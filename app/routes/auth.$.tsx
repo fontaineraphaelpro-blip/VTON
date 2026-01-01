@@ -41,5 +41,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
 // Client component to ensure top-level
 export default function AuthCallback() {
+  // Only render on client side (TopLevelRedirect uses window)
+  if (typeof window === "undefined") {
+    return null;
+  }
   return <TopLevelRedirect />;
 }

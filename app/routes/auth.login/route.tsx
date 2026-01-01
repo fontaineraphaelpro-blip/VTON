@@ -77,7 +77,7 @@ export default function Auth() {
 
   return (
     <PolarisAppProvider i18n={loaderData.polarisTranslations}>
-      <TopLevelRedirect />
+      {typeof window !== "undefined" && <TopLevelRedirect />}
       <Page>
         <Card>
           <Form method="post">
