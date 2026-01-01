@@ -1,13 +1,13 @@
+import { useEffect } from "react";
 import type { LoaderFunctionArgs, HeadersFunction } from "@remix-run/node";
 import { redirect } from "@remix-run/node";
+import { useLoaderData } from "@remix-run/react";
 import { authenticate } from "../shopify.server";
 import { ensureTopLevelLoader } from "../lib/top-level.server";
-import { TopLevelRedirect } from "../lib/top-level.client";
+import { useAppBridge } from "@shopify/app-bridge-react";
 
 // Headers to ensure OAuth opens in main window (not iframe) - required for Firefox
-// Ne pas appliquer les headers si embedded=1 (on va rediriger de toute façon)
 export const headers: HeadersFunction = (headersArgs) => {
-  // Vérifier si request existe
   if (!headersArgs?.request) {
     return {
       "X-Frame-Options": "DENY",
@@ -35,15 +35,26 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
   const { admin, session } = await authenticate.admin(request);
 
-  // Redirect to app dashboard after successful authentication
-  return redirect("/app");
+  // Return data instead of redirect - we'll use App Bridge Redirect on client
+  return { authenticated: true };
 };
 
-// Client component to ensure top-level
+// Client component to redirect using App Bridge
 export default function AuthCallback() {
-  // Only render on client side (TopLevelRedirect uses window)
-  if (typeof window === "undefined") {
-    return null;
-  }
-  return <TopLevelRedirect />;
+  const loaderData = useLoaderData<typeof loader>();
+  const app = useAppBridge();
+
+  useEffect(() => {
+    if (loaderData?.authenticated) {
+      // Use window.location for top-level redirect (App Bridge not needed here)
+      // After auth, redirect to app - this will work because we're already top-level
+      window.location.href = "/app";
+    }
+  }, [loaderData]);
+
+  return (
+    <div>
+      <p>Authenticating... Please wait.</p>
+    </div>
+  );
 }
