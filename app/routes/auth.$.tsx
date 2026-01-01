@@ -1,10 +1,10 @@
 import { useEffect } from "react";
 import type { LoaderFunctionArgs, HeadersFunction } from "@remix-run/node";
-import { redirect } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 import { authenticate } from "../shopify.server";
 import { ensureTopLevelLoader } from "../lib/top-level.server";
 import { useAppBridge } from "@shopify/app-bridge-react";
+import { Redirect } from "@shopify/app-bridge/actions";
 
 // Headers to ensure OAuth opens in main window (not iframe) - required for Firefox
 export const headers: HeadersFunction = (headersArgs) => {
@@ -39,18 +39,20 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   return { authenticated: true };
 };
 
-// Client component to redirect using App Bridge
+// Client component to redirect using App Bridge (OFFICIAL Shopify method)
 export default function AuthCallback() {
   const loaderData = useLoaderData<typeof loader>();
   const app = useAppBridge();
 
   useEffect(() => {
-    if (loaderData?.authenticated) {
-      // Use window.location for top-level redirect (App Bridge not needed here)
-      // After auth, redirect to app - this will work because we're already top-level
-      window.location.href = "/app";
+    if (loaderData?.authenticated && app) {
+      // Use App Bridge Redirect.Action.ADMIN_PATH (OFFICIAL Shopify method)
+      // This properly handles iframe navigation and respects Shopify's security policies
+      const redirectAction = Redirect.create(app);
+      // Redirect to app path - App Bridge will handle the full admin.shopify.com URL
+      redirectAction.dispatch(Redirect.Action.APP, "/app");
     }
-  }, [loaderData]);
+  }, [loaderData, app]);
 
   return (
     <div>
