@@ -26,13 +26,23 @@ export default async function handleRequest(
   responseHeaders: Headers,
   remixContext: EntryContext
 ) {
-  addDocumentResponseHeaders(request, responseHeaders);
-  
   const url = new URL(request.url);
   const pathname = url.pathname;
   
   // Routes qui doivent être top-level (OAuth, Admin auth)
   const isTopLevelRoute = pathname.startsWith("/auth");
+  // Routes qui peuvent être embedded (UI de l'app)
+  const isEmbeddedRoute = pathname.startsWith("/app");
+  
+  // Ajouter les headers Shopify
+  addDocumentResponseHeaders(request, responseHeaders);
+  
+  // Pour les routes embedded, SUPPRIMER les headers anti-iframe qui pourraient être ajoutés
+  if (isEmbeddedRoute) {
+    // Supprimer les headers qui bloquent l'iframe pour permettre l'embedding
+    responseHeaders.delete("X-Frame-Options");
+    responseHeaders.delete("Content-Security-Policy");
+  }
   
   // Headers pour forcer l'ouverture hors iframe sur les routes top-level
   if (isTopLevelRoute) {
