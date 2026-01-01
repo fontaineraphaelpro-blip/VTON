@@ -15,23 +15,13 @@ datasource db {
 
 // Session table for Shopify OAuth (used by @shopify/shopify-app-session-storage-prisma)
 model Session {
-  id                  String    @id
-  shop                String
-  state               String
-  isOnline            Boolean   @default(false)
-  scope               String?
-  expires             DateTime?
-  accessToken         String
-  userId              BigInt?
-  firstName           String?
-  lastName            String?
-  email               String?
-  accountOwner        Boolean   @default(false)
-  locale              String?
-  collaborator        Boolean?  @default(false)
-  emailVerified       Boolean?  @default(false)
-  refreshToken        String?
-  refreshTokenExpires DateTime?
+  id        String   @id @default(cuid())
+  sessionId String   @unique
+  data      String
+  shop      String
+  state     String?
+  isOnline  Boolean
+  expires   DateTime?
 }
 
 // Business data tables for VTON app
