@@ -89,7 +89,53 @@ export function ensureTopLevelLoader(request: Request) {
     return null; // Route can be embedded
   }
 
-  // Force top-level if in iframe
-  return ensureTopLevel(request);
+  // If in iframe, return HTML page that forces top-level redirect (not a Remix redirect)
+  // This avoids CSP headers being applied
+  if (isInIframe(request)) {
+    // Build redirect URL without embedded parameter
+    const redirectUrl = new URL(url);
+    redirectUrl.searchParams.delete("embedded");
+    const newUrl = redirectUrl.pathname + redirectUrl.search;
+    
+    // Return HTML page with JavaScript redirect (no CSP headers)
+    return new Response(
+      `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Redirecting...</title>
+  <script>
+    (function() {
+      if (window.top && window.top !== window.self) {
+        try {
+          window.top.location.href = "${newUrl}";
+        } catch (e) {
+          window.open("${newUrl}", "_blank");
+        }
+      } else {
+        window.location.href = "${newUrl}";
+      }
+    })();
+  </script>
+  <noscript>
+    <meta http-equiv="refresh" content="0;url=${newUrl}">
+  </noscript>
+</head>
+<body>
+  <p>Redirecting... <a href="${newUrl}">Click here if you are not redirected</a></p>
+</body>
+</html>`,
+      {
+        status: 200,
+        headers: {
+          "Content-Type": "text/html",
+          // NO CSP headers - this allows the page to load in iframe temporarily
+          // so the JavaScript can redirect the parent window
+        },
+      }
+    );
+  }
+
+  return null; // Not in iframe, continue normally
 }
 
