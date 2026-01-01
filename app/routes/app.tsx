@@ -12,12 +12,13 @@ export const links = () => [{ rel: "stylesheet", href: polarisStyles }];
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
+  const shop = url.searchParams.get("shop");
 
-  // Si la page est dans une iframe (embedded=1), on force la sortie
+  // Si embedded=1 ou qu'on est dans un iframe, rediriger vers /auth
   if (url.searchParams.get("embedded") === "1") {
-    // Retirer le paramètre embedded et rediriger hors iframe
-    url.searchParams.delete("embedded");
-    return redirect(url.pathname + url.search, {
+    // Rediriger vers /auth avec le shop si présent
+    const authUrl = shop ? `/auth?shop=${shop}` : "/auth";
+    return redirect(authUrl, {
       headers: {
         "X-Frame-Options": "DENY",
         "Content-Security-Policy": "frame-ancestors 'none'",

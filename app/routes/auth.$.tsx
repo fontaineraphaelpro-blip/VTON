@@ -12,54 +12,18 @@ export const headers: HeadersFunction = () => {
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
+  const shop = url.searchParams.get("shop");
 
-  // Si la page est dans une iframe (embedded=1), retourner une page HTML qui force l'ouverture
+  // Si embedded=1 ou qu'on est dans un iframe, rediriger vers /auth
   if (url.searchParams.get("embedded") === "1") {
-    // Retirer le paramètre embedded
-    url.searchParams.delete("embedded");
-    const newUrl = url.pathname + url.search;
-    
-    // Retourner une page HTML qui force l'ouverture dans la fenêtre principale
-    return new Response(
-      `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>Redirecting...</title>
-  <meta http-equiv="X-Frame-Options" content="DENY">
-  <meta http-equiv="Content-Security-Policy" content="frame-ancestors 'none'">
-</head>
-<body>
-  <script>
-    // Forcer l'ouverture dans la fenêtre principale
-    if (window.top !== window.self) {
-      // Si dans une iframe, essayer de rediriger la fenêtre parente
-      try {
-        window.top.location.href = "${newUrl}";
-      } catch (e) {
-        // Si bloqué (Firefox), ouvrir dans une nouvelle fenêtre
-        window.open("${newUrl}", "_top");
-      }
-    } else {
-      // Si déjà dans la fenêtre principale, rediriger normalement
-      window.location.href = "${newUrl}";
-    }
-  </script>
-  <noscript>
-    <meta http-equiv="refresh" content="0;url=${newUrl}">
-    <p>Redirecting... <a href="${newUrl}">Click here if you are not redirected</a></p>
-  </noscript>
-</body>
-</html>`,
-      {
-        status: 200,
-        headers: {
-          "Content-Type": "text/html",
-          "X-Frame-Options": "DENY",
-          "Content-Security-Policy": "frame-ancestors 'none'",
-        },
-      }
-    );
+    // Rediriger vers /auth avec le shop si présent
+    const authUrl = shop ? `/auth?shop=${shop}` : "/auth";
+    return redirect(authUrl, {
+      headers: {
+        "X-Frame-Options": "DENY",
+        "Content-Security-Policy": "frame-ancestors 'none'",
+      },
+    });
   }
 
   const { admin, session } = await authenticate.admin(request);

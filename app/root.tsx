@@ -5,6 +5,20 @@ import {
   Scripts,
   ScrollRestoration,
 } from "@remix-run/react";
+import { useEffect } from "react";
+
+// Composant client pour détecter et sortir de l'iframe
+function IframeExit() {
+  useEffect(() => {
+    // Si on est dans un iframe, on sort de l'iframe
+    if (window.top && window.top !== window.self) {
+      // On sort de l'iframe en redirigeant la fenêtre parente
+      window.top.location.href = window.location.href;
+    }
+  }, []);
+
+  return null;
+}
 
 export default function App() {
   return (
@@ -19,34 +33,9 @@ export default function App() {
         />
         <Meta />
         <Links />
-        {/* Script to detect iframe and force exit - required for Firefox OAuth */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              (function() {
-                // Détecte si on est dans une iframe et force la sortie
-                if (window.top !== window.self) {
-                  try {
-                    // Essayer d'abord de rediriger la fenêtre parente
-                    window.top.location.href = window.location.href;
-                  } catch (e) {
-                    // Si bloqué (Firefox), ouvrir dans une nouvelle fenêtre
-                    var newUrl = window.location.href;
-                    // Retirer le paramètre embedded si présent
-                    newUrl = newUrl.replace(/[?&]embedded=1(&|$)/, function(match, p1) {
-                      return p1 === '&' ? '&' : '';
-                    });
-                    newUrl = newUrl.replace(/[?&]$/, '');
-                    // Ouvrir dans une nouvelle fenêtre
-                    window.open(newUrl, '_top');
-                  }
-                }
-              })();
-            `,
-          }}
-        />
       </head>
       <body>
+        <IframeExit />
         <Outlet />
         <ScrollRestoration />
         <Scripts />
