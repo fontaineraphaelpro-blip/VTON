@@ -26,8 +26,20 @@ export default function App() {
               (function() {
                 // Détecte si on est dans une iframe et force la sortie
                 if (window.top !== window.self) {
-                  // Si on est dans une iframe, rediriger vers la même URL dans la fenêtre principale
-                  window.top.location.href = window.location.href;
+                  try {
+                    // Essayer d'abord de rediriger la fenêtre parente
+                    window.top.location.href = window.location.href;
+                  } catch (e) {
+                    // Si bloqué (Firefox), ouvrir dans une nouvelle fenêtre
+                    var newUrl = window.location.href;
+                    // Retirer le paramètre embedded si présent
+                    newUrl = newUrl.replace(/[?&]embedded=1(&|$)/, function(match, p1) {
+                      return p1 === '&' ? '&' : '';
+                    });
+                    newUrl = newUrl.replace(/[?&]$/, '');
+                    // Ouvrir dans une nouvelle fenêtre
+                    window.open(newUrl, '_top');
+                  }
                 }
               })();
             `,

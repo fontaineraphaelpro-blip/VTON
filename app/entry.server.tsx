@@ -27,6 +27,11 @@ export default async function handleRequest(
   remixContext: EntryContext
 ) {
   addDocumentResponseHeaders(request, responseHeaders);
+  
+  // Headers pour forcer l'ouverture hors iframe (Firefox)
+  responseHeaders.set("X-Frame-Options", "DENY");
+  responseHeaders.set("Content-Security-Policy", "frame-ancestors 'none'");
+  
   const userAgent = request.headers.get("user-agent");
   const callbackName = isbot(userAgent ?? '')
     ? "onAllReady"
