@@ -90,15 +90,24 @@ export default async function handleRequest(
     );
   }
   
+  // Pour les routes embedded, SUPPRIMER les headers anti-iframe AVANT d'ajouter les headers Shopify
+  // et APRÈS aussi, car addDocumentResponseHeaders pourrait les réajouter
+  if (isEmbeddedRoute) {
+    // Supprimer d'abord au cas où ils seraient déjà présents
+    responseHeaders.delete("X-Frame-Options");
+    responseHeaders.delete("Content-Security-Policy");
+  }
+  
   // Ajouter les headers Shopify
   addDocumentResponseHeaders(request, responseHeaders);
   
   // #region agent log
   const headersAfterShopify = Object.fromEntries(responseHeaders.entries());
-  fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'entry.server.tsx:handleRequest:afterShopifyHeaders',message:'Headers after addDocumentResponseHeaders',data:{headersAfterShopify},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+  fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'entry.server.tsx:handleRequest:afterShopifyHeaders',message:'Headers after addDocumentResponseHeaders',data:{headersAfterShopify,isEmbeddedRoute},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
   // #endregion
   
-  // Pour les routes embedded, SUPPRIMER les headers anti-iframe qui pourraient être ajoutés
+  // Pour les routes embedded, SUPPRIMER les headers anti-iframe APRÈS addDocumentResponseHeaders
+  // car addDocumentResponseHeaders pourrait les avoir réajoutés
   if (isEmbeddedRoute) {
     // Supprimer les headers qui bloquent l'iframe pour permettre l'embedding
     const hadXFrame = responseHeaders.has("X-Frame-Options");
