@@ -151,6 +151,16 @@ export default async function handleRequest(
           const body = new PassThrough();
           const stream = createReadableStreamFromReadable(body);
 
+          // DERNIÈRE vérification : supprimer les headers CSP pour les routes embedded
+          // juste avant de renvoyer la réponse (au cas où ils auraient été réajoutés)
+          if (isEmbeddedRoute) {
+            responseHeaders.delete("X-Frame-Options");
+            responseHeaders.delete("Content-Security-Policy");
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'entry.server.tsx:handleRequest:finalDelete',message:'Final deletion of CSP headers before response',data:{finalHeaders:Object.fromEntries(responseHeaders.entries())},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'I'})}).catch(()=>{});
+            // #endregion
+          }
+
           responseHeaders.set("Content-Type", "text/html");
           resolve(
             new Response(stream, {
