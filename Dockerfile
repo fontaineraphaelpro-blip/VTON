@@ -7,31 +7,25 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
+# Copy package files
 COPY package.json package-lock.json* ./
 
-# Install all dependencies (including dev) to get Prisma CLI
-RUN npm ci && npm cache clean --force
+# Install dependencies (Prisma is in dependencies, so it will be installed)
+RUN npm ci --omit=dev && npm cache clean --force
 
-# Copy Prisma schema before generating client
+# Copy Prisma schema
 COPY prisma ./prisma
 
-# Generate Prisma Client
+# Generate Prisma Client (needed for build)
 RUN npx prisma generate
 
-# Now copy the rest of the app
+# Copy the rest of the app
 COPY . .
 
 # Build the app (Prisma Client is now available)
 RUN npm run build
 
-# Remove dev dependencies after build, but keep Prisma for migrations
-RUN npm ci --omit=dev && npm cache clean --force
-
-# Regenerate Prisma Client after reinstalling (it's needed at runtime)
-RUN npx prisma generate
-
-# Remove CLI packages since we don't need them in production by default.
-# Remove this line if you want to run CLI commands in your container.
-RUN npm remove @shopify/cli || true
+# Prisma Client is already generated and will be used at runtime
+# The docker-start script will regenerate it anyway, but it should already be there
 
 CMD ["npm", "run", "docker-start"]
