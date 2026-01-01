@@ -70,6 +70,11 @@ export default function Auth() {
   const [shop, setShop] = useState("");
   const { errors } = actionData || loaderData;
 
+  // Si loaderData n'existe pas (redirection), ne pas rendre le composant
+  if (!loaderData) {
+    return null;
+  }
+
   return (
     <PolarisAppProvider i18n={loaderData.polarisTranslations}>
       <TopLevelRedirect />
