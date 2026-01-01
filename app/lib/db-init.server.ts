@@ -36,25 +36,25 @@ async function ensureSessionTable() {
       console.log("📦 Creating Session table...");
       await prisma.$executeRawUnsafe(`
         CREATE TABLE "Session" (
-          "id" TEXT NOT NULL PRIMARY KEY,
+          "id" TEXT PRIMARY KEY,
           "sessionId" TEXT UNIQUE,
-          "data" TEXT,
           "shop" TEXT NOT NULL,
-          "state" TEXT NOT NULL,
-          "isOnline" BOOLEAN NOT NULL DEFAULT false,
+          "state" TEXT,
+          "isOnline" BOOLEAN,
           "scope" TEXT,
           "expires" TIMESTAMP,
-          "accessToken" TEXT NOT NULL,
-          "userId" BIGINT,
+          "accessToken" TEXT,
+          "refreshToken" TEXT,
+          "refreshTokenExpires" TIMESTAMP,
+          "userId" TEXT,
           "firstName" TEXT,
           "lastName" TEXT,
           "email" TEXT,
-          "accountOwner" BOOLEAN NOT NULL DEFAULT false,
+          "accountOwner" BOOLEAN,
           "locale" TEXT,
-          "collaborator" BOOLEAN DEFAULT false,
-          "emailVerified" BOOLEAN DEFAULT false,
-          "refreshToken" TEXT,
-          "refreshTokenExpires" TIMESTAMP
+          "collaborator" BOOLEAN,
+          "emailVerified" BOOLEAN,
+          "data" TEXT NOT NULL
         )
       `);
       console.log("✅ Session table created");
@@ -86,38 +86,58 @@ async function ensureSessionTable() {
       } catch (error: any) {
         // Ignore if column is already nullable or doesn't exist
       }
-      await addColumnIfNotExists('"data"', 'TEXT');
-      // Ensure data column is nullable (PrismaSessionStorage generates it)
+      await addColumnIfNotExists('"data"', 'TEXT NOT NULL DEFAULT \'\'');
+      // Ensure data column is NOT NULL (required by PrismaSessionStorage)
       try {
         await prisma.$executeRawUnsafe(`
           ALTER TABLE "Session" 
-          ALTER COLUMN "data" DROP NOT NULL
+          ALTER COLUMN "data" SET NOT NULL
         `);
       } catch (error: any) {
-        // Ignore if column is already nullable or doesn't exist
+        // Ignore if constraint already exists
       }
       await addColumnIfNotExists('scope', 'TEXT');
       await addColumnIfNotExists('"accessToken"', 'TEXT');
       await addColumnIfNotExists('expires', 'TIMESTAMP');
       await addColumnIfNotExists('"refreshToken"', 'TEXT');
       await addColumnIfNotExists('"refreshTokenExpires"', 'TIMESTAMP');
-      await addColumnIfNotExists('"userId"', 'BIGINT');
+      await addColumnIfNotExists('"userId"', 'TEXT');
       await addColumnIfNotExists('"firstName"', 'TEXT');
       await addColumnIfNotExists('"lastName"', 'TEXT');
       await addColumnIfNotExists('email', 'TEXT');
-      await addColumnIfNotExists('"accountOwner"', 'BOOLEAN DEFAULT false');
+      await addColumnIfNotExists('"accountOwner"', 'BOOLEAN');
       await addColumnIfNotExists('locale', 'TEXT');
-      await addColumnIfNotExists('collaborator', 'BOOLEAN DEFAULT false');
-      await addColumnIfNotExists('"emailVerified"', 'BOOLEAN DEFAULT false');
+      await addColumnIfNotExists('collaborator', 'BOOLEAN');
+      await addColumnIfNotExists('"emailVerified"', 'BOOLEAN');
       
-      // Ensure required columns have NOT NULL constraints if missing
+      // Ensure nullable columns are nullable (remove NOT NULL constraints if they exist)
+      try {
+        await prisma.$executeRawUnsafe(`
+          ALTER TABLE "Session" 
+          ALTER COLUMN "state" DROP NOT NULL,
+          ALTER COLUMN "isOnline" DROP NOT NULL,
+          ALTER COLUMN "accessToken" DROP NOT NULL
+        `);
+      } catch (error: any) {
+        // Ignore if constraints don't exist
+      }
+      
+      // Change userId from BIGINT to TEXT if it exists as BIGINT
+      try {
+        await prisma.$executeRawUnsafe(`
+          ALTER TABLE "Session" 
+          ALTER COLUMN "userId" TYPE TEXT USING "userId"::TEXT
+        `);
+      } catch (error: any) {
+        // Ignore if column doesn't exist or is already TEXT
+      }
+      
+      // Ensure required columns have NOT NULL constraints if missing (only shop and data)
       try {
         await prisma.$executeRawUnsafe(`
           ALTER TABLE "Session" 
           ALTER COLUMN "shop" SET NOT NULL,
-          ALTER COLUMN "state" SET NOT NULL,
-          ALTER COLUMN "isOnline" SET NOT NULL,
-          ALTER COLUMN "accessToken" SET NOT NULL
+          ALTER COLUMN "data" SET NOT NULL
         `);
       } catch (error: any) {
         // Ignore if constraints already exist
