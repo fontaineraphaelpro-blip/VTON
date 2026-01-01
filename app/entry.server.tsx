@@ -32,6 +32,54 @@ export default async function handleRequest(
   responseHeaders.set("X-Frame-Options", "DENY");
   responseHeaders.set("Content-Security-Policy", "frame-ancestors 'none'");
   
+  // Si embedded=1, retourner une page HTML simple qui force l'ouverture immédiatement
+  const url = new URL(request.url);
+  if (url.searchParams.get("embedded") === "1") {
+    const shop = url.searchParams.get("shop");
+    const newUrl = shop ? `/auth?shop=${shop}` : "/auth";
+    
+    return new Response(
+      `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Redirecting...</title>
+  <meta http-equiv="X-Frame-Options" content="DENY">
+  <meta http-equiv="Content-Security-Policy" content="frame-ancestors 'none'">
+  <script>
+    // Script qui s'exécute IMMÉDIATEMENT pour forcer la sortie de l'iframe
+    (function() {
+      if (window.top && window.top !== window.self) {
+        try {
+          window.top.location.href = "${newUrl}";
+        } catch (e) {
+          // Si bloqué, ouvrir dans un nouvel onglet
+          window.open("${newUrl}", "_blank");
+        }
+      } else {
+        window.location.href = "${newUrl}";
+      }
+    })();
+  </script>
+  <noscript>
+    <meta http-equiv="refresh" content="0;url=${newUrl}">
+  </noscript>
+</head>
+<body>
+  <p>Redirecting... <a href="${newUrl}">Click here if you are not redirected</a></p>
+</body>
+</html>`,
+      {
+        status: 200,
+        headers: {
+          "Content-Type": "text/html",
+          "X-Frame-Options": "DENY",
+          "Content-Security-Policy": "frame-ancestors 'none'",
+        },
+      }
+    );
+  }
+  
   const userAgent = request.headers.get("user-agent");
   const callbackName = isbot(userAgent ?? '')
     ? "onAllReady"
