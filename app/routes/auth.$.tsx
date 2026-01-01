@@ -2,49 +2,59 @@ import { useEffect } from "react";
 import type { LoaderFunctionArgs, HeadersFunction } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 import { authenticate } from "../shopify.server";
-import { ensureTopLevelLoader } from "../lib/top-level.server";
+import { AppProvider } from "@shopify/shopify-app-remix/react";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { Redirect } from "@shopify/app-bridge/actions";
 
-// Headers to ensure OAuth opens in main window (not iframe) - required for Firefox
-export const headers: HeadersFunction = (headersArgs) => {
-  if (!headersArgs?.request) {
-    return {
-      "X-Frame-Options": "DENY",
-      "Content-Security-Policy": "frame-ancestors 'none'",
-    };
-  }
-  
-  const url = new URL(headersArgs.request.url);
-  // Si embedded=1, ne pas appliquer les headers (le loader va rediriger)
-  if (url.searchParams.get("embedded") === "1") {
-    return {};
-  }
-  return {
-    "X-Frame-Options": "DENY",
-    "Content-Security-Policy": "frame-ancestors 'none'",
-  };
+// Headers - allow iframe for embedded apps
+export const headers: HeadersFunction = () => {
+  // Don't block iframe - we'll use App Bridge Redirect
+  return {};
 };
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  // Force top-level if in iframe
-  const topLevelRedirect = ensureTopLevelLoader(request);
-  if (topLevelRedirect) {
-    return topLevelRedirect;
-  }
+  const url = new URL(request.url);
+  const embedded = url.searchParams.get("embedded") === "1";
 
+  // Authenticate
   const { admin, session } = await authenticate.admin(request);
 
-  // After successful auth, redirect to /app using Remix redirect
-  // The /app route will handle App Bridge navigation
-  return redirect("/app");
+  // Return data for App Bridge Redirect (Step 3: Redirect to Admin Shopify)
+  return {
+    authenticated: true,
+    embedded,
+    apiKey: process.env.SHOPIFY_API_KEY || "",
+    shop: session.shop,
+  };
 };
 
-// Simple component - redirect is handled by loader
+// Step 3: After OAuth callback, redirect to Admin Shopify using App Bridge
 export default function AuthCallback() {
+  const { authenticated, embedded, apiKey, shop } = useLoaderData<typeof loader>();
+  const app = useAppBridge();
+
+  useEffect(() => {
+    if (authenticated && embedded && app && shop) {
+      // Step 3: Redirect to Admin Shopify using App Bridge Redirect.Action.APP
+      const redirect = Redirect.create(app);
+      redirect.dispatch(Redirect.Action.APP, "/app");
+    }
+  }, [authenticated, embedded, app, shop]);
+
+  // Wrap in AppProvider for App Bridge access
+  if (embedded && apiKey) {
+    return (
+      <AppProvider isEmbeddedApp apiKey={apiKey}>
+        <div>
+          <p>Authenticating... Redirecting to app...</p>
+        </div>
+      </AppProvider>
+    );
+  }
+
   return (
     <div>
-      <p>Redirecting to app...</p>
+      <p>Authenticating...</p>
     </div>
   );
 }

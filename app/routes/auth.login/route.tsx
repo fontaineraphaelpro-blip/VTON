@@ -1,39 +1,68 @@
+import { useEffect } from "react";
 import type { LoaderFunctionArgs, HeadersFunction } from "@remix-run/node";
+import { useLoaderData } from "@remix-run/react";
+import { AppProvider } from "@shopify/shopify-app-remix/react";
+import { useAppBridge } from "@shopify/app-bridge-react";
+import { Redirect } from "@shopify/app-bridge/actions";
 import { login } from "../../shopify.server";
-import { ensureTopLevelLoader } from "../../lib/top-level.server";
 
-// Headers to ensure OAuth opens in main window (not iframe) - required for Firefox
+// Headers - allow iframe for embedded apps
 export const headers: HeadersFunction = () => {
-  // Always return headers for top-level routes (OAuth must be top-level)
-  return {
-    "X-Frame-Options": "DENY",
-    "Content-Security-Policy": "frame-ancestors 'none'",
-  };
+  // Don't block iframe - we'll use App Bridge Redirect
+  return {};
 };
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  // Force top-level if in iframe
-  const topLevelRedirect = ensureTopLevelLoader(request);
-  if (topLevelRedirect) {
-    return topLevelRedirect;
-  }
-
-  // Extract shop from URL parameters (Shopify passes it automatically)
   const url = new URL(request.url);
   const shop = url.searchParams.get("shop");
+  const embedded = url.searchParams.get("embedded") === "1";
 
-  // If shop is provided, use login() which automatically redirects to OAuth
-  // login() handles the OAuth flow and redirects to /auth/callback
+  // If embedded=1, return data for App Bridge Redirect
+  // If not embedded, use traditional login() redirect
+  if (embedded && shop) {
+    // Return shop and embedded flag for App Bridge Redirect
+    return { shop, embedded: true, apiKey: process.env.SHOPIFY_API_KEY || "" };
+  }
+
+  // Not embedded - use traditional login() redirect (top-level)
   if (shop) {
     return login(request);
   }
 
-  // If no shop parameter, return error page
-  // In embedded apps, Shopify always provides the shop parameter
-  return new Response("Shop parameter is required", { status: 400 });
+  return { shop: null, embedded: false, apiKey: process.env.SHOPIFY_API_KEY || "" };
 };
 
-// No component needed - loader handles redirect
+// Component to handle App Bridge Redirect for OAuth
 export default function AuthLogin() {
-  return null;
+  const { shop, embedded, apiKey } = useLoaderData<typeof loader>();
+  const app = useAppBridge();
+
+  useEffect(() => {
+    if (embedded && shop && app) {
+      // Step 1: Launch OAuth from iframe using App Bridge Redirect.Action.REMOTE
+      const redirect = Redirect.create(app);
+      redirect.dispatch(
+        Redirect.Action.REMOTE,
+        `https://accounts.shopify.com/select?shop=${shop}`
+      );
+    }
+  }, [embedded, shop, app]);
+
+  // If embedded, wrap in AppProvider for App Bridge access
+  if (embedded && apiKey) {
+    return (
+      <AppProvider isEmbeddedApp apiKey={apiKey}>
+        <div>
+          <p>Redirecting to Shopify OAuth...</p>
+        </div>
+      </AppProvider>
+    );
+  }
+
+  // Not embedded - show loading
+  return (
+    <div>
+      <p>Loading...</p>
+    </div>
+  );
 }
