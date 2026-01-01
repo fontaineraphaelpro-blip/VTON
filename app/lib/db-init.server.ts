@@ -86,16 +86,8 @@ async function ensureSessionTable() {
       } catch (error: any) {
         // Ignore if column is already nullable or doesn't exist
       }
-      await addColumnIfNotExists('"data"', 'TEXT NOT NULL DEFAULT \'\'');
-      // Ensure data column is NOT NULL (required by PrismaSessionStorage)
-      try {
-        await prisma.$executeRawUnsafe(`
-          ALTER TABLE "Session" 
-          ALTER COLUMN "data" SET NOT NULL
-        `);
-      } catch (error: any) {
-        // Ignore if constraint already exists
-      }
+      await addColumnIfNotExists('"data"', 'TEXT');
+      // Ensure data column is nullable (PrismaSessionStorage generates it)
       await addColumnIfNotExists('scope', 'TEXT');
       await addColumnIfNotExists('"accessToken"', 'TEXT');
       await addColumnIfNotExists('expires', 'TIMESTAMP');
