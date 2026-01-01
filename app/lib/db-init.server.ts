@@ -15,15 +15,27 @@ import prisma from "../db.server";
  * Initializes all business database tables.
  * Called at app startup.
  */
-export async function initBusinessDatabase() {
+/**
+ * Ensures Session table exists with all required columns for PrismaSessionStorage
+ */
+async function ensureSessionTable() {
   try {
-    console.log("🔧 Initializing business database tables...");
-
-    // Create Session table if it doesn't exist (required by Shopify)
-    // This is a fallback if migrations fail
-    try {
+    // Check if table exists
+    const tableExists = await prisma.$queryRawUnsafe(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'Session'
+      );
+    `);
+    
+    const exists = (tableExists as any[])[0]?.exists;
+    
+    if (!exists) {
+      // Create table if it doesn't exist
+      console.log("📦 Creating Session table...");
       await prisma.$executeRawUnsafe(`
-        CREATE TABLE IF NOT EXISTS "Session" (
+        CREATE TABLE "Session" (
           "id" TEXT NOT NULL PRIMARY KEY,
           "sessionId" TEXT NOT NULL UNIQUE,
           "shop" TEXT NOT NULL,
@@ -44,15 +56,71 @@ export async function initBusinessDatabase() {
           "refreshTokenExpires" TIMESTAMP
         )
       `);
-      console.log("✅ Session table created/verified");
-    } catch (error: any) {
-      // If table exists with different schema, try to alter it
-      if (error.message?.includes("already exists") || error.message?.includes("duplicate")) {
-        console.log("ℹ️  Session table may already exist, continuing...");
-      } else {
-        throw error;
+      console.log("✅ Session table created");
+    } else {
+      // Table exists, add missing columns
+      console.log("🔍 Session table exists, checking for missing columns...");
+      
+      const addColumnIfNotExists = async (columnName: string, columnDef: string) => {
+        try {
+          await prisma.$executeRawUnsafe(`
+            ALTER TABLE "Session" 
+            ADD COLUMN IF NOT EXISTS ${columnName} ${columnDef}
+          `);
+        } catch (error: any) {
+          // Column might already exist, ignore
+          if (!error.message?.includes("already exists") && !error.message?.includes("duplicate")) {
+            console.warn(`⚠️  Could not add column ${columnName}:`, error.message);
+          }
+        }
+      };
+      
+      await addColumnIfNotExists('"sessionId"', 'TEXT UNIQUE');
+      await addColumnIfNotExists('scope', 'TEXT');
+      await addColumnIfNotExists('"accessToken"', 'TEXT');
+      await addColumnIfNotExists('expires', 'TIMESTAMP');
+      await addColumnIfNotExists('"refreshToken"', 'TEXT');
+      await addColumnIfNotExists('"refreshTokenExpires"', 'TIMESTAMP');
+      await addColumnIfNotExists('"userId"', 'BIGINT');
+      await addColumnIfNotExists('"firstName"', 'TEXT');
+      await addColumnIfNotExists('"lastName"', 'TEXT');
+      await addColumnIfNotExists('email', 'TEXT');
+      await addColumnIfNotExists('"accountOwner"', 'BOOLEAN DEFAULT false');
+      await addColumnIfNotExists('locale', 'TEXT');
+      await addColumnIfNotExists('collaborator', 'BOOLEAN DEFAULT false');
+      await addColumnIfNotExists('"emailVerified"', 'BOOLEAN DEFAULT false');
+      
+      // Ensure required columns have NOT NULL constraints if missing
+      try {
+        await prisma.$executeRawUnsafe(`
+          ALTER TABLE "Session" 
+          ALTER COLUMN "shop" SET NOT NULL,
+          ALTER COLUMN "state" SET NOT NULL,
+          ALTER COLUMN "isOnline" SET NOT NULL,
+          ALTER COLUMN "accessToken" SET NOT NULL
+        `);
+      } catch (error: any) {
+        // Ignore if constraints already exist
       }
+      
+      console.log("✅ Session table columns verified/added");
     }
+    
+    // Verify table is accessible
+    const count = await prisma.session.count();
+    console.log(`✅ Session table accessible (${count} sessions)`);
+  } catch (error: any) {
+    console.error("❌ Error ensuring Session table:", error.message);
+    throw error;
+  }
+}
+
+export async function initBusinessDatabase() {
+  try {
+    console.log("🔧 Initializing business database tables...");
+
+    // Ensure Session table exists with all required columns
+    await ensureSessionTable();
 
     // Create shops table if it doesn't exist
     await prisma.$executeRawUnsafe(`
