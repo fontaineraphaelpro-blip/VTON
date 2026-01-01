@@ -20,17 +20,28 @@ export async function initBusinessDatabase() {
     console.log("🔧 Initializing business database tables...");
 
     // Create Session table if it doesn't exist (required by Shopify)
-    await prisma.$executeRawUnsafe(`
-      CREATE TABLE IF NOT EXISTS "Session" (
-        "id" TEXT NOT NULL PRIMARY KEY,
-        "sessionId" TEXT NOT NULL UNIQUE,
-        "data" TEXT NOT NULL,
-        "shop" TEXT NOT NULL,
-        "state" TEXT,
-        "isOnline" BOOLEAN NOT NULL,
-        "expires" TIMESTAMP
-      )
-    `);
+    // This is a fallback if migrations fail
+    try {
+      await prisma.$executeRawUnsafe(`
+        CREATE TABLE IF NOT EXISTS "Session" (
+          "id" TEXT NOT NULL PRIMARY KEY,
+          "sessionId" TEXT NOT NULL UNIQUE,
+          "data" TEXT NOT NULL,
+          "shop" TEXT NOT NULL,
+          "state" TEXT,
+          "isOnline" BOOLEAN NOT NULL,
+          "expires" TIMESTAMP
+        )
+      `);
+      console.log("✅ Session table created/verified");
+    } catch (error: any) {
+      // If table exists with different schema, try to alter it
+      if (error.message?.includes("already exists") || error.message?.includes("duplicate")) {
+        console.log("ℹ️  Session table may already exist, continuing...");
+      } else {
+        throw error;
+      }
+    }
 
     // Create shops table if it doesn't exist
     await prisma.$executeRawUnsafe(`
