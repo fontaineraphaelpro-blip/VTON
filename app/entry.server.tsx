@@ -46,11 +46,13 @@ export default async function handleRequest(
   // Si embedded=1 sur une route top-level, retourner IMMÉDIATEMENT page HTML de redirection
   // AVANT d'appliquer les headers CSP pour éviter l'erreur
   if (isTopLevelRoute && url.searchParams.get("embedded") === "1") {
-    const shop = url.searchParams.get("shop");
-    const newUrl = shop ? `/auth?shop=${shop}` : "/auth";
+    // Construire l'URL sans le paramètre embedded, en préservant tous les autres paramètres
+    const redirectUrl = new URL(url);
+    redirectUrl.searchParams.delete("embedded");
+    const newUrl = redirectUrl.pathname + redirectUrl.search;
     
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'entry.server.tsx:handleRequest:topLevelRedirect',message:'Returning redirect HTML',data:{newUrl},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'entry.server.tsx:handleRequest:topLevelRedirect',message:'Returning redirect HTML',data:{newUrl,originalPathname:pathname},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
     // #endregion
     
     return new Response(
