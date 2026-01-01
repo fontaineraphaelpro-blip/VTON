@@ -5,7 +5,13 @@ import { ensureTopLevelLoader } from "../lib/top-level.server";
 import { TopLevelRedirect } from "../lib/top-level.client";
 
 // Headers to ensure OAuth opens in main window (not iframe) - required for Firefox
-export const headers: HeadersFunction = () => {
+// Ne pas appliquer les headers si embedded=1 (on va rediriger de toute façon)
+export const headers: HeadersFunction = ({ request }) => {
+  const url = new URL(request.url);
+  // Si embedded=1, ne pas appliquer les headers (le loader va rediriger)
+  if (url.searchParams.get("embedded") === "1") {
+    return {};
+  }
   return {
     "X-Frame-Options": "DENY",
     "Content-Security-Policy": "frame-ancestors 'none'",
