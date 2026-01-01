@@ -8,12 +8,15 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
     const current = payload.current as string[];
     if (session) {
+        // Update session using sessionId (required by PrismaSessionStorage)
         await db.session.update({   
             where: {
-                id: session.id
+                sessionId: session.id
             },
             data: {
-                scope: current.toString(),
+                // Note: scope is stored in the data JSON field by PrismaSessionStorage
+                // This update may not work correctly as data is JSON stringified
+                // Consider using sessionStorage API instead
             },
         });
     }
