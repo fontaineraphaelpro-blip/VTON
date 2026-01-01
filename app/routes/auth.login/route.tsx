@@ -46,14 +46,26 @@ export default function AuthLogin() {
   useEffect(() => {
     if (embedded && shop && app && typeof window !== "undefined") {
       // Step 1: Launch OAuth from iframe using App Bridge Redirect.Action.REMOTE
-      // Import Redirect dynamically
-      import("@shopify/app-bridge/actions").then(({ Redirect }) => {
-        const redirect = Redirect.create(app);
-        redirect.dispatch(
-          Redirect.Action.REMOTE,
-          `https://accounts.shopify.com/select?shop=${shop}`
-        );
-      });
+      // Try to use App Bridge Redirect if available
+      try {
+        // @ts-ignore - @shopify/app-bridge/actions may not have types
+        import("@shopify/app-bridge/actions").then((module) => {
+          const { Redirect } = module;
+          if (Redirect && Redirect.create) {
+            const redirect = Redirect.create(app);
+            redirect.dispatch(
+              Redirect.Action.REMOTE,
+              `https://accounts.shopify.com/select?shop=${shop}`
+            );
+          }
+        }).catch(() => {
+          // Fallback: use window.location if App Bridge Redirect not available
+          window.location.href = `https://accounts.shopify.com/select?shop=${shop}`;
+        });
+      } catch (e) {
+        // Fallback: use window.location
+        window.location.href = `https://accounts.shopify.com/select?shop=${shop}`;
+      }
     }
   }, [embedded, shop, app]);
 

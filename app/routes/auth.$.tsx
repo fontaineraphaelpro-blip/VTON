@@ -35,10 +35,22 @@ export default function AuthCallback() {
   useEffect(() => {
     if (authenticated && embedded && app && shop && typeof window !== "undefined") {
       // Step 3: Redirect to Admin Shopify using App Bridge Redirect.Action.APP
-      import("@shopify/app-bridge/actions").then(({ Redirect }) => {
-        const redirect = Redirect.create(app);
-        redirect.dispatch(Redirect.Action.APP, "/app");
-      });
+      try {
+        // @ts-ignore - @shopify/app-bridge/actions may not have types
+        import("@shopify/app-bridge/actions").then((module) => {
+          const { Redirect } = module;
+          if (Redirect && Redirect.create) {
+            const redirect = Redirect.create(app);
+            redirect.dispatch(Redirect.Action.APP, "/app");
+          }
+        }).catch(() => {
+          // Fallback: use window.location if App Bridge Redirect not available
+          window.location.href = "/app";
+        });
+      } catch (e) {
+        // Fallback: use window.location
+        window.location.href = "/app";
+      }
     }
   }, [authenticated, embedded, app, shop]);
 
