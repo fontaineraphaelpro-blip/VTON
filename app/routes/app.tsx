@@ -10,6 +10,20 @@ import { authenticate } from "../shopify.server";
 export const links = () => [{ rel: "stylesheet", href: polarisStyles }];
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
+  const url = new URL(request.url);
+
+  // Si la page est dans une iframe (embedded=1), on force la sortie
+  if (url.searchParams.get("embedded") === "1") {
+    // Retirer le paramètre embedded et rediriger hors iframe
+    url.searchParams.delete("embedded");
+    return redirect(url.pathname + url.search, {
+      headers: {
+        "X-Frame-Options": "DENY",
+        "Content-Security-Policy": "frame-ancestors 'none'",
+      },
+    });
+  }
+
   await authenticate.admin(request);
 
   return { apiKey: process.env.SHOPIFY_API_KEY || "" };

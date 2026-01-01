@@ -19,6 +19,20 @@ export default function App() {
         />
         <Meta />
         <Links />
+        {/* Script to detect iframe and force exit - required for Firefox OAuth */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                // Détecte si on est dans une iframe et force la sortie
+                if (window.top !== window.self) {
+                  // Si on est dans une iframe, rediriger vers la même URL dans la fenêtre principale
+                  window.top.location.href = window.location.href;
+                }
+              })();
+            `,
+          }}
+        />
       </head>
       <body>
         <Outlet />
