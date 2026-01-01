@@ -16,6 +16,7 @@ import {
   ProgressBar,
   Spinner,
 } from "@shopify/polaris";
+// Import icons - use undefined if not available (will render without icons)
 import {
   CreditCardIcon,
   SettingsIcon,
@@ -274,7 +275,7 @@ export default function Dashboard() {
       subtitle={`Boutique: ${shop.domain}`}
       primaryAction={{
         content: "Acheter des crédits",
-        icon: CreditCardIcon,
+        ...(CreditCardIcon && { icon: CreditCardIcon }),
         onAction: () => {
           // TODO: Implement credit purchase
           console.log("Acheter des crédits");
@@ -283,7 +284,7 @@ export default function Dashboard() {
       secondaryActions={[
         {
           content: "Paramètres",
-          icon: SettingsIcon,
+          ...(SettingsIcon && { icon: SettingsIcon }),
           onAction: () => {
             // TODO: Implement settings
             console.log("Paramètres");
