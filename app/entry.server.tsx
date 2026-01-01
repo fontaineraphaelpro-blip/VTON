@@ -63,13 +63,22 @@ export default async function handleRequest(
   <title>Redirecting...</title>
   <script>
     (function() {
-      if (window.top && window.top !== window.self) {
+      // Try to break out of iframe immediately
+      if (window.top !== window.self) {
         try {
+          // Try to redirect parent window
           window.top.location.href = "${newUrl}";
         } catch (e) {
-          window.open("${newUrl}", "_blank");
+          // If blocked, try to open in new window/tab
+          try {
+            window.open("${newUrl}", "_top");
+          } catch (e2) {
+            // Last resort: show link
+            document.getElementById("redirect-link").style.display = "block";
+          }
         }
       } else {
+        // Not in iframe, redirect normally
         window.location.href = "${newUrl}";
       }
     })();
@@ -79,14 +88,22 @@ export default async function handleRequest(
   </noscript>
 </head>
 <body>
-  <p>Redirecting... <a href="${newUrl}">Click here if you are not redirected</a></p>
+  <p>Redirecting... If you are not redirected automatically, <a href="${newUrl}" target="_top" id="redirect-link" style="display:none;">click here</a>.</p>
+  <script>
+    // Fallback: if still in iframe after 100ms, show link
+    setTimeout(function() {
+      if (window.top !== window.self) {
+        document.getElementById("redirect-link").style.display = "inline";
+      }
+    }, 100);
+  </script>
 </body>
 </html>`,
       {
         status: 200,
         headers: {
           "Content-Type": "text/html",
-          // Pas de headers CSP ici - on redirige de toute façon
+          // NO CSP headers - this allows the page to load in iframe temporarily
         },
       }
     );
