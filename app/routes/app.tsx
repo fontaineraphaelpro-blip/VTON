@@ -39,5 +39,10 @@ export function ErrorBoundary() {
 }
 
 export const headers: HeadersFunction = (headersArgs) => {
-  return boundary.headers(headersArgs);
+  // #region agent log
+  const boundaryHeaders = boundary.headers(headersArgs);
+  const boundaryHeadersObj = boundaryHeaders ? Object.fromEntries(Object.entries(boundaryHeaders)) : {};
+  fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.tsx:headers',message:'Boundary headers returned',data:{boundaryHeaders:boundaryHeadersObj,hasRequest:!!headersArgs?.request},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'G'})}).catch(()=>{});
+  // #endregion
+  return boundaryHeaders;
 };
