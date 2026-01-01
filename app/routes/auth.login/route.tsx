@@ -3,7 +3,6 @@ import type { LoaderFunctionArgs, HeadersFunction } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 import { AppProvider } from "@shopify/shopify-app-remix/react";
 import { useAppBridge } from "@shopify/app-bridge-react";
-import { Redirect } from "@shopify/app-bridge/actions";
 import { login } from "../../shopify.server";
 
 // Headers - allow iframe for embedded apps
@@ -34,17 +33,27 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
 // Component to handle App Bridge Redirect for OAuth
 export default function AuthLogin() {
-  const { shop, embedded, apiKey } = useLoaderData<typeof loader>();
+  const loaderData = useLoaderData<typeof loader>();
   const app = useAppBridge();
+  
+  // Type guard to check if we have the embedded data
+  const isEmbeddedData = (data: any): data is { shop: string; embedded: boolean; apiKey: string } => {
+    return data && typeof data === "object" && "embedded" in data && "apiKey" in data;
+  };
+  
+  const { shop, embedded, apiKey } = isEmbeddedData(loaderData) ? loaderData : { shop: null, embedded: false, apiKey: "" };
 
   useEffect(() => {
-    if (embedded && shop && app) {
+    if (embedded && shop && app && typeof window !== "undefined") {
       // Step 1: Launch OAuth from iframe using App Bridge Redirect.Action.REMOTE
-      const redirect = Redirect.create(app);
-      redirect.dispatch(
-        Redirect.Action.REMOTE,
-        `https://accounts.shopify.com/select?shop=${shop}`
-      );
+      // Import Redirect dynamically
+      import("@shopify/app-bridge/actions").then(({ Redirect }) => {
+        const redirect = Redirect.create(app);
+        redirect.dispatch(
+          Redirect.Action.REMOTE,
+          `https://accounts.shopify.com/select?shop=${shop}`
+        );
+      });
     }
   }, [embedded, shop, app]);
 

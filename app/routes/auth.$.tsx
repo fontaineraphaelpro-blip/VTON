@@ -4,7 +4,6 @@ import { useLoaderData } from "@remix-run/react";
 import { authenticate } from "../shopify.server";
 import { AppProvider } from "@shopify/shopify-app-remix/react";
 import { useAppBridge } from "@shopify/app-bridge-react";
-import { Redirect } from "@shopify/app-bridge/actions";
 
 // Headers - allow iframe for embedded apps
 export const headers: HeadersFunction = () => {
@@ -34,10 +33,12 @@ export default function AuthCallback() {
   const app = useAppBridge();
 
   useEffect(() => {
-    if (authenticated && embedded && app && shop) {
+    if (authenticated && embedded && app && shop && typeof window !== "undefined") {
       // Step 3: Redirect to Admin Shopify using App Bridge Redirect.Action.APP
-      const redirect = Redirect.create(app);
-      redirect.dispatch(Redirect.Action.APP, "/app");
+      import("@shopify/app-bridge/actions").then(({ Redirect }) => {
+        const redirect = Redirect.create(app);
+        redirect.dispatch(Redirect.Action.APP, "/app");
+      });
     }
   }, [authenticated, embedded, app, shop]);
 
