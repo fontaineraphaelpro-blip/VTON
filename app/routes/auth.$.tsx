@@ -35,28 +35,16 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
   const { admin, session } = await authenticate.admin(request);
 
-  // Return data instead of redirect - we'll use App Bridge Redirect on client
-  return { authenticated: true };
+  // After successful auth, redirect to /app using Remix redirect
+  // The /app route will handle App Bridge navigation
+  return redirect("/app");
 };
 
-// Client component to redirect using App Bridge (OFFICIAL Shopify method)
+// Simple component - redirect is handled by loader
 export default function AuthCallback() {
-  const loaderData = useLoaderData<typeof loader>();
-  const app = useAppBridge();
-
-  useEffect(() => {
-    if (loaderData?.authenticated && app) {
-      // Use App Bridge Redirect.Action.ADMIN_PATH (OFFICIAL Shopify method)
-      // This properly handles iframe navigation and respects Shopify's security policies
-      const redirectAction = Redirect.create(app);
-      // Redirect to app path - App Bridge will handle the full admin.shopify.com URL
-      redirectAction.dispatch(Redirect.Action.APP, "/app");
-    }
-  }, [loaderData, app]);
-
   return (
     <div>
-      <p>Authenticating... Please wait.</p>
+      <p>Redirecting to app...</p>
     </div>
   );
 }
