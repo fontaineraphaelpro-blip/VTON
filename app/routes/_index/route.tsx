@@ -8,12 +8,15 @@ import styles from "./styles.module.css";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
+  const shop = url.searchParams.get("shop");
 
-  if (url.searchParams.get("shop")) {
-    throw redirect(`/app?${url.searchParams.toString()}`);
+  // If shop is provided, redirect to login which will handle OAuth automatically
+  if (shop) {
+    return redirect(`/auth/login?shop=${shop}`);
   }
 
-  return { showForm: Boolean(login) };
+  // No shop parameter - this shouldn't happen in embedded apps
+  return { showForm: false };
 };
 
 export default function App() {
@@ -26,18 +29,7 @@ export default function App() {
         <p className={styles.text}>
           A tagline about [your app] that describes your value proposition.
         </p>
-        {showForm && (
-          <Form className={styles.form} method="post" action="/auth/login">
-            <label className={styles.label}>
-              <span>Shop domain</span>
-              <input className={styles.input} type="text" name="shop" />
-              <span>e.g: my-shop-domain.myshopify.com</span>
-            </label>
-            <button className={styles.button} type="submit">
-              Log in
-            </button>
-          </Form>
-        )}
+        {/* Login form removed - shop is detected automatically from URL */}
         <ul className={styles.list}>
           <li>
             <strong>Product feature</strong>. Some detail about your feature and
