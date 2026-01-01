@@ -7,8 +7,18 @@ import {
 } from "@remix-run/node";
 import { isbot } from "isbot";
 import { addDocumentResponseHeaders } from "./shopify.server";
+import { initBusinessDatabase } from "./lib/db-init.server";
 
 export const streamTimeout = 5000;
+
+// Initialize business database tables on server startup
+let dbInitialized = false;
+if (!dbInitialized) {
+  initBusinessDatabase().catch((error) => {
+    console.error("Failed to initialize business database:", error);
+  });
+  dbInitialized = true;
+}
 
 export default async function handleRequest(
   request: Request,

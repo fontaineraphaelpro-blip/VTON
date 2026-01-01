@@ -15,11 +15,13 @@ import {
 } from "@shopify/polaris";
 import { TitleBar, useAppBridge } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
+import { redirect } from "@remix-run/node";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   await authenticate.admin(request);
-
-  return null;
+  
+  // Redirect to dashboard
+  return redirect("/app/dashboard");
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {

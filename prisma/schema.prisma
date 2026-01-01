@@ -9,10 +9,11 @@ generator client {
 // enough when changing adapters.
 // See https://www.prisma.io/docs/orm/reference/prisma-schema-reference#string for more information
 datasource db {
-  provider = "sqlite"
-  url      = "file:dev.sqlite"
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
+// Session table for Shopify OAuth (used by @shopify/shopify-app-session-storage-prisma)
 model Session {
   id                  String    @id
   shop                String
@@ -31,4 +32,78 @@ model Session {
   emailVerified       Boolean?  @default(false)
   refreshToken        String?
   refreshTokenExpires DateTime?
+}
+
+// Business data tables for VTON app
+model Shop {
+  domain            String    @id @db.VarChar(255)
+  accessToken       String    @default("") @db.Text
+  credits           Int       @default(0)
+  lifetimeCredits   Int       @default(0) @map("lifetime_credits")
+  totalTryons       Int       @default(0) @map("total_tryons")
+  totalAtc          Int       @default(0) @map("total_atc")
+  widgetText        String    @default("Try It On Now ✨") @map("widget_text") @db.VarChar(255)
+  widgetBg          String    @default("#000000") @map("widget_bg") @db.VarChar(7)
+  widgetColor       String    @default("#ffffff") @map("widget_color") @db.VarChar(7)
+  maxTriesPerUser   Int       @default(5) @map("max_tries_per_user")
+  installedAt       DateTime  @default(now()) @map("installed_at")
+  lastActiveAt      DateTime  @default(now()) @updatedAt @map("last_active_at")
+  isActive          Boolean   @default(true) @map("is_active")
+  uninstalledAt     DateTime? @map("uninstalled_at")
+
+  tryonLogs         TryonLog[]
+  rateLimits        RateLimit[]
+  creditPurchases   CreditPurchase[]
+
+  @@map("shops")
+}
+
+model TryonLog {
+  id              Int       @id @default(autoincrement())
+  shop            String    @db.VarChar(255)
+  customerIp      String?   @map("customer_ip") @db.VarChar(45)
+  customerId      String?   @map("customer_id") @db.VarChar(255)
+  productId       String?   @map("product_id") @db.VarChar(255)
+  productTitle    String?   @map("product_title") @db.Text
+  success         Boolean   @default(true)
+  errorMessage    String?   @map("error_message") @db.Text
+  latencyMs       Int?      @map("latency_ms")
+  resultImageUrl  String?   @map("result_image_url") @db.Text
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  shopRecord      Shop      @relation(fields: [shop], references: [domain], onDelete: Cascade)
+
+  @@index([shop])
+  @@index([createdAt])
+  @@map("tryon_logs")
+}
+
+model RateLimit {
+  id        Int      @id @default(autoincrement())
+  shop      String   @db.VarChar(255)
+  customerIp String  @map("customer_ip") @db.VarChar(45)
+  date      String   @db.VarChar(10)
+  count     Int      @default(0)
+
+  shopRecord Shop    @relation(fields: [shop], references: [domain], onDelete: Cascade)
+
+  @@unique([shop, customerIp, date])
+  @@index([shop, customerIp, date])
+  @@map("rate_limits")
+}
+
+model CreditPurchase {
+  id              Int       @id @default(autoincrement())
+  shop            String    @db.VarChar(255)
+  chargeId        String?   @unique @map("charge_id") @db.VarChar(255)
+  amountUsd       Decimal?  @map("amount_usd") @db.Decimal(10, 2)
+  creditsPurchased Int?    @map("credits_purchased")
+  status          String    @default("pending") @db.VarChar(50)
+  createdAt       DateTime  @default(now()) @map("created_at")
+  activatedAt     DateTime? @map("activated_at")
+
+  shopRecord      Shop      @relation(fields: [shop], references: [domain], onDelete: Cascade)
+
+  @@index([shop])
+  @@map("credit_purchases")
 }
