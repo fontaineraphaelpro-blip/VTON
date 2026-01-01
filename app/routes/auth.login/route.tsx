@@ -1,31 +1,9 @@
-import { useState } from "react";
-import type { ActionFunctionArgs, LoaderFunctionArgs, HeadersFunction } from "@remix-run/node";
-import { redirect } from "@remix-run/node";
-import { Form, useActionData, useLoaderData } from "@remix-run/react";
-import {
-  AppProvider as PolarisAppProvider,
-  Button,
-  Card,
-  FormLayout,
-  Page,
-  Text,
-  TextField,
-} from "@shopify/polaris";
-import polarisTranslations from "@shopify/polaris/locales/en.json";
-import polarisStyles from "@shopify/polaris/build/esm/styles.css?url";
-
+import type { LoaderFunctionArgs, HeadersFunction } from "@remix-run/node";
 import { login } from "../../shopify.server";
 import { ensureTopLevelLoader } from "../../lib/top-level.server";
-import { TopLevelRedirect } from "../../lib/top-level.client";
-
-import { loginErrorMessage } from "./error.server";
-
-export const links = () => [{ rel: "stylesheet", href: polarisStyles }];
 
 // Headers to ensure OAuth opens in main window (not iframe) - required for Firefox
-// Ne pas appliquer les headers si embedded=1 (on va rediriger de toute façon)
 export const headers: HeadersFunction = (headersArgs) => {
-  // Vérifier si request existe
   if (!headersArgs?.request) {
     return {
       "X-Frame-Options": "DENY",
@@ -51,55 +29,22 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     return topLevelRedirect;
   }
 
-  const errors = loginErrorMessage(await login(request));
+  // Extract shop from URL parameters (Shopify passes it automatically)
+  const url = new URL(request.url);
+  const shop = url.searchParams.get("shop");
 
-  return { errors, polarisTranslations };
-};
-
-export const action = async ({ request }: ActionFunctionArgs) => {
-  const errors = loginErrorMessage(await login(request));
-
-  return {
-    errors,
-  };
-};
-
-export default function Auth() {
-  const loaderData = useLoaderData<typeof loader>();
-  const actionData = useActionData<typeof action>();
-  const [shop, setShop] = useState("");
-  const { errors } = actionData || loaderData;
-
-  // Si loaderData n'existe pas (redirection), ne pas rendre le composant
-  if (!loaderData) {
-    return null;
+  // If shop is provided, use login() which automatically redirects to OAuth
+  // login() handles the OAuth flow and redirects to /auth/callback
+  if (shop) {
+    return login(request);
   }
 
-  return (
-    <PolarisAppProvider i18n={loaderData.polarisTranslations}>
-      {typeof window !== "undefined" && <TopLevelRedirect />}
-      <Page>
-        <Card>
-          <Form method="post">
-            <FormLayout>
-              <Text variant="headingMd" as="h2">
-                Log in
-              </Text>
-              <TextField
-                type="text"
-                name="shop"
-                label="Shop domain"
-                helpText="example.myshopify.com"
-                value={shop}
-                onChange={setShop}
-                autoComplete="on"
-                error={errors.shop}
-              />
-              <Button submit>Log in</Button>
-            </FormLayout>
-          </Form>
-        </Card>
-      </Page>
-    </PolarisAppProvider>
-  );
+  // If no shop parameter, return error page
+  // In embedded apps, Shopify always provides the shop parameter
+  return new Response("Shop parameter is required", { status: 400 });
+};
+
+// No component needed - loader handles redirect
+export default function AuthLogin() {
+  return null;
 }
