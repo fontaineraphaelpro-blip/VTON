@@ -30,38 +30,23 @@ export default async function handleRequest(
   const pathname = url.pathname;
   
   // Routes qui doivent être top-level (OAuth, Admin auth)
+  // Inclure /auth/login et toutes les routes /auth/*
   const isTopLevelRoute = pathname.startsWith("/auth");
   // Routes qui peuvent être embedded (UI de l'app)
   const isEmbeddedRoute = pathname.startsWith("/app");
   
-  // Ajouter les headers Shopify
-  addDocumentResponseHeaders(request, responseHeaders);
-  
-  // Pour les routes embedded, SUPPRIMER les headers anti-iframe qui pourraient être ajoutés
-  if (isEmbeddedRoute) {
-    // Supprimer les headers qui bloquent l'iframe pour permettre l'embedding
-    responseHeaders.delete("X-Frame-Options");
-    responseHeaders.delete("Content-Security-Policy");
-  }
-  
-  // Headers pour forcer l'ouverture hors iframe sur les routes top-level
-  if (isTopLevelRoute) {
-    responseHeaders.set("X-Frame-Options", "DENY");
-    responseHeaders.set("Content-Security-Policy", "frame-ancestors 'none'");
+  // Si embedded=1 sur une route top-level, retourner IMMÉDIATEMENT page HTML de redirection
+  // AVANT d'appliquer les headers CSP pour éviter l'erreur
+  if (isTopLevelRoute && url.searchParams.get("embedded") === "1") {
+    const shop = url.searchParams.get("shop");
+    const newUrl = shop ? `/auth?shop=${shop}` : "/auth";
     
-    // Si embedded=1 sur une route top-level, retourner page HTML de redirection
-    if (url.searchParams.get("embedded") === "1") {
-      const shop = url.searchParams.get("shop");
-      const newUrl = shop ? `/auth?shop=${shop}` : "/auth";
-      
-      return new Response(
-        `<!DOCTYPE html>
+    return new Response(
+      `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
   <title>Redirecting...</title>
-  <meta http-equiv="X-Frame-Options" content="DENY">
-  <meta http-equiv="Content-Security-Policy" content="frame-ancestors 'none'">
   <script>
     (function() {
       if (window.top && window.top !== window.self) {
@@ -83,16 +68,30 @@ export default async function handleRequest(
   <p>Redirecting... <a href="${newUrl}">Click here if you are not redirected</a></p>
 </body>
 </html>`,
-        {
-          status: 200,
-          headers: {
-            "Content-Type": "text/html",
-            "X-Frame-Options": "DENY",
-            "Content-Security-Policy": "frame-ancestors 'none'",
-          },
-        }
-      );
-    }
+      {
+        status: 200,
+        headers: {
+          "Content-Type": "text/html",
+          // Pas de headers CSP ici - on redirige de toute façon
+        },
+      }
+    );
+  }
+  
+  // Ajouter les headers Shopify
+  addDocumentResponseHeaders(request, responseHeaders);
+  
+  // Pour les routes embedded, SUPPRIMER les headers anti-iframe qui pourraient être ajoutés
+  if (isEmbeddedRoute) {
+    // Supprimer les headers qui bloquent l'iframe pour permettre l'embedding
+    responseHeaders.delete("X-Frame-Options");
+    responseHeaders.delete("Content-Security-Policy");
+  }
+  
+  // Headers pour forcer l'ouverture hors iframe sur les routes top-level (si pas embedded=1)
+  if (isTopLevelRoute) {
+    responseHeaders.set("X-Frame-Options", "DENY");
+    responseHeaders.set("Content-Security-Policy", "frame-ancestors 'none'");
   }
   
   const userAgent = request.headers.get("user-agent");
