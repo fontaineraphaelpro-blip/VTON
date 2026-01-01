@@ -37,7 +37,7 @@ async function ensureSessionTable() {
       await prisma.$executeRawUnsafe(`
         CREATE TABLE "Session" (
           "id" TEXT NOT NULL PRIMARY KEY,
-          "sessionId" TEXT NOT NULL UNIQUE,
+          "sessionId" TEXT UNIQUE,
           "shop" TEXT NOT NULL,
           "state" TEXT NOT NULL,
           "isOnline" BOOLEAN NOT NULL DEFAULT false,
@@ -76,6 +76,15 @@ async function ensureSessionTable() {
       };
       
       await addColumnIfNotExists('"sessionId"', 'TEXT UNIQUE');
+      // Ensure sessionId is nullable (optional) to match Prisma schema
+      try {
+        await prisma.$executeRawUnsafe(`
+          ALTER TABLE "Session" 
+          ALTER COLUMN "sessionId" DROP NOT NULL
+        `);
+      } catch (error: any) {
+        // Ignore if column is already nullable or doesn't exist
+      }
       await addColumnIfNotExists('scope', 'TEXT');
       await addColumnIfNotExists('"accessToken"', 'TEXT');
       await addColumnIfNotExists('expires', 'TIMESTAMP');

@@ -16,7 +16,7 @@ datasource db {
 // Session table for Shopify OAuth (used by @shopify/shopify-app-session-storage-prisma)
 model Session {
   id                  String    @id
-  sessionId           String    @unique
+  sessionId           String?   @unique
   shop                String
   state               String
   isOnline            Boolean   @default(false)
@@ -25,7 +25,7 @@ model Session {
   accessToken         String
   userId              BigInt?
   firstName           String?
-  lastName            String?
+  lastName           String?
   email               String?
   accountOwner        Boolean   @default(false)
   locale              String?
