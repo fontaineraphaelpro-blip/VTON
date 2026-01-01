@@ -18,21 +18,8 @@ import { authenticate } from "../shopify.server";
 import { redirect } from "@remix-run/node";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const url = new URL(request.url);
-  const shop = url.searchParams.get("shop");
-
-  // Si embedded=1 ou qu'on est dans un iframe, rediriger vers /auth
-  if (url.searchParams.get("embedded") === "1") {
-    // Rediriger vers /auth avec le shop si présent
-    const authUrl = shop ? `/auth?shop=${shop}` : "/auth";
-    return redirect(authUrl, {
-      headers: {
-        "X-Frame-Options": "DENY",
-        "Content-Security-Policy": "frame-ancestors 'none'",
-      },
-    });
-  }
-
+  // App routes can be embedded - no need to force top-level
+  // Just authenticate normally
   await authenticate.admin(request);
   
   // Redirect to dashboard

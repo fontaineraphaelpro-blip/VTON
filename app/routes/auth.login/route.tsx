@@ -15,6 +15,8 @@ import polarisTranslations from "@shopify/polaris/locales/en.json";
 import polarisStyles from "@shopify/polaris/build/esm/styles.css?url";
 
 import { login } from "../../shopify.server";
+import { ensureTopLevelLoader } from "../../lib/top-level.server";
+import { TopLevelRedirect } from "../../lib/top-level.client";
 
 import { loginErrorMessage } from "./error.server";
 
@@ -28,20 +30,14 @@ export const headers: HeadersFunction = () => {
   };
 };
 
-export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const url = new URL(request.url);
-  const shop = url.searchParams.get("shop");
+import { ensureTopLevelLoader } from "../../lib/top-level.server";
+import { TopLevelRedirect } from "../../lib/top-level.client";
 
-  // Si embedded=1 ou qu'on est dans un iframe, rediriger vers /auth
-  if (url.searchParams.get("embedded") === "1") {
-    // Rediriger vers /auth avec le shop si présent
-    const authUrl = shop ? `/auth?shop=${shop}` : "/auth";
-    return redirect(authUrl, {
-      headers: {
-        "X-Frame-Options": "DENY",
-        "Content-Security-Policy": "frame-ancestors 'none'",
-      },
-    });
+export const loader = async ({ request }: LoaderFunctionArgs) => {
+  // Force top-level if in iframe
+  const topLevelRedirect = ensureTopLevelLoader(request);
+  if (topLevelRedirect) {
+    return topLevelRedirect;
   }
 
   const errors = loginErrorMessage(await login(request));
@@ -65,6 +61,7 @@ export default function Auth() {
 
   return (
     <PolarisAppProvider i18n={loaderData.polarisTranslations}>
+      <TopLevelRedirect />
       <Page>
         <Card>
           <Form method="post">

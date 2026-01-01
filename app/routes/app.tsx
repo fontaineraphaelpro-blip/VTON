@@ -1,5 +1,4 @@
 import type { HeadersFunction, LoaderFunctionArgs } from "@remix-run/node";
-import { redirect } from "@remix-run/node";
 import { Link, Outlet, useLoaderData, useRouteError } from "@remix-run/react";
 import { boundary } from "@shopify/shopify-app-remix/server";
 import { AppProvider } from "@shopify/shopify-app-remix/react";
@@ -11,21 +10,8 @@ import { authenticate } from "../shopify.server";
 export const links = () => [{ rel: "stylesheet", href: polarisStyles }];
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const url = new URL(request.url);
-  const shop = url.searchParams.get("shop");
-
-  // Si embedded=1 ou qu'on est dans un iframe, rediriger vers /auth
-  if (url.searchParams.get("embedded") === "1") {
-    // Rediriger vers /auth avec le shop si présent
-    const authUrl = shop ? `/auth?shop=${shop}` : "/auth";
-    return redirect(authUrl, {
-      headers: {
-        "X-Frame-Options": "DENY",
-        "Content-Security-Policy": "frame-ancestors 'none'",
-      },
-    });
-  }
-
+  // App routes can be embedded - no need to force top-level
+  // Just authenticate normally
   await authenticate.admin(request);
 
   return { apiKey: process.env.SHOPIFY_API_KEY || "" };
