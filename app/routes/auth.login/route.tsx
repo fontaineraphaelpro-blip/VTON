@@ -30,9 +30,6 @@ export const headers: HeadersFunction = () => {
   };
 };
 
-import { ensureTopLevelLoader } from "../../lib/top-level.server";
-import { TopLevelRedirect } from "../../lib/top-level.client";
-
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   // Force top-level if in iframe
   const topLevelRedirect = ensureTopLevelLoader(request);
