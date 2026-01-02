@@ -244,15 +244,18 @@ export default function Credits() {
 
   const isSubmitting = fetcher.state === "submitting";
 
-  // Recharger les données après un achat réussi
+  // Rediriger vers le checkout Shopify après création de la commande
   useEffect(() => {
-    if (fetcher.data?.success) {
-      // Attendre un peu pour que la base de données soit mise à jour
+    if (fetcher.data?.success && fetcher.data?.redirect && fetcher.data?.checkoutUrl) {
+      // Rediriger vers le checkout Shopify
+      window.location.href = fetcher.data.checkoutUrl;
+    } else if (fetcher.data?.success && !fetcher.data?.redirect) {
+      // Si pas de redirection, recharger les données (ancien comportement)
       setTimeout(() => {
         revalidator.revalidate();
       }, 500);
     }
-  }, [fetcher.data?.success, revalidator]);
+  }, [fetcher.data, revalidator]);
 
   const handlePurchase = (packId: string) => {
     const formData = new FormData();
