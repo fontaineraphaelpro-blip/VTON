@@ -28,15 +28,25 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
   const shop = session.shop;
 
-  const shopData = await getShop(shop);
-  const recentLogs = await getTryonLogs(shop, {});
-  const topProducts = await getTopProducts(shop, 5);
+  try {
+    const shopData = await getShop(shop);
+    const recentLogs = await getTryonLogs(shop, {}).catch(() => []);
+    const topProducts = await getTopProducts(shop, 5).catch(() => []);
 
-  return json({
-    shop: shopData,
-    recentLogs: recentLogs.slice(0, 10),
-    topProducts,
-  });
+    return json({
+      shop: shopData || null,
+      recentLogs: Array.isArray(recentLogs) ? recentLogs.slice(0, 10) : [],
+      topProducts: Array.isArray(topProducts) ? topProducts : [],
+    });
+  } catch (error) {
+    console.error("Dashboard loader error:", error);
+    return json({
+      shop: null,
+      recentLogs: [],
+      topProducts: [],
+      error: error instanceof Error ? error.message : "Unknown error",
+    });
+  }
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
@@ -112,6 +122,11 @@ export default function Dashboard() {
       <Layout>
         <Layout.Section>
           <BlockStack gap="500">
+            {error && (
+              <Banner tone="critical">
+                Erreur lors du chargement des données: {error}
+              </Banner>
+            )}
             <Banner tone="info">
               Gérez votre application Try-On depuis cette interface. Configurez
               le widget, consultez les statistiques et l'historique des
