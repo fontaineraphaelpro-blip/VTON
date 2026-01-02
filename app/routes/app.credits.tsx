@@ -137,10 +137,40 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           variables,
         });
 
-        const responseJson = await response.json();
+        // Check if response is OK
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error("GraphQL request failed:", response.status, errorText);
+          return json({ 
+            success: false, 
+            error: `Shopify API error (${response.status}): ${errorText.substring(0, 200)}`,
+          });
+        }
+
+        let responseJson;
+        try {
+          responseJson = await response.json();
+        } catch (jsonError) {
+          console.error("Failed to parse JSON response:", jsonError);
+          const errorText = await response.text().catch(() => "Unable to read response");
+          return json({ 
+            success: false, 
+            error: `Invalid response from Shopify: ${errorText.substring(0, 200)}`,
+          });
+        }
         
         // Log the full response for debugging
         console.log("Draft order response:", JSON.stringify(responseJson, null, 2));
+        
+        // Check for GraphQL errors
+        if (responseJson.errors) {
+          const errorMessages = responseJson.errors.map((e: any) => e.message || String(e)).join(", ");
+          console.error("GraphQL errors:", errorMessages);
+          return json({ 
+            success: false, 
+            error: `GraphQL error: ${errorMessages}`,
+          });
+        }
         
         const draftOrder = responseJson.data?.draftOrderCreate?.draftOrder;
         const errors = responseJson.data?.draftOrderCreate?.userErrors;
@@ -180,7 +210,16 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         }
       } catch (error) {
         console.error("Error creating draft order:", error);
-        const errorMessage = error instanceof Error ? error.message : String(error);
+        let errorMessage: string;
+        if (error instanceof Error) {
+          errorMessage = error.message;
+        } else if (error && typeof error === 'object' && 'message' in error) {
+          errorMessage = String(error.message);
+        } else if (error && typeof error === 'object' && 'toString' in error) {
+          errorMessage = error.toString();
+        } else {
+          errorMessage = "Unknown error occurred";
+        }
         return json({ 
           success: false, 
           error: `Failed to create payment checkout: ${errorMessage}` 
