@@ -12,6 +12,8 @@ import {
   Banner,
   EmptyState,
   InlineStack,
+  Divider,
+  Box,
 } from "@shopify/polaris";
 import { TitleBar } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
@@ -65,6 +67,15 @@ export default function History() {
     return `${(ms / 1000).toFixed(1)}s`;
   };
 
+  const successCount = logs.filter((log: any) => log.success).length;
+  const failureCount = logs.length - successCount;
+  const avgLatency = logs.length > 0
+    ? Math.round(
+        logs.reduce((sum: number, log: any) => sum + (log.latency_ms || 0), 0) /
+          logs.length
+      )
+    : 0;
+
   const rows = logs.map((log: any) => [
     formatDate(log.created_at),
     log.product_title || log.product_id || "-",
@@ -72,37 +83,107 @@ export default function History() {
     <Badge key={`badge-${log.id}`} tone={log.success ? "success" : "critical"}>
       {log.success ? "Succès" : "Erreur"}
     </Badge>,
-    formatLatency(log.latency_ms),
-    log.error_message || "-",
+    <Text
+      key={`latency-${log.id}`}
+      variant="bodyMd"
+      tone={log.latency_ms && log.latency_ms > 3000 ? "critical" : "subdued"}
+      as="span"
+    >
+      {formatLatency(log.latency_ms)}
+    </Text>,
+    log.error_message ? (
+      <Text key={`error-${log.id}`} variant="bodySm" tone="critical" as="span">
+        {log.error_message.length > 50
+          ? `${log.error_message.substring(0, 50)}...`
+          : log.error_message}
+      </Text>
+    ) : (
+      "-"
+    ),
   ]);
 
   return (
     <Page>
-      <TitleBar title="Historique des essais - Try-On StyleLab" />
+      <TitleBar title="Historique - Try-On StyleLab" />
       <Layout>
         <Layout.Section>
-          <BlockStack gap="500">
+          <BlockStack gap="600">
+            {/* Header */}
+            <BlockStack gap="200">
+              <Text as="h1" variant="heading2xl" fontWeight="bold">
+                Historique des essais
+              </Text>
+              <Text variant="bodyMd" tone="subdued" as="p">
+                Consultez l'historique complet de toutes les tentatives d'essayage virtuel effectuées sur votre boutique.
+              </Text>
+            </BlockStack>
+
             {error && (
-              <Banner tone="critical">
+              <Banner tone="critical" title="Erreur">
                 Erreur lors du chargement de l'historique: {error}
               </Banner>
             )}
 
+            {/* Statistiques rapides */}
+            {logs.length > 0 && (
+              <Layout>
+                <Layout.Section variant="oneThird">
+                  <Card>
+                    <BlockStack gap="200">
+                      <Text variant="bodySm" tone="subdued" as="p">
+                        Total de sessions
+                      </Text>
+                      <Text variant="heading2xl" fontWeight="bold" as="p">
+                        {logs.length}
+                      </Text>
+                    </BlockStack>
+                  </Card>
+                </Layout.Section>
+                <Layout.Section variant="oneThird">
+                  <Card>
+                    <BlockStack gap="200">
+                      <Text variant="bodySm" tone="subdued" as="p">
+                        Taux de succès
+                      </Text>
+                      <Text variant="heading2xl" fontWeight="bold" as="p">
+                        {logs.length > 0
+                          ? ((successCount / logs.length) * 100).toFixed(1)
+                          : "0.0"}
+                        %
+                      </Text>
+                    </BlockStack>
+                  </Card>
+                </Layout.Section>
+                <Layout.Section variant="oneThird">
+                  <Card>
+                    <BlockStack gap="200">
+                      <Text variant="bodySm" tone="subdued" as="p">
+                        Latence moyenne
+                      </Text>
+                      <Text variant="heading2xl" fontWeight="bold" as="p">
+                        {avgLatency > 0 ? `${avgLatency}ms` : "-"}
+                      </Text>
+                    </BlockStack>
+                  </Card>
+                </Layout.Section>
+              </Layout>
+            )}
+
+            {/* Tableau d'historique */}
             <Card>
               <BlockStack gap="400">
                 <InlineStack align="space-between" blockAlign="center">
-                  <Text as="h2" variant="headingMd">
-                    Historique des essais Try-On
-                  </Text>
-                  <Text variant="bodyMd" tone="subdued" as="p">
-                    {logs.length} session{logs.length > 1 ? "s" : ""}
-                  </Text>
+                  <BlockStack gap="200">
+                    <Text as="h2" variant="headingLg" fontWeight="semibold">
+                      Historique complet
+                    </Text>
+                    <Text variant="bodyMd" tone="subdued" as="p">
+                      {logs.length} session{logs.length > 1 ? "s" : ""} enregistrée{logs.length > 1 ? "s" : ""}
+                    </Text>
+                  </BlockStack>
                 </InlineStack>
 
-                <Text variant="bodyMd" tone="subdued" as="p">
-                  Consultez l'historique complet de toutes les tentatives
-                  d'essayage virtuel effectuées sur votre boutique.
-                </Text>
+                <Divider />
 
                 {logs.length === 0 ? (
                   <EmptyState
@@ -110,7 +191,7 @@ export default function History() {
                     image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
                   >
                     <p>
-                      Aucune session d'essayage n'a encore été enregistrée.
+                      Aucune session d'essayage n'a encore été enregistrée. Les tentatives d'essayage virtuel apparaîtront ici une fois que vos clients commenceront à utiliser le widget.
                     </p>
                   </EmptyState>
                 ) : (
@@ -142,4 +223,3 @@ export default function History() {
     </Page>
   );
 }
-

@@ -14,6 +14,7 @@ import {
   DataTable,
   Box,
   Banner,
+  Divider,
 } from "@shopify/polaris";
 import { TitleBar } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
@@ -30,7 +31,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const shop = session.shop;
 
   try {
-    // Ensure tables exist
     await ensureTables();
 
     const shopData = await getShop(shop);
@@ -86,7 +86,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 };
 
 export default function Dashboard() {
-  const { shop, recentLogs, topProducts } = useLoaderData<typeof loader>();
+  const { shop, recentLogs, topProducts, error } = useLoaderData<typeof loader>();
   const submit = useSubmit();
 
   const handleSave = (formData: FormData) => {
@@ -94,28 +94,50 @@ export default function Dashboard() {
     submit(formData, { method: "post" });
   };
 
+  const totalTryons = shop?.total_tryons || 0;
+  const totalAtc = shop?.total_atc || 0;
+  const credits = shop?.credits || 0;
+  const conversionRate = totalTryons > 0 
+    ? ((totalAtc / totalTryons) * 100).toFixed(1) 
+    : "0.0";
+
   const stats = [
     {
       label: "Crédits disponibles",
-      value: shop?.credits || 0,
+      value: credits.toLocaleString("fr-FR"),
+      trend: "neutral" as const,
+      icon: "💎",
     },
     {
       label: "Total try-ons",
-      value: shop?.total_tryons || 0,
+      value: totalTryons.toLocaleString("fr-FR"),
+      trend: "positive" as const,
+      icon: "✨",
     },
     {
       label: "Add to Cart",
-      value: shop?.total_atc || 0,
+      value: totalAtc.toLocaleString("fr-FR"),
+      trend: "positive" as const,
+      icon: "🛒",
+    },
+    {
+      label: "Taux de conversion",
+      value: `${conversionRate}%`,
+      trend: totalAtc > 0 ? ("positive" as const) : ("neutral" as const),
+      icon: "📈",
     },
   ];
 
   const logRows = recentLogs.map((log: any) => [
-    new Date(log.created_at).toLocaleString("fr-FR"),
+    new Date(log.created_at).toLocaleString("fr-FR", {
+      dateStyle: "short",
+      timeStyle: "short",
+    }),
     log.product_title || "N/A",
     log.success ? (
-      <Badge tone="success">Succès</Badge>
+      <Badge tone="success" key={`badge-${log.id}`}>Succès</Badge>
     ) : (
-      <Badge tone="critical">Échec</Badge>
+      <Badge tone="critical" key={`badge-${log.id}`}>Échec</Badge>
     ),
     log.latency_ms ? `${log.latency_ms}ms` : "N/A",
   ]);
@@ -125,45 +147,62 @@ export default function Dashboard() {
       <TitleBar title="Dashboard - Try-On StyleLab" />
       <Layout>
         <Layout.Section>
-          <BlockStack gap="500">
+          <BlockStack gap="600">
+            {/* Header avec titre */}
+            <BlockStack gap="200">
+              <Text as="h1" variant="heading2xl" fontWeight="bold">
+                Dashboard
+              </Text>
+              <Text variant="bodyMd" tone="subdued" as="p">
+                Gérez votre application Try-On et suivez les performances en temps réel
+              </Text>
+            </BlockStack>
+
             {error && (
-              <Banner tone="critical">
+              <Banner tone="critical" title="Erreur">
                 Erreur lors du chargement des données: {error}
               </Banner>
             )}
-            <Banner tone="info">
-              Gérez votre application Try-On depuis cette interface. Configurez
-              le widget, consultez les statistiques et l'historique des
-              utilisations.
-            </Banner>
 
-            {/* Statistiques */}
-            <Card>
-              <BlockStack gap="400">
-                <Text as="h2" variant="headingMd">
-                  Statistiques
-                </Text>
-                <InlineStack gap="400" align="space-around">
-                  {stats.map((stat) => (
-                    <BlockStack key={stat.label} gap="100" align="center">
-                      <Text variant="headingLg" as="p">
-                        {stat.value.toLocaleString("fr-FR")}
-                      </Text>
-                      <Text variant="bodyMd" tone="subdued" as="p">
-                        {stat.label}
-                      </Text>
+            {/* Statistiques - Grid moderne */}
+            <Layout>
+              {stats.map((stat, index) => (
+                <Layout.Section variant="oneQuarter" key={stat.label}>
+                  <Card>
+                    <BlockStack gap="300">
+                      <InlineStack align="space-between" blockAlign="start">
+                        <BlockStack gap="100">
+                          <Text variant="heading2xl" as="p" fontWeight="bold">
+                            {stat.value}
+                          </Text>
+                          <Text variant="bodySm" tone="subdued" as="p">
+                            {stat.label}
+                          </Text>
+                        </BlockStack>
+                        <Text variant="headingLg" as="span">
+                          {stat.icon}
+                        </Text>
+                      </InlineStack>
                     </BlockStack>
-                  ))}
-                </InlineStack>
-              </BlockStack>
-            </Card>
+                  </Card>
+                </Layout.Section>
+              ))}
+            </Layout>
 
-            {/* Configuration */}
+            <Divider />
+
+            {/* Configuration du Widget */}
             <Card>
-              <BlockStack gap="400">
-                <Text as="h2" variant="headingMd">
-                  Configuration du Widget
-                </Text>
+              <BlockStack gap="500">
+                <BlockStack gap="200">
+                  <Text as="h2" variant="headingLg" fontWeight="semibold">
+                    Configuration du Widget
+                  </Text>
+                  <Text variant="bodyMd" tone="subdued" as="p">
+                    Personnalisez l'apparence et le comportement du widget Try-On sur votre boutique
+                  </Text>
+                </BlockStack>
+
                 <form
                   onSubmit={(e) => {
                     e.preventDefault();
@@ -176,22 +215,27 @@ export default function Dashboard() {
                       name="widgetText"
                       defaultValue={shop?.widget_text || "Try It On Now ✨"}
                       autoComplete="off"
+                      helpText="Texte affiché sur le bouton du widget"
                     />
-                    <InlineStack gap="400">
-                      <TextField
-                        label="Couleur de fond"
-                        name="widgetBg"
-                        defaultValue={shop?.widget_bg || "#000000"}
-                        autoComplete="off"
-                        type="color"
-                      />
-                      <TextField
-                        label="Couleur du texte"
-                        name="widgetColor"
-                        defaultValue={shop?.widget_color || "#ffffff"}
-                        autoComplete="off"
-                        type="color"
-                      />
+                    <InlineStack gap="400" align="start">
+                      <Box minWidth="200px">
+                        <TextField
+                          label="Couleur de fond"
+                          name="widgetBg"
+                          defaultValue={shop?.widget_bg || "#000000"}
+                          autoComplete="off"
+                          type="color"
+                        />
+                      </Box>
+                      <Box minWidth="200px">
+                        <TextField
+                          label="Couleur du texte"
+                          name="widgetColor"
+                          defaultValue={shop?.widget_color || "#ffffff"}
+                          autoComplete="off"
+                          type="color"
+                        />
+                      </Box>
                     </InlineStack>
                     <TextField
                       label="Nombre max de try-ons par utilisateur/jour"
@@ -199,18 +243,21 @@ export default function Dashboard() {
                       type="number"
                       defaultValue={String(shop?.max_tries_per_user || 5)}
                       autoComplete="off"
+                      helpText="Limite quotidienne par utilisateur"
                     />
                     <TextField
                       label="Crédits disponibles"
                       name="credits"
                       type="number"
-                      defaultValue={String(shop?.credits || 0)}
+                      defaultValue={String(credits)}
                       autoComplete="off"
                       helpText="Ajoutez des crédits pour permettre plus de try-ons"
                     />
-                    <Button submit variant="primary">
-                      Enregistrer la configuration
-                    </Button>
+                    <InlineStack gap="300">
+                      <Button submit variant="primary" size="large">
+                        Enregistrer la configuration
+                      </Button>
+                    </InlineStack>
                   </BlockStack>
                 </form>
               </BlockStack>
@@ -219,9 +266,14 @@ export default function Dashboard() {
             {/* Historique récent */}
             <Card>
               <BlockStack gap="400">
-                <Text as="h2" variant="headingMd">
-                  Historique récent
-                </Text>
+                <BlockStack gap="200">
+                  <Text as="h2" variant="headingLg" fontWeight="semibold">
+                    Activité récente
+                  </Text>
+                  <Text variant="bodyMd" tone="subdued" as="p">
+                    Les 10 dernières tentatives d'essayage virtuel
+                  </Text>
+                </BlockStack>
                 {logRows.length > 0 ? (
                   <DataTable
                     columnContentTypes={["text", "text", "text", "text"]}
@@ -229,7 +281,11 @@ export default function Dashboard() {
                     rows={logRows}
                   />
                 ) : (
-                  <Text tone="subdued">Aucun historique disponible</Text>
+                  <Box padding="600">
+                    <Text tone="subdued" alignment="center" as="p">
+                      Aucun historique disponible pour le moment
+                    </Text>
+                  </Box>
                 )}
               </BlockStack>
             </Card>
@@ -241,46 +297,100 @@ export default function Dashboard() {
             {/* Top produits */}
             <Card>
               <BlockStack gap="400">
-                <Text as="h2" variant="headingMd">
-                  Top produits
-                </Text>
+                <BlockStack gap="200">
+                  <Text as="h2" variant="headingLg" fontWeight="semibold">
+                    Top produits
+                  </Text>
+                  <Text variant="bodyMd" tone="subdued" as="p">
+                    Produits les plus utilisés pour le try-on
+                  </Text>
+                </BlockStack>
                 {topProducts.length > 0 ? (
-                  <BlockStack gap="200">
+                  <BlockStack gap="300">
                     {topProducts.map((product: any, index: number) => (
-                      <InlineStack
+                      <Box
                         key={product.product_id}
-                        align="space-between"
+                        paddingBlockStart={index > 0 ? "300" : "0"}
+                        paddingBlockEnd="300"
+                        borderBlockStartWidth={index > 0 ? "025" : "0"}
                       >
-                        <Text as="p" variant="bodyMd">
-                          #{index + 1} {product.product_id}
-                        </Text>
-                        <Badge>{product.tryons} try-ons</Badge>
-                      </InlineStack>
+                        <InlineStack align="space-between" blockAlign="center">
+                          <BlockStack gap="050">
+                            <InlineStack gap="200" align="start">
+                              <Text as="span" variant="bodyMd" fontWeight="semibold">
+                                #{index + 1}
+                              </Text>
+                              <Text as="span" variant="bodyMd">
+                                {product.product_id}
+                              </Text>
+                            </InlineStack>
+                          </BlockStack>
+                          <Badge tone="info">{product.tryons} try-ons</Badge>
+                        </InlineStack>
+                      </Box>
                     ))}
                   </BlockStack>
                 ) : (
-                  <Text tone="subdued">Aucun produit pour le moment</Text>
+                  <Box padding="400">
+                    <Text tone="subdued" alignment="center" as="p">
+                      Aucun produit pour le moment
+                    </Text>
+                  </Box>
                 )}
               </BlockStack>
             </Card>
 
-            {/* Informations */}
+            {/* Informations du shop */}
             <Card>
               <BlockStack gap="400">
-                <Text as="h2" variant="headingMd">
-                  Informations
-                </Text>
                 <BlockStack gap="200">
-                  <Text variant="bodyMd" as="p">
-                    <strong>Shop:</strong> {shop?.domain}
-                  </Text>
-                  <Text variant="bodyMd" as="p">
-                    <strong>Dernière activité:</strong>{" "}
-                    {shop?.last_active_at
-                      ? new Date(shop.last_active_at).toLocaleString("fr-FR")
-                      : "Jamais"}
+                  <Text as="h2" variant="headingLg" fontWeight="semibold">
+                    Informations
                   </Text>
                 </BlockStack>
+                <BlockStack gap="300">
+                  <BlockStack gap="050">
+                    <Text variant="bodySm" tone="subdued" as="p">
+                      Boutique
+                    </Text>
+                    <Text variant="bodyMd" fontWeight="medium" as="p">
+                      {shop?.domain || "N/A"}
+                    </Text>
+                  </BlockStack>
+                  <Divider />
+                  <BlockStack gap="050">
+                    <Text variant="bodySm" tone="subdued" as="p">
+                      Dernière activité
+                    </Text>
+                    <Text variant="bodyMd" fontWeight="medium" as="p">
+                      {shop?.last_active_at
+                        ? new Date(shop.last_active_at).toLocaleString("fr-FR", {
+                            dateStyle: "medium",
+                            timeStyle: "short",
+                          })
+                        : "Jamais"}
+                    </Text>
+                  </BlockStack>
+                </BlockStack>
+              </BlockStack>
+            </Card>
+
+            {/* Call to Action */}
+            <Card background="bg-surface-info-subdued">
+              <BlockStack gap="300">
+                <Text variant="headingMd" fontWeight="semibold" as="h3">
+                  Besoin d'aide ?
+                </Text>
+                <Text variant="bodyMd" as="p">
+                  Consultez la documentation ou contactez le support pour optimiser votre utilisation du widget Try-On.
+                </Text>
+                <Button
+                  url="https://shopify.dev"
+                  target="_blank"
+                  variant="secondary"
+                >
+                  Documentation
+                </Button>
               </BlockStack>
             </Card>
           </BlockStack>

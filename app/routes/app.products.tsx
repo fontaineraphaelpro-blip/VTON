@@ -1,6 +1,6 @@
 import type { LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
-import { useLoaderData, useFetcher } from "@remix-run/react";
+import { useLoaderData } from "@remix-run/react";
 import {
   Page,
   Layout,
@@ -13,15 +13,16 @@ import {
   Banner,
   EmptyState,
   Thumbnail,
+  Badge,
+  Divider,
 } from "@shopify/polaris";
-import { TitleBar, useAppBridge } from "@shopify/app-bridge-react";
+import { TitleBar } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin, session } = await authenticate.admin(request);
 
   try {
-    // Fetch products from Shopify
     const response = await admin.graphql(
       `#graphql
         query getProducts {
@@ -55,13 +56,12 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 };
 
 export default function Products() {
-  const { products, shop, error } = useLoaderData<typeof loader>();
-  const shopify = useAppBridge();
+  const { products, error } = useLoaderData<typeof loader>();
 
   const productRows = products.map((product: any) => {
     const productId = product.id.replace("gid://shopify/Product/", "");
     return [
-      <InlineStack key={product.id} gap="200" align="start">
+      <InlineStack key={product.id} gap="300" align="start">
         {product.featuredImage && (
           <Thumbnail
             source={product.featuredImage.url}
@@ -69,12 +69,24 @@ export default function Products() {
             size="small"
           />
         )}
-        <Text variant="bodyMd" fontWeight="semibold" as="span">
-          {product.title}
-        </Text>
+        <BlockStack gap="050">
+          <Text variant="bodyMd" fontWeight="semibold" as="span">
+            {product.title}
+          </Text>
+          <Text variant="bodySm" tone="subdued" as="span">
+            /{product.handle}
+          </Text>
+        </BlockStack>
       </InlineStack>,
-      product.handle,
-      product.status,
+      <Badge
+        key={`status-${product.id}`}
+        tone={product.status === "ACTIVE" ? "success" : "warning"}
+      >
+        {product.status}
+      </Badge>,
+      <Text key={`inventory-${product.id}`} variant="bodyMd" as="span">
+        {product.totalInventory || 0}
+      </Text>,
       <Button
         key={`btn-${product.id}`}
         url={`shopify:admin/products/${productId}`}
@@ -88,26 +100,48 @@ export default function Products() {
 
   return (
     <Page>
-      <TitleBar title="Gestion des produits - Try-On StyleLab" />
+      <TitleBar title="Produits - Try-On StyleLab" />
       <Layout>
         <Layout.Section>
-          <BlockStack gap="500">
+          <BlockStack gap="600">
+            {/* Header */}
+            <BlockStack gap="200">
+              <Text as="h1" variant="heading2xl" fontWeight="bold">
+                Gestion des produits
+              </Text>
+              <Text variant="bodyMd" tone="subdued" as="p">
+                Liste de vos produits Shopify. Le widget Try-On sera automatiquement disponible sur les pages produits de votre boutique.
+              </Text>
+            </BlockStack>
+
             {error && (
-              <Banner tone="critical">
+              <Banner tone="critical" title="Erreur">
                 Erreur lors du chargement des produits: {error}
               </Banner>
             )}
 
+            {/* Produits */}
             <Card>
               <BlockStack gap="400">
-                <Text as="h2" variant="headingMd">
-                  Produits Shopify
-                </Text>
-                <Text variant="bodyMd" tone="subdued" as="p">
-                  Liste de vos produits Shopify. Le widget Try-On sera
-                  automatiquement disponible sur les pages produits de votre
-                  boutique.
-                </Text>
+                <InlineStack align="space-between" blockAlign="center">
+                  <BlockStack gap="200">
+                    <Text as="h2" variant="headingLg" fontWeight="semibold">
+                      Vos produits
+                    </Text>
+                    <Text variant="bodyMd" tone="subdued" as="p">
+                      {products.length} produit{products.length > 1 ? "s" : ""} disponible{products.length > 1 ? "s" : ""}
+                    </Text>
+                  </BlockStack>
+                  <Button
+                    url="shopify:admin/products/new"
+                    target="_blank"
+                    variant="primary"
+                  >
+                    Créer un produit
+                  </Button>
+                </InlineStack>
+
+                <Divider />
 
                 {products.length === 0 ? (
                   <EmptyState
@@ -119,12 +153,14 @@ export default function Products() {
                     }}
                     image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
                   >
-                    <p>Commencez par créer un produit dans Shopify.</p>
+                    <p>
+                      Commencez par créer un produit dans Shopify. Le widget Try-On sera automatiquement disponible une fois le produit créé.
+                    </p>
                   </EmptyState>
                 ) : (
                   <DataTable
-                    columnContentTypes={["text", "text", "text", "text"]}
-                    headings={["Produit", "Handle", "Statut", "Actions"]}
+                    columnContentTypes={["text", "text", "numeric", "text"]}
+                    headings={["Produit", "Statut", "Stock", "Actions"]}
                     rows={productRows}
                   />
                 )}
@@ -136,4 +172,3 @@ export default function Products() {
     </Page>
   );
 }
-
