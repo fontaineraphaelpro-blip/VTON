@@ -854,6 +854,8 @@ body::before {
   color: var(--light-text);
   cursor: pointer;
   font-family: 'Space Grotesk', sans-serif;
+  position: relative;
+  z-index: 1;
 }
 
 .vton-plan-button:hover {
