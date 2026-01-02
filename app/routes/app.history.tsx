@@ -107,9 +107,7 @@ export default function History() {
     <Page>
       <TitleBar title="Historique - VTON Magic" />
       <Layout>
-        <Layout.Section>
-          <div className="vton-page">
-            <BlockStack gap="600">
+        <Layout.Section>            <BlockStack gap="600">
             {/* App Header */}
             <AppHeader />
 
@@ -136,9 +134,7 @@ export default function History() {
                     <BlockStack gap="200">
                       <div className="vton-stat-label">Total de sessions</div>
                       <div className="vton-stat-value">{logs.length}</div>
-                    </BlockStack>
-                  </div>
-                </Layout.Section>
+                    </BlockStack>`n                </Layout.Section>
                 <Layout.Section variant="oneThird">
                   <div className="vton-stat-card">
                     <BlockStack gap="200">
@@ -148,9 +144,7 @@ export default function History() {
                           ? `${((successCount / logs.length) * 100).toFixed(1)}%`
                           : "0%"}
                       </div>
-                    </BlockStack>
-                  </div>
-                </Layout.Section>
+                    </BlockStack>`n                </Layout.Section>
                 <Layout.Section variant="oneThird">
                   <div className="vton-stat-card">
                     <BlockStack gap="200">
@@ -158,9 +152,7 @@ export default function History() {
                       <div className="vton-stat-value">
                         {avgLatency > 0 ? `${avgLatency}ms` : "-"}
                       </div>
-                    </BlockStack>
-                  </div>
-                </Layout.Section>
+                    </BlockStack>`n                </Layout.Section>
               </Layout>
             )}
 
