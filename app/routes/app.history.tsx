@@ -107,10 +107,7 @@ export default function History() {
       <TitleBar title="Historique - VTON Magic" />
       <Layout>
         <Layout.Section>
-          <BlockStack gap="600">
-            {/* App Header */}
-            <AppHeader />
-
+          <BlockStack gap="500">
             {/* Banner valeur */}
             <Banner tone="info">
               <Text variant="bodyMd" as="p">

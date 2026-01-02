@@ -102,9 +102,7 @@ export default function Products() {
       <TitleBar title="Produits - VTON Magic" />
       <Layout>
         <Layout.Section>
-          <BlockStack gap="600">
-            <AppHeader />
-
+          <BlockStack gap="500">
             {error && (
               <Banner tone="critical" title="Erreur">
                 Erreur lors du chargement des produits: {error}
