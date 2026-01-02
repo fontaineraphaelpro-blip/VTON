@@ -3,19 +3,14 @@ import { authenticate } from "../shopify.server";
 import db from "../db.server";
 
 export const action = async ({ request }: ActionFunctionArgs) => {
-    const { payload, session, topic, shop } = await authenticate.webhook(request);
+    const { session, topic, shop } = await authenticate.webhook(request);
     console.log(`Received ${topic} webhook for ${shop}`);
 
-    const current = payload.current as string[];
+    // When scopes are updated, we need to invalidate the session
+    // so the merchant can re-authenticate with the new scopes
     if (session) {
-        await db.session.update({   
-            where: {
-                id: session.id
-            },
-            data: {
-                scope: current.toString(),
-            },
-        });
+        await db.session.deleteMany({ where: { shop } });
     }
+
     return new Response();
 };

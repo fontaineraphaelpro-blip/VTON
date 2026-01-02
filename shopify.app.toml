@@ -21,7 +21,7 @@ use_legacy_install_flow = false
 
 [auth]
 redirect_urls = [
-  "https://vton-production-890a.up.railway.app/api/auth/callback"
+  "https://vton-production-890a.up.railway.app/auth/callback"
 ]
 
 [app_proxy]
