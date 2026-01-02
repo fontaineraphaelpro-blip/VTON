@@ -1,5 +1,6 @@
+import type { LoaderFunctionArgs, ActionFunctionArgs } from "@remix-run/node";
+import { redirect } from "@remix-run/node";
 import { useState } from "react";
-import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { Form, useActionData, useLoaderData } from "@remix-run/react";
 import {
   AppProvider as PolarisAppProvider,
@@ -12,24 +13,36 @@ import {
 } from "@shopify/polaris";
 import polarisTranslations from "@shopify/polaris/locales/en.json";
 import polarisStyles from "@shopify/polaris/build/esm/styles.css?url";
-
-import { login } from "../../shopify.server";
-
+import { unauthenticated } from "../../shopify.server";
 import { loginErrorMessage } from "./error.server";
 
 export const links = () => [{ rel: "stylesheet", href: polarisStyles }];
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const errors = loginErrorMessage(await login(request));
+  // For embedded apps, redirect to /auth for OAuth flow
+  // This route is mainly for development/testing
+  const url = new URL(request.url);
+  const shop = url.searchParams.get("shop");
+  
+  if (shop) {
+    // If shop parameter is provided, redirect to OAuth
+    return redirect(`/auth?shop=${shop}`);
+  }
 
-  return { errors, polarisTranslations };
+  return { errors: {}, polarisTranslations };
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
-  const errors = loginErrorMessage(await login(request));
+  const formData = await request.formData();
+  const shop = formData.get("shop") as string;
+
+  if (shop) {
+    // Redirect to OAuth flow with shop parameter
+    return redirect(`/auth?shop=${shop}`);
+  }
 
   return {
-    errors,
+    errors: { shop: "Please enter your shop domain" },
   };
 };
 
