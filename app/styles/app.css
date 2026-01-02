@@ -1,76 +1,85 @@
 /* ============================================
-   VTON Magic - Modern Design System 2024
+   VTON Magic - AI SaaS Design System 2024
+   Inspired by modern AI/Tech SaaS platforms
    ============================================ */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap');
 
 :root {
-  /* Modern Color Palette */
+  /* AI/Tech Color Palette - Dark & Vibrant */
   --primary: #6366F1;
   --primary-dark: #4F46E5;
   --primary-light: #818CF8;
   --primary-50: #EEF2FF;
   --primary-100: #E0E7FF;
+  --primary-glow: rgba(99, 102, 241, 0.4);
   
   --secondary: #8B5CF6;
   --secondary-light: #A78BFA;
+  --secondary-glow: rgba(139, 92, 246, 0.4);
   
   --accent: #EC4899;
   --accent-light: #F472B6;
+  --accent-glow: rgba(236, 72, 153, 0.4);
   
+  --ai-blue: #06B6D4;
+  --ai-cyan: #22D3EE;
+  --ai-purple: #A855F7;
+  
+  /* Status Colors */
   --success: #10B981;
   --success-light: #34D399;
-  --success-bg: #D1FAE5;
+  --success-bg: rgba(16, 185, 129, 0.1);
   
   --warning: #F59E0B;
   --warning-light: #FBBF24;
-  --warning-bg: #FEF3C7;
+  --warning-bg: rgba(245, 158, 11, 0.1);
   
   --error: #EF4444;
   --error-light: #F87171;
-  --error-bg: #FEE2E2;
+  --error-bg: rgba(239, 68, 68, 0.1);
   
   --info: #3B82F6;
   --info-light: #60A5FA;
-  --info-bg: #DBEAFE;
+  --info-bg: rgba(59, 130, 246, 0.1);
   
-  /* Neutral Colors */
-  --gray-50: #F9FAFB;
-  --gray-100: #F3F4F6;
-  --gray-200: #E5E7EB;
-  --gray-300: #D1D5DB;
-  --gray-400: #9CA3AF;
-  --gray-500: #6B7280;
-  --gray-600: #4B5563;
-  --gray-700: #374151;
-  --gray-800: #1F2937;
-  --gray-900: #111827;
+  /* Dark Theme Colors */
+  --dark-bg: #0A0E27;
+  --dark-surface: #131829;
+  --dark-surface-elevated: #1A1F35;
+  --dark-border: rgba(255, 255, 255, 0.1);
+  --dark-text: #E5E7EB;
+  --dark-text-secondary: #9CA3AF;
   
-  /* Backgrounds */
-  --bg-primary: #FFFFFF;
-  --bg-secondary: #F9FAFB;
-  --bg-tertiary: #F3F4F6;
-  --bg-dark: #0F172A;
+  /* Glassmorphism */
+  --glass-bg: rgba(255, 255, 255, 0.05);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
   
-  /* Text Colors */
-  --text-primary: #111827;
-  --text-secondary: #6B7280;
-  --text-tertiary: #9CA3AF;
-  --text-inverse: #FFFFFF;
+  /* Light Theme */
+  --light-bg: #FAFBFC;
+  --light-surface: #FFFFFF;
+  --light-surface-elevated: #FFFFFF;
+  --light-border: #E5E7EB;
+  --light-text: #111827;
+  --light-text-secondary: #6B7280;
   
-  /* Shadows */
+  /* Gradients - AI Style */
+  --gradient-primary: linear-gradient(135deg, #6366F1 0%, #8B5CF6 50%, #EC4899 100%);
+  --gradient-secondary: linear-gradient(135deg, #EC4899 0%, #F472B6 100%);
+  --gradient-ai: linear-gradient(135deg, #06B6D4 0%, #3B82F6 50%, #8B5CF6 100%);
+  --gradient-dark: linear-gradient(135deg, #0A0E27 0%, #1A1F35 100%);
+  --gradient-glow: radial-gradient(circle at 50% 50%, rgba(99, 102, 241, 0.3), transparent 70%);
+  
+  /* Shadows - Enhanced */
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
   --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
   --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-  
-  /* Gradients */
-  --gradient-primary: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%);
-  --gradient-secondary: linear-gradient(135deg, #EC4899 0%, #F472B6 100%);
-  --gradient-success: linear-gradient(135deg, #10B981 0%, #34D399 100%);
-  --gradient-dark: linear-gradient(135deg, #1F2937 0%, #111827 100%);
+  --shadow-glow: 0 0 20px rgba(99, 102, 241, 0.5);
+  --shadow-glow-lg: 0 0 40px rgba(99, 102, 241, 0.6);
   
   /* Spacing */
   --spacing-xs: 0.25rem;
@@ -82,21 +91,21 @@
   --spacing-3xl: 4rem;
   
   /* Border Radius */
-  --radius-sm: 0.375rem;
-  --radius-md: 0.5rem;
-  --radius-lg: 0.75rem;
-  --radius-xl: 1rem;
-  --radius-2xl: 1.5rem;
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
+  --radius-2xl: 2rem;
   --radius-full: 9999px;
   
   /* Transitions */
-  --transition-fast: 150ms ease-in-out;
-  --transition-base: 200ms ease-in-out;
-  --transition-slow: 300ms ease-in-out;
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-base: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 350ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* ============================================
-   Base Styles
+   Base Styles - AI SaaS Theme
    ============================================ */
 
 * {
@@ -109,19 +118,45 @@ body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: var(--bg-secondary);
-  color: var(--text-primary);
+  background: var(--light-bg);
+  color: var(--light-text);
   line-height: 1.6;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* Animated Background Gradient */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: 
+    radial-gradient(circle at 20% 50%, rgba(99, 102, 241, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 80% 80%, rgba(139, 92, 246, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 40% 20%, rgba(236, 72, 153, 0.1) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: 0;
+  animation: gradientShift 15s ease infinite;
+}
+
+@keyframes gradientShift {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.8; }
 }
 
 /* ============================================
-   Page Container
+   Page Container - Glassmorphism Style
    ============================================ */
 
 .vton-page-container {
   min-height: 100vh;
-  background: linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
+  background: transparent;
   padding: var(--spacing-xl);
+  position: relative;
+  z-index: 1;
 }
 
 .vton-page-content {
@@ -133,7 +168,7 @@ body {
 }
 
 /* ============================================
-   Modern Header
+   Modern Header - Glassmorphism
    ============================================ */
 
 .vton-header-simple {
@@ -143,10 +178,14 @@ body {
   justify-content: space-between;
   align-items: center;
   padding: var(--spacing-lg) var(--spacing-xl);
-  background: var(--bg-primary);
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
   border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-md);
-  backdrop-filter: blur(10px);
+  box-shadow: var(--shadow-lg);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  position: relative;
+  z-index: 10;
 }
 
 .vton-header-logo {
@@ -156,22 +195,42 @@ body {
 }
 
 .vton-logo-icon-blue {
-  width: 48px;
-  height: 48px;
+  width: 52px;
+  height: 52px;
   background: var(--gradient-primary);
   border-radius: var(--radius-lg);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--text-inverse);
+  color: var(--light-surface);
   font-weight: 700;
-  font-size: 1.5rem;
-  box-shadow: var(--shadow-lg);
-  transition: transform var(--transition-base);
+  font-size: 1.75rem;
+  box-shadow: var(--shadow-glow);
+  transition: all var(--transition-base);
+  position: relative;
+  overflow: hidden;
+}
+
+.vton-logo-icon-blue::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  transform: rotate(45deg);
+  animation: shine 3s infinite;
+}
+
+@keyframes shine {
+  0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+  100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
 }
 
 .vton-logo-icon-blue:hover {
-  transform: scale(1.05) rotate(5deg);
+  transform: scale(1.1) rotate(5deg);
+  box-shadow: var(--shadow-glow-lg);
 }
 
 .vton-header-title {
@@ -182,10 +241,12 @@ body {
   -webkit-text-fill-color: transparent;
   background-clip: text;
   letter-spacing: -0.02em;
+  font-family: 'Space Grotesk', sans-serif;
 }
 
 .vton-status-badge {
   background: var(--success-bg);
+  backdrop-filter: blur(10px);
   color: var(--success);
   padding: var(--spacing-sm) var(--spacing-lg);
   border-radius: var(--radius-full);
@@ -195,6 +256,7 @@ body {
   align-items: center;
   gap: var(--spacing-sm);
   box-shadow: var(--shadow-sm);
+  border: 1px solid rgba(16, 185, 129, 0.2);
 }
 
 .vton-status-dot-green {
@@ -203,20 +265,27 @@ body {
   background: var(--success);
   border-radius: 50%;
   animation: pulse 2s infinite;
+  box-shadow: 0 0 10px var(--success);
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+  0%, 100% { 
+    opacity: 1; 
+    transform: scale(1);
+  }
+  50% { 
+    opacity: 0.7; 
+    transform: scale(1.2);
+  }
 }
 
 /* ============================================
-   Stats Grid - Modern Cards
+   Stats Grid - Glassmorphism Cards
    ============================================ */
 
 .vton-stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: var(--spacing-lg);
 }
 
@@ -227,15 +296,17 @@ body {
 }
 
 .vton-stat-card-link:hover {
-  transform: translateY(-4px);
+  transform: translateY(-6px);
 }
 
 .vton-stat-card-white {
-  background: var(--bg-primary);
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
   border-radius: var(--radius-xl);
   padding: var(--spacing-xl);
-  box-shadow: var(--shadow-md);
-  border: 1px solid var(--gray-200);
+  box-shadow: var(--shadow-lg);
+  border: 1px solid rgba(255, 255, 255, 0.3);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -250,9 +321,10 @@ body {
   top: 0;
   left: 0;
   right: 0;
-  height: 4px;
+  height: 3px;
   background: var(--gradient-primary);
   transform: scaleX(0);
+  transform-origin: left;
   transition: transform var(--transition-base);
 }
 
@@ -261,8 +333,9 @@ body {
 }
 
 .vton-stat-card-link:hover .vton-stat-card-white {
-  box-shadow: var(--shadow-xl);
+  box-shadow: var(--shadow-2xl), var(--shadow-glow);
   border-color: var(--primary);
+  background: rgba(255, 255, 255, 0.9);
 }
 
 .vton-stat-content {
@@ -270,47 +343,55 @@ body {
 }
 
 .vton-stat-value-white {
-  font-size: 2.5rem;
-  font-weight: 800;
+  font-size: 2.75rem;
+  font-weight: 900;
   background: var(--gradient-primary);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
   line-height: 1;
   margin-bottom: var(--spacing-sm);
-  letter-spacing: -0.03em;
+  letter-spacing: -0.04em;
+  font-family: 'Space Grotesk', sans-serif;
 }
 
 .vton-stat-label-white {
   font-size: 0.875rem;
-  color: var(--text-secondary);
-  font-weight: 500;
+  color: var(--light-text-secondary);
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.1em;
 }
 
 .vton-stat-icon {
-  font-size: 3rem;
-  opacity: 0.8;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+  font-size: 3.5rem;
+  opacity: 0.9;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.15));
+  transition: transform var(--transition-base);
+}
+
+.vton-stat-card-link:hover .vton-stat-icon {
+  transform: scale(1.1) rotate(5deg);
 }
 
 /* ============================================
-   Action Cards
+   Action Cards - Modern Style
    ============================================ */
 
 .vton-actions-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: var(--spacing-lg);
 }
 
 .vton-action-card-white {
-  background: var(--bg-primary);
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
   border-radius: var(--radius-xl);
   padding: var(--spacing-xl);
-  box-shadow: var(--shadow-md);
-  border: 1px solid var(--gray-200);
+  box-shadow: var(--shadow-lg);
+  border: 1px solid rgba(255, 255, 255, 0.3);
   text-decoration: none;
   display: block;
   color: inherit;
@@ -326,8 +407,8 @@ body {
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-  transition: left var(--transition-slow);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+  transition: left 0.5s ease;
 }
 
 .vton-action-card-white:hover::after {
@@ -335,34 +416,38 @@ body {
 }
 
 .vton-action-card-white:hover {
-  box-shadow: var(--shadow-xl);
+  box-shadow: var(--shadow-2xl), var(--shadow-glow);
   border-color: var(--primary);
-  transform: translateY(-2px);
+  transform: translateY(-4px);
+  background: rgba(255, 255, 255, 0.85);
 }
 
 .vton-action-content h3 {
   margin: 0 0 var(--spacing-sm) 0;
-  font-size: 1.25rem;
+  font-size: 1.375rem;
   font-weight: 700;
-  color: var(--text-primary);
+  color: var(--light-text);
+  font-family: 'Space Grotesk', sans-serif;
 }
 
 .vton-action-content p {
   margin: 0;
-  font-size: 0.875rem;
-  color: var(--text-secondary);
+  font-size: 0.9375rem;
+  color: var(--light-text-secondary);
   line-height: 1.6;
 }
 
 /* ============================================
-   Credits Page - Modern Design
+   Credits Page - Premium AI Design
    ============================================ */
 
 .vton-credits-page {
   min-height: 100vh;
-  background: linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
+  background: transparent;
   padding: var(--spacing-xl);
   font-family: 'Inter', sans-serif;
+  position: relative;
+  z-index: 1;
 }
 
 .vton-credits-content {
@@ -373,27 +458,41 @@ body {
   gap: var(--spacing-xl);
 }
 
-/* Alert Banner */
+/* Alert Banner - Glassmorphism */
 .vton-alert-banner {
-  background: linear-gradient(135deg, var(--primary-50) 0%, var(--primary-100) 100%);
-  border: 1px solid var(--primary-100);
+  background: rgba(99, 102, 241, 0.1);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(99, 102, 241, 0.2);
   border-radius: var(--radius-xl);
   padding: var(--spacing-xl);
   display: flex;
   align-items: flex-start;
   gap: var(--spacing-lg);
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--shadow-lg);
+  position: relative;
+  overflow: hidden;
+}
+
+.vton-alert-banner::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--gradient-primary);
 }
 
 .vton-info-icon {
-  background: var(--bg-primary);
+  background: rgba(255, 255, 255, 0.9);
   padding: var(--spacing-sm);
   border-radius: 50%;
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-md);
   color: var(--primary);
-  font-size: 1.25rem;
-  width: 40px;
-  height: 40px;
+  font-size: 1.5rem;
+  width: 48px;
+  height: 48px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -402,15 +501,16 @@ body {
 
 .vton-alert-text {
   font-size: 0.9375rem;
-  color: var(--gray-700);
+  color: var(--light-text);
   margin: 0;
-  line-height: 1.6;
+  line-height: 1.7;
 }
 
 .vton-alert-underline {
   text-decoration: underline;
   text-decoration-color: var(--primary-light);
-  text-underline-offset: 2px;
+  text-underline-offset: 3px;
+  font-weight: 600;
 }
 
 .vton-alert-green {
@@ -433,7 +533,7 @@ body {
 
 @media (min-width: 1024px) {
   .vton-pricing-grid {
-    grid-template-columns: 320px repeat(5, 1fr);
+    grid-template-columns: 340px repeat(5, 1fr);
     gap: var(--spacing-lg);
   }
   
@@ -453,19 +553,20 @@ body {
   .vton-pricing-card:nth-child(6) { grid-column: 6; grid-row: 1; }
 }
 
-/* Credits Card */
+/* Credits Card - Premium Dark */
 .vton-credits-card-blue {
   background: var(--gradient-dark);
   border-radius: var(--radius-2xl);
   padding: var(--spacing-2xl);
-  color: var(--text-inverse);
+  color: var(--dark-text);
   display: flex;
   flex-direction: column;
   justify-content: center;
   position: relative;
   overflow: hidden;
-  box-shadow: var(--shadow-2xl);
-  min-height: 400px;
+  box-shadow: var(--shadow-2xl), var(--shadow-glow-lg);
+  min-height: 420px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .vton-credits-card-glow {
@@ -474,8 +575,9 @@ body {
   right: -50%;
   width: 200%;
   height: 200%;
-  background: radial-gradient(circle, rgba(99, 102, 241, 0.3) 0%, transparent 70%);
-  animation: rotate 20s linear infinite;
+  background: var(--gradient-glow);
+  animation: rotate 25s linear infinite;
+  opacity: 0.6;
 }
 
 @keyframes rotate {
@@ -492,20 +594,25 @@ body {
 .vton-credits-label-blue {
   font-size: 0.875rem;
   font-weight: 700;
-  letter-spacing: 0.1em;
-  color: rgba(255, 255, 255, 0.7);
+  letter-spacing: 0.15em;
+  color: rgba(255, 255, 255, 0.6);
   margin-bottom: var(--spacing-lg);
   text-transform: uppercase;
 }
 
 .vton-credits-amount-blue {
-  font-size: 5rem;
+  font-size: 5.5rem;
   font-weight: 900;
-  color: var(--text-inverse);
+  color: var(--dark-text);
   margin-bottom: var(--spacing-xl);
   line-height: 1;
   letter-spacing: -0.05em;
-  text-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  text-shadow: 0 0 40px rgba(99, 102, 241, 0.5);
+  font-family: 'Space Grotesk', sans-serif;
+  background: linear-gradient(135deg, #FFFFFF 0%, #E0E7FF 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .vton-credits-footer-blue {
@@ -513,55 +620,60 @@ body {
   align-items: center;
   justify-content: center;
   gap: var(--spacing-sm);
-  color: rgba(255, 255, 255, 0.8);
+  color: rgba(255, 255, 255, 0.7);
   font-size: 0.9375rem;
 }
 
 .vton-infinity {
-  font-size: 1.5rem;
+  font-size: 1.75rem;
+  filter: drop-shadow(0 0 10px rgba(99, 102, 241, 0.5));
 }
 
-/* Pricing Cards */
+/* Pricing Cards - Glassmorphism */
 .vton-pricing-card {
-  background: var(--bg-primary);
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
   border-radius: var(--radius-xl);
   padding: var(--spacing-xl);
-  box-shadow: var(--shadow-md);
-  border: 2px solid var(--gray-200);
+  box-shadow: var(--shadow-lg);
+  border: 2px solid rgba(255, 255, 255, 0.3);
   display: flex;
   flex-direction: column;
   align-items: center;
   position: relative;
   transition: all var(--transition-base);
-  min-height: 400px;
+  min-height: 420px;
 }
 
 .vton-pricing-card:hover {
-  box-shadow: var(--shadow-xl);
-  transform: translateY(-4px);
+  box-shadow: var(--shadow-2xl), var(--shadow-glow);
+  transform: translateY(-6px);
   border-color: var(--primary);
+  background: rgba(255, 255, 255, 0.85);
 }
 
 .vton-pricing-card-highlight {
-  box-shadow: var(--shadow-2xl);
+  box-shadow: var(--shadow-2xl), var(--shadow-glow-lg);
   border: 2px solid var(--primary);
-  background: linear-gradient(135deg, var(--bg-primary) 0%, var(--primary-50) 100%);
-  transform: scale(1.02);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(99, 102, 241, 0.1) 100%);
+  transform: scale(1.03);
   z-index: 10;
 }
 
 .vton-badge-best-seller {
   position: absolute;
-  top: -12px;
+  top: -14px;
   background: var(--gradient-secondary);
-  color: var(--text-inverse);
+  color: var(--light-surface);
   font-size: 0.75rem;
   font-weight: 700;
   padding: var(--spacing-sm) var(--spacing-lg);
   border-radius: var(--radius-full);
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--shadow-glow);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.1em;
+  font-family: 'Space Grotesk', sans-serif;
 }
 
 .vton-badge-save {
@@ -573,6 +685,7 @@ body {
   border-radius: var(--radius-md);
   margin-bottom: var(--spacing-sm);
   text-transform: uppercase;
+  border: 1px solid rgba(16, 185, 129, 0.2);
 }
 
 .vton-badge-roi {
@@ -584,6 +697,7 @@ body {
   border-radius: var(--radius-md);
   margin-bottom: var(--spacing-sm);
   text-transform: uppercase;
+  border: 1px solid rgba(245, 158, 11, 0.2);
 }
 
 .vton-badge-minimum {
@@ -593,11 +707,12 @@ body {
 }
 
 .vton-pack-name {
-  color: var(--text-secondary);
+  color: var(--light-text-secondary);
   font-weight: 600;
   margin-bottom: var(--spacing-sm);
-  font-size: 1.125rem;
+  font-size: 1.25rem;
   margin-top: var(--spacing-md);
+  font-family: 'Space Grotesk', sans-serif;
 }
 
 .vton-pack-name-highlight {
@@ -606,30 +721,31 @@ body {
 }
 
 .vton-pack-credits-number {
-  font-size: 3rem;
-  font-weight: 800;
+  font-size: 3.5rem;
+  font-weight: 900;
   background: var(--gradient-primary);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
   margin-bottom: var(--spacing-sm);
   line-height: 1;
+  font-family: 'Space Grotesk', sans-serif;
 }
 
 .vton-pack-credits-highlight {
-  font-size: 3.5rem;
+  font-size: 4rem;
 }
 
 .vton-pack-description-text {
   font-size: 0.875rem;
-  color: var(--text-secondary);
+  color: var(--light-text-secondary);
   text-align: center;
   margin-bottom: var(--spacing-md);
 }
 
 .vton-pack-price-per-credit {
   font-size: 0.875rem;
-  color: var(--text-secondary);
+  color: var(--light-text-secondary);
   text-align: center;
   margin-bottom: var(--spacing-lg);
   font-weight: 500;
@@ -640,7 +756,7 @@ body {
   color: var(--success);
   text-align: center;
   margin-bottom: var(--spacing-sm);
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .vton-pack-bottom {
@@ -649,18 +765,19 @@ body {
 }
 
 .vton-pack-price-number {
-  font-size: 1.5rem;
-  font-weight: 700;
+  font-size: 1.75rem;
+  font-weight: 800;
   text-align: center;
   background: var(--gradient-primary);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
   margin-bottom: var(--spacing-lg);
+  font-family: 'Space Grotesk', sans-serif;
 }
 
 .vton-pack-price-highlight {
-  font-size: 1.75rem;
+  font-size: 2rem;
 }
 
 .vton-pack-button {
@@ -669,11 +786,13 @@ body {
   border-radius: var(--radius-lg);
   font-weight: 600;
   font-size: 0.9375rem;
-  border: 2px solid var(--gray-300);
-  background: var(--bg-primary);
-  color: var(--text-primary);
+  border: 2px solid rgba(229, 231, 235, 0.8);
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+  color: var(--light-text);
   cursor: pointer;
   transition: all var(--transition-base);
+  font-family: 'Space Grotesk', sans-serif;
 }
 
 .vton-pack-button:hover {
@@ -681,21 +800,22 @@ body {
   color: var(--primary);
   transform: translateY(-2px);
   box-shadow: var(--shadow-md);
+  background: rgba(255, 255, 255, 0.95);
 }
 
 .vton-pack-button-primary {
   background: var(--gradient-primary);
   border: none;
-  color: var(--text-inverse);
+  color: var(--light-surface);
   font-weight: 700;
   padding: var(--spacing-md) var(--spacing-lg);
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--shadow-glow);
 }
 
 .vton-pack-button-primary:hover {
-  box-shadow: var(--shadow-xl);
+  box-shadow: var(--shadow-glow-lg);
   transform: translateY(-2px);
-  color: var(--text-inverse);
+  color: var(--light-surface);
 }
 
 .vton-pack-button:disabled {
@@ -706,22 +826,25 @@ body {
 
 /* Custom Pack */
 .vton-custom-pack {
-  background: var(--bg-primary);
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
   border-radius: var(--radius-xl);
-  border: 2px dashed var(--gray-300);
+  border: 2px dashed rgba(99, 102, 241, 0.3);
   padding: var(--spacing-xl);
   display: flex;
   flex-direction: column;
   gap: var(--spacing-lg);
   align-items: center;
   justify-content: space-between;
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--shadow-lg);
   transition: all var(--transition-base);
 }
 
 .vton-custom-pack:hover {
   border-color: var(--primary);
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--shadow-xl), var(--shadow-glow);
+  background: rgba(255, 255, 255, 0.85);
 }
 
 @media (min-width: 768px) {
@@ -737,23 +860,24 @@ body {
 }
 
 .vton-custom-icon {
-  background: var(--gray-100);
+  background: rgba(99, 102, 241, 0.1);
   padding: var(--spacing-md);
   border-radius: var(--radius-lg);
-  color: var(--text-secondary);
+  color: var(--primary);
   font-size: 2rem;
 }
 
 .vton-custom-title {
   font-weight: 700;
-  color: var(--text-primary);
-  font-size: 1.125rem;
+  color: var(--light-text);
+  font-size: 1.25rem;
   margin: 0 0 var(--spacing-xs) 0;
+  font-family: 'Space Grotesk', sans-serif;
 }
 
 .vton-custom-text {
-  font-size: 0.875rem;
-  color: var(--text-secondary);
+  font-size: 0.9375rem;
+  color: var(--light-text-secondary);
   margin: 0;
 }
 
@@ -769,26 +893,29 @@ body {
 }
 
 .vton-custom-input {
-  width: 100px;
-  border: 2px solid var(--gray-300);
+  width: 110px;
+  border: 2px solid rgba(229, 231, 235, 0.8);
   border-radius: var(--radius-lg);
   padding: var(--spacing-md);
   text-align: center;
   font-weight: 700;
-  color: var(--text-primary);
+  color: var(--light-text);
   font-size: 0.9375rem;
   transition: all var(--transition-base);
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
 }
 
 .vton-custom-input:focus {
   outline: none;
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px var(--primary-50);
+  box-shadow: 0 0 0 4px var(--primary-50);
+  background: rgba(255, 255, 255, 0.95);
 }
 
 .vton-custom-button {
   background: var(--gradient-dark);
-  color: var(--text-inverse);
+  color: var(--light-surface);
   padding: var(--spacing-md) var(--spacing-xl);
   border-radius: var(--radius-lg);
   font-size: 0.9375rem;
@@ -796,11 +923,12 @@ body {
   border: none;
   cursor: pointer;
   transition: all var(--transition-base);
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--shadow-lg);
+  font-family: 'Space Grotesk', sans-serif;
 }
 
 .vton-custom-button:hover {
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--shadow-xl), var(--shadow-glow);
   transform: translateY(-2px);
 }
 
@@ -824,20 +952,23 @@ body {
 .vton-metric-item {
   text-align: center;
   padding: var(--spacing-xl);
-  background: linear-gradient(135deg, var(--gray-50) 0%, var(--bg-primary) 100%);
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
   border-radius: var(--radius-xl);
-  border: 1px solid var(--gray-200);
+  border: 1px solid rgba(255, 255, 255, 0.3);
   transition: all var(--transition-base);
 }
 
 .vton-metric-item:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg), var(--shadow-glow);
+  background: rgba(255, 255, 255, 0.85);
 }
 
 .vton-metric-value {
-  font-size: 2.5rem;
-  font-weight: 800;
+  font-size: 2.75rem;
+  font-weight: 900;
   background: var(--gradient-primary);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -845,38 +976,42 @@ body {
   line-height: 1;
   margin-bottom: var(--spacing-sm);
   letter-spacing: -0.03em;
+  font-family: 'Space Grotesk', sans-serif;
 }
 
 .vton-metric-label {
   font-size: 0.875rem;
-  color: var(--text-secondary);
-  font-weight: 500;
+  color: var(--light-text-secondary);
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.1em;
 }
 
 /* ============================================
-   Legacy Stat Cards (for backward compatibility)
+   Legacy Stat Cards
    ============================================ */
 
 .vton-stat-card {
-  background: var(--bg-primary);
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
   border-radius: var(--radius-xl);
   padding: var(--spacing-xl);
-  box-shadow: var(--shadow-md);
-  border: 1px solid var(--gray-200);
+  box-shadow: var(--shadow-lg);
+  border: 1px solid rgba(255, 255, 255, 0.3);
   transition: all var(--transition-base);
 }
 
 .vton-stat-card:hover {
-  box-shadow: var(--shadow-xl);
+  box-shadow: var(--shadow-2xl), var(--shadow-glow);
   border-color: var(--primary);
-  transform: translateY(-2px);
+  transform: translateY(-4px);
+  background: rgba(255, 255, 255, 0.85);
 }
 
 .vton-stat-value {
-  font-size: 2.5rem;
-  font-weight: 800;
+  font-size: 2.75rem;
+  font-weight: 900;
   background: var(--gradient-primary);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -884,14 +1019,15 @@ body {
   line-height: 1;
   margin-bottom: var(--spacing-sm);
   letter-spacing: -0.03em;
+  font-family: 'Space Grotesk', sans-serif;
 }
 
 .vton-stat-label {
   font-size: 0.875rem;
-  color: var(--text-secondary);
-  font-weight: 500;
+  color: var(--light-text-secondary);
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.1em;
 }
 
 /* ============================================
@@ -915,35 +1051,35 @@ body {
   }
   
   .vton-pack-credits-highlight {
-    font-size: 2.5rem;
+    font-size: 3rem;
   }
   
   .vton-credits-amount-blue {
-    font-size: 3.5rem;
+    font-size: 4rem;
   }
   
   .vton-stat-value-white,
   .vton-stat-value {
-    font-size: 2rem;
+    font-size: 2.25rem;
   }
   
   .vton-stat-icon {
-    font-size: 2rem;
+    font-size: 2.5rem;
   }
   
   .vton-credits-card-blue {
     padding: var(--spacing-xl);
-    min-height: 300px;
+    min-height: 350px;
   }
   
   .vton-pricing-card {
     padding: var(--spacing-lg);
-    min-height: 350px;
+    min-height: 380px;
   }
 }
 
 /* ============================================
-   Polaris Overrides
+   Polaris Overrides - AI Style
    ============================================ */
 
 .Polaris-Page {
@@ -961,16 +1097,19 @@ body {
 }
 
 .Polaris-Card {
-  background: var(--bg-primary);
-  border: 1px solid var(--gray-200);
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--shadow-lg);
   padding: 0;
   transition: all var(--transition-base);
 }
 
 .Polaris-Card:hover {
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--shadow-xl), var(--shadow-glow);
+  background: rgba(255, 255, 255, 0.85);
 }
 
 .Polaris-Card__Section {
@@ -983,52 +1122,54 @@ body {
   font-size: 0.9375rem;
   padding: var(--spacing-md) var(--spacing-xl);
   transition: all var(--transition-base);
+  font-family: 'Space Grotesk', sans-serif;
 }
 
 .Polaris-Button--primary {
   background: var(--gradient-primary);
   border: none;
-  color: var(--text-inverse);
-  box-shadow: var(--shadow-md);
+  color: var(--light-surface);
+  box-shadow: var(--shadow-glow);
 }
 
 .Polaris-Button--primary:hover {
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--shadow-glow-lg);
   transform: translateY(-2px);
 }
 
 .Polaris-Button--secondary {
-  background: var(--bg-primary);
-  border-color: var(--gray-300);
-  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+  border-color: rgba(229, 231, 235, 0.8);
+  color: var(--light-text);
 }
 
 .Polaris-Button--secondary:hover {
-  background: var(--gray-50);
+  background: rgba(255, 255, 255, 0.95);
   border-color: var(--primary);
   color: var(--primary);
 }
 
 /* ============================================
-   Scrollbar Styling
+   Scrollbar Styling - AI Theme
    ============================================ */
 
 ::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 12px;
+  height: 12px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--gray-100);
-  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--gray-400);
-  border-radius: 5px;
+  background: var(--gradient-primary);
+  border-radius: 6px;
   transition: background var(--transition-base);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--primary);
+  background: var(--gradient-secondary);
 }
