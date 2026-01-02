@@ -51,6 +51,9 @@ export default function Home() {
   const credits = shop?.credits || 0;
   const totalTryons = shop?.total_tryons || 0;
   const totalAtc = shop?.total_atc || 0;
+  const conversionRate = totalTryons > 0
+    ? ((totalAtc / totalTryons) * 100).toFixed(1)
+    : "0.0";
 
   return (
     <Page>
@@ -58,19 +61,23 @@ export default function Home() {
       <Layout>
         <Layout.Section>
           <BlockStack gap="600">
-            {/* App Header */}
             <AppHeader />
 
-            {/* Banner valeur */}
             <Banner tone="info">
               <Text variant="bodyMd" as="p">
-                <strong>Stop losing money on returns.</strong> Letting customers test products 
+                <strong>Stop losing money on returns.</strong> Letting customers test products
                 virtually removes doubt. This slashes refunds and boosts conversion by{" "}
                 <strong>2.5x instantly</strong>.
               </Text>
             </Banner>
 
-            {/* Crédits Card */}
+            {error && (
+              <Banner tone="critical" title="Erreur">
+                {error}
+              </Banner>
+            )}
+
+            {/* Crédits et Statistiques */}
             <Layout>
               <Layout.Section variant="oneThird">
                 <div className="vton-credits-card">
@@ -86,55 +93,53 @@ export default function Home() {
               </Layout.Section>
 
               <Layout.Section>
-                <BlockStack gap="400">
-                  <InlineStack align="space-between" blockAlign="center">
-                    <BlockStack gap="100">
-                      <Text variant="headingLg" fontWeight="bold" as="h2">
-                        Quick Stats
-                      </Text>
-                    </BlockStack>
-                    <Button url="/app/credits" variant="primary" size="large">
-                      Buy Credits →
-                    </Button>
-                  </InlineStack>
+                <Card>
+                  <BlockStack gap="500">
+                    <InlineStack align="space-between" blockAlign="center">
+                      <BlockStack gap="100">
+                        <Text variant="headingLg" fontWeight="bold" as="h2">
+                          Quick Stats
+                        </Text>
+                      </BlockStack>
+                      <Button url="/app/credits" variant="primary" size="large">
+                        Buy Credits →
+                      </Button>
+                    </InlineStack>
 
-                  <Layout>
-                    <Layout.Section variant="oneThird">
-                      <div className="vton-stat-card">
-                        <BlockStack gap="200">
-                          <div className="vton-stat-value">{totalTryons}</div>
-                          <div className="vton-stat-label">Total Try-ons</div>
-                        </BlockStack>
-                      </div>
-                    </Layout.Section>
-                    <Layout.Section variant="oneThird">
-                      <div className="vton-stat-card">
-                        <BlockStack gap="200">
-                          <div className="vton-stat-value">{totalAtc}</div>
-                          <div className="vton-stat-label">Add to Cart</div>
-                        </BlockStack>
-                      </div>
-                    </Layout.Section>
-                    <Layout.Section variant="oneThird">
-                      <div className="vton-stat-card">
-                        <BlockStack gap="200">
-                          <div className="vton-stat-value">
-                            {totalTryons > 0 
-                              ? `${((totalAtc / totalTryons) * 100).toFixed(1)}%`
-                              : "0%"}
-                          </div>
-                          <div className="vton-stat-label">Conversion Rate</div>
-                        </BlockStack>
-                      </div>
-                    </Layout.Section>
-                  </Layout>
-                </BlockStack>
+                    <Layout>
+                      <Layout.Section variant="oneThird">
+                        <div className="vton-stat-card">
+                          <BlockStack gap="200">
+                            <div className="vton-stat-value">{totalTryons.toLocaleString("fr-FR")}</div>
+                            <div className="vton-stat-label">Total Try-ons</div>
+                          </BlockStack>
+                        </div>
+                      </Layout.Section>
+                      <Layout.Section variant="oneThird">
+                        <div className="vton-stat-card">
+                          <BlockStack gap="200">
+                            <div className="vton-stat-value">{totalAtc.toLocaleString("fr-FR")}</div>
+                            <div className="vton-stat-label">Add to Cart</div>
+                          </BlockStack>
+                        </div>
+                      </Layout.Section>
+                      <Layout.Section variant="oneThird">
+                        <div className="vton-stat-card">
+                          <BlockStack gap="200">
+                            <div className="vton-stat-value">{conversionRate}%</div>
+                            <div className="vton-stat-label">Conversion Rate</div>
+                          </BlockStack>
+                        </div>
+                      </Layout.Section>
+                    </Layout>
+                  </BlockStack>
+                </Card>
               </Layout.Section>
             </Layout>
 
             {/* Quick Actions */}
             <Card>
-              <BlockStack gap="400">
+              <BlockStack gap="500">
                 <Text variant="headingLg" fontWeight="bold" as="h2">
                   Quick Actions
                 </Text>
@@ -142,13 +147,15 @@ export default function Home() {
                   <Layout.Section variant="oneThird">
                     <Link to="/app/credits" style={{ textDecoration: "none", display: "block" }}>
                       <div className="vton-action-card">
-                        <BlockStack gap="300">
-                          <Text variant="headingLg" fontWeight="bold" as="h3" style={{ fontSize: "1.5rem" }}>
-                            💎 Buy Credits
-                          </Text>
-                          <Text variant="bodyMd" tone="subdued" as="p">
-                            Choose a pack and boost your sales with more try-ons
-                          </Text>
+                        <BlockStack gap="400">
+                          <BlockStack gap="200">
+                            <Text variant="headingLg" fontWeight="bold" as="h3" style={{ fontSize: "1.75rem" }}>
+                              💎 Buy Credits
+                            </Text>
+                            <Text variant="bodyMd" tone="subdued" as="p">
+                              Choose a pack and boost your sales with more try-ons
+                            </Text>
+                          </BlockStack>
                           <Box paddingBlockStart="200">
                             <Text variant="bodySm" fontWeight="semibold" tone="brand" as="span">
                               View Packs →
@@ -161,13 +168,15 @@ export default function Home() {
                   <Layout.Section variant="oneThird">
                     <Link to="/app/history" style={{ textDecoration: "none", display: "block" }}>
                       <div className="vton-action-card">
-                        <BlockStack gap="300">
-                          <Text variant="headingLg" fontWeight="bold" as="h3" style={{ fontSize: "1.5rem" }}>
-                            📊 View History
-                          </Text>
-                          <Text variant="bodyMd" tone="subdued" as="p">
-                            Check all try-on sessions and performance metrics
-                          </Text>
+                        <BlockStack gap="400">
+                          <BlockStack gap="200">
+                            <Text variant="headingLg" fontWeight="bold" as="h3" style={{ fontSize: "1.75rem" }}>
+                              📊 View History
+                            </Text>
+                            <Text variant="bodyMd" tone="subdued" as="p">
+                              Check all try-on sessions and performance metrics
+                            </Text>
+                          </BlockStack>
                           <Box paddingBlockStart="200">
                             <Text variant="bodySm" fontWeight="semibold" tone="brand" as="span">
                               See All →
@@ -178,15 +187,17 @@ export default function Home() {
                     </Link>
                   </Layout.Section>
                   <Layout.Section variant="oneThird">
-                    <Link to="/app/dashboard" style={{ textDecoration: "none", display: "block" }}>
+                    <Link to="/app/widget" style={{ textDecoration: "none", display: "block" }}>
                       <div className="vton-action-card">
-                        <BlockStack gap="300">
-                          <Text variant="headingLg" fontWeight="bold" as="h3" style={{ fontSize: "1.5rem" }}>
-                            ⚙️ Dashboard
-                          </Text>
-                          <Text variant="bodyMd" tone="subdued" as="p">
-                            Configure widget settings and manage your app
-                          </Text>
+                        <BlockStack gap="400">
+                          <BlockStack gap="200">
+                            <Text variant="headingLg" fontWeight="bold" as="h3" style={{ fontSize: "1.75rem" }}>
+                              ⚙️ Dashboard
+                            </Text>
+                            <Text variant="bodyMd" tone="subdued" as="p">
+                              Configure widget settings and manage your app
+                            </Text>
+                          </BlockStack>
                           <Box paddingBlockStart="200">
                             <Text variant="bodySm" fontWeight="semibold" tone="brand" as="span">
                               Configure →
@@ -199,57 +210,7 @@ export default function Home() {
                 </Layout>
               </BlockStack>
             </Card>
-
-            {/* Recent Activity */}
-            {recentLogs.length > 0 && (
-              <Card>
-                <BlockStack gap="400">
-                  <InlineStack align="space-between" blockAlign="center">
-                    <Text variant="headingLg" fontWeight="bold" as="h2">
-                      Recent Activity
-                    </Text>
-                    <Button url="/app/history" variant="plain">
-                      View All →
-                    </Button>
-                  </InlineStack>
-                  <BlockStack gap="200">
-                    {recentLogs.slice(0, 5).map((log: any, index: number) => (
-                      <Box
-                        key={log.id || index}
-                        padding="300"
-                        borderBlockStartWidth={index > 0 ? "025" : "0"}
-                      >
-                        <InlineStack align="space-between" blockAlign="center">
-                          <BlockStack gap="050">
-                            <Text variant="bodyMd" fontWeight="medium" as="p">
-                              {log.product_title || log.product_id || "Unknown Product"}
-                            </Text>
-                            <Text variant="bodySm" tone="subdued" as="p">
-                              {new Date(log.created_at).toLocaleString("fr-FR")}
-                            </Text>
-                          </BlockStack>
-                          <Box
-                            padding="150"
-                            background={log.success ? "bg-surface-success-subdued" : "bg-surface-critical-subdued"}
-                            borderRadius="200"
-                          >
-                            <Text 
-                              variant="bodySm" 
-                              fontWeight="semibold"
-                              tone={log.success ? "success" : "critical"}
-                              as="span"
-                            >
-                              {log.success ? "✓ Success" : "✗ Failed"}
-                            </Text>
-                          </Box>
-                        </InlineStack>
-                      </Box>
-                    ))}
-                  </BlockStack>
-                </BlockStack>
-              </Card>
-            )}
-            </BlockStack>
+          </BlockStack>
         </Layout.Section>
       </Layout>
     </Page>
