@@ -296,7 +296,15 @@ export default function Widget() {
                       <TextField
                         label="Background Color"
                         value={widgetBg}
-                        onChange={setWidgetBg}
+                        onChange={(value) => {
+                          // #region agent log
+                          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.widget.tsx:299',message:'widgetBg onChange',data:{oldValue:widgetBg,newValue:value},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'G'})}).catch(()=>{});
+                          // #endregion
+                          setWidgetBg(value);
+                          // #region agent log
+                          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.widget.tsx:301',message:'widgetBg state updated',data:{newValue:value},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'G'})}).catch(()=>{});
+                          // #endregion
+                        }}
                         autoComplete="off"
                         type="color"
                         helpText="Button background color."
@@ -306,7 +314,15 @@ export default function Widget() {
                       <TextField
                         label="Text Color"
                         value={widgetColor}
-                        onChange={setWidgetColor}
+                        onChange={(value) => {
+                          // #region agent log
+                          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.widget.tsx:309',message:'widgetColor onChange',data:{oldValue:widgetColor,newValue:value},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'G'})}).catch(()=>{});
+                          // #endregion
+                          setWidgetColor(value);
+                          // #region agent log
+                          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.widget.tsx:311',message:'widgetColor state updated',data:{newValue:value},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'G'})}).catch(()=>{});
+                          // #endregion
+                        }}
                         autoComplete="off"
                         type="color"
                         helpText="Button text color."
@@ -316,7 +332,12 @@ export default function Widget() {
                   <TextField
                     label="Max try-ons per user/day"
                     value={maxTriesPerUser}
-                    onChange={setMaxTriesPerUser}
+                    onChange={(value) => {
+                      // #region agent log
+                      fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.widget.tsx:325',message:'maxTriesPerUser onChange',data:{oldValue:maxTriesPerUser,newValue:value},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+                      // #endregion
+                      setMaxTriesPerUser(value);
+                    }}
                     type="number"
                     min={1}
                     autoComplete="off"
