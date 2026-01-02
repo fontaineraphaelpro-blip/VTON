@@ -29,6 +29,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const shop = session.shop;
 
   try {
+    // Ensure tables exist
+    await ensureTables();
+
     const shopData = await getShop(shop);
     const recentLogs = await getTryonLogs(shop, {}).catch(() => []);
     const topProducts = await getTopProducts(shop, 5).catch(() => []);
