@@ -167,20 +167,23 @@ export default function Credits() {
         </header>
 
         <div className="vton-credits-content">
-          {/* Current Credits Display */}
-          <div className="vton-credits-display">
-            <div className="vton-credits-label">Your Credits</div>
-            <div className="vton-credits-amount">
-              {currentCredits.toLocaleString("en-US")}
+          {/* Top Row: Credits + Value Prop */}
+          <div className="vton-credits-top">
+            {/* Current Credits Display */}
+            <div className="vton-credits-display">
+              <div className="vton-credits-label">Your Credits</div>
+              <div className="vton-credits-amount">
+                {currentCredits.toLocaleString("en-US")}
+              </div>
+              <div className="vton-credits-subtitle">Credits never expire</div>
             </div>
-            <div className="vton-credits-subtitle">Credits never expire</div>
-          </div>
 
-          {/* Value Proposition */}
-          <div className="vton-value-prop">
-            <div className="vton-value-icon">✨</div>
-            <div className="vton-value-text">
-              <strong>Reduce returns by 2.5x</strong> and boost conversions with virtual try-on
+            {/* Value Proposition */}
+            <div className="vton-value-prop">
+              <div className="vton-value-icon">✨</div>
+              <div className="vton-value-text">
+                <strong>Reduce returns by 2.5x</strong> and boost conversions with virtual try-on
+              </div>
             </div>
           </div>
 

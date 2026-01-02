@@ -610,24 +610,35 @@ body::before {
 }
 
 .vton-credits-content {
-  display: grid;
-  grid-template-columns: 300px 1fr;
+  display: flex;
+  flex-direction: column;
   gap: var(--spacing-xl);
-  align-items: start;
   max-width: 1400px;
   margin: 0 auto;
 }
 
+/* Credits Display + Value Prop Row */
+.vton-credits-top {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: var(--spacing-xl);
+  align-items: start;
+}
+
 @media (max-width: 1024px) {
-  .vton-credits-content {
+  .vton-credits-top {
     grid-template-columns: 1fr;
   }
 }
 
 /* Credits Display - Simple & Clear */
 .vton-credits-display {
+  background: rgba(255, 255, 255, 1);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-xl);
+  box-shadow: var(--shadow-md);
+  border: 1px solid rgba(229, 231, 235, 0.8);
   text-align: center;
-  padding: var(--spacing-2xl) 0;
   width: 100%;
 }
 
@@ -662,14 +673,13 @@ body::before {
 .vton-value-prop {
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: var(--spacing-md);
   padding: var(--spacing-lg) var(--spacing-xl);
   background: rgba(99, 102, 241, 0.1);
   border-radius: var(--radius-lg);
   border: 1px solid rgba(99, 102, 241, 0.2);
   width: 100%;
-  max-width: 600px;
+  height: 100%;
 }
 
 .vton-value-icon {
@@ -694,6 +704,7 @@ body::before {
   grid-template-columns: repeat(3, 1fr);
   gap: var(--spacing-lg);
   width: 100%;
+  margin-bottom: var(--spacing-xl);
 }
 
 @media (max-width: 1024px) {
@@ -867,8 +878,6 @@ body::before {
 /* Custom Pack Section - Horizontal */
 .vton-custom-section {
   width: 100%;
-  max-width: 1000px;
-  margin-top: var(--spacing-xl);
   background: rgba(255, 255, 255, 1);
   border-radius: var(--radius-lg);
   padding: var(--spacing-xl);
