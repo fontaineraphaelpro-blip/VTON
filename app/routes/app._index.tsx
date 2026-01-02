@@ -10,7 +10,6 @@ import {
   Text,
   Button,
   Banner,
-  Box,
   Divider,
 } from "@shopify/polaris";
 import { TitleBar } from "@shopify/app-bridge-react";
@@ -207,11 +206,11 @@ export default function Home() {
                           </Text>
                         </InlineStack>
                       ))}
-                      <Box paddingBlockStart="200">
+                      <div style={{ paddingTop: "0.5rem" }}>
                         <Button url="/app/products" variant="plain">
                           Voir tous les produits →
                         </Button>
-                      </Box>
+                      </div>
                     </BlockStack>
                   ) : (
                     <Text variant="bodyMd" tone="subdued" as="p">
