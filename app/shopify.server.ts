@@ -5,9 +5,11 @@ import { prisma } from "./db.server";
 export const shopify = shopifyApp({
   apiKey: process.env.SHOPIFY_API_KEY!,
   apiSecretKey: process.env.SHOPIFY_API_SECRET!,
+  scopes: process.env.SCOPES?.split(",")!,
   appUrl: process.env.SHOPIFY_APP_URL!,
-  scopes: process.env.SCOPES?.split(","),
+  authPathPrefix: "/auth",
   sessionStorage: new PrismaSessionStorage(prisma),
+  distribution: "AppStore",
 });
 
 export default shopify;
