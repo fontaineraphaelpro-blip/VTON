@@ -16,7 +16,6 @@ import { TitleBar } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
 import { getShop, getTryonLogs, getTopProducts } from "../lib/services/db.service";
 import { ensureTables } from "../lib/db-init.server";
-import { AppHeader } from "../components/AppHeader";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
@@ -26,7 +25,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     await ensureTables();
 
     const shopData = await getShop(shop);
-    const recentLogs = await getTryonLogs(shop, {}).catch(() => []);
+    const recentLogs = await getTryonLogs(shop, { limit: 10, offset: 0 }).catch(() => []);
     const topProducts = await getTopProducts(shop, 5).catch(() => []);
 
     return json({
@@ -55,164 +54,119 @@ export default function Home() {
     ? ((totalAtc / totalTryons) * 100).toFixed(1)
     : "0.0";
 
+  const stats = [
+    { 
+      label: "Crédits disponibles", 
+      value: credits.toLocaleString("fr-FR"), 
+      icon: "💎",
+      link: "/app/credits"
+    },
+    { 
+      label: "Total try-ons", 
+      value: totalTryons.toLocaleString("fr-FR"), 
+      icon: "✨",
+      link: "/app/history"
+    },
+    { 
+      label: "Add to Cart", 
+      value: totalAtc.toLocaleString("fr-FR"), 
+      icon: "🛒",
+      link: "/app/history"
+    },
+    { 
+      label: "Taux de conversion", 
+      value: `${conversionRate}%`, 
+      icon: "📈",
+      link: "/app/dashboard"
+    },
+  ];
+
   return (
     <Page>
       <TitleBar title="Accueil - VTON Magic" />
-      <Layout>
-        <Layout.Section>
-          <BlockStack gap="600">
-            <AppHeader />
+      <BlockStack gap="500">
+        {error && (
+          <Banner tone="critical" title="Erreur">
+            {error}
+          </Banner>
+        )}
 
-            <Banner tone="info">
-              <Text variant="bodyMd" as="p">
-                <strong>Stop losing money on returns.</strong> Letting customers test products
-                virtually removes doubt. This slashes refunds and boosts conversion by{" "}
-                <strong>2.5x instantly</strong>.
-              </Text>
-            </Banner>
+        {/* Stats Grid */}
+        <Layout>
+          {stats.map((stat) => (
+            <Layout.Section variant="oneQuarter" key={stat.label}>
+              <Link to={stat.link} style={{ textDecoration: "none", display: "block" }}>
+                <div className="vton-stat-card">
+                  <BlockStack gap="200">
+                    <InlineStack align="space-between" blockAlign="start">
+                      <BlockStack gap="100">
+                        <div className="vton-stat-value">{stat.value}</div>
+                        <div className="vton-stat-label">{stat.label}</div>
+                      </BlockStack>
+                      <Text variant="headingMd" as="span">
+                        {stat.icon}
+                      </Text>
+                    </InlineStack>
+                  </BlockStack>
+                </div>
+              </Link>
+            </Layout.Section>
+          ))}
+        </Layout>
 
-            {error && (
-              <Banner tone="critical" title="Erreur">
-                {error}
-              </Banner>
-            )}
-
-            {/* Crédits et Statistiques */}
+        {/* Quick Actions */}
+        <Card>
+          <BlockStack gap="400">
+            <Text variant="headingLg" fontWeight="semibold" as="h2">
+              Actions rapides
+            </Text>
             <Layout>
               <Layout.Section variant="oneThird">
-                <div className="vton-credits-card">
-                  <div className="vton-credits-label">REMAINING CREDITS</div>
-                  <div className="vton-credits-amount">
-                    {credits.toLocaleString("fr-FR")}
+                <Link to="/app/credits" style={{ textDecoration: "none", display: "block" }}>
+                  <div className="vton-action-card">
+                    <BlockStack gap="300">
+                      <Text variant="headingMd" fontWeight="semibold" as="h3">
+                        💎 Acheter des crédits
+                      </Text>
+                      <Text variant="bodyMd" tone="subdued" as="p">
+                        Choisissez un pack et boostez vos ventes avec plus de try-ons
+                      </Text>
+                    </BlockStack>
                   </div>
-                  <div className="vton-credits-footer">
-                    <span>∞</span>
-                    <span>Credits never expire</span>
-                  </div>
-                </div>
+                </Link>
               </Layout.Section>
-
-              <Layout.Section variant="twoThirds">
-                <Card>
-                  <BlockStack gap="500">
-                    <InlineStack align="space-between" blockAlign="center">
-                      <BlockStack gap="100">
-                        <Text variant="headingLg" fontWeight="bold" as="h2">
-                          Quick Stats
-                        </Text>
-                      </BlockStack>
-                      <Button url="/app/credits" variant="primary" size="large">
-                        Buy Credits →
-                      </Button>
-                    </InlineStack>
-
-                    <Layout>
-                      <Layout.Section variant="oneThird">
-                        <div className="vton-stat-card">
-                          <BlockStack gap="200">
-                            <div className="vton-stat-value">{totalTryons.toLocaleString("fr-FR")}</div>
-                            <div className="vton-stat-label">Total Try-ons</div>
-                          </BlockStack>
-                        </div>
-                      </Layout.Section>
-                      <Layout.Section variant="oneThird">
-                        <div className="vton-stat-card">
-                          <BlockStack gap="200">
-                            <div className="vton-stat-value">{totalAtc.toLocaleString("fr-FR")}</div>
-                            <div className="vton-stat-label">Add to Cart</div>
-                          </BlockStack>
-                        </div>
-                      </Layout.Section>
-                      <Layout.Section variant="oneThird">
-                        <div className="vton-stat-card">
-                          <BlockStack gap="200">
-                            <div className="vton-stat-value">{conversionRate}%</div>
-                            <div className="vton-stat-label">Conversion Rate</div>
-                          </BlockStack>
-                        </div>
-                      </Layout.Section>
-                    </Layout>
-                  </BlockStack>
-                </Card>
+              <Layout.Section variant="oneThird">
+                <Link to="/app/history" style={{ textDecoration: "none", display: "block" }}>
+                  <div className="vton-action-card">
+                    <BlockStack gap="300">
+                      <Text variant="headingMd" fontWeight="semibold" as="h3">
+                        📊 Voir l'historique
+                      </Text>
+                      <Text variant="bodyMd" tone="subdued" as="p">
+                        Consultez toutes les sessions de try-on et les métriques de performance
+                      </Text>
+                    </BlockStack>
+                  </div>
+                </Link>
+              </Layout.Section>
+              <Layout.Section variant="oneThird">
+                <Link to="/app/widget" style={{ textDecoration: "none", display: "block" }}>
+                  <div className="vton-action-card">
+                    <BlockStack gap="300">
+                      <Text variant="headingMd" fontWeight="semibold" as="h3">
+                        ⚙️ Configurer le widget
+                      </Text>
+                      <Text variant="bodyMd" tone="subdued" as="p">
+                        Personnalisez les paramètres du widget et gérez votre application
+                      </Text>
+                    </BlockStack>
+                  </div>
+                </Link>
               </Layout.Section>
             </Layout>
-
-            {/* Quick Actions */}
-            <Card>
-              <BlockStack gap="500">
-                <Text variant="headingLg" fontWeight="bold" as="h2">
-                  Quick Actions
-                </Text>
-                <Layout>
-                  <Layout.Section variant="oneThird">
-                    <Link to="/app/credits" style={{ textDecoration: "none", display: "block" }}>
-                      <div className="vton-action-card">
-                        <BlockStack gap="400">
-                          <BlockStack gap="200">
-                            <Text variant="headingLg" fontWeight="bold" as="h3" style={{ fontSize: "1.75rem" }}>
-                              💎 Buy Credits
-                            </Text>
-                            <Text variant="bodyMd" tone="subdued" as="p">
-                              Choose a pack and boost your sales with more try-ons
-                            </Text>
-                          </BlockStack>
-                          <Box paddingBlockStart="200">
-                            <Text variant="bodySm" fontWeight="semibold" tone="brand" as="span">
-                              View Packs →
-                            </Text>
-                          </Box>
-                        </BlockStack>
-                      </div>
-                    </Link>
-                  </Layout.Section>
-                  <Layout.Section variant="oneThird">
-                    <Link to="/app/history" style={{ textDecoration: "none", display: "block" }}>
-                      <div className="vton-action-card">
-                        <BlockStack gap="400">
-                          <BlockStack gap="200">
-                            <Text variant="headingLg" fontWeight="bold" as="h3" style={{ fontSize: "1.75rem" }}>
-                              📊 View History
-                            </Text>
-                            <Text variant="bodyMd" tone="subdued" as="p">
-                              Check all try-on sessions and performance metrics
-                            </Text>
-                          </BlockStack>
-                          <Box paddingBlockStart="200">
-                            <Text variant="bodySm" fontWeight="semibold" tone="brand" as="span">
-                              See All →
-                            </Text>
-                          </Box>
-                        </BlockStack>
-                      </div>
-                    </Link>
-                  </Layout.Section>
-                  <Layout.Section variant="oneThird">
-                    <Link to="/app/widget" style={{ textDecoration: "none", display: "block" }}>
-                      <div className="vton-action-card">
-                        <BlockStack gap="400">
-                          <BlockStack gap="200">
-                            <Text variant="headingLg" fontWeight="bold" as="h3" style={{ fontSize: "1.75rem" }}>
-                              ⚙️ Dashboard
-                            </Text>
-                            <Text variant="bodyMd" tone="subdued" as="p">
-                              Configure widget settings and manage your app
-                            </Text>
-                          </BlockStack>
-                          <Box paddingBlockStart="200">
-                            <Text variant="bodySm" fontWeight="semibold" tone="brand" as="span">
-                              Configure →
-                            </Text>
-                          </Box>
-                        </BlockStack>
-                      </div>
-                    </Link>
-                  </Layout.Section>
-                </Layout>
-              </BlockStack>
-            </Card>
           </BlockStack>
-        </Layout.Section>
-      </Layout>
+        </Card>
+      </BlockStack>
     </Page>
   );
 }
