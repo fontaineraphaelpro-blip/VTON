@@ -92,20 +92,20 @@ export default function Products() {
         target="_blank"
         variant="plain"
       >
-        Voir
+        View
       </Button>,
     ];
   });
 
   return (
     <Page>
-      <TitleBar title="Produits - VTON Magic" />
+      <TitleBar title="Products - VTON Magic" />
       <Layout>
         <Layout.Section>
-          <BlockStack gap="500">
+          <BlockStack gap="600">
             {error && (
-              <Banner tone="critical" title="Erreur">
-                Erreur lors du chargement des produits: {error}
+              <Banner tone="critical" title="Error">
+                Error loading products: {error}
               </Banner>
             )}
 
@@ -114,10 +114,10 @@ export default function Products() {
                 <InlineStack align="space-between" blockAlign="center">
                   <BlockStack gap="200">
                     <Text as="h2" variant="headingLg" fontWeight="semibold">
-                      Vos produits
+                      Your Products
                     </Text>
                     <Text variant="bodyMd" tone="subdued" as="p">
-                      {products.length} produit{products.length > 1 ? "s" : ""} disponible{products.length > 1 ? "s" : ""} dans votre boutique
+                      {products.length} product{products.length > 1 ? "s" : ""} available
                     </Text>
                   </BlockStack>
                   <Button
@@ -125,7 +125,7 @@ export default function Products() {
                     target="_blank"
                     variant="primary"
                   >
-                    Créer un produit
+                    Create Product
                   </Button>
                 </InlineStack>
 
@@ -133,22 +133,22 @@ export default function Products() {
 
                 {products.length === 0 ? (
                   <EmptyState
-                    heading="Aucun produit"
+                    heading="No Products"
                     action={{
-                      content: "Créer un produit",
+                      content: "Create Product",
                       url: "shopify:admin/products/new",
                       target: "_blank",
                     }}
                     image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
                   >
                     <p>
-                      Commencez par créer un produit dans Shopify. Le widget Try-On sera automatiquement disponible sur chaque page produit.
+                      Start by creating a product in Shopify. The Try-On widget will be automatically available once the product is created.
                     </p>
                   </EmptyState>
                 ) : (
                   <DataTable
                     columnContentTypes={["text", "text", "numeric", "text"]}
-                    headings={["Produit", "Statut", "Stock", "Actions"]}
+                    headings={["Product", "Status", "Inventory", "Actions"]}
                     rows={productRows}
                   />
                 )}

@@ -19,7 +19,7 @@ import { authenticate } from "../shopify.server";
 import { getShop, upsertShop } from "../lib/services/db.service";
 import { ensureTables } from "../lib/db-init.server";
 
-// Packs de crédits optimisés pour maximiser la conversion et le profit
+// Credit packs optimized to maximize conversion and profit
 const CREDIT_PACKS = [
   {
     id: "discovery",
@@ -27,7 +27,7 @@ const CREDIT_PACKS = [
     credits: 10,
     price: 4.99,
     pricePerCredit: 0.499,
-    description: "Parfait pour tester",
+    description: "Perfect for testing",
     badge: null,
     highlight: false,
     savings: null,
@@ -38,7 +38,7 @@ const CREDIT_PACKS = [
     credits: 25,
     price: 9.99,
     pricePerCredit: 0.40,
-    description: "Idéal pour commencer",
+    description: "Ideal for getting started",
     badge: null,
     highlight: false,
     savings: "20%",
@@ -49,7 +49,7 @@ const CREDIT_PACKS = [
     credits: 50,
     price: 17.99,
     pricePerCredit: 0.36,
-    description: "Le plus populaire",
+    description: "Most popular",
     badge: "BEST SELLER",
     savePercent: 28,
     highlight: true,
@@ -61,7 +61,7 @@ const CREDIT_PACKS = [
     credits: 100,
     price: 29.99,
     pricePerCredit: 0.30,
-    description: "Pour les boutiques actives",
+    description: "For active stores",
     badge: "BEST ROI",
     highlight: false,
     savings: "40%",
@@ -72,8 +72,8 @@ const CREDIT_PACKS = [
     credits: 250,
     price: 62.50,
     pricePerCredit: 0.25,
-    description: "Maximum d'économies",
-    badge: "TARIF MINIMUM",
+    description: "Maximum savings",
+    badge: "LOWEST RATE",
     highlight: false,
     savings: "50%",
   },
@@ -157,7 +157,7 @@ export default function Credits() {
 
   return (
     <Page>
-      <TitleBar title="Crédits - VTON Magic" />
+      <TitleBar title="Credits - VTON Magic" />
       <div className="vton-credits-page">
         {/* Header Simple */}
         <header className="vton-header-simple">
@@ -195,7 +195,7 @@ export default function Credits() {
                 
                 {/* Credits amount - FIXED */}
                 <div className="vton-credits-amount-blue">
-                  {currentCredits.toLocaleString("fr-FR")}
+                  {currentCredits.toLocaleString("en-US")}
                 </div>
 
                 <div className="vton-credits-footer-blue">
@@ -221,7 +221,7 @@ export default function Credits() {
                   </div>
                 )}
                 {pack.badge && !pack.highlight && (
-                  <div className={`vton-badge-roi ${pack.badge === "TARIF MINIMUM" ? "vton-badge-minimum" : ""}`}>
+                  <div className={`vton-badge-roi ${pack.badge === "LOWEST RATE" ? "vton-badge-minimum" : ""}`}>
                     {pack.badge}
                   </div>
                 )}
@@ -234,14 +234,14 @@ export default function Credits() {
                 </div>
                 {pack.savings && (
                   <div className="vton-pack-savings">
-                    Économisez {pack.savings}
+                    Save {pack.savings}
                   </div>
                 )}
                 <p className="vton-pack-description-text">
                   {pack.description}
                 </p>
                 <div className="vton-pack-price-per-credit">
-                  {pack.pricePerCredit.toFixed(3)}€ par crédit
+                  {pack.pricePerCredit.toFixed(3)}€ per credit
                 </div>
 
                 <div className="vton-pack-bottom">
@@ -301,15 +301,15 @@ export default function Credits() {
         </div>
 
         {error && (
-          <Banner tone="critical" title="Erreur">
-            Erreur lors du chargement des données: {error}
+          <Banner tone="critical" title="Error">
+            Error loading data: {error}
           </Banner>
         )}
 
         {fetcher.data?.success && (
-          <Banner tone="success" title="Achat réussi">
-            Pack "{fetcher.data.pack}" acheté avec succès ! {fetcher.data.creditsAdded} crédits
-            ont été ajoutés à votre compte.
+          <Banner tone="success" title="Purchase successful">
+            Pack "{fetcher.data.pack}" purchased successfully! {fetcher.data.creditsAdded} credits
+            have been added to your account.
           </Banner>
         )}
       </div>

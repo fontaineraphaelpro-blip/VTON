@@ -52,7 +52,7 @@ export default function History() {
 
   const formatDate = (dateString: string) => {
     try {
-      return new Date(dateString).toLocaleString("fr-FR", {
+      return new Date(dateString).toLocaleString("en-US", {
         dateStyle: "short",
         timeStyle: "short",
       });
@@ -67,108 +67,79 @@ export default function History() {
     return `${(ms / 1000).toFixed(1)}s`;
   };
 
-  const successCount = logs.filter((log: any) => log.success).length;
-  const failureCount = logs.length - successCount;
-  const avgLatency = logs.length > 0
-    ? Math.round(
-        logs.reduce((sum: number, log: any) => sum + (log.latency_ms || 0), 0) /
-          logs.length
-      )
-    : 0;
+  const totalLogs = logs.length;
+  const successfulLogs = logs.filter((log: any) => log.success).length;
+  const successRate = totalLogs > 0 ? ((successfulLogs / totalLogs) * 100).toFixed(1) : "0.0";
+  const avgLatency = totalLogs > 0
+    ? (logs.reduce((sum: number, log: any) => sum + (log.latency_ms || 0), 0) / totalLogs).toFixed(0)
+    : "0";
+
+  const stats = [
+    { label: "Total Attempts", value: totalLogs.toLocaleString("en-US"), icon: "✨" },
+    { label: "Success Rate", value: `${successRate}%`, icon: "✅" },
+    { label: "Average Latency", value: `${avgLatency}ms`, icon: "⏱️" },
+  ];
 
   const rows = logs.map((log: any) => [
     formatDate(log.created_at),
     log.product_title || log.product_id || "-",
     log.customer_id || log.customer_ip || "-",
     <Badge key={`badge-${log.id}`} tone={log.success ? "success" : "critical"}>
-      {log.success ? "Succès" : "Erreur"}
+      {log.success ? "Success" : "Error"}
     </Badge>,
-    <Text
-      key={`latency-${log.id}`}
-      variant="bodyMd"
-      tone={log.latency_ms && log.latency_ms > 3000 ? "critical" : "subdued"}
-      as="span"
-    >
+    <Text key={`latency-${log.id}`} tone={log.latency_ms && log.latency_ms > 3000 ? "critical" : "subdued"}>
       {formatLatency(log.latency_ms)}
     </Text>,
-    log.error_message ? (
-      <Text key={`error-${log.id}`} variant="bodySm" tone="critical" as="span">
-        {log.error_message.length > 50
-          ? `${log.error_message.substring(0, 50)}...`
-          : log.error_message}
-      </Text>
-    ) : (
-      "-"
-    ),
+    log.error_message || "-",
   ]);
 
   return (
     <Page>
-      <TitleBar title="Historique - VTON Magic" />
+      <TitleBar title="History - VTON Magic" />
       <Layout>
         <Layout.Section>
-          <BlockStack gap="500">
-            {/* Banner valeur */}
-            <Banner tone="info">
-              <Text variant="bodyMd" as="p">
-                <strong>Stop losing money on returns.</strong> Letting customers test products 
-                virtually removes doubt. This slashes refunds and boosts conversion by{" "}
-                <strong>2.5x instantly</strong>.
-              </Text>
-            </Banner>
-
+          <BlockStack gap="600">
             {error && (
-              <Banner tone="critical" title="Erreur">
-                Erreur lors du chargement de l'historique: {error}
+              <Banner tone="critical" title="Error">
+                Error loading history: {error}
               </Banner>
             )}
 
-            {/* Statistiques rapides */}
-            {logs.length > 0 && (
-              <Layout>
-                <Layout.Section variant="oneThird">
+            <Layout>
+              {stats.map((stat) => (
+                <Layout.Section variant="oneThird" key={stat.label}>
                   <div className="vton-stat-card">
-                    <BlockStack gap="200">
-                      <div className="vton-stat-label">Total de sessions</div>
-                      <div className="vton-stat-value">{logs.length}</div>
+                    <BlockStack gap="300">
+                      <InlineStack align="space-between" blockAlign="start">
+                        <BlockStack gap="100">
+                          <Text variant="heading2xl" as="p" fontWeight="bold">
+                            {stat.value}
+                          </Text>
+                          <Text variant="bodySm" tone="subdued" as="p">
+                            {stat.label}
+                          </Text>
+                        </BlockStack>
+                        <Text variant="headingLg" as="span">
+                          {stat.icon}
+                        </Text>
+                      </InlineStack>
                     </BlockStack>
                   </div>
                 </Layout.Section>
-                <Layout.Section variant="oneThird">
-                  <div className="vton-stat-card">
-                    <BlockStack gap="200">
-                      <div className="vton-stat-label">Taux de succès</div>
-                      <div className="vton-stat-value">
-                        {logs.length > 0
-                          ? `${((successCount / logs.length) * 100).toFixed(1)}%`
-                          : "0%"}
-                      </div>
-                    </BlockStack>
-                  </div>
-                </Layout.Section>
-                <Layout.Section variant="oneThird">
-                  <div className="vton-stat-card">
-                    <BlockStack gap="200">
-                      <div className="vton-stat-label">Latence moyenne</div>
-                      <div className="vton-stat-value">
-                        {avgLatency > 0 ? `${avgLatency}ms` : "-"}
-                      </div>
-                    </BlockStack>
-                  </div>
-                </Layout.Section>
-              </Layout>
-            )}
+              ))}
+            </Layout>
 
-            {/* Tableau d'historique */}
+            <Divider />
+
             <Card>
               <BlockStack gap="400">
                 <InlineStack align="space-between" blockAlign="center">
                   <BlockStack gap="200">
                     <Text as="h2" variant="headingLg" fontWeight="semibold">
-                      Historique complet
+                      Try-On History
                     </Text>
                     <Text variant="bodyMd" tone="subdued" as="p">
-                      {logs.length} session{logs.length > 1 ? "s" : ""} enregistrée{logs.length > 1 ? "s" : ""}
+                      View the complete history of all virtual try-on attempts made on your store.
                     </Text>
                   </BlockStack>
                 </InlineStack>
@@ -177,11 +148,11 @@ export default function History() {
 
                 {logs.length === 0 ? (
                   <EmptyState
-                    heading="Aucun historique"
+                    heading="No History"
                     image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
                   >
                     <p>
-                      Aucune session d'essayage n'a encore été enregistrée. Les tentatives d'essayage virtuel apparaîtront ici une fois que vos clients commenceront à utiliser le widget.
+                      No try-on sessions have been recorded yet.
                     </p>
                   </EmptyState>
                 ) : (
@@ -196,11 +167,11 @@ export default function History() {
                     ]}
                     headings={[
                       "Date",
-                      "Produit",
-                      "Client",
-                      "Statut",
-                      "Latence",
-                      "Erreur",
+                      "Product",
+                      "Customer",
+                      "Status",
+                      "Latency",
+                      "Error",
                     ]}
                     rows={rows}
                   />

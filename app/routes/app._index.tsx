@@ -56,25 +56,25 @@ export default function Home() {
 
   const stats = [
     { 
-      label: "Crédits disponibles", 
-      value: credits.toLocaleString("fr-FR"), 
+      label: "Available Credits", 
+      value: credits.toLocaleString("en-US"), 
       icon: "💎",
       link: "/app/credits"
     },
     { 
       label: "Total try-ons", 
-      value: totalTryons.toLocaleString("fr-FR"), 
+      value: totalTryons.toLocaleString("en-US"), 
       icon: "✨",
       link: "/app/history"
     },
     { 
       label: "Add to Cart", 
-      value: totalAtc.toLocaleString("fr-FR"), 
+      value: totalAtc.toLocaleString("en-US"), 
       icon: "🛒",
       link: "/app/history"
     },
     { 
-      label: "Taux de conversion", 
+      label: "Conversion Rate", 
       value: `${conversionRate}%`, 
       icon: "📈",
       link: "/app/dashboard"
@@ -88,7 +88,7 @@ export default function Home() {
 
   return (
     <Page>
-      <TitleBar title="Accueil - VTON Magic" />
+      <TitleBar title="Home - VTON Magic" />
       <div className="vton-page-container">
         {/* Header Simple */}
         <header className="vton-header-simple">
@@ -104,7 +104,7 @@ export default function Home() {
 
         <div className="vton-page-content">
           {error && (
-            <Banner tone="critical" title="Erreur">
+            <Banner tone="critical" title="Error">
               {error}
             </Banner>
           )}
@@ -128,36 +128,36 @@ export default function Home() {
           <Card>
             <BlockStack gap="500">
               <Text variant="headingLg" fontWeight="bold" as="h2">
-                Actions rapides
+                Quick Actions
               </Text>
               <div className="vton-actions-grid">
                 <Link to="/app/credits" className="vton-action-card-white">
                   <div className="vton-action-content">
                     <Text variant="headingMd" fontWeight="bold" as="h3">
-                      💎 Acheter des crédits
+                      💎 Buy Credits
                     </Text>
                     <Text variant="bodyMd" tone="subdued" as="p">
-                      Choisissez un pack et boostez vos ventes avec plus de try-ons
+                      Choose a pack and boost your sales with more try-ons
                     </Text>
                   </div>
                 </Link>
                 <Link to="/app/history" className="vton-action-card-white">
                   <div className="vton-action-content">
                     <Text variant="headingMd" fontWeight="bold" as="h3">
-                      📊 Voir l'historique
+                      📊 View History
                     </Text>
                     <Text variant="bodyMd" tone="subdued" as="p">
-                      Consultez toutes les sessions de try-on et les métriques de performance
+                      View all try-on sessions and performance metrics
                     </Text>
                   </div>
                 </Link>
                 <Link to="/app/widget" className="vton-action-card-white">
                   <div className="vton-action-content">
                     <Text variant="headingMd" fontWeight="bold" as="h3">
-                      ⚙️ Configurer le widget
+                      ⚙️ Configure Widget
                     </Text>
                     <Text variant="bodyMd" tone="subdued" as="p">
-                      Personnalisez les paramètres du widget et gérez votre application
+                      Customize widget settings and manage your application
                     </Text>
                   </div>
                 </Link>
@@ -177,11 +177,11 @@ export default function Home() {
                   <div className="vton-metrics-grid">
                     <div className="vton-metric-item">
                       <div className="vton-metric-value">{successRate}%</div>
-                      <div className="vton-metric-label">Taux de succès</div>
+                      <div className="vton-metric-label">Success Rate</div>
                     </div>
                     <div className="vton-metric-item">
                       <div className="vton-metric-value">{recentLogs.length}</div>
-                      <div className="vton-metric-label">Essais récents</div>
+                      <div className="vton-metric-label">Recent Trials</div>
                     </div>
                   </div>
                 </BlockStack>
@@ -191,7 +191,7 @@ export default function Home() {
               <Card>
                 <BlockStack gap="400">
                   <Text variant="headingLg" fontWeight="bold" as="h2">
-                    Produits populaires
+                    Popular Products
                   </Text>
                   <Divider />
                   {topProducts.length > 0 ? (
@@ -208,13 +208,13 @@ export default function Home() {
                       ))}
                       <div style={{ paddingTop: "0.5rem" }}>
                         <Button url="/app/products" variant="plain">
-                          Voir tous les produits →
+                          View All Products →
                         </Button>
                       </div>
                     </BlockStack>
                   ) : (
                     <Text variant="bodyMd" tone="subdued" as="p">
-                      Aucun produit encore essayé
+                      No products tried yet
                     </Text>
                   )}
                 </BlockStack>
@@ -222,20 +222,20 @@ export default function Home() {
             </Layout.Section>
           </Layout>
 
-          {/* Crédits Alert */}
+          {/* Credits Alert */}
           {credits < 50 && (
             <Card>
               <BlockStack gap="300">
                 <Banner
-                  title="Crédits faibles"
+                  title="Low Credits"
                   tone="warning"
                   action={{
-                    content: "Acheter des crédits",
+                    content: "Buy Credits",
                     url: "/app/credits",
                   }}
                 >
-                  Vous avez {credits} crédit{credits > 1 ? "s" : ""} restant{credits > 1 ? "s" : ""}. 
-                  Rechargez pour continuer à offrir l'essayage virtuel à vos clients.
+                  You have {credits} credit{credits > 1 ? "s" : ""} remaining. 
+                  Recharge to continue offering virtual try-on to your customers.
                 </Banner>
               </BlockStack>
             </Card>
@@ -247,10 +247,10 @@ export default function Home() {
               <BlockStack gap="400">
                 <InlineStack align="space-between" blockAlign="center">
                   <Text variant="headingLg" fontWeight="bold" as="h2">
-                    Activité récente
+                    Recent Activity
                   </Text>
                   <Button url="/app/history" variant="plain">
-                    Voir tout →
+                    View All →
                   </Button>
                 </InlineStack>
                 <Divider />
@@ -269,7 +269,7 @@ export default function Home() {
                             {log.product_title || log.product_id || "Unknown Product"}
                           </Text>
                           <Text variant="bodySm" tone="subdued" as="p">
-                            {new Date(log.created_at).toLocaleString("fr-FR")}
+                            {new Date(log.created_at).toLocaleString("en-US")}
                           </Text>
                         </BlockStack>
                         <div
@@ -285,7 +285,7 @@ export default function Home() {
                             tone={log.success ? "success" : "critical"}
                             as="span"
                           >
-                            {log.success ? "✓ Succès" : "✗ Échec"}
+                            {log.success ? "✓ Success" : "✗ Failed"}
                           </Text>
                         </div>
                       </InlineStack>

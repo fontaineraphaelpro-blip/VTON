@@ -12,6 +12,7 @@ import {
   Banner,
   TextField,
   Divider,
+  Box,
 } from "@shopify/polaris";
 import { TitleBar } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
@@ -25,8 +26,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
     await ensureTables();
 
-    // Charge les données en parallèle pour améliorer les performances
-    // Limite les logs à 10 pour éviter de charger trop de données
+    // Load data in parallel for better performance
+    // Limit logs to 10 to avoid loading too much data
     const [shopData, recentLogs, topProducts] = await Promise.all([
       getShop(shop),
       getTryonLogs(shop, { limit: 10, offset: 0 }).catch(() => []),
@@ -83,10 +84,10 @@ export default function Dashboard() {
   };
 
   const stats = [
-    { label: "Crédits disponibles", value: credits.toLocaleString("fr-FR"), icon: "💎" },
-    { label: "Total try-ons", value: totalTryons.toLocaleString("fr-FR"), icon: "✨" },
-    { label: "Ajouts au panier", value: totalAtc.toLocaleString("fr-FR"), icon: "🛒" },
-    { label: "Taux de conversion", value: `${conversionRate}%`, icon: "📈" },
+    { label: "Available Credits", value: credits.toLocaleString("en-US"), icon: "💎" },
+    { label: "Total try-ons", value: totalTryons.toLocaleString("en-US"), icon: "✨" },
+    { label: "Add to Cart", value: totalAtc.toLocaleString("en-US"), icon: "🛒" },
+    { label: "Conversion Rate", value: `${conversionRate}%`, icon: "📈" },
   ];
 
   return (
@@ -96,18 +97,18 @@ export default function Dashboard() {
         <Layout.Section>
           <BlockStack gap="500">
             {error && (
-              <Banner tone="critical" title="Erreur">
-                Erreur lors du chargement des données: {error}
+              <Banner tone="critical" title="Error">
+                Error loading data: {error}
               </Banner>
             )}
 
             {fetcher.data?.success && (
               <Banner tone="success">
-                Configuration sauvegardée avec succès
+                Configuration saved successfully
               </Banner>
             )}
 
-            {/* Statistiques */}
+            {/* Statistics */}
             <Layout>
               {stats.map((stat) => (
                 <Layout.Section variant="oneQuarter" key={stat.label}>
@@ -128,32 +129,32 @@ export default function Dashboard() {
               ))}
             </Layout>
 
-            {/* Alert crédits faibles */}
+            {/* Low Credits Alert */}
             {credits < 50 && (
               <Banner
-                title="Crédits faibles"
+                title="Low Credits"
                 tone="warning"
                 action={{
-                  content: "Acheter des crédits",
+                  content: "Buy Credits",
                   url: "/app/credits",
                 }}
               >
-                Vous avez {credits} crédit{credits > 1 ? "s" : ""} restant{credits > 1 ? "s" : ""}. 
-                Rechargez pour continuer à offrir l'essayage virtuel à vos clients.
+                You have {credits} credit{credits > 1 ? "s" : ""} remaining. 
+                Recharge to continue offering virtual try-on to your customers.
               </Banner>
             )}
 
             <Divider />
 
-            {/* Configuration du Widget */}
+            {/* Widget Configuration */}
             <Card>
               <BlockStack gap="500">
                 <BlockStack gap="200">
                   <Text as="h2" variant="headingLg" fontWeight="semibold">
-                    Configuration du Widget
+                    Widget Configuration
                   </Text>
                   <Text variant="bodyMd" tone="subdued" as="p">
-                    Personnalisez l'apparence du widget Try-On sur votre boutique
+                    Customize the appearance of the Try-On widget on your store
                   </Text>
                 </BlockStack>
 
@@ -165,16 +166,16 @@ export default function Dashboard() {
                 >
                   <BlockStack gap="400">
                     <TextField
-                      label="Texte du bouton"
+                      label="Button Text"
                       name="widgetText"
                       defaultValue={shop?.widget_text || "Try It On Now ✨"}
                       autoComplete="off"
-                      helpText="Texte affiché sur le bouton du widget"
+                      helpText="Text displayed on the widget button"
                     />
                     <InlineStack gap="400" align="start">
                       <Box minWidth="200px">
                         <TextField
-                          label="Couleur de fond"
+                          label="Background Color"
                           name="widgetBg"
                           defaultValue={shop?.widget_bg || "#000000"}
                           autoComplete="off"
@@ -183,7 +184,7 @@ export default function Dashboard() {
                       </Box>
                       <Box minWidth="200px">
                         <TextField
-                          label="Couleur du texte"
+                          label="Text Color"
                           name="widgetColor"
                           defaultValue={shop?.widget_color || "#ffffff"}
                           autoComplete="off"
@@ -192,16 +193,16 @@ export default function Dashboard() {
                       </Box>
                     </InlineStack>
                     <TextField
-                      label="Nombre max de try-ons par utilisateur/jour"
+                      label="Max try-ons per user/day"
                       name="maxTriesPerUser"
                       type="number"
                       defaultValue={String(shop?.max_tries_per_user || 5)}
                       autoComplete="off"
-                      helpText="Limite quotidienne par utilisateur pour éviter les abus"
+                      helpText="Daily limit per user to prevent abuse"
                     />
                     <InlineStack align="end">
                       <Button submit variant="primary" loading={fetcher.state === "submitting"}>
-                        Enregistrer
+                        Save
                       </Button>
                     </InlineStack>
                   </BlockStack>
@@ -209,16 +210,16 @@ export default function Dashboard() {
               </BlockStack>
             </Card>
 
-            {/* Produits populaires */}
+            {/* Popular Products */}
             {topProducts.length > 0 && (
               <Card>
                 <BlockStack gap="400">
                   <BlockStack gap="200">
                     <Text as="h2" variant="headingLg" fontWeight="semibold">
-                      Produits les plus essayés
+                      Most Tried Products
                     </Text>
                     <Text variant="bodyMd" tone="subdued" as="p">
-                      Vos produits avec le plus de try-ons
+                      Your products with the most try-ons
                     </Text>
                   </BlockStack>
                   <BlockStack gap="200">
@@ -237,21 +238,21 @@ export default function Dashboard() {
               </Card>
             )}
 
-            {/* Activité récente */}
+            {/* Recent Activity */}
             {recentLogs.length > 0 && (
               <Card>
                 <BlockStack gap="400">
                   <InlineStack align="space-between" blockAlign="center">
                     <BlockStack gap="200">
                       <Text as="h2" variant="headingLg" fontWeight="semibold">
-                        Activité récente
+                        Recent Activity
                       </Text>
                       <Text variant="bodyMd" tone="subdued" as="p">
-                        Dernières tentatives de try-on
+                        Latest try-on attempts
                       </Text>
                     </BlockStack>
                     <Button url="/app/history" variant="plain">
-                      Voir tout →
+                      View All →
                     </Button>
                   </InlineStack>
                   <BlockStack gap="200">
@@ -262,7 +263,7 @@ export default function Dashboard() {
                             {log.product_title || log.product_id || "Unknown Product"}
                           </Text>
                           <Text variant="bodySm" tone="subdued" as="p">
-                            {new Date(log.created_at).toLocaleString("fr-FR")}
+                            {new Date(log.created_at).toLocaleString("en-US")}
                           </Text>
                         </BlockStack>
                         <Text
@@ -271,7 +272,7 @@ export default function Dashboard() {
                           tone={log.success ? "success" : "critical"}
                           as="span"
                         >
-                          {log.success ? "✓ Succès" : "✗ Échec"}
+                          {log.success ? "✓ Success" : "✗ Failed"}
                         </Text>
                       </InlineStack>
                     ))}
