@@ -267,6 +267,9 @@ body::before {
   text-decoration: none;
   display: block;
   transition: transform var(--transition-base);
+  cursor: pointer;
+  position: relative;
+  z-index: 1;
 }
 
 .vton-stat-card-link:hover {
@@ -446,6 +449,8 @@ body::before {
   transition: all var(--transition-base);
   position: relative;
   overflow: hidden;
+  cursor: pointer;
+  z-index: 1;
 }
 
 .vton-action-primary {
@@ -548,6 +553,10 @@ body::before {
   transition: all var(--transition-base);
   white-space: nowrap;
   font-family: 'Space Grotesk', sans-serif;
+  cursor: pointer;
+  display: inline-block;
+  position: relative;
+  z-index: 1;
 }
 
 .vton-alert-button:hover {
