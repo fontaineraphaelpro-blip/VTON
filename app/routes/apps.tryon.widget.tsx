@@ -60,8 +60,32 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         }
         
         injectButton() {
-            const addToCartBtn = document.querySelector(CONFIG.selectors.addToCartButton);
-            if (!addToCartBtn) return;
+            // Multiple selectors pour trouver le bouton panier
+            const cartSelectors = [
+                'form[action*="/cart/add"] button[type="submit"]',
+                'button[name="add"]',
+                '[data-add-to-cart]',
+                '.product-form__cart-submit',
+                '.btn--add-to-cart',
+                '#AddToCart',
+                '.add-to-cart-button',
+                'button.product-form__submit'
+            ];
+            
+            let addToCartBtn = null;
+            for (const selector of cartSelectors) {
+                addToCartBtn = document.querySelector(selector);
+                if (addToCartBtn) break;
+            }
+            
+            if (!addToCartBtn) {
+                // Retry après un délai si le bouton n'est pas encore chargé
+                setTimeout(() => this.injectButton(), 500);
+                return;
+            }
+            
+            // Vérifier si le bouton VTON existe déjà
+            if (document.querySelector('.vton-button')) return;
             
             const vtonBtn = document.createElement('button');
             vtonBtn.type = 'button';
@@ -76,7 +100,31 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             \`;
             vtonBtn.onclick = () => this.openModal();
             
-            addToCartBtn.parentElement.insertAdjacentElement('afterend', vtonBtn);
+            // Essayer plusieurs méthodes d'insertion
+            const parent = addToCartBtn.parentElement;
+            if (parent) {
+                // Méthode 1: À côté du bouton (inline)
+                if (parent.style.display === 'flex' || parent.classList.contains('flex')) {
+                    parent.appendChild(vtonBtn);
+                } else {
+                    // Méthode 2: En dessous du bouton
+                    parent.insertAdjacentElement('afterend', vtonBtn);
+                    // Ou créer un conteneur wrapper
+                    if (!parent.nextElementSibling || !parent.nextElementSibling.classList.contains('vton-wrapper')) {
+                        const wrapper = document.createElement('div');
+                        wrapper.className = 'vton-wrapper';
+                        wrapper.style.display = 'flex';
+                        wrapper.style.gap = '12px';
+                        wrapper.style.width = '100%';
+                        if (addToCartBtn.parentElement) {
+                            addToCartBtn.parentElement.replaceChild(wrapper, addToCartBtn);
+                            wrapper.appendChild(addToCartBtn);
+                            wrapper.appendChild(vtonBtn);
+                        }
+                    }
+                }
+            }
+            
             this.injectStyles();
         }
         

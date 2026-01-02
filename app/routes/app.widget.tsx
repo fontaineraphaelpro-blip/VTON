@@ -294,16 +294,21 @@ export default function Widget() {
                 <Text variant="headingLg" fontWeight="semibold" as="h2">
                   Widget Integration
                 </Text>
+                <Banner tone="success">
+                  <Text variant="bodyMd" as="p">
+                    <strong>Automatic Installation:</strong> The Try-On widget is automatically installed and will appear on your product pages. No code changes needed!
+                  </Text>
+                </Banner>
                 <Text variant="bodyMd" tone="subdued" as="p">
-                  Add this script to your Shopify theme to enable the Try-On widget.
+                  The widget script is automatically injected via Shopify Script Tags. The button will appear next to the "Add to Cart" button on all product pages.
                 </Text>
                 <Divider />
-                <InlineCode>
-                  &lt;script src="{`{ shop.url }`}/apps/proxy/tryon/widget.js" defer&gt;&lt;/script&gt;
-                </InlineCode>
                 <Text variant="bodySm" tone="subdued" as="p">
-                  Copy and paste this code into your theme's `theme.liquid` file, just before the `&lt;/body&gt;` tag.
+                  <strong>Manual Installation (Optional):</strong> If you prefer to install manually, add this script to your theme's `theme.liquid` file, just before the `&lt;/body&gt;` tag:
                 </Text>
+                <InlineCode>
+                  &lt;script src="{`{ shop.url }`}/apps/tryon/widget.js" defer&gt;&lt;/script&gt;
+                </InlineCode>
               </BlockStack>
             </Card>
           </BlockStack>

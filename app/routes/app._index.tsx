@@ -21,7 +21,7 @@ import { getShop, upsertShop, getTryonLogs, getTopProducts } from "../lib/servic
 import { ensureTables } from "../lib/db-init.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { session } = await authenticate.admin(request);
+  const { admin, session } = await authenticate.admin(request);
   const shop = session.shop;
 
   try {
@@ -32,6 +32,62 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       getTryonLogs(shop, { limit: 10, offset: 0 }).catch(() => []),
       getTopProducts(shop, 5).catch(() => []),
     ]);
+
+    // Installer automatiquement le script tag si pas déjà installé
+    try {
+      const scriptTagUrl = `${process.env.SHOPIFY_APP_URL || request.url.split('/app')[0]}/apps/tryon/widget.js`;
+      
+      // Vérifier si le script tag existe déjà
+      const scriptTagsQuery = `#graphql
+        query {
+          scriptTags(first: 50) {
+            edges {
+              node {
+                id
+                src
+              }
+            }
+          }
+        }
+      `;
+      
+      const scriptTagsResponse = await admin.graphql(scriptTagsQuery);
+      const scriptTagsData = await scriptTagsResponse.json();
+      const existingScripts = scriptTagsData.data?.scriptTags?.edges || [];
+      const scriptExists = existingScripts.some((edge: any) => 
+        edge.node.src.includes('/apps/tryon/widget.js')
+      );
+
+      if (!scriptExists) {
+        // Créer le script tag automatiquement
+        const createScriptTagMutation = `#graphql
+          mutation scriptTagCreate($input: ScriptTagInput!) {
+            scriptTagCreate(input: $input) {
+              scriptTag {
+                id
+                src
+              }
+              userErrors {
+                field
+                message
+              }
+            }
+          }
+        `;
+
+        await admin.graphql(createScriptTagMutation, {
+          variables: {
+            input: {
+              src: scriptTagUrl,
+              displayScope: "ONLINE_STORE",
+            }
+          }
+        });
+      }
+    } catch (scriptError) {
+      console.error("Error installing script tag:", scriptError);
+      // Ne pas bloquer le chargement si l'installation du script échoue
+    }
 
     return json({
       shop: shopData || null,
