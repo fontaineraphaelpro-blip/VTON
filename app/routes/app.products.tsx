@@ -170,10 +170,9 @@ export default function Products() {
                 )}
               </BlockStack>
             </Card>
-            </BlockStack>
-          </Layout.Section>
-        </Layout>
-      </div>
+          </BlockStack>
+        </Layout.Section>
+      </Layout>
     </Page>
   );
 }
