@@ -401,9 +401,19 @@ export default function Credits() {
           </Banner>
         )}
 
-        {fetcher.data?.success && (
+        {fetcher.data?.success && !fetcher.data?.redirect && (
           <Banner tone="success" title="Success!">
-            {fetcher.data.creditsAdded} credits added to your account.
+            {fetcher.data.creditsAdded || fetcher.data.credits} credits added to your account.
+          </Banner>
+        )}
+        {fetcher.data?.success && fetcher.data?.redirect && (
+          <Banner tone="info" title="Redirecting to payment...">
+            Redirecting to Shopify checkout...
+          </Banner>
+        )}
+        {fetcher.data?.error && (
+          <Banner tone="critical" title="Error">
+            {fetcher.data.error}
           </Banner>
         )}
       </div>
