@@ -23,5 +23,5 @@ model Session {
   accessToken String?
   userId    BigInt?
 
-  data      Json     @default("{}")
+  data      Json?
 }
