@@ -111,17 +111,25 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           }
         `;
 
+        // Get customer email from session if available
+        const customerEmail = session.email || undefined;
+
         const variables = {
           input: {
             lineItems: [
               {
                 title: `${pack.name} Pack - ${pack.credits} Credits`,
                 quantity: 1,
-                originalUnitPrice: pack.price.toString(),
+                originalUnitPrice: pack.price.toFixed(2),
               }
             ],
             note: `VTON Magic Credits Purchase: ${pack.credits} credits`,
             tags: ["vton-credits", `pack-${pack.id}`],
+            ...(customerEmail && {
+              customer: {
+                email: customerEmail,
+              }
+            }),
           }
         };
 
@@ -130,17 +138,31 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         });
 
         const responseJson = await response.json();
+        
+        // Log the full response for debugging
+        console.log("Draft order response:", JSON.stringify(responseJson, null, 2));
+        
         const draftOrder = responseJson.data?.draftOrderCreate?.draftOrder;
         const errors = responseJson.data?.draftOrderCreate?.userErrors;
 
         if (errors && errors.length > 0) {
+          const errorMessages = errors.map((e: any) => `${e.field ? `${e.field}: ` : ""}${e.message}`).join(", ");
+          console.error("Draft order errors:", errorMessages);
           return json({ 
             success: false, 
-            error: errors.map((e: any) => e.message).join(", "),
+            error: `Failed to create checkout: ${errorMessages}`,
           });
         }
 
-        if (draftOrder?.invoiceUrl) {
+        if (!draftOrder) {
+          console.error("No draft order returned:", responseJson);
+          return json({ 
+            success: false, 
+            error: "Failed to create draft order. Please check your Shopify permissions.",
+          });
+        }
+
+        if (draftOrder.invoiceUrl) {
           return json({ 
             success: true, 
             redirect: true,
@@ -149,12 +171,19 @@ export const action = async ({ request }: ActionFunctionArgs) => {
             credits: pack.credits,
             price: pack.price,
           });
+        } else {
+          console.error("Draft order created but no invoiceUrl:", draftOrder);
+          return json({ 
+            success: false, 
+            error: "Draft order created but no checkout URL available. Please try again.",
+          });
         }
       } catch (error) {
         console.error("Error creating draft order:", error);
+        const errorMessage = error instanceof Error ? error.message : String(error);
         return json({ 
           success: false, 
-          error: "Failed to create payment checkout. Please try again." 
+          error: `Failed to create payment checkout: ${errorMessage}` 
         });
       }
     }
