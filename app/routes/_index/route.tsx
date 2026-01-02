@@ -2,8 +2,6 @@ import type { LoaderFunctionArgs } from "@remix-run/node";
 import { redirect } from "@remix-run/node";
 import { Form, useLoaderData } from "@remix-run/react";
 
-import { login } from "../../shopify.server";
-
 import styles from "./styles.module.css";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -13,7 +11,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     throw redirect(`/app?${url.searchParams.toString()}`);
   }
 
-  return { showForm: Boolean(login) };
+  // For embedded apps, don't show login form
+  // Authentication happens via OAuth automatically
+  return { showForm: false };
 };
 
 export default function App() {
@@ -22,9 +22,9 @@ export default function App() {
   return (
     <div className={styles.index}>
       <div className={styles.content}>
-        <h1 className={styles.heading}>A short heading about [your app]</h1>
+        <h1 className={styles.heading}>Try-On StyleLab</h1>
         <p className={styles.text}>
-          A tagline about [your app] that describes your value proposition.
+          Virtual try-on powered by AI for your Shopify store.
         </p>
         {showForm && (
           <Form className={styles.form} method="post" action="/auth/login">
@@ -40,16 +40,16 @@ export default function App() {
         )}
         <ul className={styles.list}>
           <li>
-            <strong>Product feature</strong>. Some detail about your feature and
-            its benefit to your customer.
+            <strong>AI-Powered Try-On</strong>. Let customers try on products
+            virtually using advanced AI technology.
           </li>
           <li>
-            <strong>Product feature</strong>. Some detail about your feature and
-            its benefit to your customer.
+            <strong>Easy Integration</strong>. Seamlessly integrated with your
+            Shopify store and products.
           </li>
           <li>
-            <strong>Product feature</strong>. Some detail about your feature and
-            its benefit to your customer.
+            <strong>Real-time Results</strong>. Get instant try-on results for
+            your customers.
           </li>
         </ul>
       </div>
