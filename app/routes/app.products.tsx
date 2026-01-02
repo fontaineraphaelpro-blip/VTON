@@ -102,9 +102,10 @@ export default function Products() {
   return (
     <Page>
       <TitleBar title="Produits - VTON Magic" />
-      <Layout>
-        <Layout.Section>
-          <BlockStack gap="600">
+      <div className="vton-page">
+        <Layout>
+          <Layout.Section>
+            <BlockStack gap="600">
             {/* App Header */}
             <AppHeader />
 
@@ -169,9 +170,10 @@ export default function Products() {
                 )}
               </BlockStack>
             </Card>
-          </BlockStack>
-        </Layout.Section>
-      </Layout>
+            </BlockStack>
+          </Layout.Section>
+        </Layout>
+      </div>
     </Page>
   );
 }

@@ -147,9 +147,10 @@ export default function Dashboard() {
   return (
     <Page>
       <TitleBar title="Dashboard - VTON Magic" />
-      <Layout>
-        <Layout.Section>
-          <BlockStack gap="600">
+      <div className="vton-page">
+        <Layout>
+          <Layout.Section>
+            <BlockStack gap="600">
             {/* App Header */}
             <AppHeader />
 

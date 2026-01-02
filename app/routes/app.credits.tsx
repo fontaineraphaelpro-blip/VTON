@@ -176,54 +176,27 @@ export default function Credits() {
 
                     return (
                       <Layout.Section variant="oneThird" key={pack.id}>
-                        <Card>
-                          <Box position="relative">
-                            {isHighlight && (
-                              <Box
-                                padding="300"
-                                background="bg-surface-brand"
-                                borderRadius="200"
-                                marginBlockEnd="300"
-                              >
-                                <Text variant="bodySm" fontWeight="bold" alignment="center">
-                                  {pack.badge}
-                                </Text>
-                              </Box>
-                            )}
-                            
-                            {pack.savings && (
-                              <Box
-                                position="absolute"
-                                insetBlockStart="400"
-                                insetInlineEnd="400"
-                                padding="150"
-                                background="bg-fill-success"
-                                borderRadius="200"
-                              >
-                                <Text variant="bodySm" fontWeight="semibold">
-                                  SAVE {pack.savings}
-                                </Text>
-                              </Box>
-                            )}
+                        <div className={`vton-pack-card ${isHighlight ? "highlight" : ""}`}>
+                          {isHighlight && pack.badge && (
+                            <div className="vton-pack-badge best-seller">
+                              {pack.badge}
+                            </div>
+                          )}
+                          
+                          {pack.savings && (
+                            <div className="vton-pack-badge save" style={{ position: "absolute", top: isHighlight ? "3.5rem" : "1rem", right: "1rem" }}>
+                              SAVE {pack.savings}
+                            </div>
+                          )}
 
-                            {pack.badge && !isHighlight && (
-                              <Box
-                                position="absolute"
-                                insetBlockStart="400"
-                                insetInlineEnd="400"
-                                padding="150"
-                                background="bg-fill-warning-subdued"
-                                borderRadius="200"
-                              >
-                                <Text variant="bodySm" fontWeight="semibold">
-                                  {pack.badge}
-                                </Text>
-                              </Box>
-                            )}
+                          {pack.badge && !isHighlight && (
+                            <div className="vton-pack-badge roi" style={{ position: "absolute", top: "1rem", right: "1rem" }}>
+                              {pack.badge}
+                            </div>
+                          )}
 
+                          <Box padding={isHighlight ? "500" : "400"} style={{ paddingTop: isHighlight ? "0" : "1rem" }}>
                             <BlockStack gap="400">
-                              {!isHighlight && <Box paddingBlockStart="400" />}
-                              
                               <BlockStack gap="200">
                                 <Text 
                                   variant="headingLg" 
@@ -274,7 +247,7 @@ export default function Credits() {
                               </BlockStack>
                             </BlockStack>
                           </Box>
-                        </Card>
+                        </div>
                       </Layout.Section>
                     );
                   })}
@@ -325,9 +298,10 @@ export default function Credits() {
                 </form>
               </BlockStack>
             </Card>
-          </BlockStack>
-        </Layout.Section>
-      </Layout>
+            </BlockStack>
+          </Layout.Section>
+        </Layout>
+      </div>
     </Page>
   );
 }
