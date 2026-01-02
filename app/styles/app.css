@@ -978,6 +978,8 @@ body::before {
   box-shadow: var(--shadow-md);
   font-family: 'Space Grotesk', sans-serif;
   margin-left: auto;
+  position: relative;
+  z-index: 1;
 }
 
 .vton-custom-button-submit:hover:not(:disabled) {
