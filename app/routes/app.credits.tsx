@@ -165,11 +165,9 @@ export default function Credits() {
               <div className="vton-credits-card-content">
                 <div className="vton-credits-label-blue">Remaining Credits</div>
                 
-                {/* Animation de chargement */}
-                <div className="vton-loading-dots">
-                  <div className="vton-dot"></div>
-                  <div className="vton-dot delay-1"></div>
-                  <div className="vton-dot delay-2"></div>
+                {/* Credits amount */}
+                <div className="vton-credits-amount-blue">
+                  {currentCredits.toLocaleString("fr-FR")}
                 </div>
 
                 <div className="vton-credits-footer-blue">
