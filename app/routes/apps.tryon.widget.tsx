@@ -230,15 +230,62 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             const uploadArea = modal.querySelector('.vton-upload-area');
             
             if (uploadInput) {
-                uploadInput.addEventListener('change', (e) => this.handlePhotoUpload(e.target.files[0]));
+                uploadInput.addEventListener('change', (e) => {
+                    const file = (e.target as HTMLInputElement).files?.[0];
+                    if (file) {
+                        this.handlePhotoUpload(file);
+                    }
+                });
             }
-            if (uploadArea) {
-                uploadArea.addEventListener('drop', (e) => this.handlePhotoDrop(e));
-            }
-            generateBtn.addEventListener('click', () => this.generateTryOn());
             
-            // Make handlePhotoDrop available globally for inline handlers
-            window.handlePhotoDrop = (e) => this.handlePhotoDrop(e);
+            if (uploadArea) {
+                // Click to upload
+                uploadArea.addEventListener('click', () => {
+                    uploadInput?.click();
+                });
+                
+                // Drag and drop
+                uploadArea.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    (e.currentTarget as HTMLElement).style.backgroundColor = '#f0f0f0';
+                });
+                
+                uploadArea.addEventListener('dragleave', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    (e.currentTarget as HTMLElement).style.backgroundColor = '';
+                });
+                
+                uploadArea.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    (e.currentTarget as HTMLElement).style.backgroundColor = '';
+                    const file = e.dataTransfer.files[0];
+                    if (file) {
+                        this.handlePhotoUpload(file);
+                    }
+                });
+            }
+            
+            if (generateBtn) {
+                generateBtn.addEventListener('click', () => this.generateTryOn());
+            }
+            
+            // Close button
+            const closeBtn = modal.querySelector('#vton-close-btn');
+            if (closeBtn) {
+                closeBtn.addEventListener('click', () => {
+                    modal.classList.remove('active');
+                });
+            }
+            
+            // Close on background click
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.classList.remove('active');
+                }
+            });
             
             return modal;
         }
@@ -293,13 +340,35 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         
         async generateTryOn() {
             const btn = document.getElementById('vton-generate-btn');
+            if (!btn) return;
+            
             btn.disabled = true;
             btn.textContent = 'Generating...';
             
             try {
-                const personBase64 = this.userPhoto.split(',')[1];
+                if (!this.userPhoto) {
+                    throw new Error('No photo uploaded');
+                }
                 
-                const response = await fetch(\`\${CONFIG.apiBase}/generate\`, {
+                if (!this.productImage) {
+                    throw new Error('Product image not found');
+                }
+                
+                // Extract base64 from data URL
+                const personBase64 = this.userPhoto.includes(',') 
+                    ? this.userPhoto.split(',')[1] 
+                    : this.userPhoto;
+                
+                // Get shop from URL or window
+                const shop = window.Shopify?.shop || this.extractShopFromUrl() || '';
+                
+                // Build URL with Shopify proxy parameters
+                const url = new URL(\`\${CONFIG.apiBase}/generate\`, window.location.origin);
+                if (shop) {
+                    url.searchParams.set('shop', shop);
+                }
+                
+                const response = await fetch(url.toString(), {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -312,25 +381,44 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                 });
                 
                 if (!response.ok) {
-                    throw new Error('Generation failed');
+                    const errorData = await response.json().catch(() => ({ error: \`HTTP \${response.status}\` }));
+                    throw new Error(errorData.error || \`Generation failed: \${response.status}\`);
                 }
                 
                 const data = await response.json();
                 
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                if (!data.result_image_url) {
+                    throw new Error('No result image received');
+                }
+                
                 const resultDiv = document.getElementById('vton-result');
                 const resultImg = document.getElementById('vton-result-img');
-                resultImg.src = data.result_image_url;
-                resultDiv.style.display = 'block';
                 
-                btn.textContent = 'Generate Another';
-                btn.disabled = false;
+                if (resultDiv && resultImg) {
+                    resultImg.src = data.result_image_url;
+                    resultDiv.style.display = 'block';
+                    btn.textContent = 'Generate Another';
+                    btn.disabled = false;
+                } else {
+                    throw new Error('Result display elements not found');
+                }
                 
             } catch (error) {
                 console.error('[VTON] Error:', error);
-                alert('An error occurred. Please try again.');
+                const errorMessage = error instanceof Error ? error.message : 'An error occurred. Please try again.';
+                alert(errorMessage);
                 btn.textContent = 'Generate Try-On';
                 btn.disabled = false;
             }
+        }
+        
+        extractShopFromUrl() {
+            const match = window.location.hostname.match(/([^.]+)\\.myshopify\\.com/);
+            return match ? match[0] : null;
         }
     }
     

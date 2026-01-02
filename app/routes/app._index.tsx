@@ -195,6 +195,19 @@ export default function Dashboard() {
     : "0.0";
 
   const handleSave = (formData: FormData) => {
+    // Ensure all required fields are present
+    if (!formData.get("widgetText")) {
+      formData.set("widgetText", shop?.widget_text || "Try It On Now ✨");
+    }
+    if (!formData.get("widgetBg")) {
+      formData.set("widgetBg", shop?.widget_bg || "#000000");
+    }
+    if (!formData.get("widgetColor")) {
+      formData.set("widgetColor", shop?.widget_color || "#ffffff");
+    }
+    if (!formData.get("maxTriesPerUser")) {
+      formData.set("maxTriesPerUser", String(shop?.max_tries_per_user || 5));
+    }
     fetcher.submit(formData, { method: "post" });
   };
 

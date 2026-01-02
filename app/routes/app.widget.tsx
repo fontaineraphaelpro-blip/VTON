@@ -90,18 +90,26 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const garmentImage = formData.get("garmentImage") as string;
 
     if (!personImage || !garmentImage) {
-      return json({ success: false, error: "Both images are required" });
+      return json({ success: false, error: "Both images are required", testMode: true });
     }
 
     try {
       // Convert base64 images to buffers
-      const personBuffer = personImage.startsWith("data:image")
-        ? Buffer.from(personImage.split(",")[1], "base64")
-        : Buffer.from(personImage, "base64");
+      // personImage and garmentImage are already base64 data URLs from FileReader
+      const personBase64 = personImage.includes(",") ? personImage.split(",")[1] : personImage;
+      const garmentBase64 = garmentImage.includes(",") ? garmentImage.split(",")[1] : garmentImage;
       
-      const garmentBuffer = garmentImage.startsWith("data:image")
-        ? Buffer.from(garmentImage.split(",")[1], "base64")
-        : Buffer.from(garmentImage, "base64");
+      const personBuffer = Buffer.from(personBase64, "base64");
+      const garmentBuffer = Buffer.from(garmentBase64, "base64");
+
+      // Validate image sizes
+      if (personBuffer.length === 0 || garmentBuffer.length === 0) {
+        return json({ 
+          success: false, 
+          error: "Invalid image data",
+          testMode: true 
+        });
+      }
 
       // Generate try-on using Replicate service
       const { generateTryOn } = await import("../lib/services/replicate.service");
@@ -114,9 +122,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       });
     } catch (error) {
       console.error("Test try-on error:", error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
       return json({ 
         success: false, 
-        error: error instanceof Error ? error.message : "Generation failed",
+        error: `Generation failed: ${errorMessage}`,
         testMode: true 
       });
     }
