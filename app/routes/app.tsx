@@ -37,5 +37,11 @@ export function ErrorBoundary() {
 }
 
 export const headers: HeadersFunction = (headersArgs) => {
-  return boundary.headers(headersArgs);
+  const shopifyHeaders = boundary.headers(headersArgs);
+  
+  // Remove X-Frame-Options if boundary added it (entry.server.tsx will handle CSP)
+  const headers = new Headers(shopifyHeaders);
+  headers.delete("X-Frame-Options");
+  
+  return headers;
 };
