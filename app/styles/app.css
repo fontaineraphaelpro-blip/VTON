@@ -363,8 +363,24 @@ body {
   font-size: 0.75rem;
   color: var(--color-slate-400);
   text-align: center;
-  margin-bottom: 2rem;
+  margin-bottom: 0.5rem;
   padding: 0 1rem;
+}
+
+.vton-pack-price-per-credit {
+  font-size: 0.75rem;
+  color: var(--color-slate-500);
+  text-align: center;
+  margin-bottom: 1rem;
+  font-weight: 500;
+}
+
+.vton-pack-savings {
+  font-size: 0.75rem;
+  color: #047857;
+  text-align: center;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
 }
 
 .vton-pack-bottom {
