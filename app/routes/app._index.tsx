@@ -140,43 +140,58 @@ export default function Home() {
                 </Text>
                 <Layout>
                   <Layout.Section variant="oneThird">
-                    <Link to="/app/credits" style={{ textDecoration: "none" }}>
-                      <div className="vton-card" style={{ padding: "2rem", borderRadius: "12px", border: "1px solid var(--p-border-subdued)", cursor: "pointer" }}>
+                    <Link to="/app/credits" style={{ textDecoration: "none", display: "block" }}>
+                      <div className="vton-action-card">
                         <BlockStack gap="300">
-                          <Text variant="headingMd" fontWeight="semibold" as="h3">
+                          <Text variant="headingLg" fontWeight="bold" as="h3" style={{ fontSize: "1.5rem" }}>
                             💎 Buy Credits
                           </Text>
                           <Text variant="bodyMd" tone="subdued" as="p">
                             Choose a pack and boost your sales with more try-ons
                           </Text>
+                          <Box paddingBlockStart="200">
+                            <Text variant="bodySm" fontWeight="semibold" tone="brand" as="span">
+                              View Packs →
+                            </Text>
+                          </Box>
                         </BlockStack>
                       </div>
                     </Link>
                   </Layout.Section>
                   <Layout.Section variant="oneThird">
-                    <Link to="/app/history" style={{ textDecoration: "none" }}>
-                      <div className="vton-card" style={{ padding: "2rem", borderRadius: "12px", border: "1px solid var(--p-border-subdued)", cursor: "pointer" }}>
+                    <Link to="/app/history" style={{ textDecoration: "none", display: "block" }}>
+                      <div className="vton-action-card">
                         <BlockStack gap="300">
-                          <Text variant="headingMd" fontWeight="semibold" as="h3">
+                          <Text variant="headingLg" fontWeight="bold" as="h3" style={{ fontSize: "1.5rem" }}>
                             📊 View History
                           </Text>
                           <Text variant="bodyMd" tone="subdued" as="p">
                             Check all try-on sessions and performance metrics
                           </Text>
+                          <Box paddingBlockStart="200">
+                            <Text variant="bodySm" fontWeight="semibold" tone="brand" as="span">
+                              See All →
+                            </Text>
+                          </Box>
                         </BlockStack>
                       </div>
                     </Link>
                   </Layout.Section>
                   <Layout.Section variant="oneThird">
-                    <Link to="/app/dashboard" style={{ textDecoration: "none" }}>
-                      <div className="vton-card" style={{ padding: "2rem", borderRadius: "12px", border: "1px solid var(--p-border-subdued)", cursor: "pointer" }}>
+                    <Link to="/app/dashboard" style={{ textDecoration: "none", display: "block" }}>
+                      <div className="vton-action-card">
                         <BlockStack gap="300">
-                          <Text variant="headingMd" fontWeight="semibold" as="h3">
+                          <Text variant="headingLg" fontWeight="bold" as="h3" style={{ fontSize: "1.5rem" }}>
                             ⚙️ Dashboard
                           </Text>
                           <Text variant="bodyMd" tone="subdued" as="p">
                             Configure widget settings and manage your app
                           </Text>
+                          <Box paddingBlockStart="200">
+                            <Text variant="bodySm" fontWeight="semibold" tone="brand" as="span">
+                              Configure →
+                            </Text>
+                          </Box>
                         </BlockStack>
                       </div>
                     </Link>
@@ -234,9 +249,10 @@ export default function Home() {
                 </BlockStack>
               </Card>
             )}
-          </BlockStack>
-        </Layout.Section>
-      </Layout>
+            </BlockStack>
+          </Layout.Section>
+        </Layout>
+      </div>
     </Page>
   );
 }
