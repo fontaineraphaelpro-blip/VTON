@@ -1,89 +1,68 @@
-import { useEffect } from "react";
-import type { LoaderFunctionArgs, HeadersFunction } from "@remix-run/node";
-import { useLoaderData } from "@remix-run/react";
-import { AppProvider } from "@shopify/shopify-app-remix/react";
-import { useAppBridge } from "@shopify/app-bridge-react";
+import { useState } from "react";
+import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
+import { Form, useActionData, useLoaderData } from "@remix-run/react";
+import {
+  AppProvider as PolarisAppProvider,
+  Button,
+  Card,
+  FormLayout,
+  Page,
+  Text,
+  TextField,
+} from "@shopify/polaris";
+import polarisTranslations from "@shopify/polaris/locales/en.json";
+import polarisStyles from "@shopify/polaris/build/esm/styles.css?url";
+
 import { login } from "../../shopify.server";
 
-// Headers - allow iframe for embedded apps
-export const headers: HeadersFunction = () => {
-  // Don't block iframe - we'll use App Bridge Redirect
-  return {};
-};
+import { loginErrorMessage } from "./error.server";
+
+export const links = () => [{ rel: "stylesheet", href: polarisStyles }];
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const url = new URL(request.url);
-  const shop = url.searchParams.get("shop");
-  const embedded = url.searchParams.get("embedded") === "1";
+  const errors = loginErrorMessage(await login(request));
 
-  // If embedded=1, return data for App Bridge Redirect
-  // If not embedded, use traditional login() redirect
-  if (embedded && shop) {
-    // Return shop and embedded flag for App Bridge Redirect
-    return { shop, embedded: true, apiKey: process.env.SHOPIFY_API_KEY || "" };
-  }
-
-  // Not embedded - use traditional login() redirect (top-level)
-  if (shop) {
-    return login(request);
-  }
-
-  return { shop: null, embedded: false, apiKey: process.env.SHOPIFY_API_KEY || "" };
+  return { errors, polarisTranslations };
 };
 
-// Component to handle App Bridge Redirect for OAuth
-export default function AuthLogin() {
-  const loaderData = useLoaderData<typeof loader>();
-  const app = useAppBridge();
-  
-  // Type guard to check if we have the embedded data
-  const isEmbeddedData = (data: any): data is { shop: string; embedded: boolean; apiKey: string } => {
-    return data && typeof data === "object" && "embedded" in data && "apiKey" in data;
+export const action = async ({ request }: ActionFunctionArgs) => {
+  const errors = loginErrorMessage(await login(request));
+
+  return {
+    errors,
   };
-  
-  const { shop, embedded, apiKey } = isEmbeddedData(loaderData) ? loaderData : { shop: null, embedded: false, apiKey: "" };
+};
 
-  useEffect(() => {
-    if (embedded && shop && app && typeof window !== "undefined") {
-      // Step 1: Launch OAuth from iframe using App Bridge Redirect.Action.REMOTE
-      // Try to use App Bridge Redirect if available
-      try {
-        // @ts-ignore - @shopify/app-bridge/actions may not have types
-        import("@shopify/app-bridge/actions").then((module) => {
-          const { Redirect } = module;
-          if (Redirect && Redirect.create) {
-            const redirect = Redirect.create(app);
-            redirect.dispatch(
-              Redirect.Action.REMOTE,
-              `https://accounts.shopify.com/select?shop=${shop}`
-            );
-          }
-        }).catch(() => {
-          // Fallback: use window.location if App Bridge Redirect not available
-          window.location.href = `https://accounts.shopify.com/select?shop=${shop}`;
-        });
-      } catch (e) {
-        // Fallback: use window.location
-        window.location.href = `https://accounts.shopify.com/select?shop=${shop}`;
-      }
-    }
-  }, [embedded, shop, app]);
+export default function Auth() {
+  const loaderData = useLoaderData<typeof loader>();
+  const actionData = useActionData<typeof action>();
+  const [shop, setShop] = useState("");
+  const { errors } = actionData || loaderData;
 
-  // If embedded, wrap in AppProvider for App Bridge access
-  if (embedded && apiKey) {
-    return (
-      <AppProvider isEmbeddedApp apiKey={apiKey}>
-        <div>
-          <p>Redirecting to Shopify OAuth...</p>
-        </div>
-      </AppProvider>
-    );
-  }
-
-  // Not embedded - show loading
   return (
-    <div>
-      <p>Loading...</p>
-    </div>
+    <PolarisAppProvider i18n={loaderData.polarisTranslations}>
+      <Page>
+        <Card>
+          <Form method="post">
+            <FormLayout>
+              <Text variant="headingMd" as="h2">
+                Log in
+              </Text>
+              <TextField
+                type="text"
+                name="shop"
+                label="Shop domain"
+                helpText="example.myshopify.com"
+                value={shop}
+                onChange={setShop}
+                autoComplete="on"
+                error={errors.shop}
+              />
+              <Button submit>Log in</Button>
+            </FormLayout>
+          </Form>
+        </Card>
+      </Page>
+    </PolarisAppProvider>
   );
 }

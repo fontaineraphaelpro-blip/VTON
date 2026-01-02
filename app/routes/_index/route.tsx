@@ -1,20 +1,19 @@
 import type { LoaderFunctionArgs } from "@remix-run/node";
 import { redirect } from "@remix-run/node";
-import { useLoaderData } from "@remix-run/react";
+import { Form, useLoaderData } from "@remix-run/react";
+
+import { login } from "../../shopify.server";
 
 import styles from "./styles.module.css";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
-  const shop = url.searchParams.get("shop");
 
-  // If shop is provided, redirect to login which will handle OAuth automatically
-  if (shop) {
-    return redirect(`/auth/login?shop=${shop}`);
+  if (url.searchParams.get("shop")) {
+    throw redirect(`/app?${url.searchParams.toString()}`);
   }
 
-  // No shop parameter - this shouldn't happen in embedded apps
-  return { showForm: false };
+  return { showForm: Boolean(login) };
 };
 
 export default function App() {
@@ -27,7 +26,18 @@ export default function App() {
         <p className={styles.text}>
           A tagline about [your app] that describes your value proposition.
         </p>
-        {/* Login form removed - shop is detected automatically from URL */}
+        {showForm && (
+          <Form className={styles.form} method="post" action="/auth/login">
+            <label className={styles.label}>
+              <span>Shop domain</span>
+              <input className={styles.input} type="text" name="shop" />
+              <span>e.g: my-shop-domain.myshopify.com</span>
+            </label>
+            <button className={styles.button} type="submit">
+              Log in
+            </button>
+          </Form>
+        )}
         <ul className={styles.list}>
           <li>
             <strong>Product feature</strong>. Some detail about your feature and

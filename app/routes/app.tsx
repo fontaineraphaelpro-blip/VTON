@@ -10,8 +10,6 @@ import { authenticate } from "../shopify.server";
 export const links = () => [{ rel: "stylesheet", href: polarisStyles }];
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  // App routes can be embedded - no need to force top-level
-  // Just authenticate normally
   await authenticate.admin(request);
 
   return { apiKey: process.env.SHOPIFY_API_KEY || "" };
@@ -24,7 +22,7 @@ export default function App() {
     <AppProvider isEmbeddedApp apiKey={apiKey}>
       <NavMenu>
         <Link to="/app" rel="home">
-          Dashboard
+          Home
         </Link>
         <Link to="/app/additional">Additional page</Link>
       </NavMenu>
@@ -39,23 +37,5 @@ export function ErrorBoundary() {
 }
 
 export const headers: HeadersFunction = (headersArgs) => {
-  // #region agent log
-  const boundaryHeaders = boundary.headers(headersArgs);
-  const boundaryHeadersObj = boundaryHeaders ? Object.fromEntries(Object.entries(boundaryHeaders)) : {};
-  fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.tsx:headers',message:'Boundary headers returned',data:{boundaryHeaders:boundaryHeadersObj,hasRequest:!!headersArgs?.request},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'G'})}).catch(()=>{});
-  // #endregion
-  
-  // Pour les routes /app/* (embedded), SUPPRIMER les headers anti-iframe
-  // même s'ils sont retournés par boundary.headers()
-  if (boundaryHeaders) {
-    const cleanedHeaders = { ...boundaryHeaders };
-    delete cleanedHeaders["X-Frame-Options"];
-    delete cleanedHeaders["Content-Security-Policy"];
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.tsx:headers:cleaned',message:'Removed CSP headers for embedded route',data:{cleanedHeaders},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H'})}).catch(()=>{});
-    // #endregion
-    return cleanedHeaders;
-  }
-  
-  return boundaryHeaders;
+  return boundary.headers(headersArgs);
 };

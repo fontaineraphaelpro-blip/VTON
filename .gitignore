@@ -1,47 +1,25 @@
-# Dependencies
-node_modules/
-.pnp
-.pnp.js
-
-# Testing
-coverage/
-
-# Production
-build/
-dist/
-
-# Misc
+node_modules
 .DS_Store
-*.pem
 
-# Debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+/.cache
+/build
+/app/build
+/public/build/
+/public/_dev
+/app/public/build
+/prisma/dev.sqlite
+/prisma/dev.sqlite-journal
+database.sqlite
 
-# Local env files
 .env
-.env*.local
-.env.txt
+.env.*
 
-# Vercel
-.vercel
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
 
-# Typescript
-*.tsbuildinfo
+/extensions/*/dist
 
-# Prisma
-*.db
-*.db-journal
-dev.sqlite
-dev.sqlite-journal
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-
-# Shopify
-.shopify/
+# Ignore shopify files created during app dev
+.shopify/*
+.shopify.lock

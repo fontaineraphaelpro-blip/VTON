@@ -1,73 +1,8 @@
-import { useEffect } from "react";
-import type { LoaderFunctionArgs, HeadersFunction } from "@remix-run/node";
-import { useLoaderData } from "@remix-run/react";
+import type { LoaderFunctionArgs } from "@remix-run/node";
 import { authenticate } from "../shopify.server";
-import { AppProvider } from "@shopify/shopify-app-remix/react";
-import { useAppBridge } from "@shopify/app-bridge-react";
-
-// Headers - allow iframe for embedded apps
-export const headers: HeadersFunction = () => {
-  // Don't block iframe - we'll use App Bridge Redirect
-  return {};
-};
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const url = new URL(request.url);
-  const embedded = url.searchParams.get("embedded") === "1";
+  await authenticate.admin(request);
 
-  // Authenticate
-  const { admin, session } = await authenticate.admin(request);
-
-  // Return data for App Bridge Redirect (Step 3: Redirect to Admin Shopify)
-  return {
-    authenticated: true,
-    embedded,
-    apiKey: process.env.SHOPIFY_API_KEY || "",
-    shop: session.shop,
-  };
+  return null;
 };
-
-// Step 3: After OAuth callback, redirect to Admin Shopify using App Bridge
-export default function AuthCallback() {
-  const { authenticated, embedded, apiKey, shop } = useLoaderData<typeof loader>();
-  const app = useAppBridge();
-
-  useEffect(() => {
-    if (authenticated && embedded && app && shop && typeof window !== "undefined") {
-      // Step 3: Redirect to Admin Shopify using App Bridge Redirect.Action.APP
-      try {
-        // @ts-ignore - @shopify/app-bridge/actions may not have types
-        import("@shopify/app-bridge/actions").then((module) => {
-          const { Redirect } = module;
-          if (Redirect && Redirect.create) {
-            const redirect = Redirect.create(app);
-            redirect.dispatch(Redirect.Action.APP, "/app");
-          }
-        }).catch(() => {
-          // Fallback: use window.location if App Bridge Redirect not available
-          window.location.href = "/app";
-        });
-      } catch (e) {
-        // Fallback: use window.location
-        window.location.href = "/app";
-      }
-    }
-  }, [authenticated, embedded, app, shop]);
-
-  // Wrap in AppProvider for App Bridge access
-  if (embedded && apiKey) {
-    return (
-      <AppProvider isEmbeddedApp apiKey={apiKey}>
-        <div>
-          <p>Authenticating... Redirecting to app...</p>
-        </div>
-      </AppProvider>
-    );
-  }
-
-  return (
-    <div>
-      <p>Authenticating...</p>
-    </div>
-  );
-}
