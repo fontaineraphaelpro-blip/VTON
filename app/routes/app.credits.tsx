@@ -173,7 +173,7 @@ export default function Credits() {
                 </div>
               </Layout.Section>
 
-              <Layout.Section>
+              <Layout.Section variant="twoThirds">
                 <Card>
                   <BlockStack gap="400">
                     <Text variant="headingLg" fontWeight="semibold" as="h2">

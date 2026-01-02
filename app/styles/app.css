@@ -327,8 +327,17 @@ body {
   min-height: 100vh;
 }
 
+.Polaris-Page__Content {
+  max-width: 100% !important;
+}
+
 .Polaris-Layout {
   gap: 1.5rem;
+  max-width: 100% !important;
+}
+
+.Polaris-Layout__Section {
+  max-width: 100% !important;
 }
 
 /* DataTable Improvements */

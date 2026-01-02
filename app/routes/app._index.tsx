@@ -92,7 +92,7 @@ export default function Home() {
                 </div>
               </Layout.Section>
 
-              <Layout.Section>
+              <Layout.Section variant="twoThirds">
                 <Card>
                   <BlockStack gap="500">
                     <InlineStack align="space-between" blockAlign="center">
