@@ -166,16 +166,23 @@ body {
   color: var(--color-green-700);
 }
 
-/* Pricing Grid */
+/* Pricing Grid - Credits Page */
 .vton-pricing-grid {
   display: grid;
   grid-template-columns: 1fr;
   gap: 1.5rem;
 }
 
+@media (min-width: 768px) {
+  .vton-pricing-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 @media (min-width: 1024px) {
   .vton-pricing-grid {
     grid-template-columns: 1fr repeat(5, 1fr);
+    gap: 1.5rem;
   }
   
   .vton-credits-card-blue {
