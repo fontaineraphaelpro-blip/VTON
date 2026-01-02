@@ -403,6 +403,7 @@ body::before {
   grid-template-columns: 1fr 1fr;
   gap: var(--spacing-xl);
   width: 100%;
+  align-items: start;
 }
 
 @media (max-width: 1200px) {
@@ -416,6 +417,7 @@ body::before {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-lg);
+  min-width: 0; /* Prevent overflow */
 }
 
 /* ============================================
@@ -510,8 +512,6 @@ body::before {
   gap: var(--spacing-lg);
   box-shadow: var(--shadow-md);
   width: 100%;
-  max-width: 800px;
-  margin: 0 auto;
 }
 
 .vton-alert-icon {
