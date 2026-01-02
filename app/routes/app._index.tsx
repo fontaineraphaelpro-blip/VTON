@@ -55,41 +55,90 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       `;
       
       const scriptTagsResponse = await admin.graphql(scriptTagsQuery);
-      const scriptTagsData = await scriptTagsResponse.json();
-      const existingScripts = scriptTagsData.data?.scriptTags?.edges || [];
-      const scriptExists = existingScripts.some((edge: any) => 
-        edge.node.src.includes('/apps/tryon/widget.js') || edge.node.src.includes('widget.js')
-      );
-
-      if (!scriptExists) {
-        // Créer le script tag automatiquement
-        const createScriptTagMutation = `#graphql
-          mutation scriptTagCreate($input: ScriptTagInput!) {
-            scriptTagCreate(input: $input) {
-              scriptTag {
-                id
-                src
-              }
-              userErrors {
-                field
-                message
-              }
-            }
-          }
-        `;
-
-        const result = await admin.graphql(createScriptTagMutation, {
-          variables: {
-            input: {
-              src: scriptTagUrl,
-              displayScope: "ONLINE_STORE",
-            }
-          }
-        });
+      
+      // Check if response is OK (not a redirect)
+      if (!scriptTagsResponse.ok) {
+        if (scriptTagsResponse.status === 302 || scriptTagsResponse.status === 401) {
+          console.warn("Authentication required for script tag check, skipping auto-install");
+          // Skip script tag installation if auth is required
+        } else {
+          const errorText = await scriptTagsResponse.text().catch(() => "Unknown error");
+          console.error("Error checking script tags:", scriptTagsResponse.status, errorText);
+        }
+        // Continue without installing script tag
+      } else {
+        let scriptTagsData;
+        try {
+          scriptTagsData = await scriptTagsResponse.json();
+        } catch (jsonError) {
+          console.error("Failed to parse script tags response:", jsonError);
+          // Continue without installing script tag
+        }
         
-        const resultData = await result.json();
-        if (resultData.data?.scriptTagCreate?.userErrors?.length > 0) {
-          console.error("Script tag errors:", resultData.data.scriptTagCreate.userErrors);
+        if (scriptTagsData) {
+          const existingScripts = scriptTagsData.data?.scriptTags?.edges || [];
+          const scriptExists = existingScripts.some((edge: any) => 
+            edge.node.src.includes('/apps/tryon/widget.js') || edge.node.src.includes('widget.js')
+          );
+
+          if (!scriptExists) {
+            // Créer le script tag automatiquement
+            const createScriptTagMutation = `#graphql
+              mutation scriptTagCreate($input: ScriptTagInput!) {
+                scriptTagCreate(input: $input) {
+                  scriptTag {
+                    id
+                    src
+                  }
+                  userErrors {
+                    field
+                    message
+                  }
+                }
+              }
+            `;
+
+            const result = await admin.graphql(createScriptTagMutation, {
+              variables: {
+                input: {
+                  src: scriptTagUrl,
+                  displayScope: "ONLINE_STORE",
+                }
+              }
+            });
+            
+            // Check if response is OK
+            if (!result.ok) {
+              if (result.status === 302 || result.status === 401) {
+                console.warn("Authentication required for script tag creation, skipping");
+              } else {
+                const errorText = await result.text().catch(() => "Unknown error");
+                console.error("Error creating script tag:", result.status, errorText);
+              }
+            } else {
+              let resultData;
+              try {
+                resultData = await result.json();
+              } catch (jsonError) {
+                console.error("Failed to parse script tag creation response:", jsonError);
+              }
+              
+              if (resultData) {
+                // Check for GraphQL errors
+                if (resultData.errors) {
+                  const errorMessages = resultData.errors.map((e: any) => e.message || String(e)).join(", ");
+                  console.error("GraphQL errors creating script tag:", errorMessages);
+                }
+                
+                // Check for user errors
+                if (resultData.data?.scriptTagCreate?.userErrors?.length > 0) {
+                  console.error("Script tag user errors:", resultData.data.scriptTagCreate.userErrors);
+                } else if (resultData.data?.scriptTagCreate?.scriptTag) {
+                  console.log("Script tag installed successfully:", resultData.data.scriptTagCreate.scriptTag.src);
+                }
+              }
+            }
+          }
         }
       }
     } catch (scriptError) {
