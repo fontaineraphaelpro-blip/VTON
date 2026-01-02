@@ -246,7 +246,10 @@ export default function Dashboard() {
                   </form>
                 </BlockStack>
               </Card>
+            </div>
 
+            {/* Right Column */}
+            <div className="vton-main-right">
               {/* Quick Actions */}
               <div className="vton-actions-simple">
                 <Link to="/app/credits" className="vton-action-primary">
@@ -266,10 +269,7 @@ export default function Dashboard() {
                   <span className="vton-action-arrow">→</span>
                 </Link>
               </div>
-            </div>
 
-            {/* Right Column */}
-            <div className="vton-main-right">
               {/* Popular Products */}
               <Card>
                 <BlockStack gap="400">
