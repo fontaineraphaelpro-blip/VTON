@@ -12,7 +12,6 @@ import {
   Button,
   Banner,
   TextField,
-  Divider,
   Box,
 } from "@shopify/polaris";
 import { TitleBar } from "@shopify/app-bridge-react";
@@ -20,46 +19,34 @@ import { authenticate } from "../shopify.server";
 import { getShop, upsertShop } from "../lib/services/db.service";
 import { ensureTables } from "../lib/db-init.server";
 
-// Packs de crédits - Prix minimum: 0.25€ par crédit
+// Packs de crédits - Basé sur le design VtonDesign
 const CREDIT_PACKS = [
   {
-    id: "starter",
-    name: "Starter",
-    credits: 25,
-    price: 9.00,
-    pricePerCredit: 0.36,
-    description: "Parfait pour tester",
+    id: "discovery",
+    name: "Discovery",
+    credits: 10,
+    price: 4.99,
+    description: "Start offering Virtual Testing",
     badge: null,
     highlight: false,
   },
   {
-    id: "pro",
-    name: "Pro",
-    credits: 100,
-    price: 30.00,
-    pricePerCredit: 0.30,
-    description: "Idéal pour la croissance",
-    badge: "POPULAIRE",
+    id: "standard",
+    name: "Standard",
+    credits: 30,
+    price: 12.99,
+    description: "Turn visitors into buyers",
+    badge: "BEST SELLER",
+    savePercent: 15,
     highlight: true,
   },
   {
     id: "business",
     name: "Business",
-    credits: 500,
-    price: 140.00,
-    pricePerCredit: 0.28,
-    description: "Pour les volumes importants",
-    badge: "MEILLEUR PRIX",
-    highlight: false,
-  },
-  {
-    id: "enterprise",
-    name: "Enterprise",
-    credits: 2000,
-    price: 500.00,
-    pricePerCredit: 0.25,
-    description: "Tarif optimal pour gros volumes",
-    badge: "TARIF MINIMUM",
+    credits: 100,
+    price: 29.99,
+    description: "Slash return rates by 30%",
+    badge: "BEST ROI",
     highlight: false,
   },
 ];
@@ -105,13 +92,14 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     }
   } else if (intent === "custom-pack") {
     const customCredits = parseInt(formData.get("customCredits") as string);
-    if (customCredits && customCredits >= 2000) {
+    if (customCredits && customCredits >= 200) {
+      const pricePerCredit = 0.25;
       await upsertShop(shop, { addCredits: customCredits });
       return json({ 
         success: true, 
         pack: "Custom", 
         creditsAdded: customCredits,
-        price: customCredits * 0.25
+        price: customCredits * pricePerCredit
       });
     }
   }
@@ -123,7 +111,7 @@ export default function Credits() {
   const { shop, error } = useLoaderData<typeof loader>();
   const fetcher = useFetcher<typeof action>();
   const currentCredits = shop?.credits || 0;
-  const [customCredits, setCustomCredits] = useState("2000");
+  const [customAmount, setCustomAmount] = useState("200");
 
   const isSubmitting = fetcher.state === "submitting";
 
@@ -142,27 +130,141 @@ export default function Credits() {
   return (
     <Page>
       <TitleBar title="Crédits - VTON Magic" />
-      <BlockStack gap="500">
-        {/* Crédits disponibles - Stat Card */}
-        <Card>
-          <BlockStack gap="300">
-            <Text variant="headingLg" fontWeight="semibold" as="h2">
-              Crédits disponibles
-            </Text>
-            <div className="vton-credits-card">
-              <div className="vton-credits-icon">💎</div>
-              <div className="vton-credits-content">
-                <div className="vton-credits-label">CRÉDITS DISPONIBLES</div>
-                <div className="vton-credits-amount">
-                  {currentCredits.toLocaleString("fr-FR")}
+      <div className="vton-credits-page">
+        {/* Header Simple */}
+        <header className="vton-header-simple">
+          <div className="vton-header-logo">
+            <div className="vton-logo-icon-blue">⚡</div>
+            <span className="vton-header-title">VTON Magic Admin</span>
+          </div>
+          <div className="vton-status-badge">
+            <div className="vton-status-dot-green"></div>
+            System Active
+          </div>
+        </header>
+
+        <div className="vton-credits-content">
+          {/* Alert Banner */}
+          <div className="vton-alert-banner">
+            <div className="vton-info-icon">
+              ℹ️
+            </div>
+            <p className="vton-alert-text">
+              <strong>Stop losing money on returns.</strong> Letting customers{" "}
+              <span className="vton-alert-underline">test products virtually</span> removes doubt. 
+              This slashes refunds and boosts conversion by{" "}
+              <strong className="vton-alert-green">2.5x</strong> instantly.
+            </p>
+          </div>
+
+          {/* Grid Principale (Credits + Pricing) */}
+          <div className="vton-pricing-grid">
+            {/* Carte de gauche (Bleu Nuit) */}
+            <div className="vton-credits-card-blue">
+              <div className="vton-credits-card-glow"></div>
+              <div className="vton-credits-card-content">
+                <div className="vton-credits-label-blue">Remaining Credits</div>
+                
+                {/* Animation de chargement */}
+                <div className="vton-loading-dots">
+                  <div className="vton-dot"></div>
+                  <div className="vton-dot delay-1"></div>
+                  <div className="vton-dot delay-2"></div>
                 </div>
-                <div className="vton-credits-footer">
-                  ∞ Crédits illimités dans le temps
+
+                <div className="vton-credits-footer-blue">
+                  <span className="vton-infinity">∞</span> Credits never expire
                 </div>
               </div>
             </div>
-          </BlockStack>
-        </Card>
+
+            {/* Pricing Cards */}
+            {CREDIT_PACKS.map((pack) => (
+              <div 
+                key={pack.id} 
+                className={`vton-pricing-card ${pack.highlight ? "vton-pricing-card-highlight" : ""}`}
+              >
+                {pack.highlight && pack.badge && (
+                  <div className="vton-badge-best-seller">
+                    🔥 BEST SELLER
+                  </div>
+                )}
+                {pack.savePercent && (
+                  <div className="vton-badge-save">
+                    SAVE {pack.savePercent}%
+                  </div>
+                )}
+                {pack.badge && !pack.highlight && (
+                  <div className="vton-badge-roi">
+                    {pack.badge}
+                  </div>
+                )}
+
+                <h3 className={`vton-pack-name ${pack.highlight ? "vton-pack-name-highlight" : ""}`}>
+                  {pack.name}
+                </h3>
+                <div className={`vton-pack-credits-number ${pack.highlight ? "vton-pack-credits-highlight" : ""}`}>
+                  {pack.credits}
+                </div>
+                <p className="vton-pack-description-text">
+                  {pack.description}
+                </p>
+
+                <div className="vton-pack-bottom">
+                  <div className={`vton-pack-price-number ${pack.highlight ? "vton-pack-price-highlight" : ""}`}>
+                    {pack.price.toFixed(2)}€
+                  </div>
+                  <button
+                    className={`vton-pack-button ${pack.highlight ? "vton-pack-button-primary" : "vton-pack-button-secondary"}`}
+                    onClick={() => handlePurchase(pack.id)}
+                    disabled={isSubmitting}
+                  >
+                    {pack.highlight ? "Top Up Now" : "Select"}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Custom Pack (Barre du bas) */}
+          <div className="vton-custom-pack">
+            <div className="vton-custom-pack-left">
+              <div className="vton-custom-icon">
+                <span className="vton-custom-icon-emoji">🏢</span>
+              </div>
+              <div>
+                <h4 className="vton-custom-title">High Volume Store?</h4>
+                <p className="vton-custom-text">
+                  Get our lowest rate (<span className="vton-custom-price">€0.25 / try-on</span>) for bulk orders.
+                </p>
+              </div>
+            </div>
+            <div className="vton-custom-pack-right">
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleCustomPurchase(new FormData(e.currentTarget));
+                }}
+              >
+                <input 
+                  type="number" 
+                  name="customCredits"
+                  value={customAmount}
+                  onChange={(e) => setCustomAmount(e.target.value)}
+                  className="vton-custom-input"
+                  min={200}
+                />
+                <button 
+                  type="submit"
+                  className="vton-custom-button"
+                  disabled={isSubmitting}
+                >
+                  Get Custom Pack
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
 
         {error && (
           <Banner tone="critical" title="Erreur">
@@ -176,109 +278,7 @@ export default function Credits() {
             ont été ajoutés à votre compte.
           </Banner>
         )}
-
-        {/* Packs de crédits - Pricing Grid */}
-        <Card>
-          <BlockStack gap="400">
-            <BlockStack gap="200">
-              <Text variant="headingLg" fontWeight="semibold" as="h2">
-                Packs de crédits
-              </Text>
-              <Text variant="bodyMd" tone="subdued" as="p">
-                Les crédits sont utilisés pour chaque génération de try-on. Tarif minimum: 0.25€ par crédit.
-              </Text>
-            </BlockStack>
-
-            <div className="vton-packs-grid">
-              {CREDIT_PACKS.map((pack) => {
-                return (
-                  <div key={pack.id} className={`vton-pack-card ${pack.highlight ? "highlight" : ""}`}>
-                    {pack.badge && (
-                      <span className={`vton-pack-badge ${pack.highlight ? "best-seller" : "roi"}`}>
-                        {pack.badge}
-                      </span>
-                    )}
-                    <Text variant="headingMd" fontWeight="semibold" as="h3" className="vton-pack-name">
-                      {pack.name}
-                    </Text>
-                    <div className="vton-pack-credits">
-                      {pack.credits.toLocaleString("fr-FR")}
-                    </div>
-                    <Text variant="bodySm" tone="subdued" as="p" className="vton-pack-price-per">
-                      {pack.pricePerCredit.toFixed(2)}€ par crédit
-                    </Text>
-                    <Text variant="bodySm" tone="subdued" as="p" className="vton-pack-description">
-                      {pack.description}
-                    </Text>
-                    <div className="vton-pack-price">
-                      {pack.price.toFixed(2)}€
-                    </div>
-                    <Button
-                      variant="primary"
-                      size="large"
-                      fullWidth
-                      onClick={() => handlePurchase(pack.id)}
-                      loading={isSubmitting}
-                    >
-                      Acheter
-                    </Button>
-                  </div>
-                );
-              })}
-            </div>
-          </BlockStack>
-        </Card>
-
-        {/* Pack personnalisé */}
-        <Card>
-          <BlockStack gap="400">
-            <BlockStack gap="200">
-              <Text variant="headingMd" fontWeight="semibold" as="h3">
-                Pack personnalisé (volume)
-              </Text>
-              <Text variant="bodyMd" tone="subdued" as="p">
-                Pour les commandes de 2000 crédits ou plus, bénéficiez du tarif minimum de 0.25€ par crédit.
-              </Text>
-            </BlockStack>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                handleCustomPurchase(new FormData(e.currentTarget));
-              }}
-            >
-              <InlineStack gap="300" align="start">
-                <Box minWidth="200px">
-                  <TextField
-                    label=""
-                    name="customCredits"
-                    type="number"
-                    value={customCredits}
-                    onChange={setCustomCredits}
-                    min={2000}
-                    autoComplete="off"
-                    suffix="crédits"
-                  />
-                </Box>
-                <Box paddingBlockStart="500">
-                  <Text variant="bodyMd" as="p">
-                    = {(parseInt(customCredits) || 2000) * 0.25}€
-                  </Text>
-                </Box>
-                <Box paddingBlockStart="500">
-                  <Button
-                    submit
-                    variant="primary"
-                    size="large"
-                    loading={isSubmitting}
-                  >
-                    Commander
-                  </Button>
-                </Box>
-              </InlineStack>
-            </form>
-          </BlockStack>
-        </Card>
-      </BlockStack>
+      </div>
     </Page>
   );
 }

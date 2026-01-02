@@ -1,42 +1,27 @@
-/* VTON Magic - Dark Mode High-Tech Design System */
+/* VTON Magic - Design System (VtonDesign Style) */
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
 :root {
-  /* Dark Mode Colors */
-  --color-slate-950: #020617;
-  --color-slate-900: #0F172A;
-  --color-slate-800: #1E293B;
-  --color-slate-700: #334155;
+  /* Colors from VtonDesign */
+  --color-bg: #F3F4F8;
+  --color-text: #1a1b2e;
+  --color-blue-night: #2e2b69;
+  --color-indigo: #4f46e5;
+  --color-indigo-dark: #4338ca;
+  --color-indigo-light: #6366f1;
   --color-white: #FFFFFF;
-  --color-white-10: rgba(255, 255, 255, 0.1);
-  --color-white-20: rgba(255, 255, 255, 0.2);
-  --color-black-40: rgba(0, 0, 0, 0.4);
-  
-  /* Gradients */
-  --gradient-primary: linear-gradient(135deg, #6366F1 0%, #8B5CF6 50%, #EC4899 100%);
-  --gradient-purple: linear-gradient(135deg, #8B5CF6 0%, #EC4899 100%);
-  --gradient-indigo-purple: linear-gradient(to right, #6366F1, #8B5CF6);
-  --gradient-bg: radial-gradient(circle at 20% 50%, rgba(139, 92, 246, 0.15) 0%, transparent 50%),
-                 radial-gradient(circle at 80% 80%, rgba(99, 102, 241, 0.15) 0%, transparent 50%),
-                 radial-gradient(circle at 40% 20%, rgba(236, 72, 153, 0.1) 0%, transparent 50%);
-  
-  /* Shadows with glow */
-  --shadow-glow-purple: 0 0 20px rgba(139, 92, 246, 0.4),
-                        0 0 40px rgba(139, 92, 246, 0.2),
-                        0 0 60px rgba(139, 92, 246, 0.1);
-  --shadow-glow-indigo: 0 0 20px rgba(99, 102, 241, 0.4),
-                        0 0 40px rgba(99, 102, 241, 0.2);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.3),
-               0 4px 6px -2px rgba(0, 0, 0, 0.2);
-  
-  /* Transitions */
-  --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-fast: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-  
-  /* Radius */
-  --radius-lg: 16px;
-  --radius-xl: 20px;
+  --color-slate-100: #F1F5F9;
+  --color-slate-200: #E2E8F0;
+  --color-slate-300: #CBD5E1;
+  --color-slate-400: #94A3B8;
+  --color-slate-500: #64748B;
+  --color-green-100: #D1FAE5;
+  --color-green-500: #10B981;
+  --color-green-700: #047857;
+  --color-orange-100: #FFEDD5;
+  --color-orange-700: #C2410C;
+  --color-black: #0f172a;
 }
 
 /* Base Styles */
@@ -48,39 +33,481 @@ body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: var(--color-slate-950);
-  color: var(--color-white);
+  background-color: var(--color-bg);
+  color: var(--color-text);
   margin: 0;
   padding: 0;
-  position: relative;
+}
+
+/* Credits Page Container */
+.vton-credits-page {
   min-height: 100vh;
+  background-color: var(--color-bg);
+  padding: 2rem;
+  font-family: 'Inter', sans-serif;
 }
 
-body::before {
-  content: '';
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: var(--gradient-bg);
-  pointer-events: none;
-  z-index: 0;
+/* Header Simple */
+.vton-header-simple {
+  max-width: 96rem;
+  margin: 0 auto 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
-/* Polaris Overrides - Dark Mode */
-.Polaris-Page {
-  background: transparent;
-  padding: 0;
+.vton-header-logo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.vton-logo-icon-blue {
+  width: 2rem;
+  height: 2rem;
+  background-color: #2563EB;
+  border-radius: 0.375rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.vton-header-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.vton-status-badge {
+  background-color: var(--color-green-100);
+  color: var(--color-green-700);
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.vton-status-dot-green {
+  width: 0.5rem;
+  height: 0.5rem;
+  background-color: var(--color-green-500);
+  border-radius: 50%;
+}
+
+/* Credits Content */
+.vton-credits-content {
+  max-width: 96rem;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Alert Banner */
+.vton-alert-banner {
+  background-color: #EEF2FF;
+  border: 1px solid #E0E7FF;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.vton-info-icon {
+  background-color: white;
+  padding: 0.25rem;
+  border-radius: 50%;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  color: #2563EB;
+  margin-top: 0.125rem;
+  font-size: 1rem;
+  width: 1.25rem;
+  height: 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.vton-alert-text {
+  font-size: 0.875rem;
+  color: #3730a3;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.vton-alert-underline {
+  text-decoration: underline;
+  text-decoration-color: #C7D2FE;
+}
+
+.vton-alert-green {
+  color: var(--color-green-700);
+}
+
+/* Pricing Grid */
+.vton-pricing-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+}
+
+@media (min-width: 1024px) {
+  .vton-pricing-grid {
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+  }
+}
+
+/* Credits Card Blue (Left) */
+.vton-credits-card-blue {
+  background-color: var(--color-blue-night);
+  border-radius: 1rem;
+  padding: 2rem;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
   position: relative;
-  z-index: 1;
+  overflow: hidden;
+  box-shadow: 0 20px 25px -5px rgba(79, 70, 229, 0.1), 0 10px 10px -5px rgba(79, 70, 229, 0.04);
+}
+
+.vton-credits-card-glow {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 8rem;
+  height: 8rem;
+  background-color: rgba(255, 255, 255, 0.05);
+  border-radius: 50%;
+  filter: blur(3rem);
+  transform: translate(2.5rem, -2.5rem);
+}
+
+.vton-credits-card-content {
+  position: relative;
+  z-index: 10;
+  text-align: center;
+  padding: 2.5rem 0;
+}
+
+.vton-credits-label-blue {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: #C7D2FE;
+  margin-bottom: 1rem;
+  text-transform: uppercase;
+}
+
+.vton-loading-dots {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.vton-dot {
+  width: 0.75rem;
+  height: 0.75rem;
+  background-color: white;
+  border-radius: 50%;
+  animation: bounce 1.4s infinite ease-in-out both;
+}
+
+.vton-dot.delay-1 {
+  animation-delay: -0.32s;
+}
+
+.vton-dot.delay-2 {
+  animation-delay: -0.16s;
+}
+
+@keyframes bounce {
+  0%, 80%, 100% {
+    transform: scale(0);
+    opacity: 0.5;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.vton-credits-footer-blue {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  color: #C7D2FE;
+  font-size: 0.875rem;
+}
+
+.vton-infinity {
+  font-size: 1.25rem;
+}
+
+/* Pricing Cards */
+.vton-pricing-card {
+  background-color: white;
+  border-radius: 1rem;
+  padding: 1.5rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  border: 1px solid var(--color-slate-100);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  transition: box-shadow 0.2s;
+}
+
+.vton-pricing-card:hover {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.vton-pricing-card-highlight {
+  box-shadow: 0 20px 25px -5px rgba(99, 102, 241, 0.1), 0 10px 10px -5px rgba(99, 102, 241, 0.04);
+  border: 2px solid var(--color-indigo-light);
+  transform: scale(1.05);
+  z-index: 10;
+}
+
+.vton-badge-best-seller {
+  position: absolute;
+  top: -1rem;
+  background: linear-gradient(to right, #A855F7, #EC4899);
+  color: white;
+  font-size: 0.625rem;
+  font-weight: 700;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.vton-badge-save {
+  background-color: var(--color-green-100);
+  color: var(--color-green-700);
+  font-size: 0.625rem;
+  font-weight: 700;
+  padding: 0.125rem 0.5rem;
+  border-radius: 0.25rem;
+  margin-bottom: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.vton-badge-roi {
+  background-color: var(--color-orange-100);
+  color: var(--color-orange-700);
+  font-size: 0.625rem;
+  font-weight: 700;
+  padding: 0.125rem 0.5rem;
+  border-radius: 0.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.vton-pack-name {
+  color: var(--color-slate-500);
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  font-size: 1rem;
+  margin-top: 0;
+}
+
+.vton-pack-name-highlight {
+  color: var(--color-indigo-dark);
+  font-weight: 700;
+}
+
+.vton-pack-credits-number {
+  font-size: 2.25rem;
+  font-weight: 800;
+  color: var(--color-text);
+  margin-bottom: 0.5rem;
+  line-height: 1;
+}
+
+.vton-pack-credits-highlight {
+  font-size: 3rem;
+  color: var(--color-indigo-dark);
+}
+
+.vton-pack-description-text {
+  font-size: 0.75rem;
+  color: var(--color-slate-400);
+  text-align: center;
+  margin-bottom: 2rem;
+  padding: 0 1rem;
+}
+
+.vton-pack-bottom {
+  margin-top: auto;
+  width: 100%;
+}
+
+.vton-pack-price-number {
+  font-size: 1.25rem;
+  font-weight: 700;
+  text-align: center;
+  color: var(--color-indigo-dark);
+  margin-bottom: 1rem;
+}
+
+.vton-pack-price-highlight {
+  font-size: 1.5rem;
+}
+
+.vton-pack-button {
+  width: 100%;
+  padding: 0.625rem;
+  border-radius: 0.75rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  border: 1px solid var(--color-slate-200);
+  background-color: white;
+  color: var(--color-slate-600);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.vton-pack-button:hover {
+  border-color: var(--color-indigo-dark);
+  color: var(--color-indigo-dark);
+}
+
+.vton-pack-button-primary {
+  background-color: var(--color-indigo);
+  border: none;
+  color: white;
+  font-weight: 700;
+  padding: 0.75rem;
+  box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.3), 0 4px 6px -2px rgba(99, 102, 241, 0.2);
+}
+
+.vton-pack-button-primary:hover {
+  background-color: var(--color-indigo-dark);
+  box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.4), 0 4px 6px -2px rgba(99, 102, 241, 0.3);
+  color: white;
+}
+
+.vton-pack-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Custom Pack */
+.vton-custom-pack {
+  background-color: white;
+  border-radius: 0.75rem;
+  border: 2px dashed var(--color-slate-200);
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+@media (min-width: 768px) {
+  .vton-custom-pack {
+    flex-direction: row;
+  }
+}
+
+.vton-custom-pack-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.vton-custom-icon {
+  background-color: var(--color-slate-100);
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  color: var(--color-slate-600);
+}
+
+.vton-custom-icon-emoji {
+  font-weight: 700;
+  font-size: 1.125rem;
+}
+
+.vton-custom-title {
+  font-weight: 700;
+  color: var(--color-text);
+  font-size: 0.875rem;
+  margin: 0 0 0.25rem 0;
+}
+
+.vton-custom-text {
+  font-size: 0.75rem;
+  color: var(--color-slate-500);
+  margin: 0;
+}
+
+.vton-custom-price {
+  font-weight: 700;
+  color: var(--color-indigo-dark);
+}
+
+.vton-custom-pack-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.vton-custom-input {
+  width: 6rem;
+  border: 1px solid var(--color-slate-200);
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  text-align: center;
+  font-weight: 700;
+  color: var(--color-text);
+  font-size: 0.875rem;
+}
+
+.vton-custom-input:focus {
+  outline: none;
+  ring: 2px;
+  ring-color: var(--color-indigo);
+}
+
+.vton-custom-button {
+  background-color: var(--color-black);
+  color: white;
+  padding: 0.5rem 1.5rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.vton-custom-button:hover {
+  background-color: #000000;
+}
+
+.vton-custom-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Polaris Overrides */
+.Polaris-Page {
+  background: var(--color-bg);
+  padding: 0;
 }
 
 .Polaris-Page__Content {
-  padding: 2rem;
+  padding: 0;
   max-width: 100%;
-  position: relative;
-  z-index: 1;
 }
 
 .Polaris-Layout {
@@ -88,466 +515,111 @@ body::before {
 }
 
 .Polaris-Card {
-  background: var(--color-black-40);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid var(--color-white-10);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-lg);
+  background: white;
+  border: 1px solid var(--color-slate-200);
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
   padding: 0;
-  position: relative;
-  overflow: hidden;
-  transition: var(--transition);
-}
-
-.Polaris-Card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, 
-    transparent,
-    rgba(255, 255, 255, 0.2),
-    transparent
-  );
-}
-
-.Polaris-Card:hover {
-  border-color: var(--color-white-20);
-  box-shadow: var(--shadow-lg), var(--shadow-glow-purple);
 }
 
 .Polaris-Card__Section {
-  padding: 2rem;
+  padding: 1.5rem;
 }
 
 .Polaris-Button {
-  border-radius: 12px;
+  border-radius: 0.5rem;
   font-weight: 600;
-  font-size: 0.9375rem;
-  padding: 0.75rem 1.5rem;
-  transition: var(--transition);
-  border: none;
-  position: relative;
-  overflow: hidden;
+  font-size: 0.875rem;
+  padding: 0.625rem 1.25rem;
+  transition: all 0.2s;
 }
 
 .Polaris-Button--primary {
-  background: var(--gradient-indigo-purple);
+  background: var(--color-indigo);
+  border-color: var(--color-indigo);
   color: white;
-  box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
-}
-
-.Polaris-Button--primary::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-  transition: left 0.5s;
 }
 
 .Polaris-Button--primary:hover {
-  box-shadow: 0 8px 25px rgba(139, 92, 246, 0.5), var(--shadow-glow-purple);
-  transform: translateY(-2px);
-}
-
-.Polaris-Button--primary:hover::before {
-  left: 100%;
-}
-
-.Polaris-Button--primary:active {
-  transform: translateY(0);
+  background: var(--color-indigo-dark);
+  border-color: var(--color-indigo-dark);
 }
 
 .Polaris-Button--secondary {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--color-white-10);
-  color: var(--color-white);
-  backdrop-filter: blur(10px);
+  background: white;
+  border-color: var(--color-slate-200);
+  color: var(--color-text);
 }
 
 .Polaris-Button--secondary:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: var(--color-white-20);
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  background: var(--color-slate-100);
+  border-color: var(--color-slate-300);
 }
 
 .Polaris-Text--headingLg {
-  font-weight: 800;
-  color: var(--color-white);
-  font-size: 1.5rem;
-  letter-spacing: -0.02em;
+  font-weight: 700;
+  color: var(--color-text);
+  font-size: 1.25rem;
 }
 
 .Polaris-Text--headingMd {
-  font-weight: 700;
-  color: var(--color-white);
-  font-size: 1.25rem;
-  letter-spacing: -0.01em;
+  font-weight: 600;
+  color: var(--color-text);
+  font-size: 1.125rem;
 }
 
 .Polaris-Text--bodyMd {
-  color: rgba(255, 255, 255, 0.8);
-}
-
-.Polaris-Text--bodySm {
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--color-slate-600);
 }
 
 .Polaris-Banner {
-  background: var(--color-black-40);
-  backdrop-filter: blur(24px);
-  border: 1px solid var(--color-white-10);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--color-slate-200);
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .Polaris-DataTable {
-  background: var(--color-black-40);
-  backdrop-filter: blur(24px);
-  border: 1px solid var(--color-white-10);
-  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-slate-200);
+  border-radius: 0.5rem;
   overflow: hidden;
-  box-shadow: var(--shadow-lg);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .Polaris-DataTable__Table {
-  background: transparent;
+  background: white;
 }
 
-/* Stat Cards - High-Tech Style */
-.vton-stat-card {
-  background: var(--color-black-40);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid var(--color-white-10);
-  border-radius: var(--radius-xl);
-  padding: 2rem;
-  box-shadow: var(--shadow-lg);
-  transition: var(--transition);
-  position: relative;
-  overflow: hidden;
-}
-
-.vton-stat-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, 
-    transparent,
-    rgba(139, 92, 246, 0.5),
-    transparent
-  );
-}
-
-.vton-stat-card:hover {
-  border-color: var(--color-white-20);
-  box-shadow: var(--shadow-lg), var(--shadow-glow-purple);
-  transform: translateY(-4px);
-}
-
-.vton-stat-value {
-  font-size: 3rem;
-  font-weight: 900;
-  line-height: 1;
-  margin-bottom: 0.5rem;
-  color: var(--color-white);
-  letter-spacing: -0.03em;
-  background: var(--gradient-primary);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.vton-stat-label {
-  font-size: 0.875rem;
-  color: rgba(255, 255, 255, 0.6);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-}
-
-/* Credits Card - High-Tech Style */
-.vton-credits-card {
-  background: var(--color-black-40);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid var(--color-white-10);
-  border-radius: var(--radius-xl);
-  padding: 2rem;
-  box-shadow: var(--shadow-lg);
-  display: flex;
-  align-items: center;
-  gap: 1.5rem;
-  position: relative;
-  overflow: hidden;
-  transition: var(--transition);
-}
-
-.vton-credits-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, 
-    transparent,
-    rgba(139, 92, 246, 0.5),
-    transparent
-  );
-}
-
-.vton-credits-card:hover {
-  border-color: var(--color-white-20);
-  box-shadow: var(--shadow-lg), var(--shadow-glow-purple);
-}
-
-.vton-credits-icon {
-  width: 56px;
-  height: 56px;
-  background: var(--gradient-indigo-purple);
-  border-radius: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 28px;
-  flex-shrink: 0;
-  box-shadow: 0 8px 20px rgba(139, 92, 246, 0.4);
-}
-
-.vton-credits-content {
-  flex: 1;
-}
-
-.vton-credits-label {
-  font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.6);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.15em;
-  margin-bottom: 0.5rem;
-}
-
-.vton-credits-amount {
-  font-size: 2.5rem;
-  font-weight: 900;
-  line-height: 1;
-  color: var(--color-white);
-  letter-spacing: -0.03em;
-  margin-bottom: 0.25rem;
-}
-
-.vton-credits-footer {
-  font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.5);
-  font-weight: 500;
-}
-
-/* Pack Cards - High-Tech Style */
-.vton-packs-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 1.5rem;
-  width: 100%;
-}
-
-@media (max-width: 1400px) {
-  .vton-packs-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (max-width: 768px) {
-  .vton-packs-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-.vton-pack-card {
-  background: var(--color-black-40);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid var(--color-white-10);
-  border-radius: var(--radius-xl);
-  padding: 2rem;
-  box-shadow: var(--shadow-lg);
-  transition: var(--transition);
-  display: flex;
-  flex-direction: column;
-  position: relative;
-  overflow: hidden;
-}
-
-.vton-pack-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, 
-    transparent,
-    rgba(255, 255, 255, 0.2),
-    transparent
-  );
-}
-
-.vton-pack-card:hover {
-  border-color: var(--color-white-20);
-  box-shadow: var(--shadow-lg), var(--shadow-glow-purple);
-  transform: translateY(-4px);
-}
-
-.vton-pack-card.highlight {
-  border: 2px solid rgba(139, 92, 246, 0.5);
-  box-shadow: var(--shadow-lg), var(--shadow-glow-purple);
-}
-
-.vton-pack-badge {
-  display: inline-block;
-  padding: 0.5rem 1rem;
-  border-radius: 20px;
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  margin-bottom: 1rem;
-}
-
-.vton-pack-badge.best-seller {
-  background: var(--gradient-indigo-purple);
-  color: white;
-  box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);
-}
-
-.vton-pack-badge.roi {
-  background: rgba(251, 191, 36, 0.2);
-  border: 1px solid rgba(251, 191, 36, 0.3);
-  color: #FBBF24;
-}
-
-.vton-pack-name {
-  font-size: 1.25rem;
-  font-weight: 800;
-  color: var(--color-white);
-  margin-bottom: 0.5rem;
-  letter-spacing: -0.01em;
-}
-
-.vton-pack-credits {
-  font-size: 2.5rem;
-  font-weight: 900;
-  color: var(--color-white);
-  letter-spacing: -0.03em;
-  margin-bottom: 0.5rem;
-}
-
-.vton-pack-price-per {
-  font-size: 0.875rem;
-  color: rgba(255, 255, 255, 0.6);
-  margin-bottom: 0.5rem;
-  font-weight: 500;
-}
-
-.vton-pack-description {
-  font-size: 0.875rem;
-  color: rgba(255, 255, 255, 0.6);
-  margin-bottom: 1.5rem;
-  flex: 1;
-}
-
-.vton-pack-price {
-  font-size: 1.75rem;
-  font-weight: 900;
-  color: var(--color-white);
-  margin-bottom: 1.5rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid var(--color-white-10);
-  letter-spacing: -0.02em;
-}
-
-/* Action Cards - High-Tech Style */
-.vton-action-card {
-  background: var(--color-black-40);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid var(--color-white-10);
-  border-radius: var(--radius-xl);
-  padding: 2rem;
-  box-shadow: var(--shadow-lg);
-  transition: var(--transition);
-  text-decoration: none;
-  display: block;
-  color: inherit;
-  position: relative;
-  overflow: hidden;
-}
-
-.vton-action-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, 
-    transparent,
-    rgba(255, 255, 255, 0.2),
-    transparent
-  );
-}
-
-.vton-action-card:hover {
-  border-color: var(--color-white-20);
-  box-shadow: var(--shadow-lg), var(--shadow-glow-purple);
-  transform: translateY(-4px);
-}
-
-/* Scrollbar - Dark Mode */
+/* Scrollbar */
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--color-slate-100);
   border-radius: 5px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--color-slate-300);
   border-radius: 5px;
-  border: 2px solid rgba(0, 0, 0, 0.2);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--color-slate-400);
 }
 
 /* Responsive */
 @media (max-width: 768px) {
-  .Polaris-Page__Content {
+  .vton-credits-page {
     padding: 1rem;
   }
   
-  .vton-stat-value {
-    font-size: 2rem;
+  .vton-pricing-card-highlight {
+    transform: scale(1);
   }
   
-  .vton-credits-amount {
-    font-size: 2rem;
-  }
-  
-  .vton-pack-credits {
-    font-size: 2rem;
+  .vton-pack-credits-highlight {
+    font-size: 2.25rem;
   }
 }
