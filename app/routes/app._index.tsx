@@ -109,7 +109,7 @@ export default function Home() {
             </Banner>
           )}
 
-          {/* Main Stats - Simplified */}
+          {/* Main Stats - Horizontal Layout */}
           <div className="vton-stats-grid">
             {stats.map((stat) => (
               <Link to={stat.link} key={stat.label} className="vton-stat-card-link">
@@ -124,88 +124,97 @@ export default function Home() {
             ))}
           </div>
 
-          {/* Low Credits Alert - Prominent */}
-          {credits < 50 && (
-            <div className="vton-alert-urgent">
-              <div className="vton-alert-icon">⚠️</div>
-              <div className="vton-alert-content">
-                <div className="vton-alert-title">Low Credits</div>
-                <div className="vton-alert-message">
-                  You have {credits} credit{credits > 1 ? "s" : ""} remaining. Recharge now to continue.
-                </div>
-              </div>
-              <Link to="/app/credits" className="vton-alert-button">
-                Buy Credits →
-              </Link>
-            </div>
-          )}
-
-          {/* Quick Actions - Simplified */}
-          <div className="vton-actions-simple">
-            <Link to="/app/credits" className="vton-action-primary">
-              <span className="vton-action-icon">💎</span>
-              <div className="vton-action-text">
-                <div className="vton-action-title">Buy Credits</div>
-                <div className="vton-action-subtitle">Get more try-ons for your store</div>
-              </div>
-              <span className="vton-action-arrow">→</span>
-            </Link>
-            <Link to="/app/widget" className="vton-action-secondary">
-              <span className="vton-action-icon">⚙️</span>
-              <div className="vton-action-text">
-                <div className="vton-action-title">Configure Widget</div>
-                <div className="vton-action-subtitle">Customize your try-on button</div>
-              </div>
-              <span className="vton-action-arrow">→</span>
-            </Link>
-            <Link to="/app/history" className="vton-action-secondary">
-              <span className="vton-action-icon">📊</span>
-              <div className="vton-action-text">
-                <div className="vton-action-title">View History</div>
-                <div className="vton-action-subtitle">See all try-on sessions</div>
-              </div>
-              <span className="vton-action-arrow">→</span>
-            </Link>
-          </div>
-
-          {/* Recent Activity - Simplified */}
-          {recentLogs.length > 0 && (
-            <Card>
-              <BlockStack gap="400">
-                <InlineStack align="space-between" blockAlign="center">
-                  <Text variant="headingLg" fontWeight="bold" as="h2">
-                    Recent Activity
-                  </Text>
-                  <Button url="/app/history" variant="plain">
-                    View All →
-                  </Button>
-                </InlineStack>
-                <Divider />
-                <BlockStack gap="300">
-                  {recentLogs.slice(0, 5).map((log: any, index: number) => (
-                    <div key={log.id || index} className="vton-activity-item">
-                      <div className="vton-activity-content">
-                        <Text variant="bodyMd" fontWeight="medium" as="p">
-                          {log.product_title || log.product_id || "Unknown Product"}
-                        </Text>
-                        <Text variant="bodySm" tone="subdued" as="p">
-                          {new Date(log.created_at).toLocaleDateString("en-US", { 
-                            month: "short", 
-                            day: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit"
-                          })}
-                        </Text>
-                      </div>
-                      <div className={`vton-activity-status ${log.success ? "vton-activity-success" : "vton-activity-failed"}`}>
-                        {log.success ? "✓" : "✗"}
-                      </div>
+          {/* Main Content - Horizontal Layout */}
+          <div className="vton-main-layout">
+            {/* Left Column */}
+            <div className="vton-main-left">
+              {/* Low Credits Alert */}
+              {credits < 50 && (
+                <div className="vton-alert-urgent">
+                  <div className="vton-alert-icon">⚠️</div>
+                  <div className="vton-alert-content">
+                    <div className="vton-alert-title">Low Credits</div>
+                    <div className="vton-alert-message">
+                      You have {credits} credit{credits > 1 ? "s" : ""} remaining. Recharge now.
                     </div>
-                  ))}
-                </BlockStack>
-              </BlockStack>
-            </Card>
-          )}
+                  </div>
+                  <Link to="/app/credits" className="vton-alert-button">
+                    Buy Credits →
+                  </Link>
+                </div>
+              )}
+
+              {/* Quick Actions */}
+              <div className="vton-actions-simple">
+                <Link to="/app/credits" className="vton-action-primary">
+                  <span className="vton-action-icon">💎</span>
+                  <div className="vton-action-text">
+                    <div className="vton-action-title">Buy Credits</div>
+                    <div className="vton-action-subtitle">Get more try-ons</div>
+                  </div>
+                  <span className="vton-action-arrow">→</span>
+                </Link>
+                <Link to="/app/widget" className="vton-action-secondary">
+                  <span className="vton-action-icon">⚙️</span>
+                  <div className="vton-action-text">
+                    <div className="vton-action-title">Configure Widget</div>
+                    <div className="vton-action-subtitle">Customize button</div>
+                  </div>
+                  <span className="vton-action-arrow">→</span>
+                </Link>
+                <Link to="/app/history" className="vton-action-secondary">
+                  <span className="vton-action-icon">📊</span>
+                  <div className="vton-action-text">
+                    <div className="vton-action-title">View History</div>
+                    <div className="vton-action-subtitle">See all sessions</div>
+                  </div>
+                  <span className="vton-action-arrow">→</span>
+                </Link>
+              </div>
+            </div>
+
+            {/* Right Column */}
+            <div className="vton-main-right">
+              {/* Recent Activity */}
+              {recentLogs.length > 0 && (
+                <Card>
+                  <BlockStack gap="400">
+                    <InlineStack align="space-between" blockAlign="center">
+                      <Text variant="headingLg" fontWeight="bold" as="h2">
+                        Recent Activity
+                      </Text>
+                      <Button url="/app/history" variant="plain">
+                        View All →
+                      </Button>
+                    </InlineStack>
+                    <Divider />
+                    <BlockStack gap="300">
+                      {recentLogs.slice(0, 5).map((log: any, index: number) => (
+                        <div key={log.id || index} className="vton-activity-item">
+                          <div className="vton-activity-content">
+                            <Text variant="bodyMd" fontWeight="medium" as="p">
+                              {log.product_title || log.product_id || "Unknown Product"}
+                            </Text>
+                            <Text variant="bodySm" tone="subdued" as="p">
+                              {new Date(log.created_at).toLocaleDateString("en-US", { 
+                                month: "short", 
+                                day: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit"
+                              })}
+                            </Text>
+                          </div>
+                          <div className={`vton-activity-status ${log.success ? "vton-activity-success" : "vton-activity-failed"}`}>
+                            {log.success ? "✓" : "✗"}
+                          </div>
+                        </div>
+                      ))}
+                    </BlockStack>
+                  </BlockStack>
+                </Card>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </Page>

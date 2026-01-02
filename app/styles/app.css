@@ -156,15 +156,9 @@ body::before {
 
 .vton-page-content {
   display: grid;
-  grid-template-columns: 1fr 2fr;
-  gap: var(--spacing-xl);
+  grid-template-columns: 1fr;
+  gap: var(--spacing-lg);
   align-items: start;
-}
-
-@media (max-width: 1200px) {
-  .vton-page-content {
-    grid-template-columns: 1fr;
-  }
 }
 
 /* ============================================
@@ -401,7 +395,31 @@ body::before {
 }
 
 /* ============================================
-   Simplified Actions - New Design
+   Main Layout - Horizontal
+   ============================================ */
+
+.vton-main-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-xl);
+  width: 100%;
+}
+
+@media (max-width: 1200px) {
+  .vton-main-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.vton-main-left,
+.vton-main-right {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+/* ============================================
+   Simplified Actions - Horizontal
    ============================================ */
 
 .vton-actions-simple {
@@ -409,8 +427,6 @@ body::before {
   flex-direction: column;
   gap: var(--spacing-md);
   width: 100%;
-  max-width: 600px;
-  margin: 0 auto;
 }
 
 .vton-action-primary,
