@@ -1,7 +1,7 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
-import { useLoaderData, useFetcher } from "@remix-run/react";
-import { useState } from "react";
+import { useLoaderData, useFetcher, useRevalidator } from "@remix-run/react";
+import { useState, useEffect } from "react";
 import {
   Page,
   Layout,
@@ -85,6 +85,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 export default function Widget() {
   const { shop, error } = useLoaderData<typeof loader>();
   const fetcher = useFetcher<typeof action>();
+  const revalidator = useRevalidator();
 
   const [widgetText, setWidgetText] = useState(shop?.widget_text || "Try It On Now ✨");
   const [widgetBg, setWidgetBg] = useState(shop?.widget_bg || "#0066FF");
@@ -104,12 +105,25 @@ export default function Widget() {
   };
 
   const handleTestTryOn = () => {
+    if (!personImage || !garmentImage) {
+      alert("Please provide both person and garment image URLs");
+      return;
+    }
     const formData = new FormData();
     formData.append("intent", "test-tryon");
     formData.append("personImage", personImage);
     formData.append("garmentImage", garmentImage);
     fetcher.submit(formData, { method: "post" });
   };
+
+  // Recharger les données après une sauvegarde réussie
+  useEffect(() => {
+    if (fetcher.data?.success && !fetcher.data?.testMode) {
+      setTimeout(() => {
+        revalidator.revalidate();
+      }, 500);
+    }
+  }, [fetcher.data?.success, fetcher.data?.testMode, revalidator]);
 
   return (
     <Page>

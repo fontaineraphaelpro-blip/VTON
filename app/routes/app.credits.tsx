@@ -1,7 +1,7 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
-import { useLoaderData, useFetcher } from "@remix-run/react";
-import { useState } from "react";
+import { useLoaderData, useFetcher, useRevalidator } from "@remix-run/react";
+import { useState, useEffect } from "react";
 import {
   Page,
   Layout,
@@ -138,10 +138,21 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 export default function Credits() {
   const { shop, error } = useLoaderData<typeof loader>();
   const fetcher = useFetcher<typeof action>();
+  const revalidator = useRevalidator();
   const currentCredits = shop?.credits || 0;
   const [customAmount, setCustomAmount] = useState("250");
 
   const isSubmitting = fetcher.state === "submitting";
+
+  // Recharger les données après un achat réussi
+  useEffect(() => {
+    if (fetcher.data?.success) {
+      // Attendre un peu pour que la base de données soit mise à jour
+      setTimeout(() => {
+        revalidator.revalidate();
+      }, 500);
+    }
+  }, [fetcher.data?.success, revalidator]);
 
   const handlePurchase = (packId: string) => {
     const formData = new FormData();

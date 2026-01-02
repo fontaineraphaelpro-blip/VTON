@@ -58,10 +58,11 @@ body {
 /* Header Simple */
 .vton-header-simple {
   max-width: 96rem;
-  margin: 0 auto 2rem;
+  margin: 0 auto 2rem auto;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  width: 100%;
 }
 
 .vton-header-logo {
@@ -112,8 +113,10 @@ body {
 .vton-credits-page {
   min-height: 100vh;
   background-color: var(--color-bg);
-  padding: 3rem 2.5rem;
+  padding: 2rem 1.5rem;
   font-family: 'Inter', sans-serif;
+  width: 100%;
+  overflow-x: hidden;
 }
 
 .vton-credits-content {
@@ -121,7 +124,8 @@ body {
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 2.5rem;
+  gap: 2rem;
+  width: 100%;
 }
 
 /* Alert Banner */
@@ -133,7 +137,8 @@ body {
   display: flex;
   align-items: flex-start;
   gap: 1rem;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0;
+  width: 100%;
 }
 
 .vton-info-icon {
@@ -171,43 +176,64 @@ body {
 .vton-pricing-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 2rem;
+  gap: 1.5rem;
+  width: 100%;
 }
 
-@media (min-width: 768px) {
+@media (min-width: 640px) {
   .vton-pricing-grid {
     grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
   }
 }
 
 @media (min-width: 1024px) {
   .vton-pricing-grid {
-    grid-template-columns: 1fr repeat(5, 1fr);
-    gap: 2rem;
+    grid-template-columns: 280px repeat(5, 1fr);
+    gap: 1.25rem;
+    max-width: 100%;
+    overflow-x: auto;
   }
   
   .vton-credits-card-blue {
     grid-column: 1;
+    grid-row: 1;
+    min-width: 0;
+  }
+  
+  .vton-pricing-card {
+    min-width: 0;
   }
   
   .vton-pricing-card:nth-child(2) {
     grid-column: 2;
+    grid-row: 1;
   }
   
   .vton-pricing-card:nth-child(3) {
     grid-column: 3;
+    grid-row: 1;
   }
   
   .vton-pricing-card:nth-child(4) {
     grid-column: 4;
+    grid-row: 1;
   }
   
   .vton-pricing-card:nth-child(5) {
     grid-column: 5;
+    grid-row: 1;
   }
   
   .vton-pricing-card:nth-child(6) {
     grid-column: 6;
+    grid-row: 1;
+  }
+}
+
+@media (min-width: 1400px) {
+  .vton-pricing-grid {
+    gap: 1.5rem;
   }
 }
 
@@ -215,7 +241,7 @@ body {
 .vton-credits-card-blue {
   background-color: var(--color-blue-night);
   border-radius: 1rem;
-  padding: 2.5rem;
+  padding: 2rem 1.5rem;
   color: white;
   display: flex;
   flex-direction: column;
@@ -223,6 +249,8 @@ body {
   position: relative;
   overflow: hidden;
   box-shadow: 0 20px 25px -5px rgba(79, 70, 229, 0.1), 0 10px 10px -5px rgba(79, 70, 229, 0.04);
+  width: 100%;
+  min-height: 300px;
 }
 
 .vton-credits-card-glow {
@@ -280,7 +308,7 @@ body {
 .vton-pricing-card {
   background-color: white;
   border-radius: 1rem;
-  padding: 2rem 1.5rem;
+  padding: 1.75rem 1.25rem;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
   border: 1px solid var(--color-slate-100);
   display: flex;
@@ -288,6 +316,8 @@ body {
   align-items: center;
   position: relative;
   transition: box-shadow 0.2s;
+  width: 100%;
+  min-height: 300px;
 }
 
 .vton-pricing-card:hover {
@@ -297,8 +327,13 @@ body {
 .vton-pricing-card-highlight {
   box-shadow: 0 20px 25px -5px rgba(99, 102, 241, 0.1), 0 10px 10px -5px rgba(99, 102, 241, 0.04);
   border: 2px solid var(--color-indigo-light);
-  transform: scale(1.05);
   z-index: 10;
+}
+
+@media (min-width: 1024px) {
+  .vton-pricing-card-highlight {
+    transform: scale(1.02);
+  }
 }
 
 .vton-badge-best-seller {
@@ -450,17 +485,20 @@ body {
   background-color: white;
   border-radius: 0.75rem;
   border: 2px dashed var(--color-slate-200);
-  padding: 1.5rem 2rem;
+  padding: 1.5rem 1.5rem;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
   align-items: center;
   justify-content: space-between;
+  width: 100%;
+  margin-top: 1rem;
 }
 
 @media (min-width: 768px) {
   .vton-custom-pack {
     flex-direction: row;
+    padding: 1.5rem 2rem;
   }
 }
 
@@ -518,9 +556,8 @@ body {
 }
 
 .vton-custom-input:focus {
-  outline: none;
-  ring: 2px;
-  ring-color: var(--color-indigo);
+  outline: 2px solid var(--color-indigo);
+  outline-offset: 2px;
 }
 
 .vton-custom-button {
@@ -850,5 +887,17 @@ body {
   
   .vton-stat-icon {
     font-size: 1.5rem;
+  }
+  
+  .vton-credits-card-blue {
+    padding: 1.5rem 1.25rem;
+  }
+  
+  .vton-pricing-card {
+    padding: 1.5rem 1rem;
+  }
+  
+  .vton-credits-amount-blue {
+    font-size: 3rem;
   }
 }

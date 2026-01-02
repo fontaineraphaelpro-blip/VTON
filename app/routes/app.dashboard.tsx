@@ -1,6 +1,7 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
-import { useLoaderData, useFetcher } from "@remix-run/react";
+import { useLoaderData, useFetcher, useRevalidator } from "@remix-run/react";
+import { useEffect } from "react";
 import {
   Page,
   Layout,
@@ -73,6 +74,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 export default function Dashboard() {
   const { shop, recentLogs, topProducts, error } = useLoaderData<typeof loader>();
   const fetcher = useFetcher<typeof action>();
+  const revalidator = useRevalidator();
 
   const credits = shop?.credits || 0;
   const totalTryons = shop?.total_tryons || 0;
@@ -82,6 +84,15 @@ export default function Dashboard() {
   const handleSave = (formData: FormData) => {
     fetcher.submit(formData, { method: "post" });
   };
+
+  // Recharger les données après une sauvegarde réussie
+  useEffect(() => {
+    if (fetcher.data?.success) {
+      setTimeout(() => {
+        revalidator.revalidate();
+      }, 500);
+    }
+  }, [fetcher.data?.success, revalidator]);
 
   const stats = [
     { label: "Available Credits", value: credits.toLocaleString("en-US"), icon: "💎" },
