@@ -351,8 +351,6 @@ body::before {
 
 .vton-action-card-white {
   background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
   border-radius: var(--radius-xl);
   padding: var(--spacing-xl);
   box-shadow: var(--shadow-lg);
@@ -960,8 +958,6 @@ body::before {
 /* Alert Banner - Glassmorphism */
 .vton-alert-banner {
   background: rgba(99, 102, 241, 0.1);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
   border: 1px solid rgba(99, 102, 241, 0.2);
   border-radius: var(--radius-xl);
   padding: var(--spacing-xl);
@@ -1116,8 +1112,6 @@ body::before {
 /* Pricing Cards - Glassmorphism */
 .vton-pricing-card {
   background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
   border-radius: var(--radius-xl);
   padding: var(--spacing-xl);
   box-shadow: var(--shadow-lg);
@@ -1272,7 +1266,6 @@ body::before {
   font-size: 0.9375rem;
   border: 2px solid rgba(229, 231, 235, 0.8);
   background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(10px);
   color: var(--light-text);
   cursor: pointer;
   transition: all var(--transition-base);
@@ -1311,8 +1304,6 @@ body::before {
 /* Custom Pack */
 .vton-custom-pack {
   background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
   border-radius: var(--radius-xl);
   border: 2px dashed rgba(99, 102, 241, 0.3);
   padding: var(--spacing-xl);
@@ -1387,7 +1378,6 @@ body::before {
   font-size: 0.9375rem;
   transition: all var(--transition-base);
   background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(10px);
 }
 
 .vton-custom-input:focus {
@@ -1437,8 +1427,6 @@ body::before {
   text-align: center;
   padding: var(--spacing-xl);
   background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
   border-radius: var(--radius-xl);
   border: 1px solid rgba(255, 255, 255, 0.3);
   transition: all var(--transition-base);
@@ -1477,8 +1465,6 @@ body::before {
 
 .vton-stat-card {
   background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
   border-radius: var(--radius-xl);
   padding: var(--spacing-xl);
   box-shadow: var(--shadow-lg);
@@ -1582,8 +1568,6 @@ body::before {
 
 .Polaris-Card {
   background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
   border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-lg);
@@ -1623,7 +1607,6 @@ body::before {
 
 .Polaris-Button--secondary {
   background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(10px);
   border-color: rgba(229, 231, 235, 0.8);
   color: var(--light-text);
 }
