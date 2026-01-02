@@ -84,7 +84,7 @@ export default function Home() {
   return (
     <Page>
       <TitleBar title="Accueil - VTON Magic" />
-      <BlockStack gap="500">
+      <BlockStack gap="600">
         {error && (
           <Banner tone="critical" title="Erreur">
             {error}
@@ -103,7 +103,7 @@ export default function Home() {
                         <div className="vton-stat-value">{stat.value}</div>
                         <div className="vton-stat-label">{stat.label}</div>
                       </BlockStack>
-                      <Text variant="headingMd" as="span">
+                      <Text variant="headingLg" as="span" style={{ fontSize: "2rem", opacity: 0.8 }}>
                         {stat.icon}
                       </Text>
                     </InlineStack>
@@ -116,8 +116,8 @@ export default function Home() {
 
         {/* Quick Actions */}
         <Card>
-          <BlockStack gap="400">
-            <Text variant="headingLg" fontWeight="semibold" as="h2">
+          <BlockStack gap="500">
+            <Text variant="headingLg" fontWeight="bold" as="h2">
               Actions rapides
             </Text>
             <Layout>
@@ -125,7 +125,7 @@ export default function Home() {
                 <Link to="/app/credits" style={{ textDecoration: "none", display: "block" }}>
                   <div className="vton-action-card">
                     <BlockStack gap="300">
-                      <Text variant="headingMd" fontWeight="semibold" as="h3">
+                      <Text variant="headingMd" fontWeight="bold" as="h3" style={{ fontSize: "1.5rem" }}>
                         💎 Acheter des crédits
                       </Text>
                       <Text variant="bodyMd" tone="subdued" as="p">
@@ -139,7 +139,7 @@ export default function Home() {
                 <Link to="/app/history" style={{ textDecoration: "none", display: "block" }}>
                   <div className="vton-action-card">
                     <BlockStack gap="300">
-                      <Text variant="headingMd" fontWeight="semibold" as="h3">
+                      <Text variant="headingMd" fontWeight="bold" as="h3" style={{ fontSize: "1.5rem" }}>
                         📊 Voir l'historique
                       </Text>
                       <Text variant="bodyMd" tone="subdued" as="p">
@@ -153,7 +153,7 @@ export default function Home() {
                 <Link to="/app/widget" style={{ textDecoration: "none", display: "block" }}>
                   <div className="vton-action-card">
                     <BlockStack gap="300">
-                      <Text variant="headingMd" fontWeight="semibold" as="h3">
+                      <Text variant="headingMd" fontWeight="bold" as="h3" style={{ fontSize: "1.5rem" }}>
                         ⚙️ Configurer le widget
                       </Text>
                       <Text variant="bodyMd" tone="subdued" as="p">

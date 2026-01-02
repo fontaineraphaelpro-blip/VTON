@@ -1,56 +1,42 @@
-/* VTON Magic - Modern SaaS Dashboard Design System */
+/* VTON Magic - Dark Mode High-Tech Design System */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
 :root {
-  /* Colors - Modern Neutral Palette */
-  --color-zinc-50: #FAFAFA;
-  --color-zinc-100: #F4F4F5;
-  --color-zinc-200: #E4E4E7;
-  --color-zinc-300: #D4D4D8;
-  --color-zinc-400: #A1A1AA;
-  --color-zinc-500: #71717A;
-  --color-zinc-600: #52525B;
-  --color-zinc-700: #3F3F46;
-  --color-zinc-800: #27272A;
-  --color-zinc-900: #18181B;
-  
-  --color-slate-50: #F8FAFC;
-  --color-slate-100: #F1F5F9;
-  --color-slate-200: #E2E8F0;
-  --color-slate-300: #CBD5E1;
-  --color-slate-400: #94A3B8;
-  --color-slate-500: #64748B;
-  --color-slate-600: #475569;
-  --color-slate-700: #334155;
-  --color-slate-800: #1E293B;
+  /* Dark Mode Colors */
+  --color-slate-950: #020617;
   --color-slate-900: #0F172A;
+  --color-slate-800: #1E293B;
+  --color-slate-700: #334155;
+  --color-white: #FFFFFF;
+  --color-white-10: rgba(255, 255, 255, 0.1);
+  --color-white-20: rgba(255, 255, 255, 0.2);
+  --color-black-40: rgba(0, 0, 0, 0.4);
   
-  --color-primary: #0066FF;
-  --color-success: #10B981;
-  --color-warning: #F59E0B;
-  --color-error: #EF4444;
+  /* Gradients */
+  --gradient-primary: linear-gradient(135deg, #6366F1 0%, #8B5CF6 50%, #EC4899 100%);
+  --gradient-purple: linear-gradient(135deg, #8B5CF6 0%, #EC4899 100%);
+  --gradient-indigo-purple: linear-gradient(to right, #6366F1, #8B5CF6);
+  --gradient-bg: radial-gradient(circle at 20% 50%, rgba(139, 92, 246, 0.15) 0%, transparent 50%),
+                 radial-gradient(circle at 80% 80%, rgba(99, 102, 241, 0.15) 0%, transparent 50%),
+                 radial-gradient(circle at 40% 20%, rgba(236, 72, 153, 0.1) 0%, transparent 50%);
   
-  /* Spacing */
-  --spacing-xs: 0.5rem;
-  --spacing-sm: 0.75rem;
-  --spacing-md: 1rem;
-  --spacing-lg: 1.5rem;
-  --spacing-xl: 2rem;
-  --spacing-2xl: 3rem;
-  
-  /* Shadows - Subtle */
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  
-  /* Radius */
-  --radius-sm: 6px;
-  --radius: 8px;
-  --radius-md: 12px;
+  /* Shadows with glow */
+  --shadow-glow-purple: 0 0 20px rgba(139, 92, 246, 0.4),
+                        0 0 40px rgba(139, 92, 246, 0.2),
+                        0 0 60px rgba(139, 92, 246, 0.1);
+  --shadow-glow-indigo: 0 0 20px rgba(99, 102, 241, 0.4),
+                        0 0 40px rgba(99, 102, 241, 0.2);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.3),
+               0 4px 6px -2px rgba(0, 0, 0, 0.2);
   
   /* Transitions */
-  --transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-fast: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  
+  /* Radius */
+  --radius-lg: 16px;
+  --radius-xl: 20px;
 }
 
 /* Base Styles */
@@ -62,65 +48,280 @@ body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: var(--color-zinc-50);
-  color: var(--color-zinc-900);
+  background-color: var(--color-slate-950);
+  color: var(--color-white);
   margin: 0;
   padding: 0;
+  position: relative;
+  min-height: 100vh;
 }
 
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--gradient-bg);
+  pointer-events: none;
+  z-index: 0;
+}
 
-/* Stat Cards - Minimalist */
-.vton-stat-card {
-  background: white;
-  border: 1px solid var(--color-slate-200);
-  border-radius: var(--radius-md);
-  padding: var(--spacing-lg);
-  box-shadow: var(--shadow-sm);
+/* Polaris Overrides - Dark Mode */
+.Polaris-Page {
+  background: transparent;
+  padding: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.Polaris-Page__Content {
+  padding: 2rem;
+  max-width: 100%;
+  position: relative;
+  z-index: 1;
+}
+
+.Polaris-Layout {
+  gap: 1.5rem;
+}
+
+.Polaris-Card {
+  background: var(--color-black-40);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--color-white-10);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  padding: 0;
+  position: relative;
+  overflow: hidden;
   transition: var(--transition);
 }
 
+.Polaris-Card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, 
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  );
+}
+
+.Polaris-Card:hover {
+  border-color: var(--color-white-20);
+  box-shadow: var(--shadow-lg), var(--shadow-glow-purple);
+}
+
+.Polaris-Card__Section {
+  padding: 2rem;
+}
+
+.Polaris-Button {
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  padding: 0.75rem 1.5rem;
+  transition: var(--transition);
+  border: none;
+  position: relative;
+  overflow: hidden;
+}
+
+.Polaris-Button--primary {
+  background: var(--gradient-indigo-purple);
+  color: white;
+  box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
+}
+
+.Polaris-Button--primary::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.Polaris-Button--primary:hover {
+  box-shadow: 0 8px 25px rgba(139, 92, 246, 0.5), var(--shadow-glow-purple);
+  transform: translateY(-2px);
+}
+
+.Polaris-Button--primary:hover::before {
+  left: 100%;
+}
+
+.Polaris-Button--primary:active {
+  transform: translateY(0);
+}
+
+.Polaris-Button--secondary {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--color-white-10);
+  color: var(--color-white);
+  backdrop-filter: blur(10px);
+}
+
+.Polaris-Button--secondary:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--color-white-20);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+.Polaris-Text--headingLg {
+  font-weight: 800;
+  color: var(--color-white);
+  font-size: 1.5rem;
+  letter-spacing: -0.02em;
+}
+
+.Polaris-Text--headingMd {
+  font-weight: 700;
+  color: var(--color-white);
+  font-size: 1.25rem;
+  letter-spacing: -0.01em;
+}
+
+.Polaris-Text--bodyMd {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.Polaris-Text--bodySm {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.Polaris-Banner {
+  background: var(--color-black-40);
+  backdrop-filter: blur(24px);
+  border: 1px solid var(--color-white-10);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+}
+
+.Polaris-DataTable {
+  background: var(--color-black-40);
+  backdrop-filter: blur(24px);
+  border: 1px solid var(--color-white-10);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-lg);
+}
+
+.Polaris-DataTable__Table {
+  background: transparent;
+}
+
+/* Stat Cards - High-Tech Style */
+.vton-stat-card {
+  background: var(--color-black-40);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--color-white-10);
+  border-radius: var(--radius-xl);
+  padding: 2rem;
+  box-shadow: var(--shadow-lg);
+  transition: var(--transition);
+  position: relative;
+  overflow: hidden;
+}
+
+.vton-stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, 
+    transparent,
+    rgba(139, 92, 246, 0.5),
+    transparent
+  );
+}
+
 .vton-stat-card:hover {
-  box-shadow: var(--shadow);
-  border-color: var(--color-slate-300);
+  border-color: var(--color-white-20);
+  box-shadow: var(--shadow-lg), var(--shadow-glow-purple);
+  transform: translateY(-4px);
 }
 
 .vton-stat-value {
-  font-size: 2rem;
-  font-weight: 700;
+  font-size: 3rem;
+  font-weight: 900;
   line-height: 1;
-  margin-bottom: var(--spacing-xs);
-  color: var(--color-zinc-900);
-  letter-spacing: -0.02em;
+  margin-bottom: 0.5rem;
+  color: var(--color-white);
+  letter-spacing: -0.03em;
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .vton-stat-label {
   font-size: 0.875rem;
-  color: var(--color-slate-500);
-  font-weight: 500;
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
 }
 
-/* Credits Card - Small Stat Style */
+/* Credits Card - High-Tech Style */
 .vton-credits-card {
-  background: white;
-  border: 1px solid var(--color-slate-200);
-  border-radius: var(--radius-md);
-  padding: var(--spacing-lg);
-  box-shadow: var(--shadow-sm);
+  background: var(--color-black-40);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--color-white-10);
+  border-radius: var(--radius-xl);
+  padding: 2rem;
+  box-shadow: var(--shadow-lg);
   display: flex;
   align-items: center;
-  gap: var(--spacing-md);
+  gap: 1.5rem;
+  position: relative;
+  overflow: hidden;
+  transition: var(--transition);
+}
+
+.vton-credits-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, 
+    transparent,
+    rgba(139, 92, 246, 0.5),
+    transparent
+  );
+}
+
+.vton-credits-card:hover {
+  border-color: var(--color-white-20);
+  box-shadow: var(--shadow-lg), var(--shadow-glow-purple);
 }
 
 .vton-credits-icon {
-  width: 40px;
-  height: 40px;
-  background: linear-gradient(135deg, var(--color-primary) 0%, #00A3FF 100%);
-  border-radius: var(--radius);
+  width: 56px;
+  height: 56px;
+  background: var(--gradient-indigo-purple);
+  border-radius: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
+  font-size: 28px;
   flex-shrink: 0;
+  box-shadow: 0 8px 20px rgba(139, 92, 246, 0.4);
 }
 
 .vton-credits-content {
@@ -129,32 +330,33 @@ body {
 
 .vton-credits-label {
   font-size: 0.75rem;
-  color: var(--color-slate-500);
-  font-weight: 500;
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: 2px;
+  letter-spacing: 0.15em;
+  margin-bottom: 0.5rem;
 }
 
 .vton-credits-amount {
-  font-size: 1.75rem;
-  font-weight: 700;
+  font-size: 2.5rem;
+  font-weight: 900;
   line-height: 1;
-  color: var(--color-zinc-900);
-  letter-spacing: -0.02em;
+  color: var(--color-white);
+  letter-spacing: -0.03em;
+  margin-bottom: 0.25rem;
 }
 
 .vton-credits-footer {
   font-size: 0.75rem;
-  color: var(--color-slate-500);
-  margin-top: 4px;
+  color: rgba(255, 255, 255, 0.5);
+  font-weight: 500;
 }
 
-/* Pack Cards - Compact Pricing Grid */
+/* Pack Cards - High-Tech Style */
 .vton-packs-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: var(--spacing-md);
+  gap: 1.5rem;
   width: 100%;
 }
 
@@ -171,226 +373,181 @@ body {
 }
 
 .vton-pack-card {
-  background: white;
-  border: 1px solid var(--color-slate-200);
-  border-radius: var(--radius-md);
-  padding: var(--spacing-lg);
-  box-shadow: var(--shadow-sm);
+  background: var(--color-black-40);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--color-white-10);
+  border-radius: var(--radius-xl);
+  padding: 2rem;
+  box-shadow: var(--shadow-lg);
   transition: var(--transition);
   display: flex;
   flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+
+.vton-pack-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, 
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  );
 }
 
 .vton-pack-card:hover {
-  border-color: var(--color-slate-300);
-  box-shadow: var(--shadow);
+  border-color: var(--color-white-20);
+  box-shadow: var(--shadow-lg), var(--shadow-glow-purple);
+  transform: translateY(-4px);
 }
 
 .vton-pack-card.highlight {
-  border-color: var(--color-primary);
-  border-width: 2px;
+  border: 2px solid rgba(139, 92, 246, 0.5);
+  box-shadow: var(--shadow-lg), var(--shadow-glow-purple);
 }
 
 .vton-pack-badge {
   display: inline-block;
-  padding: 4px 10px;
-  border-radius: var(--radius-full);
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
   font-size: 0.75rem;
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: var(--spacing-sm);
+  letter-spacing: 0.1em;
+  margin-bottom: 1rem;
 }
 
 .vton-pack-badge.best-seller {
-  background: var(--color-primary);
+  background: var(--gradient-indigo-purple);
   color: white;
+  box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);
 }
 
 .vton-pack-badge.roi {
-  background: rgba(245, 158, 11, 0.1);
-  color: var(--color-warning);
+  background: rgba(251, 191, 36, 0.2);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  color: #FBBF24;
 }
 
 .vton-pack-name {
-  font-size: 1.125rem;
-  font-weight: 600;
-  color: var(--color-zinc-900);
-  margin-bottom: var(--spacing-xs);
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--color-white);
+  margin-bottom: 0.5rem;
+  letter-spacing: -0.01em;
 }
 
 .vton-pack-credits {
-  font-size: 2rem;
-  font-weight: 700;
-  color: var(--color-zinc-900);
-  letter-spacing: -0.02em;
-  margin-bottom: var(--spacing-xs);
+  font-size: 2.5rem;
+  font-weight: 900;
+  color: var(--color-white);
+  letter-spacing: -0.03em;
+  margin-bottom: 0.5rem;
 }
 
 .vton-pack-price-per {
   font-size: 0.875rem;
-  color: var(--color-slate-500);
-  margin-bottom: var(--spacing-xs);
+  color: rgba(255, 255, 255, 0.6);
+  margin-bottom: 0.5rem;
+  font-weight: 500;
 }
 
 .vton-pack-description {
   font-size: 0.875rem;
-  color: var(--color-slate-500);
-  margin-bottom: var(--spacing-md);
+  color: rgba(255, 255, 255, 0.6);
+  margin-bottom: 1.5rem;
   flex: 1;
 }
 
 .vton-pack-price {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--color-zinc-900);
-  margin-bottom: var(--spacing-md);
-  padding-top: var(--spacing-md);
-  border-top: 1px solid var(--color-slate-200);
+  font-size: 1.75rem;
+  font-weight: 900;
+  color: var(--color-white);
+  margin-bottom: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--color-white-10);
+  letter-spacing: -0.02em;
 }
 
-/* Action Cards - Compact */
+/* Action Cards - High-Tech Style */
 .vton-action-card {
-  background: white;
-  border: 1px solid var(--color-slate-200);
-  border-radius: var(--radius-md);
-  padding: var(--spacing-lg);
-  box-shadow: var(--shadow-sm);
+  background: var(--color-black-40);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--color-white-10);
+  border-radius: var(--radius-xl);
+  padding: 2rem;
+  box-shadow: var(--shadow-lg);
   transition: var(--transition);
   text-decoration: none;
   display: block;
   color: inherit;
+  position: relative;
+  overflow: hidden;
+}
+
+.vton-action-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, 
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  );
 }
 
 .vton-action-card:hover {
-  border-color: var(--color-slate-300);
-  box-shadow: var(--shadow);
+  border-color: var(--color-white-20);
+  box-shadow: var(--shadow-lg), var(--shadow-glow-purple);
+  transform: translateY(-4px);
 }
 
-/* Polaris Overrides - Dense UI */
-.Polaris-Page {
-  background: transparent;
-  padding: 0;
+/* Scrollbar - Dark Mode */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
 }
 
-.Polaris-Page__Content {
-  padding: 0;
-  max-width: 100%;
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 5px;
 }
 
-.Polaris-Layout {
-  gap: var(--spacing-lg);
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 5px;
+  border: 2px solid rgba(0, 0, 0, 0.2);
 }
 
-.Polaris-Card {
-  background: white;
-  border: 1px solid var(--color-slate-200);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-sm);
-  padding: 0;
-}
-
-.Polaris-Card__Section {
-  padding: var(--spacing-lg);
-}
-
-.Polaris-Button {
-  border-radius: var(--radius);
-  font-weight: 600;
-  font-size: 0.875rem;
-  padding: 0.625rem 1.25rem;
-  transition: var(--transition);
-}
-
-.Polaris-Button--primary {
-  background: var(--color-zinc-900);
-  border-color: var(--color-zinc-900);
-  color: white;
-  box-shadow: none;
-}
-
-.Polaris-Button--primary:hover {
-  background: var(--color-zinc-800);
-  border-color: var(--color-zinc-800);
-  box-shadow: var(--shadow-sm);
-}
-
-.Polaris-Button--secondary {
-  background: white;
-  border-color: var(--color-slate-200);
-  color: var(--color-zinc-900);
-}
-
-.Polaris-Button--secondary:hover {
-  background: var(--color-zinc-50);
-  border-color: var(--color-slate-300);
-}
-
-.Polaris-Text--headingLg {
-  font-weight: 600;
-  color: var(--color-zinc-900);
-  font-size: 1.25rem;
-}
-
-.Polaris-Text--headingMd {
-  font-weight: 600;
-  color: var(--color-zinc-900);
-  font-size: 1.125rem;
-}
-
-.Polaris-Text--bodyMd {
-  color: var(--color-slate-600);
-}
-
-.Polaris-Banner {
-  border: 1px solid var(--color-slate-200);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-sm);
-}
-
-.Polaris-DataTable {
-  border: 1px solid var(--color-slate-200);
-  border-radius: var(--radius-md);
-  overflow: hidden;
-  box-shadow: var(--shadow-sm);
-}
-
-/* Scrollbar */
-.app-sidebar-nav::-webkit-scrollbar,
-.app-content::-webkit-scrollbar {
-  width: 8px;
-}
-
-.app-sidebar-nav::-webkit-scrollbar-track,
-.app-content::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.app-sidebar-nav::-webkit-scrollbar-thumb {
-  background: var(--color-zinc-700);
-  border-radius: 4px;
-}
-
-.app-content::-webkit-scrollbar-thumb {
-  background: var(--color-slate-300);
-  border-radius: 4px;
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
 }
 
 /* Responsive */
 @media (max-width: 768px) {
-  .app-sidebar {
-    width: 200px;
-  }
-  
-  .app-content {
-    padding: var(--spacing-md);
+  .Polaris-Page__Content {
+    padding: 1rem;
   }
   
   .vton-stat-value {
-    font-size: 1.5rem;
+    font-size: 2rem;
+  }
+  
+  .vton-credits-amount {
+    font-size: 2rem;
   }
   
   .vton-pack-credits {
-    font-size: 1.5rem;
+    font-size: 2rem;
   }
 }
