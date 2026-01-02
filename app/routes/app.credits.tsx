@@ -299,9 +299,8 @@ export default function Credits() {
               </BlockStack>
             </Card>
             </BlockStack>
-          </Layout.Section>
-        </Layout>
-      </div>
+        </Layout.Section>
+      </Layout>
     </Page>
   );
 }

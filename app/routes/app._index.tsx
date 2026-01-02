@@ -250,9 +250,8 @@ export default function Home() {
               </Card>
             )}
             </BlockStack>
-          </Layout.Section>
-        </Layout>
-      </div>
+        </Layout.Section>
+      </Layout>
     </Page>
   );
 }
