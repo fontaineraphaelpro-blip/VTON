@@ -200,10 +200,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                 <div class="vton-modal-content">
                     <h2>Virtual Try-On</h2>
                     <div class="vton-upload-area" 
-                         ondrop="event.preventDefault(); handlePhotoDrop(event);" 
-                         ondragover="event.preventDefault(); this.style.backgroundColor='#f0f0f0';" 
-                         ondragleave="this.style.backgroundColor='';"
-                         onclick="document.getElementById('vton-photo-upload').click();"
                          style="border: 2px dashed #c4c4c4; border-radius: 8px; padding: 48px; text-align: center; cursor: pointer; background: #f9f9f9; min-height: 200px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
                         <div style="font-size: 48px; margin-bottom: 16px;">📸</div>
                         <p style="font-weight: 600; margin: 0 0 8px 0;">Drag & drop or click to upload</p>
@@ -219,7 +215,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                     <div id="vton-result" style="display:none;">
                         <img id="vton-result-img" src="" alt="Result">
                     </div>
-                    <button class="vton-close" onclick="document.getElementById('vton-modal').classList.remove('active')">
+                    <button id="vton-close-btn" class="vton-close">
                         Close
                     </button>
                 </div>

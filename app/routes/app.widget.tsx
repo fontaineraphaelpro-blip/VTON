@@ -47,10 +47,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const formData = await request.formData();
 
   const intent = formData.get("intent");
-  // #region agent log
-  const logData = { intent, shop, formDataEntries: Array.from(formData.entries()).map(([k,v]) => [k, typeof v === 'string' ? v : '[File]']) };
-  fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.widget.tsx:44',message:'Action called',data:logData,timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-  // #endregion
 
   if (intent === "update-widget") {
     const updates: any = {};
@@ -59,10 +55,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const widgetBg = formData.get("widgetBg") as string;
     const widgetColor = formData.get("widgetColor") as string;
     const maxTriesPerUser = formData.get("maxTriesPerUser") as string;
-    
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.widget.tsx:54',message:'FormData values extracted',data:{widgetText,widgetBg,widgetColor,maxTriesPerUser},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-    // #endregion
 
     if (widgetText) {
       updates.widgetText = widgetText;
@@ -77,13 +69,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       updates.maxTriesPerUser = parseInt(maxTriesPerUser);
     }
 
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.widget.tsx:67',message:'Calling upsertShop',data:{updates},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-    // #endregion
     await upsertShop(shop, updates);
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.widget.tsx:68',message:'upsertShop completed, returning success',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-    // #endregion
     return json({ success: true, testMode: false });
   } else if (intent === "test-tryon") {
     const personImage = formData.get("personImage") as string;
@@ -136,9 +122,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
 export default function Widget() {
   const { shop, error } = useLoaderData<typeof loader>();
-  // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.widget.tsx:110',message:'Widget component initialized',data:{shop:shop?{widget_text:shop.widget_text,widget_bg:shop.widget_bg,widget_color:shop.widget_color,max_tries_per_user:shop.max_tries_per_user}:null,error},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-  // #endregion
   const fetcher = useFetcher<typeof action>();
   const revalidator = useRevalidator();
 
@@ -146,9 +129,6 @@ export default function Widget() {
   const [widgetBg, setWidgetBg] = useState(shop?.widget_bg || "#0066FF");
   const [widgetColor, setWidgetColor] = useState(shop?.widget_color || "#FFFFFF");
   const [maxTriesPerUser, setMaxTriesPerUser] = useState(String(shop?.max_tries_per_user || 5));
-  // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.widget.tsx:118',message:'State initialized',data:{widgetText,widgetBg,widgetColor,maxTriesPerUser},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-  // #endregion
   const [personImage, setPersonImage] = useState("");
   const [garmentImage, setGarmentImage] = useState("");
   const [personImageFile, setPersonImageFile] = useState<File | null>(null);
@@ -157,22 +137,13 @@ export default function Widget() {
   const [garmentImagePreview, setGarmentImagePreview] = useState<string>("");
 
   const handleSaveConfig = () => {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.widget.tsx:125',message:'handleSaveConfig called',data:{widgetText,widgetBg,widgetColor,maxTriesPerUser},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
     const formData = new FormData();
     formData.append("intent", "update-widget");
     formData.append("widgetText", widgetText);
     formData.append("widgetBg", widgetBg);
     formData.append("widgetColor", widgetColor);
     formData.append("maxTriesPerUser", maxTriesPerUser);
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.widget.tsx:132',message:'FormData created, submitting',data:{intent:'update-widget',widgetText,widgetBg,widgetColor,maxTriesPerUser,fetcherState:fetcher.state},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-    // #endregion
     fetcher.submit(formData, { method: "post" });
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.widget.tsx:133',message:'fetcher.submit called',data:{fetcherState:fetcher.state},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-    // #endregion
   };
 
   const handleFileUpload = (file: File, type: "person" | "garment") => {
@@ -232,13 +203,7 @@ export default function Widget() {
 
   // Recharger les données après une sauvegarde réussie
   useEffect(() => {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.widget.tsx:191',message:'useEffect triggered',data:{fetcherData:fetcher.data,fetcherState:fetcher.state},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
-    // #endregion
     if (fetcher.data?.success && !fetcher.data?.testMode) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.widget.tsx:193',message:'Success detected, calling revalidator',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
-      // #endregion
       setTimeout(() => {
         revalidator.revalidate();
       }, 500);
@@ -292,9 +257,6 @@ export default function Widget() {
                     label="Button Text"
                     value={widgetText}
                     onChange={(value) => {
-                      // #region agent log
-                      fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.widget.tsx:245',message:'widgetText onChange',data:{oldValue:widgetText,newValue:value},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-                      // #endregion
                       setWidgetText(value);
                     }}
                     autoComplete="off"
@@ -306,13 +268,7 @@ export default function Widget() {
                         label="Background Color"
                         value={widgetBg}
                         onChange={(value) => {
-                          // #region agent log
-                          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.widget.tsx:299',message:'widgetBg onChange',data:{oldValue:widgetBg,newValue:value},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'G'})}).catch(()=>{});
-                          // #endregion
                           setWidgetBg(value);
-                          // #region agent log
-                          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.widget.tsx:301',message:'widgetBg state updated',data:{newValue:value},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'G'})}).catch(()=>{});
-                          // #endregion
                         }}
                         autoComplete="off"
                         type="color"
@@ -324,13 +280,7 @@ export default function Widget() {
                         label="Text Color"
                         value={widgetColor}
                         onChange={(value) => {
-                          // #region agent log
-                          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.widget.tsx:309',message:'widgetColor onChange',data:{oldValue:widgetColor,newValue:value},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'G'})}).catch(()=>{});
-                          // #endregion
                           setWidgetColor(value);
-                          // #region agent log
-                          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.widget.tsx:311',message:'widgetColor state updated',data:{newValue:value},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'G'})}).catch(()=>{});
-                          // #endregion
                         }}
                         autoComplete="off"
                         type="color"
@@ -342,9 +292,6 @@ export default function Widget() {
                     label="Max try-ons per user/day"
                     value={maxTriesPerUser}
                     onChange={(value) => {
-                      // #region agent log
-                      fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.widget.tsx:325',message:'maxTriesPerUser onChange',data:{oldValue:maxTriesPerUser,newValue:value},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-                      // #endregion
                       setMaxTriesPerUser(value);
                     }}
                     type="number"
@@ -352,12 +299,7 @@ export default function Widget() {
                     autoComplete="off"
                     helpText="Limits the number of virtual try-ons per customer per day."
                   />
-                  <Button variant="primary" onClick={(e) => {
-                    // #region agent log
-                    fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.widget.tsx:280',message:'Save button clicked',data:{eventType:e.type},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-                    // #endregion
-                    handleSaveConfig();
-                  }} loading={fetcher.state === "submitting"}>
+                  <Button variant="primary" onClick={handleSaveConfig} loading={fetcher.state === "submitting"}>
                     Save Configuration
                   </Button>
                 </BlockStack>
@@ -375,12 +317,6 @@ export default function Widget() {
               </Text>
               <Divider />
                 <Box padding="400" background="bg-surface-secondary" borderRadius="200">
-                  {/* #region agent log */}
-                  {(() => {
-                    fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.widget.tsx:370',message:'Preview rendering',data:{widgetBg,widgetColor,widgetText},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H'})}).catch(()=>{});
-                    return null;
-                  })()}
-                  {/* #endregion */}
                   <div
                     style={{
                       backgroundColor: widgetBg,
