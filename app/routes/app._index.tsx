@@ -35,6 +35,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
     // Installer automatiquement le script tag si pas déjà installé
     try {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:37',message:'Script tag installation attempt started',data:{shop},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
       // Construire l'URL du script - utiliser l'URL de la boutique + proxy path
       const url = new URL(request.url);
       const baseUrl = url.origin;
@@ -54,14 +57,29 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         }
       `;
       
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:57',message:'Before scriptTags query GraphQL call',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+      // #endregion
       const scriptTagsResponse = await admin.graphql(scriptTagsQuery);
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:58',message:'After scriptTags query GraphQL call',data:{ok:scriptTagsResponse.ok,status:scriptTagsResponse.status,statusText:scriptTagsResponse.statusText},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
       
       // Check if response is OK (not a redirect)
       if (!scriptTagsResponse.ok) {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:60',message:'scriptTagsResponse not OK',data:{status:scriptTagsResponse.status,statusText:scriptTagsResponse.statusText,is302:scriptTagsResponse.status===302,is401:scriptTagsResponse.status===401},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+        // #endregion
         if (scriptTagsResponse.status === 302 || scriptTagsResponse.status === 401) {
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:62',message:'Auth required detected, skipping',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+          // #endregion
           console.warn("Authentication required for script tag check, skipping auto-install");
           // Skip script tag installation if auth is required
         } else {
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:66',message:'Other error status, logging',data:{status:scriptTagsResponse.status},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+          // #endregion
           const errorText = await scriptTagsResponse.text().catch(() => "Unknown error");
           console.error("Error checking script tags:", scriptTagsResponse.status, errorText);
         }
@@ -98,6 +116,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
               }
             `;
 
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:101',message:'Before createScriptTag mutation GraphQL call',data:{scriptTagUrl},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+            // #endregion
             const result = await admin.graphql(createScriptTagMutation, {
               variables: {
                 input: {
@@ -106,12 +127,24 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                 }
               }
             });
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:109',message:'After createScriptTag mutation GraphQL call',data:{ok:result.ok,status:result.status,statusText:result.statusText},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+            // #endregion
             
             // Check if response is OK
             if (!result.ok) {
+              // #region agent log
+              fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:112',message:'result not OK',data:{status:result.status,statusText:result.statusText,is302:result.status===302,is401:result.status===401},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+              // #endregion
               if (result.status === 302 || result.status === 401) {
+                // #region agent log
+                fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:113',message:'Auth required for creation, skipping',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+                // #endregion
                 console.warn("Authentication required for script tag creation, skipping");
               } else {
+                // #region agent log
+                fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:116',message:'Other error status for creation, logging',data:{status:result.status},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+                // #endregion
                 const errorText = await result.text().catch(() => "Unknown error");
                 console.error("Error creating script tag:", result.status, errorText);
               }
@@ -142,7 +175,21 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         }
       }
     } catch (scriptError) {
-      console.error("Error installing script tag:", scriptError);
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:145',message:'Catch block - scriptError caught',data:{errorType:scriptError?.constructor?.name,isResponse:scriptError instanceof Response,hasStatus:!!(scriptError as any)?.status,status:(scriptError as any)?.status,message:scriptError instanceof Error ? scriptError.message : String(scriptError)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
+      // Ne pas loguer l'objet Response directement - extraire seulement les infos nécessaires
+      if (scriptError instanceof Response) {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:148',message:'scriptError is Response object',data:{status:scriptError.status,statusText:scriptError.statusText,url:scriptError.url},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+        // #endregion
+        console.warn(`Script tag installation skipped: ${scriptError.status} ${scriptError.statusText}`);
+      } else {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:152',message:'scriptError is not Response, logging normally',data:{message:scriptError instanceof Error ? scriptError.message : String(scriptError)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+        // #endregion
+        console.error("Error installing script tag:", scriptError);
+      }
       // Ne pas bloquer le chargement si l'installation du script échoue
     }
 
@@ -197,7 +244,7 @@ export default function Dashboard() {
   const handleSave = (formData: FormData) => {
     // Ensure all required fields are present
     if (!formData.get("widgetText")) {
-      formData.set("widgetText", shop?.widget_text || "Try It On Now ✨");
+      formData.set("widgetText", shop?.widget_text || "Try It On Now");
     }
     if (!formData.get("widgetBg")) {
       formData.set("widgetBg", shop?.widget_bg || "#000000");
@@ -223,25 +270,25 @@ export default function Dashboard() {
     { 
       label: "Available Credits", 
       value: credits.toLocaleString("en-US"), 
-      icon: "💎",
+      icon: "",
       link: "/app/credits"
     },
     { 
       label: "Total try-ons", 
       value: totalTryons.toLocaleString("en-US"), 
-      icon: "✨",
+      icon: "",
       link: "/app/history"
     },
     { 
       label: "Add to Cart", 
       value: totalAtc.toLocaleString("en-US"), 
-      icon: "🛒",
+      icon: "",
       link: "/app/history"
     },
     { 
       label: "Conversion Rate", 
       value: `${conversionRate}%`, 
-      icon: "📈",
+      icon: "",
       link: "/app/history"
     },
   ];
@@ -253,7 +300,7 @@ export default function Dashboard() {
         {/* Header */}
         <header className="vton-header-simple">
           <div className="vton-header-logo">
-            <div className="vton-logo-icon-blue">⚡</div>
+            <div className="vton-logo-icon-blue">V</div>
             <span className="vton-header-title">VTON Magic</span>
           </div>
           <div className="vton-status-badge">
@@ -294,7 +341,7 @@ export default function Dashboard() {
           {/* Low Credits Alert */}
           {credits < 50 && (
             <div className="vton-alert-urgent">
-              <div className="vton-alert-icon">⚠️</div>
+              <div className="vton-alert-icon">!</div>
               <div className="vton-alert-content">
                 <div className="vton-alert-title">Low Credits</div>
                 <div className="vton-alert-message">
@@ -332,7 +379,7 @@ export default function Dashboard() {
                       <TextField
                         label="Button Text"
                         name="widgetText"
-                        defaultValue={shop?.widget_text || "Try It On Now ✨"}
+                        defaultValue={shop?.widget_text || "Try It On Now"}
                         autoComplete="off"
                         helpText="Text displayed on the widget button"
                       />

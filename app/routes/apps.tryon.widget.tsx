@@ -201,7 +201,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                     <h2>Virtual Try-On</h2>
                     <div class="vton-upload-area" 
                          style="border: 2px dashed #c4c4c4; border-radius: 8px; padding: 48px; text-align: center; cursor: pointer; background: #f9f9f9; min-height: 200px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
-                        <div style="font-size: 48px; margin-bottom: 16px;">📸</div>
+                        <div style="font-size: 14px; margin-bottom: 16px; font-weight: 600;">UPLOAD PHOTO</div>
                         <p style="font-weight: 600; margin: 0 0 8px 0;">Drag & drop or click to upload</p>
                         <p style="color: #666; margin: 0; font-size: 14px;">Your photo for virtual try-on</p>
                         <input type="file" id="vton-photo-upload" accept="image/*" style="display:none;">

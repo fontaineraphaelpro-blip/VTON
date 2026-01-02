@@ -1,85 +1,58 @@
 /* ============================================
-   VTON Magic - AI SaaS Design System 2024
-   Inspired by modern AI/Tech SaaS platforms
+   VTON Magic - Minimalist Black & White Design
+   Professional & Modern
    ============================================ */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+/* Remove Space Grotesk - using only Inter for minimalist design */
 
 :root {
-  /* AI/Tech Color Palette - Dark & Vibrant */
-  --primary: #6366F1;
-  --primary-dark: #4F46E5;
-  --primary-light: #818CF8;
-  --primary-50: #EEF2FF;
-  --primary-100: #E0E7FF;
-  --primary-glow: rgba(99, 102, 241, 0.4);
+  /* Black & White Palette */
+  --black: #000000;
+  --black-soft: #1a1a1a;
+  --gray-dark: #2a2a2a;
+  --gray: #666666;
+  --gray-light: #999999;
+  --gray-lighter: #cccccc;
+  --gray-lightest: #e5e5e5;
+  --white: #ffffff;
+  --white-soft: #fafafa;
   
-  --secondary: #8B5CF6;
-  --secondary-light: #A78BFA;
-  --secondary-glow: rgba(139, 92, 246, 0.4);
+  /* Primary (Black) */
+  --primary: #000000;
+  --primary-hover: #1a1a1a;
   
-  --accent: #EC4899;
-  --accent-light: #F472B6;
-  --accent-glow: rgba(236, 72, 153, 0.4);
+  /* Status - Minimal (Gray scale) */
+  --success: #000000;
+  --success-bg: #f5f5f5;
+  --error: #000000;
+  --error-bg: #f5f5f5;
+  --warning: #000000;
+  --warning-bg: #f5f5f5;
+  --info: #000000;
+  --info-bg: #f5f5f5;
   
-  --ai-blue: #06B6D4;
-  --ai-cyan: #22D3EE;
-  --ai-purple: #A855F7;
+  /* Backgrounds */
+  --bg: #ffffff;
+  --bg-secondary: #fafafa;
+  --bg-tertiary: #f5f5f5;
   
-  /* Status Colors */
-  --success: #10B981;
-  --success-light: #34D399;
-  --success-bg: rgba(16, 185, 129, 0.1);
+  /* Text */
+  --text: #000000;
+  --text-secondary: #666666;
+  --text-tertiary: #999999;
   
-  --warning: #F59E0B;
-  --warning-light: #FBBF24;
-  --warning-bg: rgba(245, 158, 11, 0.1);
+  /* Borders */
+  --border: #e5e5e5;
+  --border-dark: #cccccc;
   
-  --error: #EF4444;
-  --error-light: #F87171;
-  --error-bg: rgba(239, 68, 68, 0.1);
-  
-  --info: #3B82F6;
-  --info-light: #60A5FA;
-  --info-bg: rgba(59, 130, 246, 0.1);
-  
-  /* Dark Theme Colors */
-  --dark-bg: #0A0E27;
-  --dark-surface: #131829;
-  --dark-surface-elevated: #1A1F35;
-  --dark-border: rgba(255, 255, 255, 0.1);
-  --dark-text: #E5E7EB;
-  --dark-text-secondary: #9CA3AF;
-  
-  /* Glassmorphism */
-  --glass-bg: rgba(255, 255, 255, 0.05);
-  --glass-border: rgba(255, 255, 255, 0.1);
-  --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
-  
-  /* Light Theme */
-  --light-bg: #FAFBFC;
-  --light-surface: #FFFFFF;
-  --light-surface-elevated: #FFFFFF;
-  --light-border: #E5E7EB;
-  --light-text: #111827;
-  --light-text-secondary: #6B7280;
-  
-  /* Gradients - AI Style */
-  --gradient-primary: linear-gradient(135deg, #6366F1 0%, #8B5CF6 50%, #EC4899 100%);
-  --gradient-secondary: linear-gradient(135deg, #EC4899 0%, #F472B6 100%);
-  --gradient-ai: linear-gradient(135deg, #06B6D4 0%, #3B82F6 50%, #8B5CF6 100%);
-  --gradient-dark: linear-gradient(135deg, #0A0E27 0%, #1A1F35 100%);
-  --gradient-glow: radial-gradient(circle at 50% 50%, rgba(99, 102, 241, 0.3), transparent 70%);
-  
-  /* Shadows - Enhanced */
+  /* Shadows - Minimal */
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-  --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-  --shadow-glow: 0 0 20px rgba(99, 102, 241, 0.5);
-  --shadow-glow-lg: 0 0 40px rgba(99, 102, 241, 0.6);
+  --shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 2px 4px 0 rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 4px 6px 0 rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 6px 8px 0 rgba(0, 0, 0, 0.1);
   
   /* Spacing */
   --spacing-xs: 0.25rem;
@@ -90,13 +63,13 @@
   --spacing-2xl: 3rem;
   --spacing-3xl: 4rem;
   
-  /* Border Radius */
-  --radius-sm: 0.5rem;
-  --radius-md: 0.75rem;
-  --radius-lg: 1rem;
-  --radius-xl: 1.5rem;
-  --radius-2xl: 2rem;
-  --radius-full: 9999px;
+  /* Border Radius - Minimal */
+  --radius-sm: 2px;
+  --radius-md: 2px;
+  --radius-lg: 2px;
+  --radius-xl: 2px;
+  --radius-2xl: 2px;
+  --radius-full: 2px;
   
   /* Transitions - Minimal */
   --transition-fast: 100ms ease;
@@ -118,26 +91,11 @@ body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: var(--light-bg);
-  color: var(--light-text);
+  background: var(--bg);
+  color: var(--text);
   line-height: 1.6;
   position: relative;
   overflow-x: hidden;
-}
-
-/* Simple Background - No animations */
-body::before {
-  content: '';
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: 
-    radial-gradient(circle at 20% 50%, rgba(99, 102, 241, 0.05) 0%, transparent 50%),
-    radial-gradient(circle at 80% 80%, rgba(139, 92, 246, 0.05) 0%, transparent 50%);
-  pointer-events: none;
-  z-index: 0;
 }
 
 /* ============================================
@@ -172,10 +130,8 @@ body::before {
   justify-content: space-between;
   align-items: center;
   padding: var(--spacing-md) var(--spacing-xl);
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
-  border: 1px solid rgba(229, 231, 235, 0.8);
+  background: var(--white);
+  border-bottom: 1px solid var(--border);
   position: relative;
   z-index: 10;
 }
@@ -187,17 +143,17 @@ body::before {
 }
 
 .vton-logo-icon-blue {
-  width: 52px;
-  height: 52px;
-  background: var(--gradient-primary);
-  border-radius: var(--radius-lg);
+  width: 40px;
+  height: 40px;
+  background: var(--black);
+  border-radius: 2px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--light-surface);
+  color: var(--white);
   font-weight: 700;
-  font-size: 1.75rem;
-  box-shadow: var(--shadow-glow);
+  font-size: 1.25rem;
+  box-shadow: none;
   transition: all var(--transition-base);
   position: relative;
   overflow: hidden;
@@ -210,17 +166,17 @@ body::before {
 .vton-header-title {
   font-size: 1.5rem;
   font-weight: 700;
-  background: var(--gradient-primary);
+  background: var(--black);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
   letter-spacing: -0.02em;
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: 'Inter', sans-serif;
 }
 
 .vton-status-badge {
-  background: var(--success-bg);
-  color: var(--success);
+  background: var(--bg-tertiary);
+  color: var(--black);
   padding: var(--spacing-sm) var(--spacing-lg);
   border-radius: var(--radius-full);
   font-size: 0.875rem;
@@ -229,15 +185,15 @@ body::before {
   align-items: center;
   gap: var(--spacing-sm);
   box-shadow: var(--shadow-sm);
-  border: 1px solid rgba(16, 185, 129, 0.2);
+  border: 1px solid var(--bg-tertiary);
 }
 
 .vton-status-dot-green {
   width: 8px;
   height: 8px;
-  background: var(--success);
+  background: var(--black);
   border-radius: 50%;
-  box-shadow: 0 0 8px var(--success);
+  box-shadow: none;
 }
 
 /* ============================================
@@ -277,11 +233,11 @@ body::before {
 }
 
 .vton-stat-card-white {
-  background: rgba(255, 255, 255, 0.95);
+  background: var(--white);
   border-radius: var(--radius-lg);
   padding: var(--spacing-lg);
   box-shadow: var(--shadow-md);
-  border: 1px solid rgba(229, 231, 235, 0.8);
+  border: 1px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -294,8 +250,8 @@ body::before {
   top: 0;
   left: 0;
   right: 0;
-  height: 3px;
-  background: var(--gradient-primary);
+  height: 2px;
+  background: var(--black);
   transform: scaleX(0);
   transform-origin: left;
   transition: transform var(--transition-base);
@@ -303,7 +259,7 @@ body::before {
 
 .vton-stat-card-link:hover .vton-stat-card-white {
   box-shadow: var(--shadow-lg);
-  border-color: var(--primary);
+  border-color: var(--black);
 }
 
 .vton-stat-content {
@@ -313,27 +269,24 @@ body::before {
 .vton-stat-value-white {
   font-size: 2.75rem;
   font-weight: 900;
-  background: var(--gradient-primary);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--black);
   line-height: 1;
   margin-bottom: var(--spacing-sm);
   letter-spacing: -0.04em;
-  font-family: 'Space Grotesk', sans-serif;
 }
 
 .vton-stat-label-white {
   font-size: 0.875rem;
-  color: var(--light-text-secondary);
+  color: var(--text-secondary);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.1em;
 }
 
 .vton-stat-icon {
-  font-size: 3.5rem;
-  opacity: 0.9;
+  font-size: 2rem;
+  opacity: 0.3;
+  color: var(--black);
 }
 
 /* ============================================
@@ -347,7 +300,7 @@ body::before {
 }
 
 .vton-action-card-white {
-  background: rgba(255, 255, 255, 0.7);
+  background: var(--white);
   border-radius: var(--radius-xl);
   padding: var(--spacing-xl);
   box-shadow: var(--shadow-lg);
@@ -376,8 +329,8 @@ body::before {
 }
 
 .vton-action-card-white:hover {
-  box-shadow: var(--shadow-2xl), var(--shadow-glow);
-  border-color: var(--primary);
+  box-shadow: var(--shadow-2xl), none;
+  border-color: var(--black);
   transform: translateY(-4px);
   background: rgba(255, 255, 255, 0.85);
 }
@@ -386,14 +339,14 @@ body::before {
   margin: 0 0 var(--spacing-sm) 0;
   font-size: 1.375rem;
   font-weight: 700;
-  color: var(--light-text);
-  font-family: 'Space Grotesk', sans-serif;
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
 }
 
 .vton-action-content p {
   margin: 0;
   font-size: 0.9375rem;
-  color: var(--light-text-secondary);
+  color: var(--text-secondary);
   line-height: 1.6;
 }
 
@@ -436,7 +389,7 @@ body::before {
 
 .vton-action-primary,
 .vton-action-secondary {
-  background: rgba(255, 255, 255, 0.8);
+  background: var(--white);
   border-radius: var(--radius-xl);
   padding: var(--spacing-xl);
   box-shadow: var(--shadow-lg);
@@ -454,15 +407,15 @@ body::before {
 }
 
 .vton-action-primary {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(99, 102, 241, 0.1) 100%);
-  border-color: var(--primary);
-  box-shadow: var(--shadow-xl), var(--shadow-glow);
+  background: linear-gradient(135deg, var(--white) 0%, var(--black) 100%);
+  border-color: var(--black);
+  box-shadow: var(--shadow-xl), none;
 }
 
 .vton-action-primary:hover,
 .vton-action-secondary:hover {
   box-shadow: var(--shadow-lg);
-  border-color: var(--primary);
+  border-color: var(--black);
 }
 
 .vton-action-icon {
@@ -473,12 +426,12 @@ body::before {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(99, 102, 241, 0.1);
+  background: var(--black);
   border-radius: var(--radius-lg);
 }
 
 .vton-action-primary .vton-action-icon {
-  background: var(--gradient-primary);
+  background: var(--black);
 }
 
 .vton-action-text {
@@ -488,19 +441,19 @@ body::before {
 .vton-action-title {
   font-size: 1.125rem;
   font-weight: 700;
-  color: var(--light-text);
+  color: var(--text);
   margin-bottom: var(--spacing-xs);
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: 'Inter', sans-serif;
 }
 
 .vton-action-subtitle {
   font-size: 0.875rem;
-  color: var(--light-text-secondary);
+  color: var(--text-secondary);
 }
 
 .vton-action-arrow {
   font-size: 1.5rem;
-  color: var(--primary);
+  color: var(--black);
   transition: transform var(--transition-base);
   flex-shrink: 0;
 }
@@ -508,8 +461,8 @@ body::before {
 
 /* Urgent Alert */
 .vton-alert-urgent {
-  background: rgba(245, 158, 11, 0.1);
-  border: 2px solid rgba(245, 158, 11, 0.3);
+  background: var(--bg-tertiary);
+  border: 2px solid var(--bg-tertiary);
   border-radius: var(--radius-lg);
   padding: var(--spacing-xl);
   display: flex;
@@ -531,28 +484,28 @@ body::before {
 .vton-alert-title {
   font-size: 1.125rem;
   font-weight: 700;
-  color: var(--warning);
+  color: var(--black);
   margin-bottom: var(--spacing-xs);
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: 'Inter', sans-serif;
 }
 
 .vton-alert-message {
   font-size: 0.9375rem;
-  color: var(--light-text);
+  color: var(--text);
 }
 
 .vton-alert-button {
-  background: var(--gradient-primary);
-  color: var(--light-surface);
+  background: var(--black);
+  color: var(--white);
   padding: var(--spacing-md) var(--spacing-xl);
-  border-radius: var(--radius-lg);
+  border-radius: 2px;
   text-decoration: none;
-  font-weight: 700;
-  font-size: 0.9375rem;
-  box-shadow: var(--shadow-glow);
+  font-weight: 600;
+  font-size: 0.875rem;
+  box-shadow: none;
+  border: 1px solid var(--black);
   transition: all var(--transition-base);
   white-space: nowrap;
-  font-family: 'Space Grotesk', sans-serif;
   cursor: pointer;
   display: inline-block;
   position: relative;
@@ -561,7 +514,7 @@ body::before {
 
 .vton-alert-button:hover {
   box-shadow: var(--shadow-lg);
-  color: var(--light-surface);
+  color: var(--white);
 }
 
 /* Activity Items */
@@ -570,7 +523,7 @@ body::before {
   align-items: center;
   justify-content: space-between;
   padding: var(--spacing-md) 0;
-  border-bottom: 1px solid rgba(229, 231, 235, 0.5);
+  border-bottom: 1px solid var(--border);
 }
 
 .vton-activity-item:last-child {
@@ -594,13 +547,13 @@ body::before {
 }
 
 .vton-activity-success {
-  background: var(--success-bg);
-  color: var(--success);
+  background: var(--bg-tertiary);
+  color: var(--black);
 }
 
 .vton-activity-failed {
-  background: var(--error-bg);
-  color: var(--error);
+  background: var(--bg-tertiary);
+  color: var(--black);
 }
 
 /* Empty State */
@@ -652,7 +605,7 @@ body::before {
   border-radius: var(--radius-lg);
   padding: var(--spacing-xl);
   box-shadow: var(--shadow-md);
-  border: 1px solid rgba(229, 231, 235, 0.8);
+  border: 1px solid var(--border);
   text-align: center;
   width: 100%;
 }
@@ -660,7 +613,7 @@ body::before {
 .vton-credits-label {
   font-size: 0.875rem;
   font-weight: 600;
-  color: var(--light-text-secondary);
+  color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.1em;
   margin-bottom: var(--spacing-md);
@@ -669,18 +622,14 @@ body::before {
 .vton-credits-amount {
   font-size: 4.5rem;
   font-weight: 900;
-  background: var(--gradient-primary);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--black);
   line-height: 1;
   margin-bottom: var(--spacing-sm);
-  font-family: 'Space Grotesk', sans-serif;
 }
 
 .vton-credits-subtitle {
   font-size: 0.9375rem;
-  color: var(--light-text-secondary);
+  color: var(--text-secondary);
   font-weight: 500;
 }
 
@@ -690,26 +639,27 @@ body::before {
   align-items: center;
   gap: var(--spacing-md);
   padding: var(--spacing-lg) var(--spacing-xl);
-  background: rgba(99, 102, 241, 0.1);
+  background: var(--black);
   border-radius: var(--radius-lg);
-  border: 1px solid rgba(99, 102, 241, 0.2);
+  border: 1px solid var(--black);
   width: 100%;
   height: 100%;
 }
 
 .vton-value-icon {
-  font-size: 2rem;
+  font-size: 1.5rem;
   flex-shrink: 0;
+  opacity: 0.3;
 }
 
 .vton-value-text {
   font-size: 1rem;
-  color: var(--light-text);
+  color: var(--text);
   text-align: center;
 }
 
 .vton-value-text strong {
-  color: var(--primary);
+  color: var(--black);
   font-weight: 700;
 }
 
@@ -732,7 +682,7 @@ body::before {
   background: rgba(255, 255, 255, 1);
   border-radius: var(--radius-lg);
   padding: var(--spacing-lg);
-  border: 2px solid rgba(229, 231, 235, 0.8);
+  border: 2px solid var(--border);
   box-shadow: var(--shadow-md);
   position: relative;
   display: flex;
@@ -741,17 +691,17 @@ body::before {
 
 .vton-plan-card:hover {
   box-shadow: var(--shadow-lg);
-  border-color: var(--primary);
+  border-color: var(--black);
 }
 
 .vton-plan-featured {
-  border-color: var(--primary);
+  border-color: var(--black);
   background: rgba(255, 255, 255, 0.98);
   box-shadow: var(--shadow-lg);
 }
 
 .vton-plan-popular {
-  border-top: 3px solid var(--success);
+  border-top: 3px solid var(--black);
 }
 
 .vton-plan-badge {
@@ -759,8 +709,8 @@ body::before {
   top: -12px;
   left: 50%;
   transform: translateX(-50%);
-  background: var(--success-bg);
-  color: var(--success);
+  background: var(--bg-tertiary);
+  color: var(--black);
   padding: var(--spacing-xs) var(--spacing-lg);
   border-radius: var(--radius-full);
   font-size: 0.75rem;
@@ -770,9 +720,9 @@ body::before {
 }
 
 .vton-plan-badge-featured {
-  background: var(--gradient-primary);
-  color: var(--light-surface);
-  box-shadow: var(--shadow-glow);
+  background: var(--black);
+  color: var(--white);
+  box-shadow: none;
 }
 
 .vton-plan-header {
@@ -784,26 +734,26 @@ body::before {
 .vton-plan-name {
   font-size: 1.5rem;
   font-weight: 700;
-  color: var(--light-text);
+  color: var(--text);
   margin: 0 0 var(--spacing-md) 0;
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: 'Inter', sans-serif;
 }
 
 .vton-plan-credits {
   font-size: 3.5rem;
   font-weight: 900;
-  background: var(--gradient-primary);
+  background: var(--black);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
   line-height: 1;
   margin-bottom: var(--spacing-xs);
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: 'Inter', sans-serif;
 }
 
 .vton-plan-credits-label {
   font-size: 0.875rem;
-  color: var(--light-text-secondary);
+  color: var(--text-secondary);
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.1em;
@@ -817,73 +767,72 @@ body::before {
 
 .vton-plan-description {
   font-size: 0.9375rem;
-  color: var(--light-text-secondary);
+  color: var(--text-secondary);
   margin: 0 0 var(--spacing-md) 0;
   line-height: 1.6;
 }
 
 .vton-plan-savings {
   font-size: 0.875rem;
-  color: var(--success);
+  color: var(--black);
   font-weight: 700;
   margin-bottom: var(--spacing-sm);
 }
 
 .vton-plan-price-per {
   font-size: 0.875rem;
-  color: var(--light-text-secondary);
+  color: var(--text-secondary);
   font-weight: 500;
 }
 
 .vton-plan-footer {
   text-align: center;
   padding-top: var(--spacing-lg);
-  border-top: 1px solid rgba(229, 231, 235, 0.5);
+  border-top: 1px solid var(--border);
 }
 
 .vton-plan-price {
   font-size: 2rem;
   font-weight: 800;
-  background: var(--gradient-primary);
+  background: var(--black);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
   margin-bottom: var(--spacing-lg);
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: 'Inter', sans-serif;
 }
 
 .vton-plan-button {
   width: 100%;
   padding: var(--spacing-md) var(--spacing-xl);
-  border-radius: var(--radius-lg);
+  border-radius: 2px;
   font-weight: 600;
-  font-size: 1rem;
-  border: 2px solid rgba(229, 231, 235, 0.8);
-  background: rgba(255, 255, 255, 1);
-  color: var(--light-text);
+  font-size: 0.9375rem;
+  border: 1px solid var(--border);
+  background: var(--white);
+  color: var(--text);
   cursor: pointer;
-  font-family: 'Space Grotesk', sans-serif;
   position: relative;
   z-index: 1;
 }
 
 .vton-plan-button:hover {
-  border-color: var(--primary);
-  color: var(--primary);
+  border-color: var(--black);
+  color: var(--black);
   box-shadow: var(--shadow-md);
   background: rgba(255, 255, 255, 1);
 }
 
 .vton-plan-button-primary {
-  background: var(--gradient-primary);
+  background: var(--black);
   border: none;
-  color: var(--light-surface);
-  box-shadow: var(--shadow-glow);
+  color: var(--white);
+  box-shadow: none;
 }
 
 .vton-plan-button-primary:hover {
   box-shadow: var(--shadow-lg);
-  color: var(--light-surface);
+  color: var(--white);
 }
 
 .vton-plan-button:disabled {
@@ -895,11 +844,11 @@ body::before {
 /* Custom Pack Section - Horizontal */
 .vton-custom-section {
   width: 100%;
-  background: rgba(255, 255, 255, 1);
-  border-radius: var(--radius-lg);
+  background: var(--white);
+  border-radius: var(--radius-sm);
   padding: var(--spacing-xl);
   box-shadow: var(--shadow-md);
-  border: 2px solid rgba(229, 231, 235, 0.8);
+  border: 2px solid var(--border);
 }
 
 .vton-custom-header {
@@ -921,14 +870,14 @@ body::before {
 .vton-custom-title {
   font-size: 1.25rem;
   font-weight: 700;
-  color: var(--light-text);
+  color: var(--text);
   margin-bottom: var(--spacing-xs);
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: 'Inter', sans-serif;
 }
 
 .vton-custom-subtitle {
   font-size: 0.875rem;
-  color: var(--light-text-secondary);
+  color: var(--text-secondary);
 }
 
 .vton-custom-form {
@@ -945,38 +894,37 @@ body::before {
 .vton-custom-input {
   width: 150px;
   padding: var(--spacing-md);
-  border: 2px solid rgba(229, 231, 235, 0.8);
+  border: 2px solid var(--border);
   border-radius: var(--radius-lg);
   font-size: 1rem;
   font-weight: 700;
   text-align: center;
-  color: var(--light-text);
+  color: var(--text);
   background: rgba(255, 255, 255, 1);
 }
 
 .vton-custom-input:focus {
   outline: none;
-  border-color: var(--primary);
+  border-color: var(--black);
   box-shadow: 0 0 0 3px var(--primary-50);
 }
 
 .vton-custom-input-label {
   font-size: 0.875rem;
-  color: var(--light-text-secondary);
+  color: var(--text-secondary);
   font-weight: 500;
 }
 
 .vton-custom-button-submit {
   padding: var(--spacing-md) var(--spacing-xl);
-  background: var(--gradient-primary);
-  color: var(--light-surface);
-  border: none;
-  border-radius: var(--radius-lg);
-  font-weight: 700;
-  font-size: 1rem;
+  background: var(--black);
+  color: var(--white);
+  border: 1px solid var(--black);
+  border-radius: 2px;
+  font-weight: 600;
+  font-size: 0.9375rem;
   cursor: pointer;
-  box-shadow: var(--shadow-md);
-  font-family: 'Space Grotesk', sans-serif;
+  box-shadow: none;
   margin-left: auto;
   position: relative;
   z-index: 1;
@@ -993,15 +941,15 @@ body::before {
 
 .vton-custom-price-info {
   font-size: 0.875rem;
-  color: var(--light-text-secondary);
+  color: var(--text-secondary);
   text-align: center;
   font-weight: 500;
 }
 
 /* Alert Banner - Glassmorphism */
 .vton-alert-banner {
-  background: rgba(99, 102, 241, 0.1);
-  border: 1px solid rgba(99, 102, 241, 0.2);
+  background: var(--black);
+  border: 1px solid var(--black);
   border-radius: var(--radius-xl);
   padding: var(--spacing-xl);
   display: flex;
@@ -1019,15 +967,15 @@ body::before {
   left: 0;
   right: 0;
   height: 2px;
-  background: var(--gradient-primary);
+  background: var(--black);
 }
 
 .vton-info-icon {
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--white);
   padding: var(--spacing-sm);
   border-radius: 50%;
   box-shadow: var(--shadow-md);
-  color: var(--primary);
+  color: var(--black);
   font-size: 1.5rem;
   width: 48px;
   height: 48px;
@@ -1039,20 +987,20 @@ body::before {
 
 .vton-alert-text {
   font-size: 0.9375rem;
-  color: var(--light-text);
+  color: var(--text);
   margin: 0;
   line-height: 1.7;
 }
 
 .vton-alert-underline {
   text-decoration: underline;
-  text-decoration-color: var(--primary-light);
+  text-decoration-color: var(--gray-dark);
   text-underline-offset: 3px;
   font-weight: 600;
 }
 
 .vton-alert-green {
-  color: var(--success);
+  color: var(--black);
   font-weight: 700;
 }
 
@@ -1102,7 +1050,7 @@ body::before {
   justify-content: center;
   position: relative;
   overflow: hidden;
-  box-shadow: var(--shadow-2xl), var(--shadow-glow-lg);
+  box-shadow: var(--shadow-2xl), none;
   min-height: 420px;
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
@@ -1130,8 +1078,8 @@ body::before {
   margin-bottom: var(--spacing-xl);
   line-height: 1;
   letter-spacing: -0.05em;
-  text-shadow: 0 0 40px rgba(99, 102, 241, 0.5);
-  font-family: 'Space Grotesk', sans-serif;
+  text-shadow: 0 0 40px var(--black);
+  font-family: 'Inter', sans-serif;
   background: linear-gradient(135deg, #FFFFFF 0%, #E0E7FF 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -1143,18 +1091,18 @@ body::before {
   align-items: center;
   justify-content: center;
   gap: var(--spacing-sm);
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--white);
   font-size: 0.9375rem;
 }
 
 .vton-infinity {
   font-size: 1.75rem;
-  filter: drop-shadow(0 0 10px rgba(99, 102, 241, 0.5));
+  filter: drop-shadow(0 0 10px var(--black));
 }
 
 /* Pricing Cards - Glassmorphism */
 .vton-pricing-card {
-  background: rgba(255, 255, 255, 0.7);
+  background: var(--white);
   border-radius: var(--radius-xl);
   padding: var(--spacing-xl);
   box-shadow: var(--shadow-lg);
@@ -1168,16 +1116,16 @@ body::before {
 }
 
 .vton-pricing-card:hover {
-  box-shadow: var(--shadow-2xl), var(--shadow-glow);
+  box-shadow: var(--shadow-2xl), none;
   transform: translateY(-6px);
-  border-color: var(--primary);
+  border-color: var(--black);
   background: rgba(255, 255, 255, 0.85);
 }
 
 .vton-pricing-card-highlight {
-  box-shadow: var(--shadow-2xl), var(--shadow-glow-lg);
-  border: 2px solid var(--primary);
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(99, 102, 241, 0.1) 100%);
+  box-shadow: var(--shadow-2xl), none;
+  border: 2px solid var(--black);
+  background: linear-gradient(135deg, var(--white) 0%, var(--black) 100%);
   transform: scale(1.03);
   z-index: 10;
 }
@@ -1185,72 +1133,72 @@ body::before {
 .vton-badge-best-seller {
   position: absolute;
   top: -14px;
-  background: var(--gradient-secondary);
-  color: var(--light-surface);
+  background: var(--black);
+  color: var(--white);
   font-size: 0.75rem;
   font-weight: 700;
   padding: var(--spacing-sm) var(--spacing-lg);
   border-radius: var(--radius-full);
-  box-shadow: var(--shadow-glow);
+  box-shadow: none;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: 'Inter', sans-serif;
 }
 
 .vton-badge-save {
-  background: var(--success-bg);
-  color: var(--success);
+  background: var(--bg-tertiary);
+  color: var(--black);
   font-size: 0.75rem;
   font-weight: 700;
   padding: var(--spacing-xs) var(--spacing-md);
   border-radius: var(--radius-md);
   margin-bottom: var(--spacing-sm);
   text-transform: uppercase;
-  border: 1px solid rgba(16, 185, 129, 0.2);
+  border: 1px solid var(--bg-tertiary);
 }
 
 .vton-badge-roi {
-  background: var(--warning-bg);
-  color: var(--warning);
+  background: var(--bg-tertiary);
+  color: var(--black);
   font-size: 0.75rem;
   font-weight: 700;
   padding: var(--spacing-xs) var(--spacing-md);
   border-radius: var(--radius-md);
   margin-bottom: var(--spacing-sm);
   text-transform: uppercase;
-  border: 1px solid rgba(245, 158, 11, 0.2);
+  border: 1px solid var(--bg-tertiary);
 }
 
 .vton-badge-minimum {
   background: var(--primary-50);
-  color: var(--primary-dark);
+  color: var(--black);
   border: 1px solid var(--primary-100);
 }
 
 .vton-pack-name {
-  color: var(--light-text-secondary);
+  color: var(--text-secondary);
   font-weight: 600;
   margin-bottom: var(--spacing-sm);
   font-size: 1.25rem;
   margin-top: var(--spacing-md);
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: 'Inter', sans-serif;
 }
 
 .vton-pack-name-highlight {
-  color: var(--primary-dark);
+  color: var(--black);
   font-weight: 700;
 }
 
 .vton-pack-credits-number {
   font-size: 3.5rem;
   font-weight: 900;
-  background: var(--gradient-primary);
+  background: var(--black);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
   margin-bottom: var(--spacing-sm);
   line-height: 1;
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: 'Inter', sans-serif;
 }
 
 .vton-pack-credits-highlight {
@@ -1259,14 +1207,14 @@ body::before {
 
 .vton-pack-description-text {
   font-size: 0.875rem;
-  color: var(--light-text-secondary);
+  color: var(--text-secondary);
   text-align: center;
   margin-bottom: var(--spacing-md);
 }
 
 .vton-pack-price-per-credit {
   font-size: 0.875rem;
-  color: var(--light-text-secondary);
+  color: var(--text-secondary);
   text-align: center;
   margin-bottom: var(--spacing-lg);
   font-weight: 500;
@@ -1274,7 +1222,7 @@ body::before {
 
 .vton-pack-savings {
   font-size: 0.875rem;
-  color: var(--success);
+  color: var(--black);
   text-align: center;
   margin-bottom: var(--spacing-sm);
   font-weight: 700;
@@ -1289,12 +1237,12 @@ body::before {
   font-size: 1.75rem;
   font-weight: 800;
   text-align: center;
-  background: var(--gradient-primary);
+  background: var(--black);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
   margin-bottom: var(--spacing-lg);
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: 'Inter', sans-serif;
 }
 
 .vton-pack-price-highlight {
@@ -1307,35 +1255,35 @@ body::before {
   border-radius: var(--radius-lg);
   font-weight: 600;
   font-size: 0.9375rem;
-  border: 2px solid rgba(229, 231, 235, 0.8);
-  background: rgba(255, 255, 255, 0.8);
-  color: var(--light-text);
+  border: 2px solid var(--border);
+  background: var(--white);
+  color: var(--text);
   cursor: pointer;
   transition: all var(--transition-base);
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: 'Inter', sans-serif;
 }
 
 .vton-pack-button:hover {
-  border-color: var(--primary);
-  color: var(--primary);
+  border-color: var(--black);
+  color: var(--black);
   transform: translateY(-2px);
   box-shadow: var(--shadow-md);
-  background: rgba(255, 255, 255, 0.95);
+  background: var(--white);
 }
 
 .vton-pack-button-primary {
-  background: var(--gradient-primary);
+  background: var(--black);
   border: none;
-  color: var(--light-surface);
+  color: var(--white);
   font-weight: 700;
   padding: var(--spacing-md) var(--spacing-lg);
-  box-shadow: var(--shadow-glow);
+  box-shadow: none;
 }
 
 .vton-pack-button-primary:hover {
-  box-shadow: var(--shadow-glow-lg);
+  box-shadow: none;
   transform: translateY(-2px);
-  color: var(--light-surface);
+  color: var(--white);
 }
 
 .vton-pack-button:disabled {
@@ -1346,9 +1294,9 @@ body::before {
 
 /* Custom Pack */
 .vton-custom-pack {
-  background: rgba(255, 255, 255, 0.7);
+  background: var(--white);
   border-radius: var(--radius-xl);
-  border: 2px dashed rgba(99, 102, 241, 0.3);
+  border: 2px dashed var(--black);
   padding: var(--spacing-xl);
   display: flex;
   flex-direction: column;
@@ -1360,8 +1308,8 @@ body::before {
 }
 
 .vton-custom-pack:hover {
-  border-color: var(--primary);
-  box-shadow: var(--shadow-xl), var(--shadow-glow);
+  border-color: var(--black);
+  box-shadow: var(--shadow-xl), none;
   background: rgba(255, 255, 255, 0.85);
 }
 
@@ -1378,30 +1326,30 @@ body::before {
 }
 
 .vton-custom-icon {
-  background: rgba(99, 102, 241, 0.1);
+  background: var(--black);
   padding: var(--spacing-md);
   border-radius: var(--radius-lg);
-  color: var(--primary);
+  color: var(--black);
   font-size: 2rem;
 }
 
 .vton-custom-title {
   font-weight: 700;
-  color: var(--light-text);
+  color: var(--text);
   font-size: 1.25rem;
   margin: 0 0 var(--spacing-xs) 0;
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: 'Inter', sans-serif;
 }
 
 .vton-custom-text {
   font-size: 0.9375rem;
-  color: var(--light-text-secondary);
+  color: var(--text-secondary);
   margin: 0;
 }
 
 .vton-custom-price {
   font-weight: 700;
-  color: var(--primary);
+  color: var(--black);
 }
 
 .vton-custom-pack-right {
@@ -1412,40 +1360,40 @@ body::before {
 
 .vton-custom-input {
   width: 110px;
-  border: 2px solid rgba(229, 231, 235, 0.8);
+  border: 2px solid var(--border);
   border-radius: var(--radius-lg);
   padding: var(--spacing-md);
   text-align: center;
   font-weight: 700;
-  color: var(--light-text);
+  color: var(--text);
   font-size: 0.9375rem;
   transition: all var(--transition-base);
-  background: rgba(255, 255, 255, 0.8);
+  background: var(--white);
 }
 
 .vton-custom-input:focus {
   outline: none;
-  border-color: var(--primary);
+  border-color: var(--black);
   box-shadow: 0 0 0 4px var(--primary-50);
-  background: rgba(255, 255, 255, 0.95);
+  background: var(--white);
 }
 
 .vton-custom-button {
-  background: var(--gradient-dark);
-  color: var(--light-surface);
+  background: var(--black);
+  color: var(--white);
   padding: var(--spacing-md) var(--spacing-xl);
-  border-radius: var(--radius-lg);
+  border-radius: 2px;
   font-size: 0.9375rem;
-  font-weight: 700;
-  border: none;
+  font-weight: 600;
+  border: 1px solid var(--black);
   cursor: pointer;
   transition: all var(--transition-base);
-  box-shadow: var(--shadow-lg);
-  font-family: 'Space Grotesk', sans-serif;
+  box-shadow: none;
+  font-family: 'Inter', sans-serif;
 }
 
 .vton-custom-button:hover {
-  box-shadow: var(--shadow-xl), var(--shadow-glow);
+  box-shadow: var(--shadow-xl), none;
   transform: translateY(-2px);
 }
 
@@ -1469,7 +1417,7 @@ body::before {
 .vton-metric-item {
   text-align: center;
   padding: var(--spacing-xl);
-  background: rgba(255, 255, 255, 0.7);
+  background: var(--white);
   border-radius: var(--radius-xl);
   border: 1px solid rgba(255, 255, 255, 0.3);
   transition: all var(--transition-base);
@@ -1477,26 +1425,26 @@ body::before {
 
 .vton-metric-item:hover {
   transform: translateY(-4px);
-  box-shadow: var(--shadow-lg), var(--shadow-glow);
+  box-shadow: var(--shadow-lg), none;
   background: rgba(255, 255, 255, 0.85);
 }
 
 .vton-metric-value {
   font-size: 2.75rem;
   font-weight: 900;
-  background: var(--gradient-primary);
+  background: var(--black);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
   line-height: 1;
   margin-bottom: var(--spacing-sm);
   letter-spacing: -0.03em;
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: 'Inter', sans-serif;
 }
 
 .vton-metric-label {
   font-size: 0.875rem;
-  color: var(--light-text-secondary);
+  color: var(--text-secondary);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.1em;
@@ -1507,7 +1455,7 @@ body::before {
    ============================================ */
 
 .vton-stat-card {
-  background: rgba(255, 255, 255, 0.7);
+  background: var(--white);
   border-radius: var(--radius-xl);
   padding: var(--spacing-xl);
   box-shadow: var(--shadow-lg);
@@ -1516,8 +1464,8 @@ body::before {
 }
 
 .vton-stat-card:hover {
-  box-shadow: var(--shadow-2xl), var(--shadow-glow);
-  border-color: var(--primary);
+  box-shadow: var(--shadow-2xl), none;
+  border-color: var(--black);
   transform: translateY(-4px);
   background: rgba(255, 255, 255, 0.85);
 }
@@ -1525,19 +1473,19 @@ body::before {
 .vton-stat-value {
   font-size: 2.75rem;
   font-weight: 900;
-  background: var(--gradient-primary);
+  background: var(--black);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
   line-height: 1;
   margin-bottom: var(--spacing-sm);
   letter-spacing: -0.03em;
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: 'Inter', sans-serif;
 }
 
 .vton-stat-label {
   font-size: 0.875rem;
-  color: var(--light-text-secondary);
+  color: var(--text-secondary);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.1em;
@@ -1610,7 +1558,7 @@ body::before {
 }
 
 .Polaris-Card {
-  background: rgba(255, 255, 255, 0.7);
+  background: var(--white);
   border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-lg);
@@ -1619,7 +1567,7 @@ body::before {
 }
 
 .Polaris-Card:hover {
-  box-shadow: var(--shadow-xl), var(--shadow-glow);
+  box-shadow: var(--shadow-xl), none;
   background: rgba(255, 255, 255, 0.85);
 }
 
@@ -1633,31 +1581,31 @@ body::before {
   font-size: 0.9375rem;
   padding: var(--spacing-md) var(--spacing-xl);
   transition: all var(--transition-base);
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: 'Inter', sans-serif;
 }
 
 .Polaris-Button--primary {
-  background: var(--gradient-primary);
+  background: var(--black);
   border: none;
-  color: var(--light-surface);
-  box-shadow: var(--shadow-glow);
+  color: var(--white);
+  box-shadow: none;
 }
 
 .Polaris-Button--primary:hover {
-  box-shadow: var(--shadow-glow-lg);
+  box-shadow: none;
   transform: translateY(-2px);
 }
 
 .Polaris-Button--secondary {
-  background: rgba(255, 255, 255, 0.8);
-  border-color: rgba(229, 231, 235, 0.8);
-  color: var(--light-text);
+  background: var(--white);
+  border-color: var(--border);
+  color: var(--text);
 }
 
 .Polaris-Button--secondary:hover {
-  background: rgba(255, 255, 255, 0.95);
-  border-color: var(--primary);
-  color: var(--primary);
+  background: var(--white);
+  border-color: var(--black);
+  color: var(--black);
 }
 
 /* ============================================
@@ -1675,11 +1623,11 @@ body::before {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--gradient-primary);
+  background: var(--black);
   border-radius: 6px;
   transition: background var(--transition-base);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--gradient-secondary);
+  background: var(--black);
 }

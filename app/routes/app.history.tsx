@@ -75,9 +75,9 @@ export default function History() {
     : "0";
 
   const stats = [
-    { label: "Total Attempts", value: totalLogs.toLocaleString("en-US"), icon: "✨" },
-    { label: "Success Rate", value: `${successRate}%`, icon: "✅" },
-    { label: "Average Latency", value: `${avgLatency}ms`, icon: "⏱️" },
+    { label: "Total Attempts", value: totalLogs.toLocaleString("en-US"), icon: "" },
+    { label: "Success Rate", value: `${successRate}%`, icon: "" },
+    { label: "Average Latency", value: `${avgLatency}ms`, icon: "" },
   ];
 
   const rows = logs.map((log: any) => [

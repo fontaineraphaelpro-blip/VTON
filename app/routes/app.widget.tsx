@@ -42,11 +42,17 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.widget.tsx:44',message:'Action called',data:{method:request.method},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+  // #endregion
   const { session } = await authenticate.admin(request);
   const shop = session.shop;
   const formData = await request.formData();
 
   const intent = formData.get("intent");
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.widget.tsx:50',message:'Intent extracted',data:{intent,shop},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+  // #endregion
 
   if (intent === "update-widget") {
     const updates: any = {};
@@ -55,6 +61,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const widgetBg = formData.get("widgetBg") as string;
     const widgetColor = formData.get("widgetColor") as string;
     const maxTriesPerUser = formData.get("maxTriesPerUser") as string;
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.widget.tsx:57',message:'FormData values extracted',data:{widgetText,widgetBg,widgetColor,maxTriesPerUser},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+    // #endregion
 
     if (widgetText) {
       updates.widgetText = widgetText;
@@ -68,8 +77,13 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     if (maxTriesPerUser) {
       updates.maxTriesPerUser = parseInt(maxTriesPerUser);
     }
-
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.widget.tsx:72',message:'Before upsertShop',data:{updates,shop},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+    // #endregion
     await upsertShop(shop, updates);
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.widget.tsx:74',message:'After upsertShop, returning success',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+    // #endregion
     return json({ success: true, testMode: false });
   } else if (intent === "test-tryon") {
     const personImage = formData.get("personImage") as string;
@@ -125,10 +139,15 @@ export default function Widget() {
   const fetcher = useFetcher<typeof action>();
   const revalidator = useRevalidator();
 
-  const [widgetText, setWidgetText] = useState(shop?.widget_text || "Try It On Now ✨");
+  const [widgetText, setWidgetText] = useState(shop?.widget_text || "Try It On Now");
   const [widgetBg, setWidgetBg] = useState(shop?.widget_bg || "#0066FF");
   const [widgetColor, setWidgetColor] = useState(shop?.widget_color || "#FFFFFF");
   const [maxTriesPerUser, setMaxTriesPerUser] = useState(String(shop?.max_tries_per_user || 5));
+  // #region agent log
+  useEffect(() => {
+    fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.widget.tsx:131',message:'Widget component initialized',data:{shop:shop?{widget_text:shop.widget_text,widget_bg:shop.widget_bg,widget_color:shop.widget_color,max_tries_per_user:shop.max_tries_per_user}:null,error,initialState:{widgetText,widgetBg,widgetColor,maxTriesPerUser}},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+  }, []);
+  // #endregion
   const [personImage, setPersonImage] = useState("");
   const [garmentImage, setGarmentImage] = useState("");
   const [personImageFile, setPersonImageFile] = useState<File | null>(null);
@@ -137,13 +156,22 @@ export default function Widget() {
   const [garmentImagePreview, setGarmentImagePreview] = useState<string>("");
 
   const handleSaveConfig = () => {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.widget.tsx:139',message:'handleSaveConfig called',data:{widgetText,widgetBg,widgetColor,maxTriesPerUser},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
     const formData = new FormData();
     formData.append("intent", "update-widget");
     formData.append("widgetText", widgetText);
     formData.append("widgetBg", widgetBg);
     formData.append("widgetColor", widgetColor);
     formData.append("maxTriesPerUser", maxTriesPerUser);
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.widget.tsx:147',message:'Before fetcher.submit',data:{fetcherState:fetcher.state},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
     fetcher.submit(formData, { method: "post" });
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.widget.tsx:149',message:'After fetcher.submit',data:{fetcherState:fetcher.state},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
   };
 
   const handleFileUpload = (file: File, type: "person" | "garment") => {
@@ -201,9 +229,22 @@ export default function Widget() {
     fetcher.submit(formData, { method: "post" });
   };
 
+  // Log preview values when they change
+  useEffect(() => {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.widget.tsx:217',message:'Preview values changed',data:{widgetBg,widgetColor,widgetText},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+    // #endregion
+  }, [widgetBg, widgetColor, widgetText]);
+
   // Recharger les données après une sauvegarde réussie
   useEffect(() => {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.widget.tsx:225',message:'useEffect triggered for revalidator',data:{fetcherSuccess:fetcher.data?.success,fetcherTestMode:fetcher.data?.testMode},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+    // #endregion
     if (fetcher.data?.success && !fetcher.data?.testMode) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.widget.tsx:228',message:'Calling revalidator.revalidate()',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+      // #endregion
       setTimeout(() => {
         revalidator.revalidate();
       }, 500);
@@ -217,7 +258,7 @@ export default function Widget() {
         {/* Header */}
         <header className="vton-header-simple">
           <div className="vton-header-logo">
-            <div className="vton-logo-icon-blue">⚡</div>
+            <div className="vton-logo-icon-blue">V</div>
             <span className="vton-header-title">VTON Magic</span>
           </div>
           <div className="vton-status-badge">
@@ -257,6 +298,9 @@ export default function Widget() {
                     label="Button Text"
                     value={widgetText}
                     onChange={(value) => {
+                      // #region agent log
+                      fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.widget.tsx:265',message:'widgetText onChange',data:{oldValue:widgetText,newValue:value},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+                      // #endregion
                       setWidgetText(value);
                     }}
                     autoComplete="off"
@@ -268,6 +312,9 @@ export default function Widget() {
                         label="Background Color"
                         value={widgetBg}
                         onChange={(value) => {
+                          // #region agent log
+                          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.widget.tsx:276',message:'widgetBg onChange',data:{oldValue:widgetBg,newValue:value},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+                          // #endregion
                           setWidgetBg(value);
                         }}
                         autoComplete="off"
@@ -280,6 +327,9 @@ export default function Widget() {
                         label="Text Color"
                         value={widgetColor}
                         onChange={(value) => {
+                          // #region agent log
+                          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.widget.tsx:288',message:'widgetColor onChange',data:{oldValue:widgetColor,newValue:value},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+                          // #endregion
                           setWidgetColor(value);
                         }}
                         autoComplete="off"
@@ -292,6 +342,9 @@ export default function Widget() {
                     label="Max try-ons per user/day"
                     value={maxTriesPerUser}
                     onChange={(value) => {
+                      // #region agent log
+                      fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.widget.tsx:300',message:'maxTriesPerUser onChange',data:{oldValue:maxTriesPerUser,newValue:value},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+                      // #endregion
                       setMaxTriesPerUser(value);
                     }}
                     type="number"
@@ -390,7 +443,7 @@ export default function Widget() {
                           </>
                         ) : (
                           <>
-                            <div style={{ fontSize: "48px", marginBottom: "16px" }}>📸</div>
+                            <div style={{ fontSize: "14px", marginBottom: "16px", fontWeight: 600 }}>UPLOAD PHOTO</div>
                             <Text variant="bodyMd" fontWeight="medium">
                               Drag & drop or click to upload
                             </Text>
@@ -453,7 +506,7 @@ export default function Widget() {
                           </>
                         ) : (
                           <>
-                            <div style={{ fontSize: "48px", marginBottom: "16px" }}>👕</div>
+                            <div style={{ fontSize: "14px", marginBottom: "16px", fontWeight: 600 }}>UPLOAD GARMENT</div>
                             <Text variant="bodyMd" fontWeight="medium">
                               Drag & drop or click to upload
                             </Text>

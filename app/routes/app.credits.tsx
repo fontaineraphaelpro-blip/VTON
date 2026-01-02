@@ -133,12 +133,21 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           }
         };
 
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:136',message:'Before admin.graphql call for draft order',data:{packId:pack.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+        // #endregion
         const response = await admin.graphql(mutation, {
           variables,
         });
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:140',message:'After admin.graphql call for draft order',data:{isResponse:response instanceof Response,ok:response?.ok,status:response?.status,statusText:response?.statusText},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+        // #endregion
 
         // Check if response is OK
         if (!response.ok) {
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:144',message:'Response not OK',data:{status:response.status,statusText:response.statusText,is401:response.status===401},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+          // #endregion
           // Handle 401 Unauthorized - authentication required
           if (response.status === 401) {
             const reauthUrl = response.headers.get('x-shopify-api-request-failure-reauthorize-url');
@@ -221,14 +230,59 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           });
         }
       } catch (error) {
-        console.error("Error creating draft order:", error);
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:224',message:'Catch block - error caught',data:{errorType:error?.constructor?.name,isResponse:error instanceof Response,isError:error instanceof Error,hasStatus:!!(error as any)?.status,status:(error as any)?.status,message:error instanceof Error ? error.message : String(error)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+        // #endregion
+        // Ne pas loguer l'objet Response directement - extraire seulement les infos nécessaires
+        if (error instanceof Response) {
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:227',message:'Error is Response object',data:{status:error.status,statusText:error.statusText,url:error.url,is401:error.status===401},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+          // #endregion
+          // Handle 401 Unauthorized in catch block
+          if (error.status === 401) {
+            const reauthUrl = error.headers.get('x-shopify-api-request-failure-reauthorize-url');
+            console.warn(`Draft order creation failed: ${error.status} ${error.statusText} - Authentication required`);
+            return json({ 
+              success: false, 
+              error: "Your session has expired. Please refresh the page to re-authenticate.",
+              requiresAuth: true,
+              reauthUrl: reauthUrl || null,
+            });
+          }
+          console.warn(`Draft order creation failed: ${error.status} ${error.statusText}`);
+          return json({ 
+            success: false, 
+            error: `Shopify API error (${error.status}): ${error.statusText}` 
+          });
+        }
+        // Check if error has Response-like properties (status, statusText)
+        const errorAny = error as any;
+        if (errorAny && typeof errorAny === 'object' && 'status' in errorAny && 'statusText' in errorAny) {
+          // Handle Response-like object
+          if (errorAny.status === 401) {
+            const reauthUrl = errorAny.headers?.get?.('x-shopify-api-request-failure-reauthorize-url') || 
+                             errorAny.headers?.['x-shopify-api-request-failure-reauthorize-url'];
+            console.warn(`Draft order creation failed: ${errorAny.status} ${errorAny.statusText} - Authentication required`);
+            return json({ 
+              success: false, 
+              error: "Your session has expired. Please refresh the page to re-authenticate.",
+              requiresAuth: true,
+              reauthUrl: reauthUrl || null,
+            });
+          }
+          console.warn(`Draft order creation failed: ${errorAny.status} ${errorAny.statusText}`);
+          return json({ 
+            success: false, 
+            error: `Shopify API error (${errorAny.status}): ${errorAny.statusText || 'Unknown error'}` 
+          });
+        }
+        // Log normal errors (not Response objects)
+        console.error("Error creating draft order:", error instanceof Error ? error.message : String(error));
         let errorMessage: string;
         if (error instanceof Error) {
           errorMessage = error.message;
         } else if (error && typeof error === 'object' && 'message' in error) {
           errorMessage = String(error.message);
-        } else if (error && typeof error === 'object' && 'toString' in error) {
-          errorMessage = error.toString();
         } else {
           errorMessage = "Unknown error occurred";
         }
@@ -283,12 +337,21 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           }
         };
 
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:321',message:'Before admin.graphql call for custom draft order',data:{customCredits},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+        // #endregion
         const response = await admin.graphql(mutation, {
           variables,
         });
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:325',message:'After admin.graphql call for custom draft order',data:{isResponse:response instanceof Response,ok:response?.ok,status:response?.status,statusText:response?.statusText},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+        // #endregion
 
         // Check if response is OK
         if (!response.ok) {
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:329',message:'Custom response not OK',data:{status:response.status,statusText:response.statusText,is401:response.status===401},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+          // #endregion
           // Handle 401 Unauthorized - authentication required
           if (response.status === 401) {
             const reauthUrl = response.headers.get('x-shopify-api-request-failure-reauthorize-url');
@@ -371,14 +434,59 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           });
         }
       } catch (error) {
-        console.error("Error creating custom draft order:", error);
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:399',message:'Catch block - custom error caught',data:{errorType:error?.constructor?.name,isResponse:error instanceof Response,isError:error instanceof Error,hasStatus:!!(error as any)?.status,status:(error as any)?.status,message:error instanceof Error ? error.message : String(error)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+        // #endregion
+        // Ne pas loguer l'objet Response directement - extraire seulement les infos nécessaires
+        if (error instanceof Response) {
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:402',message:'Custom error is Response object',data:{status:error.status,statusText:error.statusText,url:error.url,is401:error.status===401},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+          // #endregion
+          // Handle 401 Unauthorized in catch block
+          if (error.status === 401) {
+            const reauthUrl = error.headers.get('x-shopify-api-request-failure-reauthorize-url');
+            console.warn(`Custom draft order creation failed: ${error.status} ${error.statusText} - Authentication required`);
+            return json({ 
+              success: false, 
+              error: "Your session has expired. Please refresh the page to re-authenticate.",
+              requiresAuth: true,
+              reauthUrl: reauthUrl || null,
+            });
+          }
+          console.warn(`Custom draft order creation failed: ${error.status} ${error.statusText}`);
+          return json({ 
+            success: false, 
+            error: `Shopify API error (${error.status}): ${error.statusText}` 
+          });
+        }
+        // Check if error has Response-like properties (status, statusText)
+        const errorAny = error as any;
+        if (errorAny && typeof errorAny === 'object' && 'status' in errorAny && 'statusText' in errorAny) {
+          // Handle Response-like object
+          if (errorAny.status === 401) {
+            const reauthUrl = errorAny.headers?.get?.('x-shopify-api-request-failure-reauthorize-url') || 
+                             errorAny.headers?.['x-shopify-api-request-failure-reauthorize-url'];
+            console.warn(`Custom draft order creation failed: ${errorAny.status} ${errorAny.statusText} - Authentication required`);
+            return json({ 
+              success: false, 
+              error: "Your session has expired. Please refresh the page to re-authenticate.",
+              requiresAuth: true,
+              reauthUrl: reauthUrl || null,
+            });
+          }
+          console.warn(`Custom draft order creation failed: ${errorAny.status} ${errorAny.statusText}`);
+          return json({ 
+            success: false, 
+            error: `Shopify API error (${errorAny.status}): ${errorAny.statusText || 'Unknown error'}` 
+          });
+        }
+        // Log normal errors (not Response objects)
+        console.error("Error creating custom draft order:", error instanceof Error ? error.message : String(error));
         let errorMessage: string;
         if (error instanceof Error) {
           errorMessage = error.message;
         } else if (error && typeof error === 'object' && 'message' in error) {
           errorMessage = String(error.message);
-        } else if (error && typeof error === 'object' && 'toString' in error) {
-          errorMessage = error.toString();
         } else {
           errorMessage = "Unknown error occurred";
         }
@@ -445,7 +553,7 @@ export default function Credits() {
         {/* Header */}
         <header className="vton-header-simple">
           <div className="vton-header-logo">
-            <div className="vton-logo-icon-blue">⚡</div>
+            <div className="vton-logo-icon-blue">V</div>
             <span className="vton-header-title">VTON Magic</span>
           </div>
           <div className="vton-status-badge">
@@ -468,7 +576,7 @@ export default function Credits() {
 
             {/* Value Proposition */}
             <div className="vton-value-prop">
-              <div className="vton-value-icon">✨</div>
+              <div className="vton-value-icon"></div>
               <div className="vton-value-text">
                 <strong>Reduce returns by 2.5x</strong> and boost conversions with virtual try-on
               </div>
@@ -519,7 +627,7 @@ export default function Credits() {
           {/* Custom Pack Section */}
           <div className="vton-custom-section">
             <div className="vton-custom-header">
-              <span className="vton-custom-icon">🏢</span>
+              <span className="vton-custom-icon"></span>
               <div className="vton-custom-info">
                 <div className="vton-custom-title">Custom Pack</div>
                 <div className="vton-custom-subtitle">Get bulk pricing for 250+ credits</div>
