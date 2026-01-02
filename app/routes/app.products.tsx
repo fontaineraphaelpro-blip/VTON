@@ -14,6 +14,7 @@ import {
   Thumbnail,
   Badge,
   Divider,
+  Banner,
 } from "@shopify/polaris";
 import { TitleBar } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
@@ -55,36 +56,44 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 };
 
 export default function Products() {
-  const { products, error } = useLoaderData<typeof loader>();
+  const loaderData = useLoaderData<typeof loader>();
+  const products = Array.isArray(loaderData?.products) ? loaderData.products : [];
+  const error = loaderData?.error;
 
   const productRows = products.map((product: any) => {
+    if (!product || !product.id) {
+      return null;
+    }
+    
     const productId = product.id.replace("gid://shopify/Product/", "");
     return [
       <InlineStack key={product.id} gap="300" align="start">
-        {product.featuredImage && (
+        {product.featuredImage?.url && (
           <Thumbnail
             source={product.featuredImage.url}
-            alt={product.featuredImage.altText || product.title}
+            alt={product.featuredImage.altText || product.title || "Product"}
             size="small"
           />
         )}
         <BlockStack gap="050">
           <Text variant="bodyMd" fontWeight="semibold" as="span">
-            {product.title}
+            {product.title || "Untitled Product"}
           </Text>
-          <Text variant="bodySm" tone="subdued" as="span">
-            /{product.handle}
-          </Text>
+          {product.handle && (
+            <Text variant="bodySm" tone="subdued" as="span">
+              /{product.handle}
+            </Text>
+          )}
         </BlockStack>
       </InlineStack>,
       <Badge
         key={`status-${product.id}`}
         tone={product.status === "ACTIVE" ? "success" : "warning"}
       >
-        {product.status}
+        {product.status || "UNKNOWN"}
       </Badge>,
       <Text key={`inventory-${product.id}`} variant="bodyMd" as="span">
-        {product.totalInventory || 0}
+        {product.totalInventory ?? 0}
       </Text>,
       <Button
         key={`btn-${product.id}`}
@@ -95,7 +104,7 @@ export default function Products() {
         View
       </Button>,
     ];
-  });
+  }).filter((row) => row !== null);
 
   return (
     <Page>
