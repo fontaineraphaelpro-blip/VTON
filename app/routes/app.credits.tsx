@@ -192,68 +192,66 @@ export default function Credits() {
 
                         return (
                           <div key={pack.id} className={`vton-pack-card ${isHighlight ? "highlight" : ""}`}>
-                            <div className={`vton-pack-card ${isHighlight ? "highlight" : ""}`}>
-                              {isHighlight && pack.badge && (
-                                <div className="vton-pack-badge best-seller">
-                                  {pack.badge}
-                                </div>
-                              )}
+                            {isHighlight && pack.badge && (
+                              <div className="vton-pack-badge best-seller">
+                                {pack.badge}
+                              </div>
+                            )}
 
-                              {pack.badge && !isHighlight && (
-                                <div className="vton-pack-badge roi">
-                                  {pack.badge}
-                                </div>
-                              )}
+                            {pack.badge && !isHighlight && (
+                              <div className="vton-pack-badge roi">
+                                {pack.badge}
+                              </div>
+                            )}
 
-                              <Box padding={isHighlight ? "500" : "400"} style={{ paddingTop: isHighlight ? "4rem" : "1rem" }}>
-                                <BlockStack gap="400">
-                                  <BlockStack gap="200">
-                                    <Text 
-                                      variant="headingLg" 
-                                      fontWeight="bold" 
-                                      as="h3"
-                                    >
-                                      {pack.name}
-                                    </Text>
-                                    <Text 
-                                      variant="heading2xl" 
-                                      fontWeight="bold" 
-                                      as="p"
-                                    >
-                                      {pack.credits.toLocaleString("fr-FR")}
-                                    </Text>
-                                    <Text variant="bodySm" tone="subdued" as="p">
-                                      {pack.pricePerCredit.toFixed(2)}€ par crédit
-                                    </Text>
-                                    <Text variant="bodyMd" tone="subdued" as="p">
-                                      {pack.description}
-                                    </Text>
-                                  </BlockStack>
-
-                                  <Divider />
-
-                                  <BlockStack gap="300">
-                                    <Text variant="headingLg" fontWeight="bold" as="p">
-                                      {pack.price.toFixed(2)}€
-                                    </Text>
-                                    
-                                    <Button
-                                      variant={isHighlight ? "primary" : "secondary"}
-                                      size="large"
-                                      fullWidth
-                                      onClick={() => handlePurchase(pack.id)}
-                                      loading={isSubmitting}
-                                    >
-                                      Acheter
-                                    </Button>
-                                  </BlockStack>
+                            <Box padding={isHighlight ? "500" : "400"} style={{ paddingTop: isHighlight ? "4rem" : "1rem" }}>
+                              <BlockStack gap="400">
+                                <BlockStack gap="200">
+                                  <Text 
+                                    variant="headingLg" 
+                                    fontWeight="bold" 
+                                    as="h3"
+                                  >
+                                    {pack.name}
+                                  </Text>
+                                  <Text 
+                                    variant="heading2xl" 
+                                    fontWeight="bold" 
+                                    as="p"
+                                  >
+                                    {pack.credits.toLocaleString("fr-FR")}
+                                  </Text>
+                                  <Text variant="bodySm" tone="subdued" as="p">
+                                    {pack.pricePerCredit.toFixed(2)}€ par crédit
+                                  </Text>
+                                  <Text variant="bodyMd" tone="subdued" as="p">
+                                    {pack.description}
+                                  </Text>
                                 </BlockStack>
-                              </Box>
-                            </div>
-                          </Layout.Section>
+
+                                <Divider />
+
+                                <BlockStack gap="300">
+                                  <Text variant="headingLg" fontWeight="bold" as="p">
+                                    {pack.price.toFixed(2)}€
+                                  </Text>
+                                  
+                                  <Button
+                                    variant={isHighlight ? "primary" : "secondary"}
+                                    size="large"
+                                    fullWidth
+                                    onClick={() => handlePurchase(pack.id)}
+                                    loading={isSubmitting}
+                                  >
+                                    Acheter
+                                  </Button>
+                                </BlockStack>
+                              </BlockStack>
+                            </Box>
+                          </div>
                         );
                       })}
-                    </Layout>
+                    </div>
                   </BlockStack>
                 </Card>
               </Layout.Section>
