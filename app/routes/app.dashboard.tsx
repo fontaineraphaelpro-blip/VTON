@@ -330,8 +330,7 @@ export default function Dashboard() {
                 )}
               </BlockStack>
             </Card>
-            </BlockStack>
-          </div>
+          </BlockStack>
         </Layout.Section>
 
         <Layout.Section variant="oneThird">
@@ -450,8 +449,7 @@ export default function Dashboard() {
                 </Button>
               </BlockStack>
             </Card>
-            </BlockStack>
-          </div>
+          </BlockStack>
         </Layout.Section>
       </Layout>
     </Page>
