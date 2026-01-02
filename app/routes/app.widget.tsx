@@ -366,6 +366,12 @@ export default function Widget() {
               </Text>
               <Divider />
                 <Box padding="400" background="bg-surface-secondary" borderRadius="200">
+                  {/* #region agent log */}
+                  {(() => {
+                    fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.widget.tsx:370',message:'Preview rendering',data:{widgetBg,widgetColor,widgetText},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H'})}).catch(()=>{});
+                    return null;
+                  })()}
+                  {/* #endregion */}
                   <div
                     style={{
                       backgroundColor: widgetBg,
