@@ -186,7 +186,7 @@ export default function Credits() {
           </div>
 
           {/* Grid Principale (Credits + Pricing) */}
-          <div className="vton-pricing-grid-large">
+          <div className="vton-pricing-grid">
             {/* Carte de gauche (Bleu Nuit) */}
             <div className="vton-credits-card-blue">
               <div className="vton-credits-card-glow"></div>
