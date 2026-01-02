@@ -44,14 +44,59 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         }`
     );
 
-    const responseJson = await response.json();
+    // Check if response is OK
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("GraphQL request failed:", response.status, errorText);
+      return json({ 
+        products: [], 
+        shop: session.shop, 
+        error: `Shopify API error (${response.status}): ${errorText.substring(0, 200)}` 
+      });
+    }
+
+    let responseJson;
+    try {
+      responseJson = await response.json();
+    } catch (jsonError) {
+      console.error("Failed to parse JSON response:", jsonError);
+      const errorText = await response.text().catch(() => "Unable to read response");
+      return json({ 
+        products: [], 
+        shop: session.shop, 
+        error: `Invalid response from Shopify: ${errorText.substring(0, 200)}` 
+      });
+    }
+
+    // Check for GraphQL errors
+    if (responseJson.errors) {
+      const errorMessages = responseJson.errors.map((e: any) => e.message || String(e)).join(", ");
+      console.error("GraphQL errors:", errorMessages);
+      return json({ 
+        products: [], 
+        shop: session.shop, 
+        error: `GraphQL error: ${errorMessages}` 
+      });
+    }
+
     const products =
       responseJson.data?.products?.edges?.map((edge: any) => edge.node) || [];
 
+    console.log(`Loaded ${products.length} products for shop ${session.shop}`);
     return json({ products, shop: session.shop });
   } catch (error) {
     console.error("Error fetching products:", error);
-    return json({ products: [], shop: session.shop, error: String(error) });
+    let errorMessage: string;
+    if (error instanceof Error) {
+      errorMessage = error.message;
+    } else if (error && typeof error === 'object' && 'message' in error) {
+      errorMessage = String(error.message);
+    } else if (error && typeof error === 'object' && 'toString' in error) {
+      errorMessage = error.toString();
+    } else {
+      errorMessage = "Unknown error occurred";
+    }
+    return json({ products: [], shop: session.shop, error: errorMessage });
   }
 };
 
