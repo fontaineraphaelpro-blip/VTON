@@ -135,35 +135,45 @@ export default function Widget() {
 
   return (
     <Page>
-      <TitleBar title="Widget Configuration & Test - VTON Magic" />
-      <Layout>
-        <Layout.Section>
-          <BlockStack gap="600">
-            {error && (
-              <Banner tone="critical" title="Error">
-                Error loading: {error}
-              </Banner>
-            )}
+      <TitleBar title="Widget Configuration - VTON Magic" />
+      <div className="vton-page-container">
+        {/* Header */}
+        <header className="vton-header-simple">
+          <div className="vton-header-logo">
+            <div className="vton-logo-icon-blue">⚡</div>
+            <span className="vton-header-title">VTON Magic</span>
+          </div>
+          <div className="vton-status-badge">
+            <div className="vton-status-dot-green"></div>
+            Active
+          </div>
+        </header>
 
-            {fetcher.data?.success && (
-              <Banner tone="success">
-                {fetcher.data.testMode
-                  ? "Try-on test initiated (feature to be completed)"
-                  : "Configuration saved successfully"}
-              </Banner>
-            )}
+        <div className="vton-page-content">
+          {error && (
+            <Banner tone="critical" title="Error">
+              Error loading: {error}
+            </Banner>
+          )}
 
-            {/* Widget Configuration */}
-            <Card>
-              <BlockStack gap="400">
-                <Text variant="headingLg" fontWeight="semibold" as="h2">
-                  Widget Customization
-                </Text>
-                <Text variant="bodyMd" tone="subdued" as="p">
-                  Adjust the appearance and behavior of the Try-On button on your product pages.
-                </Text>
+          {fetcher.data?.success && (
+            <Banner tone="success">
+              {fetcher.data.testMode
+                ? "Try-on test initiated (feature to be completed)"
+                : "Configuration saved successfully"}
+            </Banner>
+          )}
 
-                <Divider />
+          {/* Widget Configuration */}
+          <Card>
+            <BlockStack gap="400">
+              <Text as="h2" variant="headingLg" fontWeight="semibold">
+                Widget Configuration
+              </Text>
+              <Text variant="bodyMd" tone="subdued" as="p">
+                Customize the appearance of the Try-On widget
+              </Text>
+              <Divider />
 
                 <BlockStack gap="400">
                   <TextField
@@ -211,16 +221,16 @@ export default function Widget() {
               </BlockStack>
             </Card>
 
-            {/* Widget Preview */}
-            <Card>
-              <BlockStack gap="400">
-                <Text variant="headingLg" fontWeight="semibold" as="h2">
-                  Button Preview
-                </Text>
-                <Text variant="bodyMd" tone="subdued" as="p">
-                  Preview what your Try-On button will look like on your store.
-                </Text>
-                <Divider />
+          {/* Widget Preview */}
+          <Card>
+            <BlockStack gap="400">
+              <Text as="h2" variant="headingLg" fontWeight="semibold">
+                Button Preview
+              </Text>
+              <Text variant="bodyMd" tone="subdued" as="p">
+                Preview what your Try-On button will look like on your store
+              </Text>
+              <Divider />
                 <Box padding="400" background="bg-surface-secondary" borderRadius="200">
                   <div
                     style={{
@@ -241,16 +251,16 @@ export default function Widget() {
               </BlockStack>
             </Card>
 
-            {/* AI Try-On Test */}
-            <Card>
-              <BlockStack gap="400">
-                <Text variant="headingLg" fontWeight="semibold" as="h2">
-                  Test AI Virtual Try-On
-                </Text>
-                <Text variant="bodyMd" tone="subdued" as="p">
-                  Run a test to see the quality of AI generation.
-                </Text>
-                <Divider />
+          {/* AI Try-On Test */}
+          <Card>
+            <BlockStack gap="400">
+              <Text as="h2" variant="headingLg" fontWeight="semibold">
+                Test AI Virtual Try-On
+              </Text>
+              <Text variant="bodyMd" tone="subdued" as="p">
+                Run a test to see the quality of AI generation
+              </Text>
+              <Divider />
                 <InlineStack gap="400" align="start">
                   <TextField
                     label="Person Image URL"
@@ -288,32 +298,31 @@ export default function Widget() {
               </BlockStack>
             </Card>
 
-            {/* Integration Instructions */}
-            <Card>
-              <BlockStack gap="400">
-                <Text variant="headingLg" fontWeight="semibold" as="h2">
-                  Widget Integration
+          {/* Integration Instructions */}
+          <Card>
+            <BlockStack gap="400">
+              <Text as="h2" variant="headingLg" fontWeight="semibold">
+                Widget Integration
+              </Text>
+              <Banner tone="success">
+                <Text variant="bodyMd" as="p">
+                  <strong>Automatic Installation:</strong> The Try-On widget is automatically installed and will appear on your product pages. No code changes needed!
                 </Text>
-                <Banner tone="success">
-                  <Text variant="bodyMd" as="p">
-                    <strong>Automatic Installation:</strong> The Try-On widget is automatically installed and will appear on your product pages. No code changes needed!
-                  </Text>
-                </Banner>
-                <Text variant="bodyMd" tone="subdued" as="p">
-                  The widget script is automatically injected via Shopify Script Tags. The button will appear next to the "Add to Cart" button on all product pages.
-                </Text>
-                <Divider />
-                <Text variant="bodySm" tone="subdued" as="p">
-                  <strong>Manual Installation (Optional):</strong> If you prefer to install manually, add this script to your theme's `theme.liquid` file, just before the `&lt;/body&gt;` tag:
-                </Text>
-                <InlineCode>
-                  &lt;script src="{`{ shop.url }`}/apps/tryon/widget.js" defer&gt;&lt;/script&gt;
-                </InlineCode>
-              </BlockStack>
-            </Card>
-          </BlockStack>
-        </Layout.Section>
-      </Layout>
+              </Banner>
+              <Text variant="bodyMd" tone="subdued" as="p">
+                The widget script is automatically injected via Shopify Script Tags. The button will appear next to the "Add to Cart" button on all product pages.
+              </Text>
+              <Divider />
+              <Text variant="bodySm" tone="subdued" as="p">
+                <strong>Manual Installation (Optional):</strong> If you prefer to install manually, add this script to your theme's `theme.liquid` file, just before the `&lt;/body&gt;` tag:
+              </Text>
+              <InlineCode>
+                &lt;script src="{`{ shop.url }`}/apps/tryon/widget.js" defer&gt;&lt;/script&gt;
+              </InlineCode>
+            </BlockStack>
+          </Card>
+        </div>
+      </div>
     </Page>
   );
 }
