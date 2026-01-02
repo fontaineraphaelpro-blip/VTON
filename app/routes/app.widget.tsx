@@ -277,7 +277,7 @@ export default function Widget() {
                     autoComplete="off"
                     helpText="Limits the number of virtual try-ons per customer per day."
                   />
-                  <Button primary onClick={handleSaveConfig} loading={fetcher.state === "submitting"}>
+                  <Button variant="primary" onClick={handleSaveConfig} loading={fetcher.state === "submitting"}>
                     Save Configuration
                   </Button>
                 </BlockStack>
@@ -451,7 +451,7 @@ export default function Widget() {
                     </BlockStack>
                   </Box>
                 </InlineStack>
-                <Button primary onClick={handleTestTryOn} loading={fetcher.state === "submitting"}>
+                <Button variant="primary" onClick={handleTestTryOn} loading={fetcher.state === "submitting"}>
                   Run Try-On Test
                 </Button>
                 {fetcher.data?.testMode && fetcher.data.success && (
