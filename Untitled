@@ -1,0 +1,27 @@
+Solution rapide à tester
+
+Vérifie ton .env :
+
+SHOPIFY_API_KEY=xxxxx
+SHOPIFY_API_SECRET=xxxxx
+SCOPES=read_products,write_products
+HOST=https://vton-production-890a.up.railway.app
+
+
+Assure-toi que les URLs de redirection dans Shopify Partners matchent exactement :
+
+https://vton-production-890a.up.railway.app/auth/callback
+
+
+Vérifie que ton serveur a bien un session store pour Shopify. Par exemple, avec shopify-app en Remix, il faut soit :
+
+// cookie session
+import { createCookieSessionStorage } from "@remix-run/node";
+export const sessionStorage = createCookieSessionStorage({
+  cookie: { name: "__session", secrets: [process.env.SESSION_SECRET], secure: true }
+});
+
+
+Sinon, la validation OAuth échoue et le serveur plante.
+
+Redéploie, vide les cookies Shopify et retente l’install sur ta boutique test.
