@@ -39,12 +39,20 @@ body {
   padding: 0;
 }
 
-/* Credits Page Container */
-.vton-credits-page {
+/* Page Container - Style VtonDesign pour toutes les pages */
+.vton-page-container {
   min-height: 100vh;
   background-color: var(--color-bg);
   padding: 2rem;
   font-family: 'Inter', sans-serif;
+}
+
+.vton-page-content {
+  max-width: 96rem;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
 }
 
 /* Header Simple */
@@ -100,7 +108,14 @@ body {
   border-radius: 50%;
 }
 
-/* Credits Content */
+/* Credits Page Container */
+.vton-credits-page {
+  min-height: 100vh;
+  background-color: var(--color-bg);
+  padding: 2rem;
+  font-family: 'Inter', sans-serif;
+}
+
 .vton-credits-content {
   max-width: 96rem;
   margin: 0 auto;
@@ -475,6 +490,107 @@ body {
   cursor: not-allowed;
 }
 
+/* Stats Grid - Style VtonDesign */
+.vton-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(1, 1fr);
+  gap: 1rem;
+}
+
+@media (min-width: 768px) {
+  .vton-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .vton-stats-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.vton-stat-card-link {
+  text-decoration: none;
+  display: block;
+}
+
+.vton-stat-card-white {
+  background-color: white;
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  border: 1px solid var(--color-slate-200);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: all 0.2s;
+}
+
+.vton-stat-card-white:hover {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  border-color: var(--color-indigo-light);
+}
+
+.vton-stat-content {
+  flex: 1;
+}
+
+.vton-stat-value-white {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--color-text);
+  line-height: 1;
+  margin-bottom: 0.5rem;
+  letter-spacing: -0.02em;
+}
+
+.vton-stat-label-white {
+  font-size: 0.875rem;
+  color: var(--color-slate-500);
+  font-weight: 500;
+}
+
+.vton-stat-icon {
+  font-size: 2rem;
+  opacity: 0.8;
+}
+
+/* Actions Grid */
+.vton-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(1, 1fr);
+  gap: 1rem;
+}
+
+@media (min-width: 768px) {
+  .vton-actions-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.vton-action-card-white {
+  background-color: white;
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  border: 1px solid var(--color-slate-200);
+  text-decoration: none;
+  display: block;
+  color: inherit;
+  transition: all 0.2s;
+}
+
+.vton-action-card-white:hover {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  border-color: var(--color-indigo-light);
+}
+
+.vton-action-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
 /* Polaris Overrides */
 .Polaris-Page {
   background: var(--color-bg);
@@ -545,7 +661,7 @@ body {
 }
 
 .Polaris-Text--bodyMd {
-  color: var(--color-slate-600);
+  color: var(--color-slate-500);
 }
 
 .Polaris-Banner {
@@ -587,7 +703,8 @@ body {
 
 /* Responsive */
 @media (max-width: 768px) {
-  .vton-credits-page {
+  .vton-credits-page,
+  .vton-page-container {
     padding: 1rem;
   }
   
@@ -597,5 +714,13 @@ body {
   
   .vton-pack-credits-highlight {
     font-size: 2.25rem;
+  }
+  
+  .vton-stat-value-white {
+    font-size: 1.5rem;
+  }
+  
+  .vton-stat-icon {
+    font-size: 1.5rem;
   }
 }
