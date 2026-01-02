@@ -26,9 +26,13 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
     await ensureTables();
 
-    const shopData = await getShop(shop);
-    const recentLogs = await getTryonLogs(shop, {}).catch(() => []);
-    const topProducts = await getTopProducts(shop, 5).catch(() => []);
+    // Charge les données en parallèle pour améliorer les performances
+    // Limite les logs à 10 pour éviter de charger trop de données
+    const [shopData, recentLogs, topProducts] = await Promise.all([
+      getShop(shop),
+      getTryonLogs(shop, { limit: 10, offset: 0 }).catch(() => []),
+      getTopProducts(shop, 5).catch(() => []),
+    ]);
 
     return json({
       shop: shopData || null,

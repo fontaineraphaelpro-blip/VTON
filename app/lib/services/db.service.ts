@@ -137,6 +137,8 @@ export async function getTryonLogs(shop: string, filters: {
   date?: string;
   startDate?: Date;
   endDate?: Date;
+  limit?: number;
+  offset?: number;
 } = {}) {
   let queryText = "SELECT * FROM tryon_logs WHERE shop = $1";
   const params: any[] = [shop];
@@ -156,6 +158,16 @@ export async function getTryonLogs(shop: string, filters: {
   }
   
   queryText += " ORDER BY created_at DESC";
+  
+  // Ajoute LIMIT et OFFSET si spécifiés
+  if (filters.limit !== undefined) {
+    queryText += ` LIMIT $${paramIndex++}`;
+    params.push(filters.limit);
+  }
+  if (filters.offset !== undefined) {
+    queryText += ` OFFSET $${paramIndex++}`;
+    params.push(filters.offset);
+  }
   
   const result = await query(queryText, params);
   return result.rows as any[];
