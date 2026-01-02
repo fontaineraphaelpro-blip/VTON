@@ -19,35 +19,63 @@ import { authenticate } from "../shopify.server";
 import { getShop, upsertShop } from "../lib/services/db.service";
 import { ensureTables } from "../lib/db-init.server";
 
-// Packs de crédits - Basé sur le design VtonDesign
+// Packs de crédits optimisés pour maximiser la conversion et le profit
 const CREDIT_PACKS = [
   {
     id: "discovery",
     name: "Discovery",
     credits: 10,
     price: 4.99,
-    description: "Start offering Virtual Testing",
+    pricePerCredit: 0.499,
+    description: "Parfait pour tester",
     badge: null,
     highlight: false,
+    savings: null,
+  },
+  {
+    id: "starter",
+    name: "Starter",
+    credits: 25,
+    price: 9.99,
+    pricePerCredit: 0.40,
+    description: "Idéal pour commencer",
+    badge: null,
+    highlight: false,
+    savings: "20%",
   },
   {
     id: "standard",
     name: "Standard",
-    credits: 30,
-    price: 12.99,
-    description: "Turn visitors into buyers",
+    credits: 50,
+    price: 17.99,
+    pricePerCredit: 0.36,
+    description: "Le plus populaire",
     badge: "BEST SELLER",
-    savePercent: 15,
+    savePercent: 28,
     highlight: true,
+    savings: "28%",
   },
   {
     id: "business",
     name: "Business",
     credits: 100,
     price: 29.99,
-    description: "Slash return rates by 30%",
+    pricePerCredit: 0.30,
+    description: "Pour les boutiques actives",
     badge: "BEST ROI",
     highlight: false,
+    savings: "40%",
+  },
+  {
+    id: "enterprise",
+    name: "Enterprise",
+    credits: 250,
+    price: 62.50,
+    pricePerCredit: 0.25,
+    description: "Maximum d'économies",
+    badge: "TARIF MINIMUM",
+    highlight: false,
+    savings: "50%",
   },
 ];
 
@@ -92,7 +120,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     }
   } else if (intent === "custom-pack") {
     const customCredits = parseInt(formData.get("customCredits") as string);
-    if (customCredits && customCredits >= 200) {
+    if (customCredits && customCredits >= 250) {
       const pricePerCredit = 0.25;
       await upsertShop(shop, { addCredits: customCredits });
       return json({ 
@@ -111,7 +139,7 @@ export default function Credits() {
   const { shop, error } = useLoaderData<typeof loader>();
   const fetcher = useFetcher<typeof action>();
   const currentCredits = shop?.credits || 0;
-  const [customAmount, setCustomAmount] = useState("200");
+  const [customAmount, setCustomAmount] = useState("250");
 
   const isSubmitting = fetcher.state === "submitting";
 
@@ -158,14 +186,14 @@ export default function Credits() {
           </div>
 
           {/* Grid Principale (Credits + Pricing) */}
-          <div className="vton-pricing-grid">
+          <div className="vton-pricing-grid-large">
             {/* Carte de gauche (Bleu Nuit) */}
             <div className="vton-credits-card-blue">
               <div className="vton-credits-card-glow"></div>
               <div className="vton-credits-card-content">
                 <div className="vton-credits-label-blue">Remaining Credits</div>
                 
-                {/* Credits amount */}
+                {/* Credits amount - FIXED */}
                 <div className="vton-credits-amount-blue">
                   {currentCredits.toLocaleString("fr-FR")}
                 </div>
@@ -176,7 +204,7 @@ export default function Credits() {
               </div>
             </div>
 
-            {/* Pricing Cards */}
+            {/* Pricing Cards - 5 packs optimisés */}
             {CREDIT_PACKS.map((pack) => (
               <div 
                 key={pack.id} 
@@ -193,7 +221,7 @@ export default function Credits() {
                   </div>
                 )}
                 {pack.badge && !pack.highlight && (
-                  <div className="vton-badge-roi">
+                  <div className={`vton-badge-roi ${pack.badge === "TARIF MINIMUM" ? "vton-badge-minimum" : ""}`}>
                     {pack.badge}
                   </div>
                 )}
@@ -204,9 +232,17 @@ export default function Credits() {
                 <div className={`vton-pack-credits-number ${pack.highlight ? "vton-pack-credits-highlight" : ""}`}>
                   {pack.credits}
                 </div>
+                {pack.savings && (
+                  <div className="vton-pack-savings">
+                    Économisez {pack.savings}
+                  </div>
+                )}
                 <p className="vton-pack-description-text">
                   {pack.description}
                 </p>
+                <div className="vton-pack-price-per-credit">
+                  {pack.pricePerCredit.toFixed(3)}€ par crédit
+                </div>
 
                 <div className="vton-pack-bottom">
                   <div className={`vton-pack-price-number ${pack.highlight ? "vton-pack-price-highlight" : ""}`}>
@@ -233,7 +269,7 @@ export default function Credits() {
               <div>
                 <h4 className="vton-custom-title">High Volume Store?</h4>
                 <p className="vton-custom-text">
-                  Get our lowest rate (<span className="vton-custom-price">€0.25 / try-on</span>) for bulk orders.
+                  Get our lowest rate (<span className="vton-custom-price">€0.25 / try-on</span>) for bulk orders (250+ credits).
                 </p>
               </div>
             </div>
@@ -250,7 +286,7 @@ export default function Credits() {
                   value={customAmount}
                   onChange={(e) => setCustomAmount(e.target.value)}
                   className="vton-custom-input"
-                  min={200}
+                  min={250}
                 />
                 <button 
                   type="submit"

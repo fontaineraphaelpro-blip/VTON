@@ -179,6 +179,31 @@ body {
   }
 }
 
+/* Pricing Grid Large (5 packs) */
+.vton-pricing-grid-large {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+}
+
+@media (min-width: 1024px) {
+  .vton-pricing-grid-large {
+    grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr;
+  }
+  
+  .vton-credits-card-blue {
+    grid-column: 1 / 2;
+  }
+  
+  .vton-pricing-card:nth-child(2),
+  .vton-pricing-card:nth-child(3),
+  .vton-pricing-card:nth-child(4),
+  .vton-pricing-card:nth-child(5),
+  .vton-pricing-card:nth-child(6) {
+    grid-column: span 1;
+  }
+}
+
 /* Credits Card Blue (Left) */
 .vton-credits-card-blue {
   background-color: var(--color-blue-night);
@@ -300,6 +325,12 @@ body {
   padding: 0.125rem 0.5rem;
   border-radius: 0.25rem;
   margin-bottom: 0.5rem;
+}
+
+.vton-badge-minimum {
+  background-color: rgba(99, 102, 241, 0.1);
+  color: var(--color-indigo-dark);
+  border: 1px solid rgba(99, 102, 241, 0.2);
 }
 
 .vton-pack-name {

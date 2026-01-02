@@ -11,6 +11,7 @@ import {
   Button,
   Banner,
   Box,
+  Divider,
 } from "@shopify/polaris";
 import { TitleBar } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
@@ -80,6 +81,11 @@ export default function Home() {
       link: "/app/dashboard"
     },
   ];
+
+  const successfulLogs = recentLogs.filter((log: any) => log.success).length;
+  const successRate = recentLogs.length > 0 
+    ? ((successfulLogs / recentLogs.length) * 100).toFixed(0)
+    : "0";
 
   return (
     <Page>
@@ -159,6 +165,133 @@ export default function Home() {
               </div>
             </BlockStack>
           </Card>
+
+          {/* Performance Metrics */}
+          <Layout>
+            <Layout.Section variant="oneHalf">
+              <Card>
+                <BlockStack gap="400">
+                  <Text variant="headingLg" fontWeight="bold" as="h2">
+                    Performance
+                  </Text>
+                  <Divider />
+                  <div className="vton-metrics-grid">
+                    <div className="vton-metric-item">
+                      <div className="vton-metric-value">{successRate}%</div>
+                      <div className="vton-metric-label">Taux de succès</div>
+                    </div>
+                    <div className="vton-metric-item">
+                      <div className="vton-metric-value">{recentLogs.length}</div>
+                      <div className="vton-metric-label">Essais récents</div>
+                    </div>
+                  </div>
+                </BlockStack>
+              </Card>
+            </Layout.Section>
+            <Layout.Section variant="oneHalf">
+              <Card>
+                <BlockStack gap="400">
+                  <Text variant="headingLg" fontWeight="bold" as="h2">
+                    Produits populaires
+                  </Text>
+                  <Divider />
+                  {topProducts.length > 0 ? (
+                    <BlockStack gap="300">
+                      {topProducts.slice(0, 3).map((product: any, index: number) => (
+                        <InlineStack key={product.product_id || index} align="space-between" blockAlign="center">
+                          <Text variant="bodyMd" as="span">
+                            {product.product_title || product.product_id}
+                          </Text>
+                          <Text variant="bodyMd" fontWeight="semibold" as="span">
+                            {product.count} try-on{product.count > 1 ? "s" : ""}
+                          </Text>
+                        </InlineStack>
+                      ))}
+                      <Box paddingBlockStart="200">
+                        <Button url="/app/products" variant="plain">
+                          Voir tous les produits →
+                        </Button>
+                      </Box>
+                    </BlockStack>
+                  ) : (
+                    <Text variant="bodyMd" tone="subdued" as="p">
+                      Aucun produit encore essayé
+                    </Text>
+                  )}
+                </BlockStack>
+              </Card>
+            </Layout.Section>
+          </Layout>
+
+          {/* Crédits Alert */}
+          {credits < 50 && (
+            <Card>
+              <BlockStack gap="300">
+                <Banner
+                  title="Crédits faibles"
+                  tone="warning"
+                  action={{
+                    content: "Acheter des crédits",
+                    url: "/app/credits",
+                  }}
+                >
+                  Vous avez {credits} crédit{credits > 1 ? "s" : ""} restant{credits > 1 ? "s" : ""}. 
+                  Rechargez pour continuer à offrir l'essayage virtuel à vos clients.
+                </Banner>
+              </BlockStack>
+            </Card>
+          )}
+
+          {/* Recent Activity */}
+          {recentLogs.length > 0 && (
+            <Card>
+              <BlockStack gap="400">
+                <InlineStack align="space-between" blockAlign="center">
+                  <Text variant="headingLg" fontWeight="bold" as="h2">
+                    Activité récente
+                  </Text>
+                  <Button url="/app/history" variant="plain">
+                    Voir tout →
+                  </Button>
+                </InlineStack>
+                <Divider />
+                <BlockStack gap="200">
+                  {recentLogs.map((log: any, index: number) => (
+                    <Box
+                      key={log.id || index}
+                      padding="300"
+                      borderBlockStartWidth={index > 0 ? "025" : "0"}
+                    >
+                      <InlineStack align="space-between" blockAlign="center">
+                        <BlockStack gap="050">
+                          <Text variant="bodyMd" fontWeight="medium" as="p">
+                            {log.product_title || log.product_id || "Unknown Product"}
+                          </Text>
+                          <Text variant="bodySm" tone="subdued" as="p">
+                            {new Date(log.created_at).toLocaleString("fr-FR")}
+                          </Text>
+                        </BlockStack>
+                        <Box
+                          padding="150"
+                          background={log.success ? "bg-surface-success-subdued" : "bg-surface-critical-subdued"}
+                          borderRadius="200"
+                        >
+                          <Text
+                            variant="bodySm"
+                            fontWeight="semibold"
+                            tone={log.success ? "success" : "critical"}
+                            as="span"
+                          >
+                            {log.success ? "✓ Succès" : "✗ Échec"}
+                          </Text>
+                        </Box>
+                      </InlineStack>
+                    </Box>
+                  ))}
+                </BlockStack>
+              </BlockStack>
+            </Card>
+          )}
         </div>
       </div>
     </Page>
