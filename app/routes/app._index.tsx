@@ -271,16 +271,16 @@ export default function Dashboard() {
             {/* Right Column */}
             <div className="vton-main-right">
               {/* Popular Products */}
-              {topProducts.length > 0 && (
-                <Card>
-                  <BlockStack gap="400">
-                    <Text as="h2" variant="headingLg" fontWeight="semibold">
-                      Most Tried Products
-                    </Text>
-                    <Text variant="bodyMd" tone="subdued" as="p">
-                      Your products with the most try-ons
-                    </Text>
-                    <Divider />
+              <Card>
+                <BlockStack gap="400">
+                  <Text as="h2" variant="headingLg" fontWeight="semibold">
+                    Most Tried Products
+                  </Text>
+                  <Text variant="bodyMd" tone="subdued" as="p">
+                    Your products with the most try-ons
+                  </Text>
+                  <Divider />
+                  {topProducts.length > 0 ? (
                     <BlockStack gap="300">
                       {topProducts.map((product: any, index: number) => (
                         <InlineStack key={product.product_id || index} align="space-between" blockAlign="center">
@@ -293,23 +293,29 @@ export default function Dashboard() {
                         </InlineStack>
                       ))}
                     </BlockStack>
-                  </BlockStack>
-                </Card>
-              )}
+                  ) : (
+                    <div className="vton-empty-state">
+                      <Text variant="bodyMd" tone="subdued" as="p">
+                        No try-ons yet. Start using the widget on your products!
+                      </Text>
+                    </div>
+                  )}
+                </BlockStack>
+              </Card>
 
               {/* Recent Activity */}
-              {recentLogs.length > 0 && (
-                <Card>
-                  <BlockStack gap="400">
-                    <InlineStack align="space-between" blockAlign="center">
-                      <Text variant="headingLg" fontWeight="bold" as="h2">
-                        Recent Activity
-                      </Text>
-                      <Button url="/app/history" variant="plain">
-                        View All →
-                      </Button>
-                    </InlineStack>
-                    <Divider />
+              <Card>
+                <BlockStack gap="400">
+                  <InlineStack align="space-between" blockAlign="center">
+                    <Text variant="headingLg" fontWeight="bold" as="h2">
+                      Recent Activity
+                    </Text>
+                    <Button url="/app/history" variant="plain">
+                      View All →
+                    </Button>
+                  </InlineStack>
+                  <Divider />
+                  {recentLogs.length > 0 ? (
                     <BlockStack gap="300">
                       {recentLogs.slice(0, 5).map((log: any, index: number) => (
                         <div key={log.id || index} className="vton-activity-item">
@@ -332,9 +338,15 @@ export default function Dashboard() {
                         </div>
                       ))}
                     </BlockStack>
-                  </BlockStack>
-                </Card>
-              )}
+                  ) : (
+                    <div className="vton-empty-state">
+                      <Text variant="bodyMd" tone="subdued" as="p">
+                        No recent activity. Try-ons will appear here once customers start using the widget.
+                      </Text>
+                    </div>
+                  )}
+                </BlockStack>
+              </Card>
             </div>
           </div>
         </div>

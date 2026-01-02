@@ -594,6 +594,12 @@ body::before {
   color: var(--error);
 }
 
+/* Empty State */
+.vton-empty-state {
+  padding: var(--spacing-xl) 0;
+  text-align: center;
+}
+
 /* ============================================
    Credits Page - Simple & Clean Design
    ============================================ */
