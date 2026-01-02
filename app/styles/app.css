@@ -175,32 +175,31 @@ body {
 
 @media (min-width: 1024px) {
   .vton-pricing-grid {
-    grid-template-columns: 1fr 1fr 1fr 1fr;
-  }
-}
-
-/* Pricing Grid Large (5 packs) */
-.vton-pricing-grid-large {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 1.5rem;
-}
-
-@media (min-width: 1024px) {
-  .vton-pricing-grid-large {
-    grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr;
+    grid-template-columns: 1fr repeat(5, 1fr);
   }
   
   .vton-credits-card-blue {
-    grid-column: 1 / 2;
+    grid-column: 1;
   }
   
-  .vton-pricing-card:nth-child(2),
-  .vton-pricing-card:nth-child(3),
-  .vton-pricing-card:nth-child(4),
-  .vton-pricing-card:nth-child(5),
+  .vton-pricing-card:nth-child(2) {
+    grid-column: 2;
+  }
+  
+  .vton-pricing-card:nth-child(3) {
+    grid-column: 3;
+  }
+  
+  .vton-pricing-card:nth-child(4) {
+    grid-column: 4;
+  }
+  
+  .vton-pricing-card:nth-child(5) {
+    grid-column: 5;
+  }
+  
   .vton-pricing-card:nth-child(6) {
-    grid-column: span 1;
+    grid-column: 6;
   }
 }
 
