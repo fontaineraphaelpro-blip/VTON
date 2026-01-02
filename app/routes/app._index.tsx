@@ -3,8 +3,14 @@ import { redirect } from "@remix-run/node";
 import { authenticate } from "../shopify.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  await authenticate.admin(request);
-
-  // Rediriger vers le dashboard par défaut
-  return redirect("/app/dashboard");
+  const { session } = await authenticate.admin(request);
+  
+  // Preserve query parameters when redirecting to dashboard
+  const url = new URL(request.url);
+  const searchParams = url.searchParams.toString();
+  const redirectUrl = searchParams 
+    ? `/app/dashboard?${searchParams}` 
+    : "/app/dashboard";
+  
+  return redirect(redirectUrl);
 };
