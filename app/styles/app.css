@@ -438,7 +438,7 @@ body::before {
 }
 
 /* ============================================
-   Credits Page - Premium AI Design
+   Credits Page - Simple & Clean Design
    ============================================ */
 
 .vton-credits-page {
@@ -448,14 +448,320 @@ body::before {
   font-family: 'Inter', sans-serif;
   position: relative;
   z-index: 1;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
 .vton-credits-content {
-  max-width: 1400px;
-  margin: 0 auto;
   display: flex;
   flex-direction: column;
+  gap: var(--spacing-2xl);
+  align-items: center;
+}
+
+/* Credits Display - Simple & Clear */
+.vton-credits-display {
+  text-align: center;
+  padding: var(--spacing-2xl) 0;
+  width: 100%;
+}
+
+.vton-credits-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--light-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: var(--spacing-md);
+}
+
+.vton-credits-amount {
+  font-size: 4.5rem;
+  font-weight: 900;
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1;
+  margin-bottom: var(--spacing-sm);
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+.vton-credits-subtitle {
+  font-size: 0.9375rem;
+  color: var(--light-text-secondary);
+  font-weight: 500;
+}
+
+/* Value Proposition */
+.vton-value-prop {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-lg) var(--spacing-xl);
+  background: rgba(99, 102, 241, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: var(--radius-xl);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  width: 100%;
+  max-width: 600px;
+}
+
+.vton-value-icon {
+  font-size: 2rem;
+  flex-shrink: 0;
+}
+
+.vton-value-text {
+  font-size: 1rem;
+  color: var(--light-text);
+  text-align: center;
+}
+
+.vton-value-text strong {
+  color: var(--primary);
+  font-weight: 700;
+}
+
+/* Simple Pricing Grid - 3 Plans */
+.vton-pricing-simple {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: var(--spacing-xl);
+  width: 100%;
+  max-width: 1000px;
+}
+
+.vton-plan-card {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(20px) saturate(180%);
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-xl);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  box-shadow: var(--shadow-lg);
+  transition: all var(--transition-base);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.vton-plan-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-xl), var(--shadow-glow);
+  border-color: var(--primary);
+}
+
+.vton-plan-featured {
+  border-color: var(--primary);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(99, 102, 241, 0.1) 100%);
+  box-shadow: var(--shadow-xl), var(--shadow-glow);
+  transform: scale(1.02);
+}
+
+.vton-plan-popular {
+  border-top: 3px solid var(--success);
+}
+
+.vton-plan-badge {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--success-bg);
+  color: var(--success);
+  padding: var(--spacing-xs) var(--spacing-lg);
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.vton-plan-badge-featured {
+  background: var(--gradient-primary);
+  color: var(--light-surface);
+  box-shadow: var(--shadow-glow);
+}
+
+.vton-plan-header {
+  text-align: center;
+  margin-bottom: var(--spacing-lg);
+  padding-top: var(--spacing-md);
+}
+
+.vton-plan-name {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--light-text);
+  margin: 0 0 var(--spacing-md) 0;
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+.vton-plan-credits {
+  font-size: 3.5rem;
+  font-weight: 900;
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1;
+  margin-bottom: var(--spacing-xs);
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+.vton-plan-credits-label {
+  font-size: 0.875rem;
+  color: var(--light-text-secondary);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.vton-plan-features {
+  flex: 1;
+  margin-bottom: var(--spacing-lg);
+  text-align: center;
+}
+
+.vton-plan-description {
+  font-size: 0.9375rem;
+  color: var(--light-text-secondary);
+  margin: 0 0 var(--spacing-md) 0;
+  line-height: 1.6;
+}
+
+.vton-plan-savings {
+  font-size: 0.875rem;
+  color: var(--success);
+  font-weight: 700;
+  margin-bottom: var(--spacing-sm);
+}
+
+.vton-plan-price-per {
+  font-size: 0.875rem;
+  color: var(--light-text-secondary);
+  font-weight: 500;
+}
+
+.vton-plan-footer {
+  text-align: center;
+  padding-top: var(--spacing-lg);
+  border-top: 1px solid rgba(229, 231, 235, 0.5);
+}
+
+.vton-plan-price {
+  font-size: 2rem;
+  font-weight: 800;
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: var(--spacing-lg);
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+.vton-plan-button {
+  width: 100%;
+  padding: var(--spacing-md) var(--spacing-xl);
+  border-radius: var(--radius-lg);
+  font-weight: 600;
+  font-size: 1rem;
+  border: 2px solid rgba(229, 231, 235, 0.8);
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  color: var(--light-text);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+.vton-plan-button:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  background: rgba(255, 255, 255, 1);
+}
+
+.vton-plan-button-primary {
+  background: var(--gradient-primary);
+  border: none;
+  color: var(--light-surface);
+  box-shadow: var(--shadow-glow);
+}
+
+.vton-plan-button-primary:hover {
+  box-shadow: var(--shadow-glow-lg);
+  transform: translateY(-2px);
+  color: var(--light-surface);
+}
+
+.vton-plan-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Custom Pack Button - Simple */
+.vton-custom-section {
+  width: 100%;
+  max-width: 600px;
+  margin-top: var(--spacing-lg);
+}
+
+.vton-custom-form {
+  width: 100%;
+}
+
+.vton-custom-button-simple {
+  width: 100%;
+  padding: var(--spacing-lg) var(--spacing-xl);
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(20px) saturate(180%);
+  border: 2px dashed rgba(99, 102, 241, 0.3);
+  border-radius: var(--radius-xl);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-md);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--primary);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+.vton-custom-button-simple:hover {
+  border-color: var(--primary);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-2px);
+}
+
+.vton-custom-button-simple:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.vton-custom-icon {
+  font-size: 1.5rem;
+}
+
+.vton-custom-text {
+  flex: 1;
+  text-align: center;
+}
+
+.vton-custom-arrow {
+  font-size: 1.25rem;
+  transition: transform var(--transition-base);
+}
+
+.vton-custom-button-simple:hover .vton-custom-arrow {
+  transform: translateX(4px);
 }
 
 /* Alert Banner - Glassmorphism */

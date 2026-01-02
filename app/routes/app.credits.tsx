@@ -19,63 +19,45 @@ import { authenticate } from "../shopify.server";
 import { getShop, upsertShop } from "../lib/services/db.service";
 import { ensureTables } from "../lib/db-init.server";
 
-// Credit packs optimized to maximize conversion and profit
+// 3 Credit packs optimized for conversion AND high average order value
+// Strategy: Entry point (Starter), Middle tier (Pro), Premium (Enterprise)
 const CREDIT_PACKS = [
-  {
-    id: "discovery",
-    name: "Discovery",
-    credits: 10,
-    price: 4.99,
-    pricePerCredit: 0.499,
-    description: "Perfect for testing",
-    badge: null,
-    highlight: false,
-    savings: null,
-  },
   {
     id: "starter",
     name: "Starter",
-    credits: 25,
-    price: 9.99,
+    credits: 50,
+    price: 19.99,
     pricePerCredit: 0.40,
-    description: "Ideal for getting started",
-    badge: null,
+    description: "Perfect to get started",
+    badge: "POPULAR",
     highlight: false,
     savings: "20%",
+    popular: true,
   },
   {
-    id: "standard",
-    name: "Standard",
-    credits: 50,
-    price: 17.99,
-    pricePerCredit: 0.36,
-    description: "Most popular",
-    badge: "BEST SELLER",
-    savePercent: 28,
+    id: "pro",
+    name: "Pro",
+    credits: 150,
+    price: 49.99,
+    pricePerCredit: 0.33,
+    description: "Best value for growing stores",
+    badge: "BEST VALUE",
+    savePercent: 33,
     highlight: true,
-    savings: "28%",
-  },
-  {
-    id: "business",
-    name: "Business",
-    credits: 100,
-    price: 29.99,
-    pricePerCredit: 0.30,
-    description: "For active stores",
-    badge: "BEST ROI",
-    highlight: false,
-    savings: "40%",
+    savings: "33%",
+    popular: false,
   },
   {
     id: "enterprise",
     name: "Enterprise",
-    credits: 250,
-    price: 62.50,
-    pricePerCredit: 0.25,
-    description: "Maximum savings",
-    badge: "LOWEST RATE",
+    credits: 500,
+    price: 149.99,
+    pricePerCredit: 0.30,
+    description: "Maximum savings for high volume",
+    badge: "BEST ROI",
     highlight: false,
-    savings: "50%",
+    savings: "40%",
+    popular: false,
   },
 ];
 
@@ -170,157 +152,115 @@ export default function Credits() {
     <Page>
       <TitleBar title="Credits - VTON Magic" />
       <div className="vton-credits-page">
-        {/* Header Simple */}
+        {/* Header */}
         <header className="vton-header-simple">
           <div className="vton-header-logo">
             <div className="vton-logo-icon-blue">⚡</div>
-            <span className="vton-header-title">VTON Magic Admin</span>
+            <span className="vton-header-title">VTON Magic</span>
           </div>
           <div className="vton-status-badge">
             <div className="vton-status-dot-green"></div>
-            System Active
+            Active
           </div>
         </header>
 
         <div className="vton-credits-content">
-          {/* Alert Banner */}
-          <div className="vton-alert-banner">
-            <div className="vton-info-icon">
-              ℹ️
+          {/* Current Credits Display */}
+          <div className="vton-credits-display">
+            <div className="vton-credits-label">Your Credits</div>
+            <div className="vton-credits-amount">
+              {currentCredits.toLocaleString("en-US")}
             </div>
-            <p className="vton-alert-text">
-              <strong>Stop losing money on returns.</strong> Letting customers{" "}
-              <span className="vton-alert-underline">test products virtually</span> removes doubt. 
-              This slashes refunds and boosts conversion by{" "}
-              <strong className="vton-alert-green">2.5x</strong> instantly.
-            </p>
+            <div className="vton-credits-subtitle">Credits never expire</div>
           </div>
 
-          {/* Grid Principale (Credits + Pricing) */}
-          <div className="vton-pricing-grid">
-            {/* Carte de gauche (Bleu Nuit) */}
-            <div className="vton-credits-card-blue">
-              <div className="vton-credits-card-glow"></div>
-              <div className="vton-credits-card-content">
-                <div className="vton-credits-label-blue">Remaining Credits</div>
-                
-                {/* Credits amount - FIXED */}
-                <div className="vton-credits-amount-blue">
-                  {currentCredits.toLocaleString("en-US")}
-                </div>
-
-                <div className="vton-credits-footer-blue">
-                  <span className="vton-infinity">∞</span> Credits never expire
-                </div>
-              </div>
+          {/* Value Proposition */}
+          <div className="vton-value-prop">
+            <div className="vton-value-icon">✨</div>
+            <div className="vton-value-text">
+              <strong>Reduce returns by 2.5x</strong> and boost conversions with virtual try-on
             </div>
+          </div>
 
-            {/* Pricing Cards - 5 packs optimisés */}
+          {/* 3 Pricing Plans */}
+          <div className="vton-pricing-simple">
             {CREDIT_PACKS.map((pack) => (
               <div 
                 key={pack.id} 
-                className={`vton-pricing-card ${pack.highlight ? "vton-pricing-card-highlight" : ""}`}
+                className={`vton-plan-card ${pack.highlight ? "vton-plan-featured" : ""} ${pack.popular ? "vton-plan-popular" : ""}`}
               >
-                {pack.highlight && pack.badge && (
-                  <div className="vton-badge-best-seller">
-                    🔥 BEST SELLER
-                  </div>
-                )}
-                {pack.savePercent && (
-                  <div className="vton-badge-save">
-                    SAVE {pack.savePercent}%
-                  </div>
-                )}
-                {pack.badge && !pack.highlight && (
-                  <div className={`vton-badge-roi ${pack.badge === "LOWEST RATE" ? "vton-badge-minimum" : ""}`}>
+                {pack.badge && (
+                  <div className={`vton-plan-badge ${pack.highlight ? "vton-plan-badge-featured" : ""}`}>
                     {pack.badge}
                   </div>
                 )}
-
-                <h3 className={`vton-pack-name ${pack.highlight ? "vton-pack-name-highlight" : ""}`}>
-                  {pack.name}
-                </h3>
-                <div className={`vton-pack-credits-number ${pack.highlight ? "vton-pack-credits-highlight" : ""}`}>
-                  {pack.credits}
-                </div>
-                {pack.savings && (
-                  <div className="vton-pack-savings">
-                    Save {pack.savings}
-                  </div>
-                )}
-                <p className="vton-pack-description-text">
-                  {pack.description}
-                </p>
-                <div className="vton-pack-price-per-credit">
-                  {pack.pricePerCredit.toFixed(3)}€ per credit
+                
+                <div className="vton-plan-header">
+                  <h3 className="vton-plan-name">{pack.name}</h3>
+                  <div className="vton-plan-credits">{pack.credits}</div>
+                  <div className="vton-plan-credits-label">credits</div>
                 </div>
 
-                <div className="vton-pack-bottom">
-                  <div className={`vton-pack-price-number ${pack.highlight ? "vton-pack-price-highlight" : ""}`}>
-                    {pack.price.toFixed(2)}€
-                  </div>
+                <div className="vton-plan-features">
+                  <p className="vton-plan-description">{pack.description}</p>
+                  {pack.savings && (
+                    <div className="vton-plan-savings">Save {pack.savings}</div>
+                  )}
+                  <div className="vton-plan-price-per">€{pack.pricePerCredit.toFixed(2)} per credit</div>
+                </div>
+
+                <div className="vton-plan-footer">
+                  <div className="vton-plan-price">€{pack.price.toFixed(2)}</div>
                   <button
-                    className={`vton-pack-button ${pack.highlight ? "vton-pack-button-primary" : "vton-pack-button-secondary"}`}
+                    className={`vton-plan-button ${pack.highlight ? "vton-plan-button-primary" : ""}`}
                     onClick={() => handlePurchase(pack.id)}
                     disabled={isSubmitting}
                   >
-                    {pack.highlight ? "Top Up Now" : "Select"}
+                    {isSubmitting ? "Processing..." : "Get Started"}
                   </button>
                 </div>
               </div>
             ))}
           </div>
 
-          {/* Custom Pack (Barre du bas) */}
-          <div className="vton-custom-pack">
-            <div className="vton-custom-pack-left">
-              <div className="vton-custom-icon">
-                <span className="vton-custom-icon-emoji">🏢</span>
-              </div>
-              <div>
-                <h4 className="vton-custom-title">High Volume Store?</h4>
-                <p className="vton-custom-text">
-                  Get our lowest rate (<span className="vton-custom-price">€0.25 / try-on</span>) for bulk orders (250+ credits).
-                </p>
-              </div>
-            </div>
-            <div className="vton-custom-pack-right">
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  handleCustomPurchase(new FormData(e.currentTarget));
-                }}
+          {/* Custom Pack Button */}
+          <div className="vton-custom-section">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleCustomPurchase(new FormData(e.currentTarget));
+              }}
+              className="vton-custom-form"
+            >
+              <button
+                type="submit"
+                className="vton-custom-button-simple"
+                disabled={isSubmitting}
               >
-                <input 
-                  type="number" 
-                  name="customCredits"
-                  value={customAmount}
-                  onChange={(e) => setCustomAmount(e.target.value)}
-                  className="vton-custom-input"
-                  min={250}
-                />
-                <button 
-                  type="submit"
-                  className="vton-custom-button"
-                  disabled={isSubmitting}
-                >
-                  Get Custom Pack
-                </button>
-              </form>
-            </div>
+                <span className="vton-custom-icon">🏢</span>
+                <span className="vton-custom-text">
+                  Need a custom pack? Get bulk pricing (250+ credits)
+                </span>
+                <span className="vton-custom-arrow">→</span>
+              </button>
+              <input 
+                type="hidden" 
+                name="customCredits"
+                value={customAmount}
+              />
+            </form>
           </div>
         </div>
 
         {error && (
           <Banner tone="critical" title="Error">
-            Error loading data: {error}
+            {error}
           </Banner>
         )}
 
         {fetcher.data?.success && (
-          <Banner tone="success" title="Purchase successful">
-            Pack "{fetcher.data.pack}" purchased successfully! {fetcher.data.creditsAdded} credits
-            have been added to your account.
+          <Banner tone="success" title="Success!">
+            {fetcher.data.creditsAdded} credits added to your account.
           </Banner>
         )}
       </div>
