@@ -198,7 +198,8 @@ export default function Dashboard() {
                   <form
                     onSubmit={(e) => {
                       e.preventDefault();
-                      handleSave(new FormData(e.currentTarget));
+                      const formData = new FormData(e.currentTarget);
+                      handleSave(formData);
                     }}
                   >
                     <BlockStack gap="400">

@@ -109,6 +109,14 @@ export default function Widget() {
       alert("Please provide both person and garment image URLs");
       return;
     }
+    if (!personImage.startsWith("http://") && !personImage.startsWith("https://")) {
+      alert("Person image URL must be a valid HTTP/HTTPS URL");
+      return;
+    }
+    if (!garmentImage.startsWith("http://") && !garmentImage.startsWith("https://")) {
+      alert("Garment image URL must be a valid HTTP/HTTPS URL");
+      return;
+    }
     const formData = new FormData();
     formData.append("intent", "test-tryon");
     formData.append("personImage", personImage);

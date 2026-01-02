@@ -145,7 +145,16 @@ export default function Credits() {
     fetcher.submit(formData, { method: "post" });
   };
 
-  const handleCustomPurchase = (formData: FormData) => {
+  const handleCustomPurchase = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const credits = parseInt(formData.get("customCredits") as string);
+    
+    if (!credits || credits < 250) {
+      alert("Minimum 250 credits required for custom pack.");
+      return;
+    }
+    
     formData.append("intent", "custom-pack");
     fetcher.submit(formData, { method: "post" });
   };
@@ -238,10 +247,7 @@ export default function Credits() {
               </div>
             </div>
             <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                handleCustomPurchase(new FormData(e.currentTarget));
-              }}
+              onSubmit={handleCustomPurchase}
               className="vton-custom-form"
             >
               <div className="vton-custom-input-group">
