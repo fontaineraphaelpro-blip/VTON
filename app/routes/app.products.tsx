@@ -171,8 +171,16 @@ export default function Products() {
         <Layout.Section>
           <BlockStack gap="600">
             {error && (
-              <Banner tone="critical" title="Error">
-                Error loading products: {error}
+              <Banner 
+                tone="critical" 
+                title={loaderData?.requiresAuth ? "Authentication Required" : "Error"}
+                action={loaderData?.requiresAuth && loaderData?.reauthUrl ? {
+                  content: "Re-authenticate",
+                  url: loaderData.reauthUrl,
+                  target: "_top",
+                } : undefined}
+              >
+                {error}
               </Banner>
             )}
 
