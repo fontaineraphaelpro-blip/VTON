@@ -46,7 +46,20 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
     // Check if response is OK
     if (!response.ok) {
-      const errorText = await response.text();
+      // Handle 401 Unauthorized - authentication required
+      if (response.status === 401) {
+        const reauthUrl = response.headers.get('x-shopify-api-request-failure-reauthorize-url');
+        console.error("Authentication required (401) for products query");
+        return json({ 
+          products: [], 
+          shop: session.shop, 
+          error: "Your session has expired. Please refresh the page to re-authenticate.",
+          requiresAuth: true,
+          reauthUrl: reauthUrl || null,
+        });
+      }
+      
+      const errorText = await response.text().catch(() => `HTTP ${response.status} ${response.statusText}`);
       console.error("GraphQL request failed:", response.status, errorText);
       return json({ 
         products: [], 
