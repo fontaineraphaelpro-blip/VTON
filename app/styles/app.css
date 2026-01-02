@@ -416,7 +416,6 @@ body::before {
 .vton-action-primary,
 .vton-action-secondary {
   background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(20px) saturate(180%);
   border-radius: var(--radius-xl);
   padding: var(--spacing-xl);
   box-shadow: var(--shadow-lg);
