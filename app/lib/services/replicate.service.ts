@@ -62,6 +62,8 @@ export async function generateTryOn(
     }
 
     console.log("Calling Replicate API with model:", MODEL_ID);
+    console.log("Input types - person:", typeof personInput, "garment:", typeof garmentInput);
+    
     const output = await replicate.run(MODEL_ID, {
       input: {
         human_img: personInput,
@@ -71,15 +73,67 @@ export async function generateTryOn(
       },
     });
 
-    // Replicate can return a list or a string
-    const resultUrl = Array.isArray(output) ? output[0] : output;
+    console.log("Replicate output type:", typeof output);
+    console.log("Replicate output:", JSON.stringify(output, null, 2));
+
+    // Replicate can return different formats:
+    // 1. A string (URL)
+    // 2. An array of strings (URLs)
+    // 3. An object with a URL property
+    // 4. null or undefined
     
-    if (!resultUrl) {
-      throw new Error("Replicate returned no result");
+    let resultUrl: string | null = null;
+
+    if (typeof output === "string") {
+      resultUrl = output;
+    } else if (Array.isArray(output)) {
+      // If array, get first element
+      resultUrl = output.length > 0 ? String(output[0]) : null;
+    } else if (output && typeof output === "object") {
+      // If object, try to find URL property
+      if ("url" in output && typeof output.url === "string") {
+        resultUrl = output.url;
+      } else if ("output" in output) {
+        // Sometimes nested in "output" property
+        const nested = output.output;
+        if (typeof nested === "string") {
+          resultUrl = nested;
+        } else if (Array.isArray(nested) && nested.length > 0) {
+          resultUrl = String(nested[0]);
+        }
+      } else {
+        // Try to stringify the first value
+        const values = Object.values(output);
+        if (values.length > 0 && typeof values[0] === "string") {
+          resultUrl = values[0];
+        }
+      }
     }
 
-    console.log("Replicate generation successful:", resultUrl);
-    return String(resultUrl);
+    if (!resultUrl) {
+      console.error("Replicate output format not recognized:", output);
+      throw new Error(`Replicate returned unexpected format: ${JSON.stringify(output)}`);
+    }
+
+    // Validate that resultUrl is a valid URL
+    try {
+      new URL(resultUrl);
+    } catch {
+      // If not a valid URL, it might be a base64 data URL or file path
+      // Check if it starts with http:// or https://
+      if (!resultUrl.startsWith("http://") && !resultUrl.startsWith("https://") && !resultUrl.startsWith("data:")) {
+        console.warn("Result URL doesn't look like a valid URL:", resultUrl);
+        // Try to construct a full URL if it's a relative path
+        if (resultUrl.startsWith("/")) {
+          resultUrl = `https://replicate.delivery${resultUrl}`;
+        } else {
+          throw new Error(`Invalid result URL format: ${resultUrl}`);
+        }
+      }
+    }
+
+    console.log("Replicate generation successful, result URL:", resultUrl);
+    return resultUrl;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error("Replicate generation error:", errorMessage);

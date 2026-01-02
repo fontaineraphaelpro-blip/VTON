@@ -159,11 +159,24 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     }
 
     // 7. Generate try-on via Replicate
-    const resultUrl = await generateTryOn(
-      personBuffer,
-      garmentInput,
-      "upper_body"
-    );
+    let resultUrl: string;
+    try {
+      resultUrl = await generateTryOn(
+        personBuffer,
+        garmentInput,
+        "upper_body"
+      );
+      
+      // Validate result URL
+      if (!resultUrl || typeof resultUrl !== "string") {
+        throw new Error("Invalid result URL from Replicate");
+      }
+      
+      console.log("Try-on generation successful, result URL:", resultUrl);
+    } catch (replicateError) {
+      console.error("Replicate generation error:", replicateError);
+      throw new Error(`Replicate generation failed: ${replicateError instanceof Error ? replicateError.message : String(replicateError)}`);
+    }
 
     // 8. Update stats in PostgreSQL
     const latencyMs = Date.now() - startTime;
