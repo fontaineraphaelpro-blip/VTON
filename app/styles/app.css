@@ -674,6 +674,50 @@ body {
   gap: 0.5rem;
 }
 
+.vton-action-content h3 {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.vton-action-content p {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--color-slate-500);
+  line-height: 1.5;
+}
+
+/* Metrics Grid */
+.vton-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+  padding: 1rem 0;
+}
+
+.vton-metric-item {
+  text-align: center;
+  padding: 1rem;
+  background-color: var(--color-slate-100);
+  border-radius: 0.5rem;
+}
+
+.vton-metric-value {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--color-indigo-dark);
+  line-height: 1;
+  margin-bottom: 0.5rem;
+  letter-spacing: -0.02em;
+}
+
+.vton-metric-label {
+  font-size: 0.875rem;
+  color: var(--color-slate-500);
+  font-weight: 500;
+}
+
 /* Polaris Overrides */
 .Polaris-Page {
   background: var(--color-bg);
