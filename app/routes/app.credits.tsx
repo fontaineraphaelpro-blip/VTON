@@ -289,7 +289,19 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
         // Check if response is OK
         if (!response.ok) {
-          const errorText = await response.text();
+          // Handle 401 Unauthorized - authentication required
+          if (response.status === 401) {
+            const reauthUrl = response.headers.get('x-shopify-api-request-failure-reauthorize-url');
+            console.error("Authentication required (401) for custom draft order creation");
+            return json({ 
+              success: false, 
+              error: "Your session has expired. Please refresh the page to re-authenticate.",
+              requiresAuth: true,
+              reauthUrl: reauthUrl || null,
+            });
+          }
+          
+          const errorText = await response.text().catch(() => `HTTP ${response.status} ${response.statusText}`);
           console.error("GraphQL request failed (custom):", response.status, errorText);
           return json({ 
             success: false, 
@@ -560,7 +572,15 @@ export default function Credits() {
           </Banner>
         )}
         {fetcher.data?.error && (
-          <Banner tone="critical" title="Error">
+          <Banner 
+            tone="critical" 
+            title={fetcher.data.requiresAuth ? "Authentication Required" : "Error"}
+            action={fetcher.data.requiresAuth && fetcher.data.reauthUrl ? {
+              content: "Re-authenticate",
+              url: fetcher.data.reauthUrl,
+              target: "_top",
+            } : undefined}
+          >
             {fetcher.data.error}
           </Banner>
         )}
