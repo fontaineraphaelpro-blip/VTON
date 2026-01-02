@@ -93,6 +93,10 @@ export default function Widget() {
   const [maxTriesPerUser, setMaxTriesPerUser] = useState(String(shop?.max_tries_per_user || 5));
   const [personImage, setPersonImage] = useState("");
   const [garmentImage, setGarmentImage] = useState("");
+  const [personImageFile, setPersonImageFile] = useState<File | null>(null);
+  const [garmentImageFile, setGarmentImageFile] = useState<File | null>(null);
+  const [personImagePreview, setPersonImagePreview] = useState<string>("");
+  const [garmentImagePreview, setGarmentImagePreview] = useState<string>("");
 
   const handleSaveConfig = () => {
     const formData = new FormData();
@@ -104,17 +108,52 @@ export default function Widget() {
     fetcher.submit(formData, { method: "post" });
   };
 
+  const handleFileUpload = (file: File, type: "person" | "garment") => {
+    if (!file.type.startsWith("image/")) {
+      alert("Please upload an image file");
+      return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const result = e.target?.result as string;
+      if (type === "person") {
+        setPersonImageFile(file);
+        setPersonImagePreview(result);
+        setPersonImage(result); // Base64 pour l'envoi
+      } else {
+        setGarmentImageFile(file);
+        setGarmentImagePreview(result);
+        setGarmentImage(result); // Base64 pour l'envoi
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = (e: React.DragEvent, type: "person" | "garment") => {
+    e.preventDefault();
+    e.stopPropagation();
+    const file = e.dataTransfer.files[0];
+    if (file) {
+      handleFileUpload(file, type);
+    }
+  };
+
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>, type: "person" | "garment") => {
+    const file = e.target.files?.[0];
+    if (file) {
+      handleFileUpload(file, type);
+    }
+  };
+
   const handleTestTryOn = () => {
     if (!personImage || !garmentImage) {
-      alert("Please provide both person and garment image URLs");
-      return;
-    }
-    if (!personImage.startsWith("http://") && !personImage.startsWith("https://")) {
-      alert("Person image URL must be a valid HTTP/HTTPS URL");
-      return;
-    }
-    if (!garmentImage.startsWith("http://") && !garmentImage.startsWith("https://")) {
-      alert("Garment image URL must be a valid HTTP/HTTPS URL");
+      alert("Please upload both person and garment images");
       return;
     }
     const formData = new FormData();
@@ -260,24 +299,133 @@ export default function Widget() {
               <Text variant="bodyMd" tone="subdued" as="p">
                 Run a test to see the quality of AI generation
               </Text>
-              <Divider />
-                <InlineStack gap="400" align="start">
-                  <TextField
-                    label="Person Image URL"
-                    placeholder="https://example.com/person.jpg"
-                    autoComplete="off"
-                    value={personImage}
-                    onChange={setPersonImage}
-                    helpText="The person image for try-on."
-                  />
-                  <TextField
-                    label="Garment Image URL"
-                    placeholder="https://example.com/garment.jpg"
-                    autoComplete="off"
-                    value={garmentImage}
-                    onChange={setGarmentImage}
-                    helpText="The garment image to try on."
-                  />
+                <Divider />
+                <InlineStack gap="400" align="start" wrap>
+                  {/* Person Image Upload */}
+                  <Box minWidth="300px" flex="1">
+                    <BlockStack gap="200">
+                      <Text variant="bodyMd" fontWeight="medium" as="label">
+                        Person Image
+                      </Text>
+                      <div
+                        onDragOver={handleDragOver}
+                        onDrop={(e) => handleDrop(e, "person")}
+                        style={{
+                          border: "2px dashed #c4c4c4",
+                          borderRadius: "8px",
+                          padding: "32px",
+                          textAlign: "center",
+                          cursor: "pointer",
+                          backgroundColor: personImagePreview ? "transparent" : "#f9f9f9",
+                          minHeight: "200px",
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          position: "relative",
+                        }}
+                        onClick={() => document.getElementById("person-image-input")?.click()}
+                      >
+                        {personImagePreview ? (
+                          <>
+                            <img
+                              src={personImagePreview}
+                              alt="Person preview"
+                              style={{
+                                maxWidth: "100%",
+                                maxHeight: "180px",
+                                borderRadius: "4px",
+                                marginBottom: "8px",
+                              }}
+                            />
+                            <Text variant="bodySm" tone="subdued">
+                              Click or drag to replace
+                            </Text>
+                          </>
+                        ) : (
+                          <>
+                            <div style={{ fontSize: "48px", marginBottom: "16px" }}>📸</div>
+                            <Text variant="bodyMd" fontWeight="medium">
+                              Drag & drop or click to upload
+                            </Text>
+                            <Text variant="bodySm" tone="subdued">
+                              Person image for try-on
+                            </Text>
+                          </>
+                        )}
+                        <input
+                          id="person-image-input"
+                          type="file"
+                          accept="image/*"
+                          style={{ display: "none" }}
+                          onChange={(e) => handleFileInputChange(e, "person")}
+                        />
+                      </div>
+                    </BlockStack>
+                  </Box>
+
+                  {/* Garment Image Upload */}
+                  <Box minWidth="300px" flex="1">
+                    <BlockStack gap="200">
+                      <Text variant="bodyMd" fontWeight="medium" as="label">
+                        Garment Image
+                      </Text>
+                      <div
+                        onDragOver={handleDragOver}
+                        onDrop={(e) => handleDrop(e, "garment")}
+                        style={{
+                          border: "2px dashed #c4c4c4",
+                          borderRadius: "8px",
+                          padding: "32px",
+                          textAlign: "center",
+                          cursor: "pointer",
+                          backgroundColor: garmentImagePreview ? "transparent" : "#f9f9f9",
+                          minHeight: "200px",
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          position: "relative",
+                        }}
+                        onClick={() => document.getElementById("garment-image-input")?.click()}
+                      >
+                        {garmentImagePreview ? (
+                          <>
+                            <img
+                              src={garmentImagePreview}
+                              alt="Garment preview"
+                              style={{
+                                maxWidth: "100%",
+                                maxHeight: "180px",
+                                borderRadius: "4px",
+                                marginBottom: "8px",
+                              }}
+                            />
+                            <Text variant="bodySm" tone="subdued">
+                              Click or drag to replace
+                            </Text>
+                          </>
+                        ) : (
+                          <>
+                            <div style={{ fontSize: "48px", marginBottom: "16px" }}>👕</div>
+                            <Text variant="bodyMd" fontWeight="medium">
+                              Drag & drop or click to upload
+                            </Text>
+                            <Text variant="bodySm" tone="subdued">
+                              Garment image to try on
+                            </Text>
+                          </>
+                        )}
+                        <input
+                          id="garment-image-input"
+                          type="file"
+                          accept="image/*"
+                          style={{ display: "none" }}
+                          onChange={(e) => handleFileInputChange(e, "garment")}
+                        />
+                      </div>
+                    </BlockStack>
+                  </Box>
                 </InlineStack>
                 <Button primary onClick={handleTestTryOn} loading={fetcher.state === "submitting"}>
                   Run Try-On Test

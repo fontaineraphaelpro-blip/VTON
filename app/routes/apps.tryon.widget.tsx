@@ -199,15 +199,15 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             modal.innerHTML = \`
                 <div class="vton-modal-content">
                     <h2>Virtual Try-On</h2>
-                    <div class="vton-upload-area">
-                        <label for="vton-photo-upload">
-                            <div class="upload-box">
-                                <svg width="48" height="48" viewBox="0 0 24 24">
-                                    <path d="M12 4L12 20M4 12L20 12" stroke="#666" stroke-width="2"/>
-                                </svg>
-                                <p>Upload your photo</p>
-                            </div>
-                        </label>
+                    <div class="vton-upload-area" 
+                         ondrop="event.preventDefault(); handlePhotoDrop(event);" 
+                         ondragover="event.preventDefault(); this.style.backgroundColor='#f0f0f0';" 
+                         ondragleave="this.style.backgroundColor='';"
+                         onclick="document.getElementById('vton-photo-upload').click();"
+                         style="border: 2px dashed #c4c4c4; border-radius: 8px; padding: 48px; text-align: center; cursor: pointer; background: #f9f9f9; min-height: 200px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                        <div style="font-size: 48px; margin-bottom: 16px;">📸</div>
+                        <p style="font-weight: 600; margin: 0 0 8px 0;">Drag & drop or click to upload</p>
+                        <p style="color: #666; margin: 0; font-size: 14px;">Your photo for virtual try-on</p>
                         <input type="file" id="vton-photo-upload" accept="image/*" style="display:none;">
                     </div>
                     <div id="vton-preview" style="display:none;">
@@ -227,16 +227,27 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             
             const uploadInput = modal.querySelector('#vton-photo-upload');
             const generateBtn = modal.querySelector('#vton-generate-btn');
+            const uploadArea = modal.querySelector('.vton-upload-area');
             
-            uploadInput.addEventListener('change', (e) => this.handlePhotoUpload(e));
+            if (uploadInput) {
+                uploadInput.addEventListener('change', (e) => this.handlePhotoUpload(e.target.files[0]));
+            }
+            if (uploadArea) {
+                uploadArea.addEventListener('drop', (e) => this.handlePhotoDrop(e));
+            }
             generateBtn.addEventListener('click', () => this.generateTryOn());
+            
+            // Make handlePhotoDrop available globally for inline handlers
+            window.handlePhotoDrop = (e) => this.handlePhotoDrop(e);
             
             return modal;
         }
         
-        handlePhotoUpload(event) {
-            const file = event.target.files[0];
-            if (!file) return;
+        handlePhotoUpload(file) {
+            if (!file || !file.type.startsWith('image/')) {
+                alert('Please upload an image file');
+                return;
+            }
             
             const reader = new FileReader();
             reader.onload = (e) => {
@@ -244,12 +255,40 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                 
                 const preview = document.getElementById('vton-preview');
                 const previewImg = document.getElementById('vton-preview-img');
+                const uploadArea = document.querySelector('.vton-upload-area');
+                
                 previewImg.src = e.target.result;
                 preview.style.display = 'block';
+                
+                // Update upload area to show preview
+                if (uploadArea) {
+                    uploadArea.innerHTML = \`
+                        <img src="\${e.target.result}" style="max-width: 100%; max-height: 150px; border-radius: 4px; margin-bottom: 8px;" alt="Preview">
+                        <p style="color: #666; margin: 0; font-size: 14px;">Click or drag to replace</p>
+                        <input type="file" id="vton-photo-upload" accept="image/*" style="display:none;">
+                    \`;
+                    uploadArea.onclick = () => document.getElementById('vton-photo-upload').click();
+                    const newInput = uploadArea.querySelector('#vton-photo-upload');
+                    if (newInput) {
+                        newInput.addEventListener('change', (ev) => this.handlePhotoUpload(ev.target.files[0]));
+                    }
+                }
                 
                 document.getElementById('vton-generate-btn').disabled = false;
             };
             reader.readAsDataURL(file);
+        }
+        
+        handlePhotoDrop(event) {
+            event.preventDefault();
+            const file = event.dataTransfer.files[0];
+            if (file) {
+                this.handlePhotoUpload(file);
+            }
+            const uploadArea = document.querySelector('.vton-upload-area');
+            if (uploadArea) {
+                uploadArea.style.backgroundColor = '';
+            }
         }
         
         async generateTryOn() {
