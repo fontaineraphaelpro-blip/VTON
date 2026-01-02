@@ -257,10 +257,12 @@ export default function Home() {
                 <Divider />
                 <BlockStack gap="200">
                   {recentLogs.map((log: any, index: number) => (
-                    <Box
+                    <div
                       key={log.id || index}
-                      padding="300"
-                      borderBlockStartWidth={index > 0 ? "025" : "0"}
+                      style={{
+                        padding: index > 0 ? "1rem 0" : "0 0 1rem 0",
+                        borderTop: index > 0 ? "1px solid #E2E8F0" : "none",
+                      }}
                     >
                       <InlineStack align="space-between" blockAlign="center">
                         <BlockStack gap="050">
@@ -271,10 +273,12 @@ export default function Home() {
                             {new Date(log.created_at).toLocaleString("fr-FR")}
                           </Text>
                         </BlockStack>
-                        <Box
-                          padding="150"
-                          background={log.success ? "bg-surface-success-subdued" : "bg-surface-critical-subdued"}
-                          borderRadius="200"
+                        <div
+                          style={{
+                            padding: "0.375rem 0.75rem",
+                            backgroundColor: log.success ? "#D1FAE5" : "#FEE2E2",
+                            borderRadius: "0.5rem",
+                          }}
                         >
                           <Text
                             variant="bodySm"
@@ -284,9 +288,9 @@ export default function Home() {
                           >
                             {log.success ? "✓ Succès" : "✗ Échec"}
                           </Text>
-                        </Box>
+                        </div>
                       </InlineStack>
-                    </Box>
+                    </div>
                   ))}
                 </BlockStack>
               </BlockStack>
