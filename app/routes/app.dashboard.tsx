@@ -94,9 +94,7 @@ export default function Dashboard() {
       <TitleBar title="Dashboard - VTON Magic" />
       <Layout>
         <Layout.Section>
-          <BlockStack gap="600">
-            <AppHeader />
-
+          <BlockStack gap="500">
             {error && (
               <Banner tone="critical" title="Erreur">
                 Erreur lors du chargement des données: {error}
