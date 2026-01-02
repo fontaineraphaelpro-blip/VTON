@@ -348,10 +348,19 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         }
       } catch (error) {
         console.error("Error creating custom draft order:", error);
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        return json({ 
-          success: false, 
-          error: `Failed to create payment checkout: ${errorMessage}` 
+        let errorMessage: string;
+        if (error instanceof Error) {
+          errorMessage = error.message;
+        } else if (error && typeof error === 'object' && 'message' in error) {
+          errorMessage = String(error.message);
+        } else if (error && typeof error === 'object' && 'toString' in error) {
+          errorMessage = error.toString();
+        } else {
+          errorMessage = "Unknown error occurred";
+        }
+        return json({
+          success: false,
+          error: `Failed to create payment checkout: ${errorMessage}`
         });
       }
     } else {
