@@ -1,6 +1,7 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
-import { useLoaderData, useSubmit, useFetcher } from "@remix-run/react";
+import { useLoaderData, useFetcher } from "@remix-run/react";
+import { useState } from "react";
 import {
   Page,
   Layout,
@@ -20,34 +21,46 @@ import { getShop, upsertShop } from "../lib/services/db.service";
 import { ensureTables } from "../lib/db-init.server";
 import { AppHeader } from "../components/AppHeader";
 
-// Packs de crédits dans le style de l'image
+// Packs de crédits - Prix minimum: 0.25€ par crédit
 const CREDIT_PACKS = [
   {
-    id: "discovery",
-    name: "Discovery",
-    credits: 10,
-    price: 4.99,
-    description: "Start offering Virtual Testing",
+    id: "starter",
+    name: "Starter",
+    credits: 25,
+    price: 9.00,
+    pricePerCredit: 0.36,
+    description: "Parfait pour tester",
     badge: null,
     highlight: false,
   },
   {
-    id: "standard",
-    name: "Standard",
-    credits: 30,
-    price: 12.99,
-    description: "Turn visitors into buyers",
-    badge: "BEST SELLER",
-    savings: "15%",
+    id: "pro",
+    name: "Pro",
+    credits: 100,
+    price: 30.00,
+    pricePerCredit: 0.30,
+    description: "Idéal pour la croissance",
+    badge: "POPULAIRE",
     highlight: true,
   },
   {
     id: "business",
     name: "Business",
-    credits: 100,
-    price: 29.99,
-    description: "Slash return rates by 30%",
-    badge: "BEST ROI",
+    credits: 500,
+    price: 140.00,
+    pricePerCredit: 0.28,
+    description: "Pour les volumes importants",
+    badge: "MEILLEUR PRIX",
+    highlight: false,
+  },
+  {
+    id: "enterprise",
+    name: "Enterprise",
+    credits: 2000,
+    price: 500.00,
+    pricePerCredit: 0.25,
+    description: "Tarif optimal pour gros volumes",
+    badge: "TARIF MINIMUM",
     highlight: false,
   },
 ];
@@ -78,194 +91,182 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const formData = await request.formData();
 
   const intent = formData.get("intent");
-  const packId = formData.get("packId") as string;
-  const customCredits = formData.get("customCredits") as string;
 
-  if (intent === "purchase-pack") {
+  if (intent === "purchase-credits") {
+    const packId = formData.get("packId") as string;
     const pack = CREDIT_PACKS.find((p) => p.id === packId);
+
     if (pack) {
       await upsertShop(shop, { addCredits: pack.credits });
       return json({ success: true, pack: pack.name, creditsAdded: pack.credits });
     }
-  }
-
-  if (intent === "purchase-custom") {
-    const credits = parseInt(customCredits || "0");
-    if (credits >= 200) {
-      // Prix personnalisé : 0.25€ par crédit pour bulk
-      await upsertShop(shop, { addCredits: credits });
-      return json({ success: true, creditsAdded: credits });
+  } else if (intent === "custom-pack") {
+    const customCredits = parseInt(formData.get("customCredits") as string);
+    if (customCredits && customCredits >= 2000) {
+      const pricePerCredit = 0.25;
+      await upsertShop(shop, { addCredits: customCredits });
+      return json({ 
+        success: true, 
+        pack: "Custom", 
+        creditsAdded: customCredits,
+        price: customCredits * pricePerCredit
+      });
     }
   }
 
-  return json({ success: false });
+  return json({ success: false, error: "Invalid purchase" });
 };
 
 export default function Credits() {
   const { shop, error } = useLoaderData<typeof loader>();
-  const submit = useSubmit();
-  const fetcher = useFetcher();
-
+  const fetcher = useFetcher<typeof action>();
   const currentCredits = shop?.credits || 0;
-  const isLoading = fetcher.state !== "idle";
+  const [customCredits, setCustomCredits] = useState("2000");
+
+  const isSubmitting = fetcher.state === "submitting";
 
   const handlePurchase = (packId: string) => {
     const formData = new FormData();
-    formData.append("intent", "purchase-pack");
+    formData.append("intent", "purchase-credits");
     formData.append("packId", packId);
-    submit(formData, { method: "post" });
+    fetcher.submit(formData, { method: "post" });
   };
 
   const handleCustomPurchase = (formData: FormData) => {
-    formData.append("intent", "purchase-custom");
-    submit(formData, { method: "post" });
+    formData.append("intent", "custom-pack");
+    fetcher.submit(formData, { method: "post" });
   };
 
   return (
     <Page>
-      <TitleBar title="Acheter des crédits - VTON Magic" />
+      <TitleBar title="Crédits - VTON Magic" />
       <Layout>
         <Layout.Section>
           <BlockStack gap="600">
-            {/* App Header */}
             <AppHeader />
-
-            {/* Banner d'alerte valeur */}
-            <Banner tone="info">
-              <Text variant="bodyMd" as="p">
-                <strong>Stop losing money on returns.</strong> Letting customers test products 
-                virtually removes doubt. This slashes refunds and boosts conversion by{" "}
-                <strong>2.5x instantly</strong>.
-              </Text>
-            </Banner>
 
             {error && (
               <Banner tone="critical" title="Erreur">
-                Erreur lors du chargement: {error}
+                Erreur lors du chargement des données: {error}
               </Banner>
             )}
 
             {fetcher.data?.success && (
-              <Banner tone="success" title="Succès">
-                Pack "{fetcher.data.pack}" acheté avec succès ! {fetcher.data.creditsAdded} crédits 
+              <Banner tone="success" title="Achat réussi">
+                Pack "{fetcher.data.pack}" acheté avec succès ! {fetcher.data.creditsAdded} crédits
                 ont été ajoutés à votre compte.
               </Banner>
             )}
 
-            {/* Layout principal : Crédits à gauche, Packs à droite */}
+            {/* Crédits disponibles */}
             <Layout>
-              {/* Carte Crédits Restants (gauche) */}
               <Layout.Section variant="oneThird">
                 <div className="vton-credits-card">
-                  <div className="vton-credits-label">REMAINING CREDITS</div>
+                  <div className="vton-credits-label">CRÉDITS DISPONIBLES</div>
                   <div className="vton-credits-amount">
                     {currentCredits.toLocaleString("fr-FR")}
                   </div>
                   <div className="vton-credits-footer">
                     <span>∞</span>
-                    <span>Credits never expire</span>
+                    <span>Crédits illimités dans le temps</span>
                   </div>
                 </div>
               </Layout.Section>
 
-              {/* Packs de pricing (droite) */}
               <Layout.Section>
-                <Layout>
-                  {CREDIT_PACKS.map((pack) => {
-                    const isHighlight = pack.highlight;
+                <Card>
+                  <BlockStack gap="400">
+                    <Text variant="headingLg" fontWeight="semibold" as="h2">
+                      Packs de crédits
+                    </Text>
+                    <Text variant="bodyMd" tone="subdued" as="p">
+                      Les crédits sont utilisés pour chaque génération de try-on. Tarif minimum: 0.25€ par crédit.
+                    </Text>
 
-                    return (
-                      <Layout.Section variant="oneThird" key={pack.id}>
-                        <div className={`vton-pack-card ${isHighlight ? "highlight" : ""}`}>
-                          {isHighlight && pack.badge && (
-                            <div className="vton-pack-badge best-seller">
-                              {pack.badge}
+                    <Layout>
+                      {CREDIT_PACKS.map((pack) => {
+                        const isHighlight = pack.highlight;
+
+                        return (
+                          <Layout.Section variant="oneHalf" key={pack.id}>
+                            <div className={`vton-pack-card ${isHighlight ? "highlight" : ""}`}>
+                              {isHighlight && pack.badge && (
+                                <div className="vton-pack-badge best-seller">
+                                  {pack.badge}
+                                </div>
+                              )}
+
+                              {pack.badge && !isHighlight && (
+                                <div className="vton-pack-badge roi">
+                                  {pack.badge}
+                                </div>
+                              )}
+
+                              <Box padding={isHighlight ? "500" : "400"} style={{ paddingTop: isHighlight ? "4rem" : "1rem" }}>
+                                <BlockStack gap="400">
+                                  <BlockStack gap="200">
+                                    <Text 
+                                      variant="headingLg" 
+                                      fontWeight="bold" 
+                                      as="h3"
+                                    >
+                                      {pack.name}
+                                    </Text>
+                                    <Text 
+                                      variant="heading2xl" 
+                                      fontWeight="bold" 
+                                      as="p"
+                                    >
+                                      {pack.credits.toLocaleString("fr-FR")}
+                                    </Text>
+                                    <Text variant="bodySm" tone="subdued" as="p">
+                                      {pack.pricePerCredit.toFixed(2)}€ par crédit
+                                    </Text>
+                                    <Text variant="bodyMd" tone="subdued" as="p">
+                                      {pack.description}
+                                    </Text>
+                                  </BlockStack>
+
+                                  <Divider />
+
+                                  <BlockStack gap="300">
+                                    <Text variant="headingLg" fontWeight="bold" as="p">
+                                      {pack.price.toFixed(2)}€
+                                    </Text>
+                                    
+                                    <Button
+                                      variant={isHighlight ? "primary" : "secondary"}
+                                      size="large"
+                                      fullWidth
+                                      onClick={() => handlePurchase(pack.id)}
+                                      loading={isSubmitting}
+                                    >
+                                      Acheter
+                                    </Button>
+                                  </BlockStack>
+                                </BlockStack>
+                              </Box>
                             </div>
-                          )}
-                          
-                          {pack.savings && (
-                            <div className="vton-pack-badge save" style={{ position: "absolute", top: isHighlight ? "3.5rem" : "1rem", right: "1rem" }}>
-                              SAVE {pack.savings}
-                            </div>
-                          )}
-
-                          {pack.badge && !isHighlight && (
-                            <div className="vton-pack-badge roi" style={{ position: "absolute", top: "1rem", right: "1rem" }}>
-                              {pack.badge}
-                            </div>
-                          )}
-
-                          <Box padding={isHighlight ? "500" : "400"} style={{ paddingTop: isHighlight ? "0" : "1rem" }}>
-                            <BlockStack gap="400">
-                              <BlockStack gap="200">
-                                <Text 
-                                  variant="headingLg" 
-                                  fontWeight="bold" 
-                                  as="h3"
-                                  tone={isHighlight ? "brand" : undefined}
-                                >
-                                  {pack.name}
-                                </Text>
-                                <Text 
-                                  variant="heading3xl" 
-                                  fontWeight="bold" 
-                                  as="p"
-                                  tone={isHighlight ? "brand" : undefined}
-                                >
-                                  {pack.credits}
-                                </Text>
-                                <Text 
-                                  variant="bodyMd" 
-                                  tone={isHighlight ? "brand" : "subdued"} 
-                                  as="p"
-                                >
-                                  {pack.description}
-                                </Text>
-                              </BlockStack>
-
-                              <Divider />
-
-                              <BlockStack gap="300">
-                                <Text 
-                                  variant="headingLg" 
-                                  fontWeight="bold" 
-                                  as="p"
-                                  tone={isHighlight ? "brand" : undefined}
-                                >
-                                  {pack.price.toFixed(2)}€
-                                </Text>
-                                
-                                <Button
-                                  variant={isHighlight ? "primary" : "secondary"}
-                                  size="large"
-                                  fullWidth
-                                  onClick={() => handlePurchase(pack.id)}
-                                  loading={isLoading}
-                                >
-                                  {isHighlight ? "Top Up Now" : "Select"}
-                                </Button>
-                              </BlockStack>
-                            </BlockStack>
-                          </Box>
-                        </div>
-                      </Layout.Section>
-                    );
-                  })}
-                </Layout>
+                          </Layout.Section>
+                        );
+                      })}
+                    </Layout>
+                  </BlockStack>
+                </Card>
               </Layout.Section>
             </Layout>
 
-            {/* Section High Volume Store */}
+            {/* Pack personnalisé */}
             <Card>
               <BlockStack gap="400">
-                <InlineStack gap="300" align="start">
+                <BlockStack gap="200">
                   <Text variant="headingMd" fontWeight="semibold" as="h3">
-                    🏠 High Volume Store?
+                    Pack personnalisé (volume)
                   </Text>
-                </InlineStack>
-                <Text variant="bodyMd" tone="subdued" as="p">
-                  Get our lowest rate (€0.25 / try-on) for bulk orders.
-                </Text>
+                  <Text variant="bodyMd" tone="subdued" as="p">
+                    Pour les commandes de 2000 crédits ou plus, bénéficiez du tarif minimum de 0.25€ par crédit.
+                  </Text>
+                </BlockStack>
                 <form
                   onSubmit={(e) => {
                     e.preventDefault();
@@ -273,32 +274,38 @@ export default function Credits() {
                   }}
                 >
                   <InlineStack gap="300" align="start">
-                    <Box minWidth="150px">
+                    <Box minWidth="200px">
                       <TextField
                         label=""
                         name="customCredits"
                         type="number"
-                        defaultValue="200"
-                        min={200}
+                        value={customCredits}
+                        onChange={setCustomCredits}
+                        min={2000}
                         autoComplete="off"
-                        suffix="credits"
+                        suffix="crédits"
                       />
+                    </Box>
+                    <Box paddingBlockStart="500">
+                      <Text variant="bodyMd" as="p">
+                        = {(parseInt(customCredits) || 2000) * 0.25}€
+                      </Text>
                     </Box>
                     <Box paddingBlockStart="500">
                       <Button
                         submit
                         variant="primary"
                         size="large"
-                        loading={isLoading}
+                        loading={isSubmitting}
                       >
-                        Get Custom Pack
+                        Commander
                       </Button>
                     </Box>
                   </InlineStack>
                 </form>
               </BlockStack>
             </Card>
-            </BlockStack>
+          </BlockStack>
         </Layout.Section>
       </Layout>
     </Page>

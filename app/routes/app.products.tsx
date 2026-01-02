@@ -10,7 +10,6 @@ import {
   DataTable,
   Button,
   InlineStack,
-  Banner,
   EmptyState,
   Thumbnail,
   Badge,
@@ -27,7 +26,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     const response = await admin.graphql(
       `#graphql
         query getProducts {
-          products(first: 50) {
+          products(first: 100) {
             edges {
               node {
                 id
@@ -105,17 +104,7 @@ export default function Products() {
       <Layout>
         <Layout.Section>
           <BlockStack gap="600">
-            {/* App Header */}
             <AppHeader />
-
-            {/* Banner valeur */}
-            <Banner tone="info">
-              <Text variant="bodyMd" as="p">
-                <strong>Stop losing money on returns.</strong> Letting customers test products 
-                virtually removes doubt. This slashes refunds and boosts conversion by{" "}
-                <strong>2.5x instantly</strong>.
-              </Text>
-            </Banner>
 
             {error && (
               <Banner tone="critical" title="Erreur">
@@ -123,7 +112,6 @@ export default function Products() {
               </Banner>
             )}
 
-            {/* Produits */}
             <Card>
               <BlockStack gap="400">
                 <InlineStack align="space-between" blockAlign="center">
@@ -132,7 +120,7 @@ export default function Products() {
                       Vos produits
                     </Text>
                     <Text variant="bodyMd" tone="subdued" as="p">
-                      {products.length} produit{products.length > 1 ? "s" : ""} disponible{products.length > 1 ? "s" : ""}
+                      {products.length} produit{products.length > 1 ? "s" : ""} disponible{products.length > 1 ? "s" : ""} dans votre boutique
                     </Text>
                   </BlockStack>
                   <Button
@@ -157,7 +145,7 @@ export default function Products() {
                     image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
                   >
                     <p>
-                      Commencez par créer un produit dans Shopify. Le widget Try-On sera automatiquement disponible une fois le produit créé.
+                      Commencez par créer un produit dans Shopify. Le widget Try-On sera automatiquement disponible sur chaque page produit.
                     </p>
                   </EmptyState>
                 ) : (

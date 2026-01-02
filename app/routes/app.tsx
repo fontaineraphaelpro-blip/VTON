@@ -24,15 +24,16 @@ export default function App() {
 
   return (
     <AppProvider isEmbeddedApp apiKey={apiKey}>
-      <NavMenu>
-        <Link to="/app" rel="home">
-          Home
-        </Link>
-        <Link to="/app/dashboard">Dashboard</Link>
-        <Link to="/app/products">Produits</Link>
-        <Link to="/app/history">Historique</Link>
-        <Link to="/app/credits">Crédits</Link>
-      </NavMenu>
+            <NavMenu>
+              <Link to="/app" rel="home">
+                Accueil
+              </Link>
+              <Link to="/app/dashboard">Dashboard</Link>
+              <Link to="/app/products">Produits</Link>
+              <Link to="/app/widget">Widget</Link>
+              <Link to="/app/history">Historique</Link>
+              <Link to="/app/credits">Crédits</Link>
+            </NavMenu>
       <Outlet />
     </AppProvider>
   );
