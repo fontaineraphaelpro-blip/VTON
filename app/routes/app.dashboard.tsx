@@ -23,6 +23,7 @@ import {
   getTryonLogs,
   getTopProducts,
 } from "../lib/services/db.service";
+import { ensureTables } from "../lib/db-init.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
