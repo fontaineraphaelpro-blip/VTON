@@ -176,19 +176,22 @@ export default function Credits() {
               <Layout.Section variant="twoThirds">
                 <Card>
                   <BlockStack gap="400">
-                    <Text variant="headingLg" fontWeight="semibold" as="h2">
-                      Packs de crédits
-                    </Text>
-                    <Text variant="bodyMd" tone="subdued" as="p">
-                      Les crédits sont utilisés pour chaque génération de try-on. Tarif minimum: 0.25€ par crédit.
-                    </Text>
+                    <BlockStack gap="200">
+                      <Text variant="headingLg" fontWeight="semibold" as="h2">
+                        Packs de crédits
+                      </Text>
+                      <Text variant="bodyMd" tone="subdued" as="p">
+                        Les crédits sont utilisés pour chaque génération de try-on. Tarif minimum: 0.25€ par crédit.
+                      </Text>
+                    </BlockStack>
 
-                    <Layout>
+                    {/* Grille 2x2 pour les packs */}
+                    <div className="vton-packs-grid">
                       {CREDIT_PACKS.map((pack) => {
                         const isHighlight = pack.highlight;
 
                         return (
-                          <Layout.Section variant="oneHalf" key={pack.id}>
+                          <div key={pack.id} className={`vton-pack-card ${isHighlight ? "highlight" : ""}`}>
                             <div className={`vton-pack-card ${isHighlight ? "highlight" : ""}`}>
                               {isHighlight && pack.badge && (
                                 <div className="vton-pack-badge best-seller">
