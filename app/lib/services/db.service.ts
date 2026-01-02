@@ -52,6 +52,7 @@ export async function getShop(domain: string) {
 export async function upsertShop(domain: string, data: {
   accessToken?: string;
   credits?: number;
+  addCredits?: number;
   widgetText?: string;
   widgetBg?: string;
   widgetColor?: string;
@@ -74,6 +75,10 @@ export async function upsertShop(domain: string, data: {
     if (data.credits !== undefined) {
       updates.push(`credits = $${paramIndex++}`);
       params.push(data.credits);
+    }
+    if (data.addCredits !== undefined) {
+      updates.push(`credits = credits + $${paramIndex++}`);
+      params.push(data.addCredits);
     }
     if (data.widgetText !== undefined) {
       updates.push(`widget_text = $${paramIndex++}`);

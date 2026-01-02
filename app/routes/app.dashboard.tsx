@@ -15,6 +15,7 @@ import {
   Box,
   Banner,
   Divider,
+  Link,
 } from "@shopify/polaris";
 import { TitleBar } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
@@ -189,6 +190,41 @@ export default function Dashboard() {
               ))}
             </Layout>
 
+            {/* Alert bas crédits */}
+            {credits < 50 && (
+              <Banner
+                title="Crédits faibles"
+                tone="warning"
+                action={{
+                  content: "Acheter des crédits",
+                  url: "/app/credits",
+                }}
+              >
+                Vous avez {credits} crédit{credits > 1 ? "s" : ""} restant{credits > 1 ? "s" : ""}. 
+                Achetez un pack de crédits pour continuer à offrir l'essayage virtuel à vos clients.
+              </Banner>
+            )}
+
+            {/* CTA Achat crédits si crédits faibles */}
+            {credits < 100 && (
+              <Card background="bg-surface-success-subdued">
+                <InlineStack align="space-between" blockAlign="center">
+                  <BlockStack gap="200">
+                    <Text variant="headingMd" fontWeight="semibold" as="h3">
+                      💎 Rechargez vos crédits
+                    </Text>
+                    <Text variant="bodyMd" as="p">
+                      Ne manquez pas l'opportunité d'augmenter vos ventes ! Achetez un pack de crédits 
+                      et bénéficiez de remises importantes sur les volumes.
+                    </Text>
+                  </BlockStack>
+                  <Button url="/app/credits" variant="primary" size="large">
+                    Voir les packs
+                  </Button>
+                </InlineStack>
+              </Card>
+            )}
+
             <Divider />
 
             {/* Configuration du Widget */}
@@ -245,14 +281,20 @@ export default function Dashboard() {
                       autoComplete="off"
                       helpText="Limite quotidienne par utilisateur"
                     />
-                    <TextField
-                      label="Crédits disponibles"
-                      name="credits"
-                      type="number"
-                      defaultValue={String(credits)}
-                      autoComplete="off"
-                      helpText="Ajoutez des crédits pour permettre plus de try-ons"
-                    />
+                    <BlockStack gap="200">
+                      <TextField
+                        label="Crédits disponibles"
+                        name="credits"
+                        type="number"
+                        defaultValue={String(credits)}
+                        autoComplete="off"
+                        helpText="Ajoutez des crédits manuellement ou achetez un pack"
+                        disabled
+                      />
+                      <Button url="/app/credits" variant="secondary" size="medium">
+                        Acheter des crédits →
+                      </Button>
+                    </BlockStack>
                     <InlineStack gap="300">
                       <Button submit variant="primary" size="large">
                         Enregistrer la configuration
@@ -372,6 +414,21 @@ export default function Dashboard() {
                     </Text>
                   </BlockStack>
                 </BlockStack>
+              </BlockStack>
+            </Card>
+
+            {/* CTA Achat crédits */}
+            <Card background="bg-surface-brand-subdued">
+              <BlockStack gap="300">
+                <Text variant="headingMd" fontWeight="semibold" as="h3">
+                  💎 Acheter des crédits
+                </Text>
+                <Text variant="bodyMd" as="p">
+                  Boostez vos ventes avec plus de crédits. Packs disponibles avec remises jusqu'à 40%.
+                </Text>
+                <Button url="/app/credits" variant="primary" size="medium" fullWidth>
+                  Voir les packs
+                </Button>
               </BlockStack>
             </Card>
 

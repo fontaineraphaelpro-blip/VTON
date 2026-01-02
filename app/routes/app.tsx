@@ -27,6 +27,7 @@ export default function App() {
         <Link to="/app/dashboard">Dashboard</Link>
         <Link to="/app/products">Produits</Link>
         <Link to="/app/history">Historique</Link>
+        <Link to="/app/credits">Crédits</Link>
       </NavMenu>
       <Outlet />
     </AppProvider>
