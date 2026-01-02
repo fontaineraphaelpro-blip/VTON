@@ -112,7 +112,7 @@ body {
 .vton-credits-page {
   min-height: 100vh;
   background-color: var(--color-bg);
-  padding: 2rem;
+  padding: 3rem 2.5rem;
   font-family: 'Inter', sans-serif;
 }
 
@@ -121,7 +121,7 @@ body {
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 2.5rem;
 }
 
 /* Alert Banner */
@@ -170,7 +170,7 @@ body {
 .vton-pricing-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 1.5rem;
+  gap: 2rem;
 }
 
 @media (min-width: 768px) {
@@ -182,7 +182,7 @@ body {
 @media (min-width: 1024px) {
   .vton-pricing-grid {
     grid-template-columns: 1fr repeat(5, 1fr);
-    gap: 1.5rem;
+    gap: 2rem;
   }
   
   .vton-credits-card-blue {
@@ -279,7 +279,7 @@ body {
 .vton-pricing-card {
   background-color: white;
   border-radius: 1rem;
-  padding: 1.5rem;
+  padding: 2rem 1.5rem;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
   border: 1px solid var(--color-slate-100);
   display: flex;
