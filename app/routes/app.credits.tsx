@@ -225,8 +225,15 @@ export default function Credits() {
             ))}
           </div>
 
-          {/* Custom Pack Button */}
+          {/* Custom Pack Section */}
           <div className="vton-custom-section">
+            <div className="vton-custom-header">
+              <span className="vton-custom-icon">🏢</span>
+              <div className="vton-custom-info">
+                <div className="vton-custom-title">Custom Pack</div>
+                <div className="vton-custom-subtitle">Get bulk pricing for 250+ credits</div>
+              </div>
+            </div>
             <form
               onSubmit={(e) => {
                 e.preventDefault();
@@ -234,22 +241,28 @@ export default function Credits() {
               }}
               className="vton-custom-form"
             >
-              <button
-                type="submit"
-                className="vton-custom-button-simple"
-                disabled={isSubmitting}
-              >
-                <span className="vton-custom-icon">🏢</span>
-                <span className="vton-custom-text">
-                  Need a custom pack? Get bulk pricing (250+ credits)
-                </span>
-                <span className="vton-custom-arrow">→</span>
-              </button>
-              <input 
-                type="hidden" 
-                name="customCredits"
-                value="500"
-              />
+              <div className="vton-custom-input-group">
+                <input 
+                  type="number" 
+                  name="customCredits"
+                  value={customAmount}
+                  onChange={(e) => setCustomAmount(e.target.value)}
+                  className="vton-custom-input"
+                  min={250}
+                  placeholder="250"
+                />
+                <span className="vton-custom-input-label">credits</span>
+                <button
+                  type="submit"
+                  className="vton-custom-button-submit"
+                  disabled={isSubmitting || !customAmount || parseInt(customAmount) < 250}
+                >
+                  {isSubmitting ? "Processing..." : "Get Custom Pack"}
+                </button>
+              </div>
+              <div className="vton-custom-price-info">
+                €{(parseFloat(customAmount) || 0) * 0.30} total (€0.30 per credit)
+              </div>
             </form>
           </div>
         </div>

@@ -98,10 +98,10 @@
   --radius-2xl: 2rem;
   --radius-full: 9999px;
   
-  /* Transitions */
-  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-base: 250ms cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-slow: 350ms cubic-bezier(0.4, 0, 0.2, 1);
+  /* Transitions - Minimal */
+  --transition-fast: 100ms ease;
+  --transition-base: 150ms ease;
+  --transition-slow: 200ms ease;
 }
 
 /* ============================================
@@ -125,7 +125,7 @@ body {
   overflow-x: hidden;
 }
 
-/* Animated Background Gradient */
+/* Simple Background - No animations */
 body::before {
   content: '';
   position: fixed;
@@ -134,17 +134,10 @@ body::before {
   width: 100%;
   height: 100%;
   background: 
-    radial-gradient(circle at 20% 50%, rgba(99, 102, 241, 0.1) 0%, transparent 50%),
-    radial-gradient(circle at 80% 80%, rgba(139, 92, 246, 0.1) 0%, transparent 50%),
-    radial-gradient(circle at 40% 20%, rgba(236, 72, 153, 0.1) 0%, transparent 50%);
+    radial-gradient(circle at 20% 50%, rgba(99, 102, 241, 0.05) 0%, transparent 50%),
+    radial-gradient(circle at 80% 80%, rgba(139, 92, 246, 0.05) 0%, transparent 50%);
   pointer-events: none;
   z-index: 0;
-  animation: gradientShift 15s ease infinite;
-}
-
-@keyframes gradientShift {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.8; }
 }
 
 /* ============================================
@@ -154,17 +147,24 @@ body::before {
 .vton-page-container {
   min-height: 100vh;
   background: transparent;
-  padding: var(--spacing-xl);
+  padding: var(--spacing-lg);
   position: relative;
   z-index: 1;
+  max-width: 1600px;
+  margin: 0 auto;
 }
 
 .vton-page-content {
-  max-width: 1400px;
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 1fr 2fr;
   gap: var(--spacing-xl);
+  align-items: start;
+}
+
+@media (max-width: 1200px) {
+  .vton-page-content {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* ============================================
@@ -172,18 +172,16 @@ body::before {
    ============================================ */
 
 .vton-header-simple {
-  max-width: 1400px;
-  margin: 0 auto var(--spacing-xl) auto;
+  max-width: 1600px;
+  margin: 0 auto var(--spacing-lg) auto;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: var(--spacing-lg) var(--spacing-xl);
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-lg);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: var(--spacing-md) var(--spacing-xl);
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  border: 1px solid rgba(229, 231, 235, 0.8);
   position: relative;
   z-index: 10;
 }
@@ -285,8 +283,21 @@ body::before {
 
 .vton-stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: var(--spacing-lg);
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--spacing-md);
+  width: 100%;
+}
+
+@media (max-width: 1200px) {
+  .vton-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .vton-stats-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .vton-stat-card-link {
@@ -300,19 +311,15 @@ body::before {
 }
 
 .vton-stat-card-white {
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border-radius: var(--radius-xl);
-  padding: var(--spacing-xl);
-  box-shadow: var(--shadow-lg);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
+  box-shadow: var(--shadow-md);
+  border: 1px solid rgba(229, 231, 235, 0.8);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  transition: all var(--transition-base);
   position: relative;
-  overflow: hidden;
 }
 
 .vton-stat-card-white::before {
@@ -328,14 +335,9 @@ body::before {
   transition: transform var(--transition-base);
 }
 
-.vton-stat-card-link:hover .vton-stat-card-white::before {
-  transform: scaleX(1);
-}
-
 .vton-stat-card-link:hover .vton-stat-card-white {
-  box-shadow: var(--shadow-2xl), var(--shadow-glow);
+  box-shadow: var(--shadow-lg);
   border-color: var(--primary);
-  background: rgba(255, 255, 255, 0.9);
 }
 
 .vton-stat-content {
@@ -639,10 +641,18 @@ body::before {
 }
 
 .vton-credits-content {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-2xl);
-  align-items: center;
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: var(--spacing-xl);
+  align-items: start;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+@media (max-width: 1024px) {
+  .vton-credits-content {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* Credits Display - Simple & Clear */
@@ -710,39 +720,40 @@ body::before {
   font-weight: 700;
 }
 
-/* Simple Pricing Grid - 3 Plans */
+/* Simple Pricing Grid - 3 Plans - Horizontal */
 .vton-pricing-simple {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: var(--spacing-xl);
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--spacing-lg);
   width: 100%;
-  max-width: 1000px;
+}
+
+@media (max-width: 1024px) {
+  .vton-pricing-simple {
+    grid-template-columns: 1fr;
+  }
 }
 
 .vton-plan-card {
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(20px) saturate(180%);
-  border-radius: var(--radius-xl);
-  padding: var(--spacing-xl);
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  box-shadow: var(--shadow-lg);
-  transition: all var(--transition-base);
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
+  border: 2px solid rgba(229, 231, 235, 0.8);
+  box-shadow: var(--shadow-md);
   position: relative;
   display: flex;
   flex-direction: column;
 }
 
 .vton-plan-card:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-xl), var(--shadow-glow);
+  box-shadow: var(--shadow-lg);
   border-color: var(--primary);
 }
 
 .vton-plan-featured {
   border-color: var(--primary);
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(99, 102, 241, 0.1) 100%);
-  box-shadow: var(--shadow-xl), var(--shadow-glow);
-  transform: scale(1.02);
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: var(--shadow-lg);
 }
 
 .vton-plan-popular {
@@ -889,65 +900,110 @@ body::before {
   transform: none;
 }
 
-/* Custom Pack Button - Simple */
+/* Custom Pack Section - Horizontal */
 .vton-custom-section {
   width: 100%;
-  max-width: 600px;
-  margin-top: var(--spacing-lg);
+  max-width: 1000px;
+  margin-top: var(--spacing-xl);
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-xl);
+  box-shadow: var(--shadow-md);
+  border: 2px solid rgba(229, 231, 235, 0.8);
+}
+
+.vton-custom-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+}
+
+.vton-custom-icon {
+  font-size: 2rem;
+  flex-shrink: 0;
+}
+
+.vton-custom-info {
+  flex: 1;
+}
+
+.vton-custom-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--light-text);
+  margin-bottom: var(--spacing-xs);
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+.vton-custom-subtitle {
+  font-size: 0.875rem;
+  color: var(--light-text-secondary);
 }
 
 .vton-custom-form {
   width: 100%;
 }
 
-.vton-custom-button-simple {
-  width: 100%;
-  padding: var(--spacing-lg) var(--spacing-xl);
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(20px) saturate(180%);
-  border: 2px dashed rgba(99, 102, 241, 0.3);
-  border-radius: var(--radius-xl);
+.vton-custom-input-group {
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+}
+
+.vton-custom-input {
+  width: 150px;
+  padding: var(--spacing-md);
+  border: 2px solid rgba(229, 231, 235, 0.8);
+  border-radius: var(--radius-lg);
   font-size: 1rem;
-  font-weight: 600;
-  color: var(--primary);
-  cursor: pointer;
-  transition: all var(--transition-base);
-  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  text-align: center;
+  color: var(--light-text);
+  background: rgba(255, 255, 255, 1);
 }
 
-.vton-custom-button-simple:hover {
+.vton-custom-input:focus {
+  outline: none;
   border-color: var(--primary);
-  background: rgba(255, 255, 255, 0.9);
-  box-shadow: var(--shadow-lg);
-  transform: translateY(-2px);
+  box-shadow: 0 0 0 3px var(--primary-50);
 }
 
-.vton-custom-button-simple:disabled {
+.vton-custom-input-label {
+  font-size: 0.875rem;
+  color: var(--light-text-secondary);
+  font-weight: 500;
+}
+
+.vton-custom-button-submit {
+  padding: var(--spacing-md) var(--spacing-xl);
+  background: var(--gradient-primary);
+  color: var(--light-surface);
+  border: none;
+  border-radius: var(--radius-lg);
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+  box-shadow: var(--shadow-md);
+  font-family: 'Space Grotesk', sans-serif;
+  margin-left: auto;
+}
+
+.vton-custom-button-submit:hover:not(:disabled) {
+  box-shadow: var(--shadow-lg);
+}
+
+.vton-custom-button-submit:disabled {
   opacity: 0.6;
   cursor: not-allowed;
-  transform: none;
 }
 
-.vton-custom-icon {
-  font-size: 1.5rem;
-}
-
-.vton-custom-text {
-  flex: 1;
+.vton-custom-price-info {
+  font-size: 0.875rem;
+  color: var(--light-text-secondary);
   text-align: center;
-}
-
-.vton-custom-arrow {
-  font-size: 1.25rem;
-  transition: transform var(--transition-base);
-}
-
-.vton-custom-button-simple:hover .vton-custom-arrow {
-  transform: translateX(4px);
+  font-weight: 500;
 }
 
 /* Alert Banner - Glassmorphism */
