@@ -190,18 +190,26 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
     await incrementRateLimit(shop, clientIp, today);
 
+    // Validate resultUrl before logging
+    const validResultUrl = resultUrl && typeof resultUrl === "string" ? resultUrl : null;
+
     await createTryonLog({
       shop,
       customerIp: clientIp,
       productId: product_id || null,
       success: true,
       latencyMs,
-      resultImageUrl: resultUrl,
+      resultImageUrl: validResultUrl,
     });
 
     // Get remaining credits
     const updatedShop = await getShop(shop);
     const creditsRemaining = updatedShop?.credits || 0;
+
+    // Ensure resultUrl is a valid string before returning
+    if (!resultUrl || typeof resultUrl !== "string") {
+      throw new Error("Invalid result URL format from Replicate");
+    }
 
     return json({
       result_image_url: resultUrl,
