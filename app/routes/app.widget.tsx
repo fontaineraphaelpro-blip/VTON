@@ -74,9 +74,33 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       return json({ success: false, error: "Both images are required" });
     }
 
-    // Logic for testing try-on (to be implemented)
-    console.log("Test try-on initiated with:", { personImage, garmentImage });
-    return json({ success: true, testMode: true, resultImageUrl: "https://via.placeholder.com/300x400?text=Try-on+Result" });
+    try {
+      // Convert base64 images to buffers
+      const personBuffer = personImage.startsWith("data:image")
+        ? Buffer.from(personImage.split(",")[1], "base64")
+        : Buffer.from(personImage, "base64");
+      
+      const garmentBuffer = garmentImage.startsWith("data:image")
+        ? Buffer.from(garmentImage.split(",")[1], "base64")
+        : Buffer.from(garmentImage, "base64");
+
+      // Generate try-on using Replicate service
+      const { generateTryOn } = await import("../lib/services/replicate.service");
+      const resultUrl = await generateTryOn(personBuffer, garmentBuffer, "upper_body");
+
+      return json({ 
+        success: true, 
+        testMode: true, 
+        resultImageUrl: resultUrl 
+      });
+    } catch (error) {
+      console.error("Test try-on error:", error);
+      return json({ 
+        success: false, 
+        error: error instanceof Error ? error.message : "Generation failed",
+        testMode: true 
+      });
+    }
   }
 
   return json({ success: false, error: "Invalid action" });
