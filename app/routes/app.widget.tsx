@@ -20,7 +20,6 @@ import { TitleBar } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
 import { getShop, upsertShop } from "../lib/services/db.service";
 import { ensureTables } from "../lib/db-init.server";
-import { AppHeader } from "../components/AppHeader";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
@@ -122,9 +121,7 @@ export default function Widget() {
       <TitleBar title="Configuration Widget - VTON Magic" />
       <Layout>
         <Layout.Section>
-          <BlockStack gap="600">
-            <AppHeader />
-
+          <BlockStack gap="500">
             {error && (
               <Banner tone="critical" title="Erreur">
                 {error}

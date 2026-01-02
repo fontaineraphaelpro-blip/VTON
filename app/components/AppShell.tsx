@@ -56,11 +56,9 @@ export function AppShell({ children }: AppShellProps) {
         <header className="app-header">
           <div className="app-header-content">
             <InlineStack align="space-between" blockAlign="center">
-              <Box>
-                <Text variant="headingLg" fontWeight="semibold" as="h1">
-                  VTON Magic Admin
-                </Text>
-              </Box>
+              <Text variant="headingLg" fontWeight="semibold" as="h1">
+                VTON Magic Admin
+              </Text>
               <div className="app-status">
                 <div className="app-status-dot"></div>
                 <Text variant="bodySm" fontWeight="medium" as="span">

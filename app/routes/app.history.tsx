@@ -19,7 +19,6 @@ import { TitleBar } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
 import { getTryonLogs } from "../lib/services/db.service";
 import { ensureTables } from "../lib/db-init.server";
-import { AppHeader } from "../components/AppHeader";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
