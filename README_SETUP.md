@@ -113,13 +113,9 @@ npx prisma studio  # Interface graphique pour la DB
 - Vérifier que `DATABASE_URL` est correct
 - Vérifier que PostgreSQL est accessible
 
-### Erreur OAuth / Boucle de redirection infinie
+### Erreur OAuth
 - Vérifier `SHOPIFY_API_KEY` et `SHOPIFY_API_SECRET`
 - Vérifier que l'URL de redirection dans Shopify Partners correspond à `/auth/callback`
-- **⚠️ Si boucle infinie entre `/auth` et `/auth/exit-iframe`** : Voir le guide détaillé dans [`TROUBLESHOOTING.md`](./TROUBLESHOOTING.md)
-  - Utiliser HTTPS (ngrok pour le dev local, pas localhost)
-  - S'assurer que `SHOPIFY_APP_URL` dans `.env` correspond exactement à l'URL dans Shopify Partners
-  - Vérifier que l'URL de callback est exactement `[votre-url]/auth/callback`
 
 ### Erreur de build
 - Vérifier que toutes les dépendances sont installées : `npm install`
