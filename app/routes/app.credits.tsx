@@ -103,7 +103,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   } else if (intent === "custom-pack") {
     const customCredits = parseInt(formData.get("customCredits") as string);
     if (customCredits && customCredits >= 250) {
-      const pricePerCredit = 0.25;
+      const pricePerCredit = 0.30; // Same as Enterprise tier
       await upsertShop(shop, { addCredits: customCredits });
       return json({ 
         success: true, 
@@ -111,6 +111,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         creditsAdded: customCredits,
         price: customCredits * pricePerCredit
       });
+    } else {
+      return json({ success: false, error: "Minimum 250 credits required for custom pack" });
     }
   }
 
@@ -122,7 +124,7 @@ export default function Credits() {
   const fetcher = useFetcher<typeof action>();
   const revalidator = useRevalidator();
   const currentCredits = shop?.credits || 0;
-  const [customAmount, setCustomAmount] = useState("250");
+  const [customAmount, setCustomAmount] = useState("500");
 
   const isSubmitting = fetcher.state === "submitting";
 
@@ -246,7 +248,7 @@ export default function Credits() {
               <input 
                 type="hidden" 
                 name="customCredits"
-                value={customAmount}
+                value="500"
               />
             </form>
           </div>
