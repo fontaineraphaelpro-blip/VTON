@@ -82,7 +82,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
-  const { session } = await authenticate.admin(request);
+  const { admin, session } = await authenticate.admin(request);
   const shop = session.shop;
   const formData = await request.formData();
 
@@ -93,24 +93,140 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const pack = CREDIT_PACKS.find((p) => p.id === packId);
 
     if (pack) {
-      await upsertShop(shop, { addCredits: pack.credits });
-      return json({ 
-        success: true, 
-        pack: pack.name, 
-        creditsAdded: pack.credits,
-      });
+      // Create a Shopify checkout URL for payment
+      try {
+        // Create a draft order for the credit purchase
+        const mutation = `#graphql
+          mutation draftOrderCreate($input: DraftOrderInput!) {
+            draftOrderCreate(input: $input) {
+              draftOrder {
+                id
+                invoiceUrl
+              }
+              userErrors {
+                field
+                message
+              }
+            }
+          }
+        `;
+
+        const variables = {
+          input: {
+            lineItems: [
+              {
+                title: `${pack.name} Pack - ${pack.credits} Credits`,
+                quantity: 1,
+                originalUnitPrice: pack.price.toString(),
+              }
+            ],
+            note: `VTON Magic Credits Purchase: ${pack.credits} credits`,
+            tags: ["vton-credits", `pack-${pack.id}`],
+          }
+        };
+
+        const response = await admin.graphql(mutation, {
+          variables,
+        });
+
+        const responseJson = await response.json();
+        const draftOrder = responseJson.data?.draftOrderCreate?.draftOrder;
+        const errors = responseJson.data?.draftOrderCreate?.userErrors;
+
+        if (errors && errors.length > 0) {
+          return json({ 
+            success: false, 
+            error: errors.map((e: any) => e.message).join(", "),
+          });
+        }
+
+        if (draftOrder?.invoiceUrl) {
+          return json({ 
+            success: true, 
+            redirect: true,
+            checkoutUrl: draftOrder.invoiceUrl,
+            pack: pack.name, 
+            credits: pack.credits,
+            price: pack.price,
+          });
+        }
+      } catch (error) {
+        console.error("Error creating draft order:", error);
+        return json({ 
+          success: false, 
+          error: "Failed to create payment checkout. Please try again." 
+        });
+      }
     }
   } else if (intent === "custom-pack") {
     const customCredits = parseInt(formData.get("customCredits") as string);
     if (customCredits && customCredits >= 250) {
-      const pricePerCredit = 0.30; // Same as Enterprise tier
-      await upsertShop(shop, { addCredits: customCredits });
-      return json({ 
-        success: true, 
-        pack: "Custom", 
-        creditsAdded: customCredits,
-        price: customCredits * pricePerCredit
-      });
+      const pricePerCredit = 0.30;
+      const totalPrice = customCredits * pricePerCredit;
+
+      try {
+        // Create a draft order for custom pack
+        const mutation = `#graphql
+          mutation draftOrderCreate($input: DraftOrderInput!) {
+            draftOrderCreate(input: $input) {
+              draftOrder {
+                id
+                invoiceUrl
+              }
+              userErrors {
+                field
+                message
+              }
+            }
+          }
+        `;
+
+        const variables = {
+          input: {
+            lineItems: [
+              {
+                title: `Custom Pack - ${customCredits} Credits`,
+                quantity: 1,
+                originalUnitPrice: totalPrice.toFixed(2),
+              }
+            ],
+            note: `VTON Magic Credits Purchase: ${customCredits} credits (Custom Pack)`,
+            tags: ["vton-credits", "custom-pack"],
+          }
+        };
+
+        const response = await admin.graphql(mutation, {
+          variables,
+        });
+
+        const responseJson = await response.json();
+        const draftOrder = responseJson.data?.draftOrderCreate?.draftOrder;
+        const errors = responseJson.data?.draftOrderCreate?.userErrors;
+
+        if (errors && errors.length > 0) {
+          return json({ 
+            success: false, 
+            error: errors.map((e: any) => e.message).join(", "),
+          });
+        }
+
+        if (draftOrder?.invoiceUrl) {
+          return json({ 
+            success: true, 
+            redirect: true,
+            checkoutUrl: draftOrder.invoiceUrl,
+            pack: "Custom", 
+            credits: customCredits,
+            price: totalPrice,
+          });
+        }
+      } catch (error) {
+        console.error("Error creating draft order:", error);
+        return json({ 
+          success: false, 
+          error: "Failed to create payment checkout. Please try again." 
+        });
+      }
     } else {
       return json({ success: false, error: "Minimum 250 credits required for custom pack" });
     }
