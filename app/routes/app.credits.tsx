@@ -210,6 +210,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           }
         `;
 
+        // Get customer email from session if available
+        const customerEmail = session.email || undefined;
+
         const variables = {
           input: {
             lineItems: [
@@ -221,6 +224,11 @@ export const action = async ({ request }: ActionFunctionArgs) => {
             ],
             note: `VTON Magic Credits Purchase: ${customCredits} credits (Custom Pack)`,
             tags: ["vton-credits", "custom-pack"],
+            ...(customerEmail && {
+              customer: {
+                email: customerEmail,
+              }
+            }),
           }
         };
 
@@ -229,17 +237,31 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         });
 
         const responseJson = await response.json();
+        
+        // Log the full response for debugging
+        console.log("Custom draft order response:", JSON.stringify(responseJson, null, 2));
+        
         const draftOrder = responseJson.data?.draftOrderCreate?.draftOrder;
         const errors = responseJson.data?.draftOrderCreate?.userErrors;
 
         if (errors && errors.length > 0) {
+          const errorMessages = errors.map((e: any) => `${e.field ? `${e.field}: ` : ""}${e.message}`).join(", ");
+          console.error("Custom draft order errors:", errorMessages);
           return json({ 
             success: false, 
-            error: errors.map((e: any) => e.message).join(", "),
+            error: `Failed to create checkout: ${errorMessages}`,
           });
         }
 
-        if (draftOrder?.invoiceUrl) {
+        if (!draftOrder) {
+          console.error("No custom draft order returned:", responseJson);
+          return json({ 
+            success: false, 
+            error: "Failed to create draft order. Please check your Shopify permissions.",
+          });
+        }
+
+        if (draftOrder.invoiceUrl) {
           return json({ 
             success: true, 
             redirect: true,
@@ -248,12 +270,19 @@ export const action = async ({ request }: ActionFunctionArgs) => {
             credits: customCredits,
             price: totalPrice,
           });
+        } else {
+          console.error("Custom draft order created but no invoiceUrl:", draftOrder);
+          return json({ 
+            success: false, 
+            error: "Draft order created but no checkout URL available. Please try again.",
+          });
         }
       } catch (error) {
-        console.error("Error creating draft order:", error);
+        console.error("Error creating custom draft order:", error);
+        const errorMessage = error instanceof Error ? error.message : String(error);
         return json({ 
           success: false, 
-          error: "Failed to create payment checkout. Please try again." 
+          error: `Failed to create payment checkout: ${errorMessage}` 
         });
       }
     } else {
