@@ -10,7 +10,8 @@ ENV NODE_ENV=production
 COPY package.json package-lock.json* ./
 
 # Install all dependencies (including devDependencies) for build
-RUN npm ci && npm cache clean --force
+# Use --legacy-peer-deps to handle peer dependency conflicts with Shopify packages
+RUN npm ci --legacy-peer-deps && npm cache clean --force
 
 COPY . .
 
@@ -24,7 +25,7 @@ ENV SHOPIFY_APP_URL=${SHOPIFY_APP_URL:-http://localhost:3000}
 RUN npm run build
 
 # Remove dev dependencies after build to reduce image size
-RUN npm ci --omit=dev && npm cache clean --force
+RUN npm ci --omit=dev --legacy-peer-deps && npm cache clean --force
 # Remove CLI packages since we don't need them in production by default.
 RUN npm remove @shopify/cli || true
 
