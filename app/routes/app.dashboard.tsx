@@ -26,6 +26,7 @@ import {
   getTopProducts,
 } from "../lib/services/db.service";
 import { ensureTables } from "../lib/db-init.server";
+import { AppHeader } from "../components/AppHeader";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
@@ -145,19 +146,21 @@ export default function Dashboard() {
 
   return (
     <Page>
-      <TitleBar title="Dashboard - Try-On StyleLab" />
+      <TitleBar title="Dashboard - VTON Magic" />
       <Layout>
         <Layout.Section>
           <BlockStack gap="600">
-            {/* Header avec titre */}
-            <BlockStack gap="200">
-              <Text as="h1" variant="heading2xl" fontWeight="bold">
-                Dashboard
+            {/* App Header */}
+            <AppHeader />
+
+            {/* Banner valeur */}
+            <Banner tone="info">
+              <Text variant="bodyMd" as="p">
+                <strong>Stop losing money on returns.</strong> Letting customers test products 
+                virtually removes doubt. This slashes refunds and boosts conversion by{" "}
+                <strong>2.5x instantly</strong>.
               </Text>
-              <Text variant="bodyMd" tone="subdued" as="p">
-                Gérez votre application Try-On et suivez les performances en temps réel
-              </Text>
-            </BlockStack>
+            </Banner>
 
             {error && (
               <Banner tone="critical" title="Erreur">
@@ -169,23 +172,19 @@ export default function Dashboard() {
             <Layout>
               {stats.map((stat, index) => (
                 <Layout.Section variant="oneQuarter" key={stat.label}>
-                  <Card>
+                  <div className="vton-stat-card">
                     <BlockStack gap="300">
                       <InlineStack align="space-between" blockAlign="start">
                         <BlockStack gap="100">
-                          <Text variant="heading2xl" as="p" fontWeight="bold">
-                            {stat.value}
-                          </Text>
-                          <Text variant="bodySm" tone="subdued" as="p">
-                            {stat.label}
-                          </Text>
+                          <div className="vton-stat-value">{stat.value}</div>
+                          <div className="vton-stat-label">{stat.label}</div>
                         </BlockStack>
                         <Text variant="headingLg" as="span">
                           {stat.icon}
                         </Text>
                       </InlineStack>
                     </BlockStack>
-                  </Card>
+                  </div>
                 </Layout.Section>
               ))}
             </Layout>

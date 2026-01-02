@@ -18,6 +18,7 @@ import { TitleBar } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
 import { getShop, upsertShop } from "../lib/services/db.service";
 import { ensureTables } from "../lib/db-init.server";
+import { AppHeader } from "../components/AppHeader";
 
 // Packs de crédits dans le style de l'image
 const CREDIT_PACKS = [
@@ -122,10 +123,13 @@ export default function Credits() {
 
   return (
     <Page>
-      <TitleBar title="Acheter des crédits - Try-On StyleLab" />
+      <TitleBar title="Acheter des crédits - VTON Magic" />
       <Layout>
         <Layout.Section>
           <BlockStack gap="600">
+            {/* App Header */}
+            <AppHeader />
+
             {/* Banner d'alerte valeur */}
             <Banner tone="info">
               <Text variant="bodyMd" as="p">
@@ -152,33 +156,16 @@ export default function Credits() {
             <Layout>
               {/* Carte Crédits Restants (gauche) */}
               <Layout.Section variant="oneThird">
-                <Card>
-                  <Box
-                    padding="600"
-                    background="bg-surface-inverse"
-                    borderRadius="300"
-                  >
-                    <BlockStack gap="400">
-                      <Text variant="bodySm" tone="subdued" as="p" alignment="start">
-                        REMAINING CREDITS
-                      </Text>
-                      <Text 
-                        variant="heading3xl" 
-                        fontWeight="bold" 
-                        as="p"
-                        alignment="start"
-                      >
-                        {currentCredits.toLocaleString("fr-FR")}
-                      </Text>
-                      <InlineStack gap="200" align="start">
-                        <Text variant="headingLg" as="span">∞</Text>
-                        <Text variant="bodyMd" tone="subdued" as="p">
-                          Credits never expire
-                        </Text>
-                      </InlineStack>
-                    </BlockStack>
-                  </Box>
-                </Card>
+                <div className="vton-credits-card">
+                  <div className="vton-credits-label">REMAINING CREDITS</div>
+                  <div className="vton-credits-amount">
+                    {currentCredits.toLocaleString("fr-FR")}
+                  </div>
+                  <div className="vton-credits-footer">
+                    <span>∞</span>
+                    <span>Credits never expire</span>
+                  </div>
+                </div>
               </Layout.Section>
 
               {/* Packs de pricing (droite) */}

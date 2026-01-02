@@ -100,19 +100,21 @@ export default function Products() {
 
   return (
     <Page>
-      <TitleBar title="Produits - Try-On StyleLab" />
+      <TitleBar title="Produits - VTON Magic" />
       <Layout>
         <Layout.Section>
           <BlockStack gap="600">
-            {/* Header */}
-            <BlockStack gap="200">
-              <Text as="h1" variant="heading2xl" fontWeight="bold">
-                Gestion des produits
+            {/* App Header */}
+            <AppHeader />
+
+            {/* Banner valeur */}
+            <Banner tone="info">
+              <Text variant="bodyMd" as="p">
+                <strong>Stop losing money on returns.</strong> Letting customers test products 
+                virtually removes doubt. This slashes refunds and boosts conversion by{" "}
+                <strong>2.5x instantly</strong>.
               </Text>
-              <Text variant="bodyMd" tone="subdued" as="p">
-                Liste de vos produits Shopify. Le widget Try-On sera automatiquement disponible sur les pages produits de votre boutique.
-              </Text>
-            </BlockStack>
+            </Banner>
 
             {error && (
               <Banner tone="critical" title="Erreur">

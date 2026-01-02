@@ -19,6 +19,7 @@ import { TitleBar } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
 import { getTryonLogs } from "../lib/services/db.service";
 import { ensureTables } from "../lib/db-init.server";
+import { AppHeader } from "../components/AppHeader";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
@@ -104,19 +105,21 @@ export default function History() {
 
   return (
     <Page>
-      <TitleBar title="Historique - Try-On StyleLab" />
+      <TitleBar title="Historique - VTON Magic" />
       <Layout>
         <Layout.Section>
           <BlockStack gap="600">
-            {/* Header */}
-            <BlockStack gap="200">
-              <Text as="h1" variant="heading2xl" fontWeight="bold">
-                Historique des essais
+            {/* App Header */}
+            <AppHeader />
+
+            {/* Banner valeur */}
+            <Banner tone="info">
+              <Text variant="bodyMd" as="p">
+                <strong>Stop losing money on returns.</strong> Letting customers test products 
+                virtually removes doubt. This slashes refunds and boosts conversion by{" "}
+                <strong>2.5x instantly</strong>.
               </Text>
-              <Text variant="bodyMd" tone="subdued" as="p">
-                Consultez l'historique complet de toutes les tentatives d'essayage virtuel effectuées sur votre boutique.
-              </Text>
-            </BlockStack>
+            </Banner>
 
             {error && (
               <Banner tone="critical" title="Erreur">
