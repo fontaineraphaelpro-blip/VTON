@@ -209,26 +209,8 @@ body::before {
   overflow: hidden;
 }
 
-.vton-logo-icon-blue::before {
-  content: '';
-  position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-  transform: rotate(45deg);
-  animation: shine 3s infinite;
-}
-
-@keyframes shine {
-  0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
-  100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
-}
-
 .vton-logo-icon-blue:hover {
-  transform: scale(1.1) rotate(5deg);
-  box-shadow: var(--shadow-glow-lg);
+  box-shadow: var(--shadow-lg);
 }
 
 .vton-header-title {
@@ -262,19 +244,7 @@ body::before {
   height: 8px;
   background: var(--success);
   border-radius: 50%;
-  animation: pulse 2s infinite;
-  box-shadow: 0 0 10px var(--success);
-}
-
-@keyframes pulse {
-  0%, 100% { 
-    opacity: 1; 
-    transform: scale(1);
-  }
-  50% { 
-    opacity: 0.7; 
-    transform: scale(1.2);
-  }
+  box-shadow: 0 0 8px var(--success);
 }
 
 /* ============================================
@@ -368,12 +338,6 @@ body::before {
 .vton-stat-icon {
   font-size: 3.5rem;
   opacity: 0.9;
-  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.15));
-  transition: transform var(--transition-base);
-}
-
-.vton-stat-card-link:hover .vton-stat-icon {
-  transform: scale(1.1) rotate(5deg);
 }
 
 /* ============================================
@@ -478,8 +442,7 @@ body::before {
 
 .vton-action-primary:hover,
 .vton-action-secondary:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-2xl), var(--shadow-glow);
+  box-shadow: var(--shadow-lg);
   border-color: var(--primary);
 }
 
@@ -523,10 +486,6 @@ body::before {
   flex-shrink: 0;
 }
 
-.vton-action-primary:hover .vton-action-arrow,
-.vton-action-secondary:hover .vton-action-arrow {
-  transform: translateX(4px);
-}
 
 /* Urgent Alert */
 .vton-alert-urgent {
@@ -581,8 +540,7 @@ body::before {
 }
 
 .vton-alert-button:hover {
-  box-shadow: var(--shadow-glow-lg);
-  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
   color: var(--light-surface);
 }
 
@@ -876,7 +834,6 @@ body::before {
 .vton-plan-button:hover {
   border-color: var(--primary);
   color: var(--primary);
-  transform: translateY(-2px);
   box-shadow: var(--shadow-md);
   background: rgba(255, 255, 255, 1);
 }
@@ -889,8 +846,7 @@ body::before {
 }
 
 .vton-plan-button-primary:hover {
-  box-shadow: var(--shadow-glow-lg);
-  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
   color: var(--light-surface);
 }
 
@@ -1117,21 +1073,6 @@ body::before {
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.vton-credits-card-glow {
-  position: absolute;
-  top: -50%;
-  right: -50%;
-  width: 200%;
-  height: 200%;
-  background: var(--gradient-glow);
-  animation: rotate 25s linear infinite;
-  opacity: 0.6;
-}
-
-@keyframes rotate {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
 
 .vton-credits-card-content {
   position: relative;
