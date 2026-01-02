@@ -215,7 +215,7 @@ body {
 .vton-credits-card-blue {
   background-color: var(--color-blue-night);
   border-radius: 1rem;
-  padding: 2rem;
+  padding: 2.5rem;
   color: white;
   display: flex;
   flex-direction: column;
