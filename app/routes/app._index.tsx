@@ -253,14 +253,6 @@ export default function Dashboard() {
             <div className="vton-main-right">
               {/* Quick Actions */}
               <div className="vton-actions-simple">
-                <Link to="/app/credits" className="vton-action-primary">
-                  <span className="vton-action-icon">💎</span>
-                  <div className="vton-action-text">
-                    <div className="vton-action-title">Buy Credits</div>
-                    <div className="vton-action-subtitle">Get more try-ons</div>
-                  </div>
-                  <span className="vton-action-arrow">→</span>
-                </Link>
                 <Link to="/app/history" className="vton-action-secondary">
                   <span className="vton-action-icon">📊</span>
                   <div className="vton-action-text">
