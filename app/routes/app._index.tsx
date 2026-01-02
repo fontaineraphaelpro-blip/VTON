@@ -35,7 +35,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
     // Installer automatiquement le script tag si pas déjà installé
     try {
-      const scriptTagUrl = `${process.env.SHOPIFY_APP_URL || request.url.split('/app')[0]}/apps/tryon/widget.js`;
+      // Construire l'URL du script - utiliser l'URL de la boutique + proxy path
+      const url = new URL(request.url);
+      const baseUrl = url.origin;
+      const scriptTagUrl = `${baseUrl}/apps/tryon/widget.js`;
       
       // Vérifier si le script tag existe déjà
       const scriptTagsQuery = `#graphql
@@ -55,7 +58,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       const scriptTagsData = await scriptTagsResponse.json();
       const existingScripts = scriptTagsData.data?.scriptTags?.edges || [];
       const scriptExists = existingScripts.some((edge: any) => 
-        edge.node.src.includes('/apps/tryon/widget.js')
+        edge.node.src.includes('/apps/tryon/widget.js') || edge.node.src.includes('widget.js')
       );
 
       if (!scriptExists) {
@@ -75,7 +78,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
           }
         `;
 
-        await admin.graphql(createScriptTagMutation, {
+        const result = await admin.graphql(createScriptTagMutation, {
           variables: {
             input: {
               src: scriptTagUrl,
@@ -83,6 +86,11 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             }
           }
         });
+        
+        const resultData = await result.json();
+        if (resultData.data?.scriptTagCreate?.userErrors?.length > 0) {
+          console.error("Script tag errors:", resultData.data.scriptTagCreate.userErrors);
+        }
       }
     } catch (scriptError) {
       console.error("Error installing script tag:", scriptError);
