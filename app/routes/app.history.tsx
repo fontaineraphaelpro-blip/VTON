@@ -132,43 +132,34 @@ export default function History() {
             {logs.length > 0 && (
               <Layout>
                 <Layout.Section variant="oneThird">
-                  <Card>
+                  <div className="vton-stat-card">
                     <BlockStack gap="200">
-                      <Text variant="bodySm" tone="subdued" as="p">
-                        Total de sessions
-                      </Text>
-                      <Text variant="heading2xl" fontWeight="bold" as="p">
-                        {logs.length}
-                      </Text>
+                      <div className="vton-stat-label">Total de sessions</div>
+                      <div className="vton-stat-value">{logs.length}</div>
                     </BlockStack>
-                  </Card>
+                  </div>
                 </Layout.Section>
                 <Layout.Section variant="oneThird">
-                  <Card>
+                  <div className="vton-stat-card">
                     <BlockStack gap="200">
-                      <Text variant="bodySm" tone="subdued" as="p">
-                        Taux de succès
-                      </Text>
-                      <Text variant="heading2xl" fontWeight="bold" as="p">
+                      <div className="vton-stat-label">Taux de succès</div>
+                      <div className="vton-stat-value">
                         {logs.length > 0
-                          ? ((successCount / logs.length) * 100).toFixed(1)
-                          : "0.0"}
-                        %
-                      </Text>
+                          ? `${((successCount / logs.length) * 100).toFixed(1)}%`
+                          : "0%"}
+                      </div>
                     </BlockStack>
-                  </Card>
+                  </div>
                 </Layout.Section>
                 <Layout.Section variant="oneThird">
-                  <Card>
+                  <div className="vton-stat-card">
                     <BlockStack gap="200">
-                      <Text variant="bodySm" tone="subdued" as="p">
-                        Latence moyenne
-                      </Text>
-                      <Text variant="heading2xl" fontWeight="bold" as="p">
+                      <div className="vton-stat-label">Latence moyenne</div>
+                      <div className="vton-stat-value">
                         {avgLatency > 0 ? `${avgLatency}ms` : "-"}
-                      </Text>
+                      </div>
                     </BlockStack>
-                  </Card>
+                  </div>
                 </Layout.Section>
               </Layout>
             )}
