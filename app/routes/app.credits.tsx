@@ -275,10 +275,40 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           variables,
         });
 
-        const responseJson = await response.json();
+        // Check if response is OK
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error("GraphQL request failed (custom):", response.status, errorText);
+          return json({ 
+            success: false, 
+            error: `Shopify API error (${response.status}): ${errorText.substring(0, 200)}`,
+          });
+        }
+
+        let responseJson;
+        try {
+          responseJson = await response.json();
+        } catch (jsonError) {
+          console.error("Failed to parse JSON response (custom):", jsonError);
+          const errorText = await response.text().catch(() => "Unable to read response");
+          return json({ 
+            success: false, 
+            error: `Invalid response from Shopify: ${errorText.substring(0, 200)}`,
+          });
+        }
         
         // Log the full response for debugging
         console.log("Custom draft order response:", JSON.stringify(responseJson, null, 2));
+        
+        // Check for GraphQL errors
+        if (responseJson.errors) {
+          const errorMessages = responseJson.errors.map((e: any) => e.message || String(e)).join(", ");
+          console.error("GraphQL errors (custom):", errorMessages);
+          return json({ 
+            success: false, 
+            error: `GraphQL error: ${errorMessages}`,
+          });
+        }
         
         const draftOrder = responseJson.data?.draftOrderCreate?.draftOrder;
         const errors = responseJson.data?.draftOrderCreate?.userErrors;
