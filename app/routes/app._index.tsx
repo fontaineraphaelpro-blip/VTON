@@ -11,9 +11,7 @@ import {
   TextField,
   Checkbox,
   Badge,
-  Icon,
 } from "@shopify/polaris";
-import { CreditCardMajor, AnalyticsMajor, CartMajor, TrendingUpMajor } from "@shopify/polaris-icons";
 import { TitleBar } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
 import { getShop, upsertShop, getTryonLogs, getTopProducts, getTryonStatsByDay } from "../lib/services/db.service";
@@ -271,7 +269,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
           }
         }
       }
-    } catch (scriptError) {
+    } catch (scriptError: any) {
       // #region agent log
       fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:145',message:'Catch block - scriptError caught',data:{errorType:scriptError?.constructor?.name,isResponse:scriptError instanceof Response,hasStatus:!!(scriptError as any)?.status,status:(scriptError as any)?.status,message:scriptError instanceof Error ? scriptError.message : String(scriptError)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
       // #endregion

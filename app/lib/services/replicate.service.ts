@@ -109,8 +109,9 @@ export async function generateTryOn(
           
           console.log(`Poll ${pollCount}/${maxPolls} - Prediction status:`, prediction.status);
           
-          if (prediction.status === "succeeded" && prediction.output) {
-            output = prediction.output;
+            if (prediction.status === "succeeded" && prediction.output) {
+              const predictionOutput = prediction.output;
+              output = predictionOutput;
             console.log("Prediction succeeded, output:", output);
             break;
           } else if (prediction.status === "failed" || prediction.status === "canceled") {
