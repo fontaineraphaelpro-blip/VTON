@@ -1,5 +1,5 @@
 /**
- * Fallback route for /widget-v2.js
+ * Catch-all route for /widget-v2.js and /widget-v2.*
  * This route handles requests from Shopify App Proxy which strips the /apps/tryon prefix.
  * 
  * Shopify App Proxy configuration:
