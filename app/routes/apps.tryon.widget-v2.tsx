@@ -1779,7 +1779,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                     : this.userPhoto;
                 
                 // Build API URL correctly - CONFIG.apiBase is already a full URL
-                const url = new URL(\`\${CONFIG.apiBase}/generate\`);
+                const url = new URL(CONFIG.apiBase + '/generate');
                 if (this.shop) {
                     url.searchParams.set('shop', this.shop);
                 }
