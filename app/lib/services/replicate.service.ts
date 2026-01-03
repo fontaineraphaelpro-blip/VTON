@@ -50,43 +50,40 @@ export async function generateTryOn(
   }
 
   try {
-    // Convert Buffer to data URL if needed for Replicate
-    // IMPORTANT: Replicate SDK accepts Buffer directly OR data URLs
-    // For google/nano-banana-pro, we need to send images as data URLs or Buffers
+    // IMPORTANT: For google/nano-banana-pro, we MUST send prompt + both images (person and product)
+    // Replicate SDK accepts Buffer directly, data URLs, or HTTP URLs
+    // Let's try keeping Buffers as Buffers - SDK should handle them natively
     let personInput: string | Buffer = personImage;
     let garmentInput: string | Buffer = garmentImage;
 
-    // If Buffer, convert to data URL format that Replicate expects
-    // Replicate SDK should accept data URLs, but let's ensure they're properly formatted
+    // Keep Buffers as Buffers - Replicate SDK handles Buffers natively
+    // If string, keep as-is (could be URL or data URL)
     if (Buffer.isBuffer(personImage)) {
-      const base64 = personImage.toString("base64");
-      personInput = `data:image/jpeg;base64,${base64}`;
-      console.log("Person image converted to data URL, length:", personInput.length);
+      personInput = personImage; // Keep as Buffer
+      console.log("[Replicate] Person image is Buffer, keeping as Buffer, size:", personInput.length, "bytes");
+    } else if (typeof personImage === 'string') {
+      personInput = personImage;
+      console.log("[Replicate] Person image is string, length:", personInput.length, "chars");
     }
+    
     if (Buffer.isBuffer(garmentImage)) {
-      const base64 = garmentImage.toString("base64");
-      garmentInput = `data:image/jpeg;base64,${base64}`;
-      console.log("Garment image converted to data URL, length:", garmentInput.length);
+      garmentInput = garmentImage; // Keep as Buffer
+      console.log("[Replicate] Garment image is Buffer, keeping as Buffer, size:", garmentInput.length, "bytes");
+    } else if (typeof garmentImage === 'string') {
+      garmentInput = garmentImage;
+      console.log("[Replicate] Garment image is string, length:", garmentInput.length, "chars");
     }
     
     // Validate that we have valid image inputs
     if (!personInput || !garmentInput) {
       throw new Error("Invalid image inputs: personInput or garmentInput is empty");
     }
-    
-    // Validate data URL format if strings
-    if (typeof personInput === 'string' && !personInput.startsWith('data:') && !personInput.startsWith('http')) {
-      throw new Error("Person image must be a data URL, HTTP URL, or Buffer");
-    }
-    if (typeof garmentInput === 'string' && !garmentInput.startsWith('data:') && !garmentInput.startsWith('http')) {
-      throw new Error("Garment image must be a data URL, HTTP URL, or Buffer");
-    }
 
-    console.log("Calling Replicate API with model:", MODEL_ID);
-    console.log("Input types - person:", typeof personInput, "garment:", typeof garmentInput);
-    console.log("Person image length:", typeof personInput === 'string' ? personInput.length : 'Buffer');
-    console.log("Garment image length:", typeof garmentInput === 'string' ? garmentInput.length : 'Buffer');
-    console.log("Using prompt:", GARMENT_TRANSFER_PROMPT);
+    console.log("[Replicate] Calling Replicate API with model:", MODEL_ID);
+    console.log("[Replicate] Input types - person:", Buffer.isBuffer(personInput) ? 'Buffer' : typeof personInput, "garment:", Buffer.isBuffer(garmentInput) ? 'Buffer' : typeof garmentInput);
+    console.log("[Replicate] Person image size:", Buffer.isBuffer(personInput) ? personInput.length + " bytes" : (typeof personInput === 'string' ? personInput.length + " chars" : 'unknown'));
+    console.log("[Replicate] Garment image size:", Buffer.isBuffer(garmentInput) ? garmentInput.length + " bytes" : (typeof garmentInput === 'string' ? garmentInput.length + " chars" : 'unknown'));
+    console.log("[Replicate] Using prompt:", GARMENT_TRANSFER_PROMPT);
     
     // Use replicate.run which returns a Promise that resolves when the prediction completes
     // For google/nano-banana-pro, we MUST send prompt + both images (person and product)
