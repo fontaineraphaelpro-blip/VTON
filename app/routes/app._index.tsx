@@ -11,6 +11,7 @@ import {
   TextField,
   Checkbox,
   Badge,
+  BlockStack,
 } from "@shopify/polaris";
 import { TitleBar } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
@@ -256,8 +257,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
               
               if (resultData) {
                 // Check for GraphQL errors
-                if (resultData.errors) {
-                  const errorMessages = resultData.errors.map((e: any) => e.message || String(e)).join(", ");
+                if ((resultData as any).errors) {
+                  const errorMessages = (resultData as any).errors.map((e: any) => e.message || String(e)).join(", ");
                   console.error("GraphQL errors creating script tag:", errorMessages);
                 }
                 
@@ -449,9 +450,17 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 };
 
 export default function Dashboard() {
-  const { shop, recentLogs, topProducts, dailyStats, monthlyUsage, error } = useLoaderData<typeof loader>();
+  const loaderData = useLoaderData<typeof loader>();
   const fetcher = useFetcher<typeof action>();
   const revalidator = useRevalidator();
+
+  // Handle both success and error cases from loader
+  const shop = (loaderData as any).shop || null;
+  const recentLogs = Array.isArray((loaderData as any).recentLogs) ? (loaderData as any).recentLogs : [];
+  const topProducts = Array.isArray((loaderData as any).topProducts) ? (loaderData as any).topProducts : [];
+  const dailyStats = Array.isArray((loaderData as any).dailyStats) ? (loaderData as any).dailyStats : [];
+  const monthlyUsage = typeof (loaderData as any).monthlyUsage === 'number' ? (loaderData as any).monthlyUsage : 0;
+  const error = (loaderData as any).error || null;
 
   const credits = shop?.credits || 0;
   const totalTryons = shop?.total_tryons || 0;
@@ -560,19 +569,19 @@ export default function Dashboard() {
                   {error}
                 </Banner>
               )}
-              {fetcher.data?.success && fetcher.data?.deletedCount !== undefined && (
+              {fetcher.data?.success && (fetcher.data as any).deletedCount !== undefined && (
                 <Banner tone="success">
-                  {fetcher.data.message || `Supprimé ${fetcher.data.deletedCount} ancien(s) script tag(s)`}
+                  {(fetcher.data as any).message || `Supprimé ${(fetcher.data as any).deletedCount} ancien(s) script tag(s)`}
                 </Banner>
               )}
-              {fetcher.data?.success && fetcher.data?.deletedCount === undefined && (
+              {fetcher.data?.success && !(fetcher.data as any).deletedCount && (
                 <Banner tone="success">
                   Configuration sauvegardée avec succès
                 </Banner>
               )}
-              {fetcher.data?.error && (
+              {(fetcher.data as any)?.error && (
                 <Banner tone="critical">
-                  Erreur : {fetcher.data.error}
+                  Erreur : {(fetcher.data as any).error}
                 </Banner>
               )}
               {credits < 50 && (
@@ -694,7 +703,7 @@ export default function Dashboard() {
                       {product.product_title || product.product_id || "Produit inconnu"}
                     </span>
                     <Badge tone="info">
-                      {product.tryons || product.count} essai{product.tryons > 1 ? "s" : ""}
+                      {String(product.tryons || product.count)} essai{(product.tryons || product.count) > 1 ? "s" : ""}
                     </Badge>
                   </div>
                 ))}
@@ -828,7 +837,6 @@ export default function Dashboard() {
               <div className="setting-card">
                 <label>Nettoyage</label>
                 <Button
-                  type="button"
                   onClick={() => {
                     const formData = new FormData();
                     formData.append("intent", "cleanup-script-tags");
