@@ -38,11 +38,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         if (hostname.endsWith('.myshopify.com')) {
             return hostname;
         }
-        // For custom domains, try to get from Shopify object if available
         if (typeof window !== 'undefined' && window.Shopify && window.Shopify.shop) {
             return window.Shopify.shop;
         }
-        // Fallback: construct from hostname
         return hostname.replace('.myshopify.com', '') + '.myshopify.com';
     }
     
@@ -71,7 +69,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         return null;
     }
     
-    // Create widget HTML
+    // Create widget HTML (without container div, will be injected into existing container)
     function createWidgetHTML() {
         return \`
             <div style="margin: 20px 0; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px; background: #fff;">
@@ -113,82 +111,68 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         }
         
         init() {
-            console.log('[VTON] init() called');
-            // Wait for DOM to be ready, but also add a timeout fallback
-            if (document.readyState === 'loading') {
-                console.log('[VTON] DOM still loading, waiting for DOMContentLoaded');
-                document.addEventListener('DOMContentLoaded', () => {
-                    console.log('[VTON] DOMContentLoaded fired, calling injectWidget');
+            // Try to inject immediately, with retries
+            this.injectWidget();
+            
+            setTimeout(() => {
+                if (!document.getElementById('vton-upload-section')) {
                     this.injectWidget();
-                });
-                // Fallback: try after a delay if DOMContentLoaded doesn't fire
-                setTimeout(() => {
-                    if (!document.getElementById('vton-widget-container')) {
-                        console.log('[VTON] Fallback timeout, trying to inject widget');
-                        this.injectWidget();
-                    }
-                }, 2000);
-            } else {
-                console.log('[VTON] DOM already ready, calling injectWidget immediately');
-                this.injectWidget();
-            }
+                }
+            }, 1000);
+            
+            setTimeout(() => {
+                if (!document.getElementById('vton-upload-section')) {
+                    this.injectWidget();
+                }
+            }, 3000);
         }
         
         injectWidget() {
-            console.log('[VTON] injectWidget called');
+            // Check if widget container already exists (from theme extension)
+            let existingContainer = document.getElementById('vton-widget-container');
             
-            // Check if widget already exists
-            if (document.getElementById('vton-widget-container')) {
-                console.log('[VTON] Widget already exists, skipping');
+            // If container exists, use it
+            if (existingContainer) {
+                // Check if widget content already exists
+                if (!existingContainer.querySelector('#vton-upload-section')) {
+                    existingContainer.innerHTML = createWidgetHTML();
+                    this.setupEventListeners();
+                }
                 return;
             }
             
-            // Find Add to Cart button
+            // Otherwise, find Add to Cart button and inject after it
             const addToCartBtn = findAddToCartButton();
             if (!addToCartBtn) {
-                console.log('[VTON] Add to Cart button not found - trying to inject anyway');
                 // Try to find product form instead
                 const productForm = document.querySelector('form[action*="/cart/add"]') || document.querySelector('.product-form') || document.querySelector('form.product-form');
                 if (productForm) {
-                    console.log('[VTON] Found product form, injecting widget after form');
-                    const widgetHTML = createWidgetHTML();
-                    const tempDiv = document.createElement('div');
-                    tempDiv.innerHTML = widgetHTML;
-                    const widgetContainer = tempDiv.firstElementChild;
-                    productForm.parentNode.insertBefore(widgetContainer, productForm.nextSibling);
+                    const container = document.createElement('div');
+                    container.id = 'vton-widget-container';
+                    container.innerHTML = createWidgetHTML();
+                    productForm.parentNode.insertBefore(container, productForm.nextSibling);
                     this.setupEventListeners();
                     return;
                 }
-                console.log('[VTON] Could not find Add to Cart button or product form');
                 return;
             }
             
-            console.log('[VTON] Found Add to Cart button:', addToCartBtn);
+            // Create container and inject after button
+            const container = document.createElement('div');
+            container.id = 'vton-widget-container';
+            container.innerHTML = createWidgetHTML();
             
-            // Create widget container
-            const widgetHTML = createWidgetHTML();
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = widgetHTML;
-            const widgetContainer = tempDiv.firstElementChild;
-            
-            // Insert widget after Add to Cart button's parent (form) or after the button itself
             const parent = addToCartBtn.closest('form') || addToCartBtn.parentElement;
-            console.log('[VTON] Parent element:', parent);
             
             if (parent && parent.nextSibling) {
-                parent.parentNode.insertBefore(widgetContainer, parent.nextSibling);
-                console.log('[VTON] Widget inserted after parent');
+                parent.parentNode.insertBefore(container, parent.nextSibling);
             } else if (parent) {
-                parent.parentNode.appendChild(widgetContainer);
-                console.log('[VTON] Widget appended to parent');
+                parent.parentNode.appendChild(container);
             } else {
-                addToCartBtn.parentNode.insertBefore(widgetContainer, addToCartBtn.nextSibling);
-                console.log('[VTON] Widget inserted after button');
+                addToCartBtn.parentNode.insertBefore(container, addToCartBtn.nextSibling);
             }
             
-            // Setup event listeners
             this.setupEventListeners();
-            console.log('[VTON] Widget injected successfully');
         }
         
         setupEventListeners() {
@@ -267,24 +251,20 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             this.showLoading();
             
             try {
-                // Extract product image from page
                 const productImageUrl = this.getProductImage();
                 
                 if (!productImageUrl) {
                     throw new Error('Image produit non trouvée');
                 }
                 
-                // Convert user photo data URL to base64
                 const personBase64 = this.userPhoto.split(',')[1];
                 
-                // Prepare request body
                 const requestBody = {
                     person_image_base64: personBase64,
                     clothing_url: productImageUrl,
                     product_id: this.productId
                 };
                 
-                // Make API request
                 const url = new URL(CONFIG.apiBase + '/generate');
                 url.searchParams.set('shop', this.shop);
                 
@@ -314,14 +294,12 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                 this.showResult(data.result_image_url);
                 
             } catch (error) {
-                console.error('[VTON] Generation error:', error);
                 const errorMessage = error instanceof Error ? error.message : 'Une erreur est survenue';
                 this.showError(errorMessage);
             }
         }
         
         getProductImage() {
-            // Try to find product image
             const productImageSelectors = [
                 '.product__photo img',
                 '.product-single__photo img',
@@ -339,7 +317,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                 }
             }
             
-            // Fallback: get from og:image meta tag
             const ogImage = document.querySelector('meta[property="og:image"]');
             if (ogImage) {
                 return ogImage.getAttribute('content');
@@ -354,20 +331,16 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         try {
             new VTONWidget();
         } catch (error) {
-            console.error('[VTON] Error initializing widget:', error);
+            // Silently fail
         }
     }
     
-    // Wait for window to be fully loaded
     if (document.readyState === 'complete' || document.readyState === 'interactive') {
-        // DOM is ready, but wait a bit for dynamic content
         setTimeout(initializeWidget, 100);
     } else {
-        // Wait for window load event (fires after all resources are loaded)
         window.addEventListener('load', function() {
             setTimeout(initializeWidget, 100);
         });
-        // Also try on DOMContentLoaded as fallback
         document.addEventListener('DOMContentLoaded', function() {
             setTimeout(initializeWidget, 500);
         });
