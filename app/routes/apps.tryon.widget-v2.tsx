@@ -1861,7 +1861,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             
             const link = document.createElement('a');
             link.href = this.resultImageUrl;
-            link.download = \`vton-result-\${Date.now()}.jpg\`;
+            link.download = 'vton-result-' + Date.now() + '.jpg';
             link.target = '_blank';
             document.body.appendChild(link);
             link.click();
@@ -1879,10 +1879,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             const divider = shadowRoot.querySelector('#vton-slider-divider');
             
             if (beforeImg) {
-                beforeImg.style.clipPath = \`polygon(0 0, \${percentage}% 0, \${percentage}% 100%, 0 100%)\`;
+                beforeImg.style.clipPath = 'polygon(0 0, ' + percentage + '% 0, ' + percentage + '% 100%, 0 100%)';
             }
             if (divider) {
-                divider.style.left = \`\${percentage}%\`;
+                divider.style.left = percentage + '%';
             }
         }
     }
