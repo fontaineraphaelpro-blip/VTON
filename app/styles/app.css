@@ -1,553 +1,279 @@
 /* ============================================
-   VTON MAGIC - ULTIMATE AI THEME
-   Style: Minimalist Swiss / Modern SaaS
+   VTON MAGIC - PROFESSIONAL SHOPIFY APP DESIGN
+   Inspired by top Shopify apps (Klaviyo, Recharge, etc.)
    ============================================ */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 :root {
-  /* --- PALETTE NEUTRE PREMIUM --- */
-  --bg-app: #F9FAFB;        /* Gris très pâle pour le fond, moins dur que le blanc */
-  --bg-card: #FFFFFF;
-  --bg-glass: rgba(255, 255, 255, 0.8);
-
-  /* --- COULEURS PRINCIPALES --- */
-  --primary: #09090b;       /* Noir riche (Zinc 950) - Plus élégant que #000 */
-  --primary-hover: #27272a; /* Zinc 800 */
+  /* Professional Color Palette */
+  --color-bg: #F6F6F7;
+  --color-surface: #FFFFFF;
+  --color-border: #E1E3E5;
+  --color-border-hover: #C9CCCF;
   
-  --text-main: #09090b;
-  --text-secondary: #52525b; /* Zinc 600 */
-  --text-tertiary: #a1a1aa;
-
-  /* --- BORDURES & LIGNES --- */
-  --border-light: #f4f4f5;
-  --border-subtle: #e4e4e7; /* Zinc 200 */
-  --border-focus: #09090b;
-
-  /* --- OMBRES (DIFFUSES & MODERNES) --- */
-  --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
-  --shadow-float: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
-
-  /* --- DIVERS --- */
-  --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
+  --color-text-primary: #202223;
+  --color-text-secondary: #6D7175;
+  --color-text-tertiary: #8C9196;
   
-  --ease-spring: cubic-bezier(0.4, 0, 0.2, 1);
+  --color-primary: #008060;
+  --color-primary-hover: #006E52;
+  --color-primary-light: #E3FCF7;
+  
+  --color-success: #008060;
+  --color-warning: #FFC453;
+  --color-critical: #D72C0D;
+  --color-info: #5C6AC4;
+  
+  /* Shadows - Subtle and Professional */
+  --shadow-card: 0 1px 0 rgba(0, 0, 0, 0.05);
+  --shadow-card-hover: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --shadow-button: 0 1px 0 rgba(0, 0, 0, 0.05);
+  
+  /* Spacing */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+  --spacing-2xl: 48px;
+  
+  /* Border Radius */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  
+  /* Transitions */
+  --transition-fast: 150ms ease;
+  --transition-base: 200ms ease;
 }
 
 /* ============================================
    BASE & RESET
    ============================================ */
 
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+}
 
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  background-color: var(--bg-app);
-  color: var(--text-main);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background-color: var(--color-bg);
+  color: var(--color-text-primary);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* ============================================
-   STRUCTURE & LAYOUT
+   POLARIS OVERRIDES - Professional Look
    ============================================ */
 
-.vton-page-container {
-  max-width: 1440px;
-  margin: 0 auto;
-  padding: 32px;
-  min-height: 100vh;
-}
-
-/* Grid Système Unifié */
-.vton-grid-4 {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 24px;
-}
-
-.vton-grid-3 {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 24px;
-}
-
-.vton-grid-2 {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 24px;
-}
-
-.vton-layout-main {
-  display: grid;
-  grid-template-columns: 3fr 1fr; /* Ratio 75% / 25% */
-  gap: 24px;
-  align-items: start;
-}
-
-@media (max-width: 1024px) {
-  .vton-grid-4, .vton-grid-3 { grid-template-columns: repeat(2, 1fr); }
-  .vton-layout-main { grid-template-columns: 1fr; }
-}
-
-@media (max-width: 640px) {
-  .vton-grid-4, .vton-grid-3, .vton-grid-2 { grid-template-columns: 1fr; }
-  .vton-page-container { padding: 16px; }
-}
-
-/* ============================================
-   COMPOSANTS UI (Modern AI Style)
-   ============================================ */
-
-/* 1. Header */
-.vton-header-simple {
-  background: var(--bg-card);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  padding: 20px 24px;
-  margin-bottom: 32px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  box-shadow: var(--shadow-xs);
-}
-
-.vton-header-title {
-  font-size: 1.25rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: var(--primary);
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-/* 2. Cartes (Unifier Dashboard et Pricing) */
-.vton-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  padding: 24px;
-  transition: all 0.3s var(--ease-spring);
-  height: 100%;
-  position: relative;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-.vton-card:hover {
-  border-color: var(--text-tertiary);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
-}
-
-/* Style spécifique pour les stats */
-.vton-stat-value {
-  font-size: 3rem;
-  font-weight: 800;
-  letter-spacing: -0.04em;
-  color: var(--primary);
-  line-height: 1;
-  margin: 16px 0 8px 0;
-}
-
-.vton-stat-label {
-  font-size: 0.8rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--text-secondary);
-}
-
-/* 3. Boutons (Clean & Crisp) */
-.vton-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 12px 24px;
-  border-radius: var(--radius-md);
-  font-weight: 600;
-  font-size: 0.95rem;
-  transition: all 0.2s ease;
-  cursor: pointer;
-  text-decoration: none;
-  font-family: 'Inter', sans-serif;
-  gap: 8px;
-}
-
-.vton-btn-primary {
-  background: var(--primary);
-  color: #fff;
-  border: 1px solid var(--primary);
-  box-shadow: var(--shadow-sm);
-}
-
-.vton-btn-primary:hover {
-  background: var(--primary-hover);
-  border-color: var(--primary-hover);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-md);
-}
-
-.vton-btn-secondary {
-  background: #fff;
-  color: var(--text-main);
-  border: 1px solid var(--border-subtle);
-}
-
-.vton-btn-secondary:hover {
-  border-color: var(--primary);
-  background: var(--bg-app);
-}
-
-.vton-btn-full { width: 100%; }
-
-/* 4. Badges */
-.vton-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 4px 10px;
-  border-radius: 99px;
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.vton-badge-dark {
-  background: var(--primary);
-  color: #fff;
-}
-
-.vton-badge-light {
-  background: var(--border-light);
-  color: var(--text-main);
-  border: 1px solid var(--border-subtle);
-}
-
-/* ============================================
-   PRICING & CREDITS SPECIFIC
-   ============================================ */
-
-.vton-pricing-card {
-  /* Hérite de vton-card + spécificités */
-  background: var(--bg-card);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-xl);
-  padding: 32px;
-  text-align: center;
-  transition: all 0.3s var(--ease-spring);
-  position: relative;
-}
-
-.vton-pricing-card.featured {
-  border: 2px solid var(--primary);
-  box-shadow: var(--shadow-lg);
-  transform: scale(1.02);
-  z-index: 2;
-}
-
-.vton-pricing-credits {
-  font-size: 3.5rem;
-  font-weight: 900;
-  letter-spacing: -0.03em;
-  margin: 16px 0;
-}
-
-.vton-pricing-price {
-  font-size: 1.5rem;
-  color: var(--text-secondary);
-  margin-bottom: 24px;
-}
-
-.vton-pricing-price strong {
-  color: var(--primary);
-  font-weight: 700;
-}
-
-/* Input Custom pour le pack libre */
-.vton-input-group {
-  display: flex;
-  gap: 12px;
-  margin: 16px 0;
-}
-
-.vton-input {
-  width: 100%;
-  padding: 12px 16px;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
-  font-size: 1rem;
-  font-weight: 500;
-  text-align: center;
-  outline: none;
-  transition: border-color 0.2s;
-  background: #fff;
-  color: var(--text-main);
-}
-
-.vton-input:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(9, 9, 11, 0.1);
-}
-
-/* ============================================
-   POLARIS OVERRIDES (Correctifs Shopify)
-   ============================================ */
-
-/* Force le fond transparent pour se fondre dans notre thème */
 .Polaris-Page {
-  background: transparent !important;
-  max-width: 100% !important;
+  background: var(--color-bg) !important;
   padding: 0 !important;
 }
 
 .Polaris-Page__Content {
   padding: 0 !important;
+  background: var(--color-bg) !important;
 }
 
-/* Override des cartes Polaris pour matcher notre style */
 .Polaris-Card {
-  background: var(--bg-card) !important;
+  background: var(--color-surface) !important;
+  border: 1px solid var(--color-border) !important;
   border-radius: var(--radius-lg) !important;
-  box-shadow: var(--shadow-sm) !important;
-  border: 1px solid var(--border-subtle) !important;
+  box-shadow: var(--shadow-card) !important;
+  padding: var(--spacing-lg) !important;
+  transition: box-shadow var(--transition-base), border-color var(--transition-base) !important;
 }
 
 .Polaris-Card:hover {
-  box-shadow: var(--shadow-md) !important;
+  box-shadow: var(--shadow-card-hover) !important;
+  border-color: var(--color-border-hover) !important;
 }
 
-/* Override des boutons Polaris */
 .Polaris-Button--primary {
-  background: var(--primary) !important;
-  border: 1px solid var(--primary) !important;
-  color: #fff !important;
-  border-radius: var(--radius-md) !important;
+  background: var(--color-primary) !important;
+  border-color: var(--color-primary) !important;
+  color: #FFFFFF !important;
   font-weight: 600 !important;
-  box-shadow: var(--shadow-sm) !important;
+  box-shadow: var(--shadow-button) !important;
+  transition: background var(--transition-fast), border-color var(--transition-fast) !important;
 }
 
-.Polaris-Button--primary:hover {
-  background: var(--primary-hover) !important;
-  transform: translateY(-1px);
+.Polaris-Button--primary:hover:not(:disabled) {
+  background: var(--color-primary-hover) !important;
+  border-color: var(--color-primary-hover) !important;
 }
 
-/* Masquer les ombres par défaut de Polaris si nécessaire */
-.Polaris-ShadowBevel {
-  box-shadow: none !important;
+.Polaris-Button--secondary {
+  background: var(--color-surface) !important;
+  border-color: var(--color-border) !important;
+  color: var(--color-text-primary) !important;
+  font-weight: 500 !important;
 }
 
-/* ============================================
-   UTILITAIRES
-   ============================================ */
-
-.text-center { text-align: center; }
-.mb-2 { margin-bottom: 0.5rem; }
-.mb-4 { margin-bottom: 1rem; }
-.mb-8 { margin-bottom: 2rem; }
-.mt-auto { margin-top: auto; }
-.w-full { width: 100%; }
-
-/* Animation subtile d'apparition */
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.vton-animate-in {
-  animation: fadeIn 0.4s ease-out forwards;
+.Polaris-Button--secondary:hover:not(:disabled) {
+  background: var(--color-bg) !important;
+  border-color: var(--color-border-hover) !important;
 }
 
 /* ============================================
-   COMPATIBILITÉ AVEC ANCIEN CODE
+   LAYOUT CONTAINERS
    ============================================ */
 
-/* Variables de compatibilité pour l'ancien code */
-:root {
-  --bg: var(--bg-card);
-  --bg-soft: var(--bg-app);
-  --text-primary: var(--text-main);
-  --text-secondary: var(--text-secondary);
-  --border: var(--border-subtle);
-  --primary: var(--primary);
-  --primary-hover: var(--primary-hover);
-  --radius: var(--radius-lg);
-  --shadow: var(--shadow-sm);
-  --transition: 0.3s var(--ease-spring);
-  --ease: var(--ease-spring);
-}
-
-/* App Container (compatibilité) */
 .app-container {
-  max-width: 1100px;
-  margin: 40px auto;
-  padding: 0 20px 80px;
-  background: var(--bg-app);
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: var(--spacing-xl);
 }
 
 .app-header {
-  margin-bottom: 40px;
+  margin-bottom: var(--spacing-xl);
 }
 
 .app-title {
-  font-size: 32px;
+  font-size: 28px;
   font-weight: 700;
-  letter-spacing: -0.02em;
-  color: var(--text-main);
-  margin: 0;
+  color: var(--color-text-primary);
+  margin: 0 0 var(--spacing-xs) 0;
+  letter-spacing: -0.01em;
 }
 
 .app-subtitle {
-  margin-top: 6px;
   font-size: 15px;
-  color: var(--text-secondary);
+  color: var(--color-text-secondary);
+  margin: 0;
+  font-weight: 400;
 }
 
-/* Stats Grid (compatibilité) */
+/* ============================================
+   STATS GRID - Professional Cards
+   ============================================ */
+
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 20px;
-  margin-bottom: 40px;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--spacing-lg);
+  margin-bottom: var(--spacing-xl);
 }
 
 .stat-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border-subtle);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  padding: 24px 28px;
-  box-shadow: var(--shadow-xs);
+  padding: var(--spacing-lg);
+  box-shadow: var(--shadow-card);
+  transition: all var(--transition-base);
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  transition: transform 0.2s var(--ease-spring), box-shadow 0.2s var(--ease-spring);
+  position: relative;
+  overflow: hidden;
+}
+
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--color-primary);
+  opacity: 0;
+  transition: opacity var(--transition-base);
 }
 
 .stat-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--shadow-card-hover);
+  border-color: var(--color-border-hover);
+  transform: translateY(-1px);
 }
 
-.stat-emoji {
-  font-size: 28px;
-  margin-bottom: 12px;
+.stat-card:hover::before {
+  opacity: 1;
+}
+
+.stat-icon-wrapper {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  background: var(--color-primary-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: var(--spacing-md);
+}
+
+.stat-icon-wrapper svg {
+  width: 20px;
+  height: 20px;
+  color: var(--color-primary);
 }
 
 .stat-value {
-  font-size: 36px;
+  font-size: 32px;
   font-weight: 700;
-  margin-bottom: 6px;
-  color: var(--text-main);
+  color: var(--color-text-primary);
+  line-height: 1.2;
+  margin: 0 0 var(--spacing-xs) 0;
+  letter-spacing: -0.02em;
 }
 
 .stat-label {
-  font-size: 14px;
-  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
-/* Dashboard Sections (compatibilité) */
+/* ============================================
+   DASHBOARD SECTIONS
+   ============================================ */
+
 .dashboard-section {
-  margin-bottom: 40px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
+  margin-bottom: var(--spacing-lg);
+  box-shadow: var(--shadow-card);
 }
 
 .dashboard-section h2 {
-  font-size: 20px;
+  font-size: 16px;
   font-weight: 600;
-  margin-bottom: 16px;
-  color: var(--text-main);
+  color: var(--color-text-primary);
+  margin: 0 0 var(--spacing-md) 0;
+  letter-spacing: -0.01em;
 }
 
 .dashboard-placeholder {
-  font-size: 14px;
-  color: var(--text-tertiary);
-  padding: 24px;
-  background: var(--bg-card);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--border-subtle);
+  padding: var(--spacing-2xl);
   text-align: center;
-}
-
-/* Settings Grid (compatibilité) */
-.settings-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 20px;
-}
-
-.setting-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.setting-card label {
-  font-weight: 500;
+  color: var(--color-text-tertiary);
   font-size: 14px;
-  color: var(--text-main);
-}
-
-.setting-card input[type="number"],
-.setting-card input[type="text"],
-.setting-card select {
-  padding: 8px 12px;
+  background: var(--color-bg);
   border-radius: var(--radius-md);
-  border: 1px solid var(--border-subtle);
-  font-size: 14px;
-  width: 100%;
-  background: var(--bg-card);
-  color: var(--text-main);
-  transition: border-color 0.2s;
+  border: 1px dashed var(--color-border);
 }
 
-.setting-card input:focus {
-  outline: none;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(9, 9, 11, 0.1);
-}
+/* ============================================
+   GRAPH & CHARTS
+   ============================================ */
 
-.setting-card button {
-  margin-top: 12px;
-  padding: 10px;
-  border-radius: var(--radius-md);
-  border: none;
-  background: var(--primary);
-  color: #fff;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s var(--ease-spring), transform 0.1s var(--ease-spring);
-}
-
-.setting-card button:hover {
-  background: var(--primary-hover);
-}
-
-.setting-card button:active {
-  transform: scale(0.98);
-}
-
-/* Graph Styles (compatibilité) */
 .graph-container-large {
-  padding: 1.5rem 0;
+  padding: var(--spacing-lg) 0;
   min-height: 200px;
 }
 
 .graph-bars {
   display: flex;
   align-items: flex-end;
-  gap: 0.75rem;
+  gap: var(--spacing-md);
   height: 200px;
+  padding: 0 var(--spacing-sm);
 }
 
 .graph-bar-item {
@@ -555,55 +281,46 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--spacing-sm);
+  min-width: 0;
 }
 
 .graph-bar-value {
-  font-size: 0.875rem;
+  font-size: 13px;
   font-weight: 600;
-  color: var(--text-main);
+  color: var(--color-text-primary);
 }
 
 .graph-bar {
   width: 100%;
-  background: var(--primary);
-  border-radius: 4px 4px 0 0;
-  min-height: 10px;
-  transition: all 0.3s var(--ease-spring);
+  background: var(--color-primary);
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  min-height: 8px;
+  transition: all var(--transition-base);
+  position: relative;
+}
+
+.graph-bar:hover {
+  background: var(--color-primary-hover);
+  opacity: 0.9;
 }
 
 .graph-bar-label {
-  font-size: 0.75rem;
-  color: var(--text-secondary);
+  font-size: 11px;
+  color: var(--color-text-secondary);
   text-align: center;
+  font-weight: 500;
 }
 
-/* Empty States (compatibilité) */
-.empty-state-large {
-  min-height: 200px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  padding: 2rem;
-}
+/* ============================================
+   LISTS (Products, Activity)
+   ============================================ */
 
-.empty-state-large p {
-  color: var(--text-secondary);
-  font-size: 0.9375rem;
-  margin: 0;
-}
-
-/* Products and Activity Lists (compatibilité) */
 .products-list,
 .activity-list {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  background: var(--bg-card);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  padding: 20px;
+  gap: 0;
 }
 
 .product-item,
@@ -611,8 +328,8 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.75rem 0;
-  border-bottom: 1px solid var(--border-subtle);
+  padding: var(--spacing-md) 0;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .product-item:last-child,
@@ -622,12 +339,13 @@ body {
 
 .product-name {
   flex: 1;
-  min-width: 0;
-  font-size: 0.9375rem;
-  color: var(--text-main);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  margin-right: var(--spacing-md);
 }
 
 .activity-info {
@@ -636,121 +354,212 @@ body {
 }
 
 .activity-title {
-  font-size: 0.9375rem;
+  font-size: 14px;
   font-weight: 500;
-  color: var(--text-main);
-  margin: 0 0 0.25rem 0;
+  color: var(--color-text-primary);
+  margin: 0 0 var(--spacing-xs) 0;
 }
 
 .activity-date {
-  font-size: 0.8125rem;
-  color: var(--text-secondary);
+  font-size: 12px;
+  color: var(--color-text-secondary);
   margin: 0;
 }
 
-/* Credits Balance (compatibilité) */
+/* ============================================
+   SETTINGS GRID
+   ============================================ */
+
+.settings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--spacing-lg);
+  margin-bottom: var(--spacing-lg);
+}
+
+.setting-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.setting-card label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.setting-card input[type="number"],
+.setting-card input[type="text"],
+.setting-card select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--color-text-primary);
+  background: var(--color-surface);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.setting-card input:focus,
+.setting-card select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+
+.setting-card button {
+  padding: 10px 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-family: 'Inter', sans-serif;
+}
+
+.setting-card button:hover:not(:disabled) {
+  background: var(--color-bg);
+  border-color: var(--color-border-hover);
+}
+
+.setting-card button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ============================================
+   CREDITS PAGE
+   ============================================ */
+
 .credits-balance {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-xl);
+  margin-bottom: var(--spacing-xl);
+  box-shadow: var(--shadow-card);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: var(--bg-card);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  padding: 24px 28px;
-  margin-bottom: 32px;
-  box-shadow: var(--shadow-xs);
 }
 
 .credits-amount {
   font-size: 48px;
   font-weight: 700;
-  letter-spacing: -0.03em;
-  color: var(--text-main);
+  color: var(--color-text-primary);
   line-height: 1;
+  margin: 0 0 var(--spacing-xs) 0;
+  letter-spacing: -0.03em;
 }
 
 .credits-label {
-  margin-top: 8px;
-  font-size: 14px;
-  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
-/* Pricing Grid (compatibilité) */
 .pricing-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 24px;
-  margin-bottom: 40px;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--spacing-lg);
+  margin-bottom: var(--spacing-xl);
 }
 
 .plan-card {
-  position: relative;
-  background: var(--bg-card);
-  border: 1px solid var(--border-subtle);
+  background: var(--color-surface);
+  border: 2px solid var(--color-border);
   border-radius: var(--radius-lg);
-  padding: 28px;
-  transition: all 0.2s var(--ease-spring);
+  padding: var(--spacing-xl);
+  position: relative;
+  transition: all var(--transition-base);
   display: flex;
   flex-direction: column;
+  height: 100%;
 }
 
 .plan-card:hover {
-  border-color: var(--primary);
-  box-shadow: var(--shadow-md);
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-card-hover);
   transform: translateY(-2px);
 }
 
 .plan-card.featured {
-  border: 2px solid var(--primary);
-  box-shadow: var(--shadow-lg);
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-card-hover);
+  background: linear-gradient(to bottom, var(--color-surface) 0%, var(--color-primary-light) 100%);
 }
 
 .plan-badge {
   position: absolute;
   top: -12px;
-  left: 24px;
-  background: var(--primary);
-  color: white;
-  font-size: 12px;
-  font-weight: 600;
+  left: var(--spacing-lg);
+  background: var(--color-primary);
+  color: #FFFFFF;
+  font-size: 11px;
+  font-weight: 700;
   padding: 4px 12px;
   border-radius: var(--radius-sm);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.1em;
 }
 
 .plan-name {
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 700;
-  color: var(--text-main);
-  margin-bottom: 12px;
+  color: var(--color-text-primary);
+  margin: 0 0 var(--spacing-md) 0;
+  letter-spacing: -0.01em;
 }
 
 .plan-price {
   font-size: 36px;
   font-weight: 700;
-  color: var(--text-main);
-  margin-bottom: 20px;
+  color: var(--color-text-primary);
+  margin: 0 0 var(--spacing-md) 0;
   line-height: 1;
+  letter-spacing: -0.02em;
 }
 
 .plan-price span {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 400;
-  color: var(--text-secondary);
+  color: var(--color-text-secondary);
 }
 
 .plan-features {
-  margin-bottom: 24px;
-  min-height: 120px;
   flex: 1;
+  margin-bottom: var(--spacing-lg);
+  min-height: 120px;
 }
 
 .plan-feature {
   font-size: 14px;
-  color: var(--text-secondary);
-  margin-bottom: 8px;
-  padding-left: 8px;
+  color: var(--color-text-secondary);
+  margin-bottom: var(--spacing-sm);
+  padding-left: var(--spacing-md);
+  position: relative;
+}
+
+.plan-feature::before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  color: var(--color-primary);
+  font-weight: 600;
 }
 
 .plan-cta {
@@ -759,46 +568,92 @@ body {
 
 .plan-button {
   width: 100%;
-  background: var(--primary);
-  color: white;
-  border: none;
+  padding: 12px 24px;
   border-radius: var(--radius-md);
-  padding: 14px 24px;
+  border: none;
+  background: var(--color-primary);
+  color: #FFFFFF;
   font-size: 15px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s var(--ease-spring);
+  transition: all var(--transition-fast);
+  font-family: 'Inter', sans-serif;
+  box-shadow: var(--shadow-button);
 }
 
 .plan-button:hover:not(:disabled) {
-  background: var(--primary-hover);
+  background: var(--color-primary-hover);
   transform: translateY(-1px);
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--shadow-card-hover);
 }
 
 .plan-button:disabled {
-  opacity: 0.5;
+  opacity: 0.6;
   cursor: not-allowed;
 }
 
 .plan-card.featured .plan-button {
-  background: var(--primary);
-  box-shadow: var(--shadow-sm);
+  background: var(--color-primary);
+  box-shadow: var(--shadow-card-hover);
 }
 
-/* Responsive (compatibilité) */
-@media (max-width: 768px) {
-  .app-container {
-    padding: 24px 16px 60px;
-  }
+/* ============================================
+   RESPONSIVE
+   ============================================ */
 
+@media (max-width: 1024px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .pricing-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .settings-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .app-container {
+    padding: var(--spacing-lg);
+  }
+  
+  .stats-grid,
   .pricing-grid {
     grid-template-columns: 1fr;
   }
-
+  
   .credits-balance {
     flex-direction: column;
     align-items: flex-start;
-    gap: 16px;
+    gap: var(--spacing-md);
   }
+  
+  .credits-amount {
+    font-size: 36px;
+  }
+}
+
+/* ============================================
+   UTILITIES
+   ============================================ */
+
+.text-center {
+  text-align: center;
+}
+
+.mb-0 { margin-bottom: 0; }
+.mb-1 { margin-bottom: var(--spacing-xs); }
+.mb-2 { margin-bottom: var(--spacing-sm); }
+.mb-3 { margin-bottom: var(--spacing-md); }
+.mb-4 { margin-bottom: var(--spacing-lg); }
+
+.mt-auto {
+  margin-top: auto;
+}
+
+.w-full {
+  width: 100%;
 }
