@@ -543,7 +543,11 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 };
 
 export default function Credits() {
+  console.log("[Credits] Component rendering");
+  
   const { shop, error } = useLoaderData<typeof loader>();
+  console.log("[Credits] Loader data:", { hasShop: !!shop, hasError: !!error, credits: shop?.credits });
+  
   const fetcher = useFetcher<typeof action>();
   const revalidator = useRevalidator();
   const currentCredits = shop?.credits || 0;
@@ -554,6 +558,7 @@ export default function Credits() {
   revalidatorRef.current = revalidator;
 
   const isSubmitting = fetcher.state === "submitting";
+  console.log("[Credits] Component state initialized");
 
   // Rediriger vers le checkout Shopify après création de la commande
   useEffect(() => {
@@ -670,24 +675,30 @@ export default function Credits() {
         <Layout.Section>
           <Card>
             <BlockStack gap="400">
-              <Text variant="heading2xl" as="p" fontWeight="bold" alignment="center">
-                {currentCredits.toLocaleString("en-US")}
-              </Text>
-              <Text variant="bodyMd" tone="subdued" as="p" alignment="center">
-                Jetons restants
-              </Text>
-              <Text variant="bodySm" tone="subdued" as="p" alignment="center">
-                Les jetons n'expirent jamais
-              </Text>
+              <Box textAlign="center">
+                <Text variant="heading2xl" as="p" fontWeight="bold">
+                  {currentCredits.toLocaleString("en-US")}
+                </Text>
+              </Box>
+              <Box textAlign="center">
+                <Text variant="bodyMd" tone="subdued" as="p">
+                  Jetons restants
+                </Text>
+              </Box>
+              <Box textAlign="center">
+                <Text variant="bodySm" tone="subdued" as="p">
+                  Les jetons n'expirent jamais
+                </Text>
+              </Box>
             </BlockStack>
           </Card>
         </Layout.Section>
 
         {/* Packs de crédits */}
         <Layout.Section>
-          <Layout>
+          <InlineStack gap="400" align="stretch" blockAlign="stretch">
             {CREDIT_PACKS.map((pack) => (
-              <Layout.Section variant="oneHalf" key={pack.id}>
+              <Box key={pack.id} minWidth="50%">
                 <Card>
                   <BlockStack gap="400">
                     {pack.highlight && (
@@ -724,9 +735,9 @@ export default function Credits() {
                     </BlockStack>
                   </BlockStack>
                 </Card>
-              </Layout.Section>
+              </Box>
             ))}
-          </Layout>
+          </InlineStack>
         </Layout.Section>
 
         {/* Historique des recharges */}
@@ -738,9 +749,11 @@ export default function Credits() {
               </Text>
               <Divider />
               <Box padding="400">
-                <Text variant="bodyMd" tone="subdued" as="p" alignment="center">
-                  Aucun historique disponible pour le moment
-                </Text>
+                <Box textAlign="center">
+                  <Text variant="bodyMd" tone="subdued" as="p">
+                    Aucun historique disponible pour le moment
+                  </Text>
+                </Box>
               </Box>
             </BlockStack>
           </Card>
