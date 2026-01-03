@@ -168,7 +168,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                 throw new Error('Missing shop or product ID');
             }
             
-            const url = new URL(\`\${CONFIG.apiBase}/status\`, window.location.origin);
+            // Build URL correctly - CONFIG.apiBase is already a full URL
+            const url = new URL(\`\${CONFIG.apiBase}/status\`);
             url.searchParams.set('shop', this.shop);
             url.searchParams.set('product_id', this.productId);
             
@@ -278,7 +279,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         }
         
         getProductImage() {
-            // Try multiple selectors
+            // Try multiple selectors for product image
             const selectors = [
                 '.product__media img',
                 '.product-single__media img',
@@ -288,13 +289,60 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                 '.product-gallery img',
                 'img[data-product-image]',
                 '.product__photo img',
-                '.product-images img'
+                '.product-images img',
+                '.product-image img',
+                '.product__image img',
+                '.product-photo img',
+                'img.product-image',
+                'img.product__image',
+                '.product-single__photos img',
+                '.product-form__image img',
+                'main img[src*="products"]',
+                'article img[src*="products"]',
+                '.product img:first-of-type'
             ];
             
             for (const selector of selectors) {
-                const img = document.querySelector(selector);
-                if (img && img.src && !img.src.includes('placeholder')) {
-                    return img.src;
+                const img = document.querySelector(selector) as HTMLImageElement;
+                if (img && img.src) {
+                    // Skip placeholders, loading images, and very small images
+                    const src = img.src;
+                    if (!src.includes('placeholder') && 
+                        !src.includes('loading') && 
+                        !src.includes('spinner') &&
+                        !src.includes('data:image/svg') &&
+                        img.naturalWidth > 100) {
+                        // Try to get high-res version if available
+                        const dataSrc = img.getAttribute('data-src') || img.getAttribute('data-original');
+                        return dataSrc || src;
+                    }
+                }
+            }
+            
+            // Fallback: try to get from Shopify product data
+            if (window.Shopify && (window as any).Shopify.product) {
+                const product = (window as any).Shopify.product;
+                if (product.featured_image) {
+                    return product.featured_image;
+                }
+                if (product.images && product.images.length > 0) {
+                    return product.images[0];
+                }
+            }
+            
+            // Last resort: get first large image in the product area
+            const productArea = document.querySelector('[data-product-id]')?.closest('main') || 
+                               document.querySelector('.product') ||
+                               document.querySelector('main');
+            if (productArea) {
+                const imgs = productArea.querySelectorAll('img');
+                for (const img of Array.from(imgs)) {
+                    const imgEl = img as HTMLImageElement;
+                    if (imgEl.src && 
+                        imgEl.naturalWidth > 200 && 
+                        !imgEl.src.includes('placeholder')) {
+                        return imgEl.src;
+                    }
                 }
             }
             
@@ -806,9 +854,17 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         }
         
         setupButtonEvents() {
-            const triggerBtn = this.shadowRoot.querySelector('#vton-trigger-btn');
+            const triggerBtn = this.shadowRoot?.querySelector('#vton-trigger-btn');
             if (triggerBtn) {
-                triggerBtn.addEventListener('click', () => this.openModal());
+                console.log('[VTON] Setting up button events');
+                triggerBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('[VTON] Button clicked, opening modal');
+                    this.openModal();
+                }, true);
+            } else {
+                console.warn('[VTON] Trigger button not found in shadow root');
             }
         }
         
@@ -816,14 +872,37 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         // MODAL MANAGEMENT
         // ==========================================
         openModal() {
+            console.log('[VTON] openModal called');
             // Create modal in document body (outside shadow DOM for z-index)
             let modal = document.getElementById('vton-modal-overlay');
             if (!modal) {
+                console.log('[VTON] Creating new modal');
                 modal = this.createModal();
                 document.body.appendChild(modal);
+            } else {
+                console.log('[VTON] Using existing modal');
             }
             modal.classList.add('active');
             document.body.style.overflow = 'hidden';
+            
+            // Ensure product image is loaded
+            if (!this.productImage) {
+                this.productImage = this.getProductImage();
+                console.log('[VTON] Product image:', this.productImage);
+            }
+            
+            // Display product image in modal if available
+            const shadowRoot = modal.shadowRoot;
+            if (shadowRoot && this.productImage) {
+                const productPreview = shadowRoot.querySelector('#vton-product-preview') as HTMLElement;
+                const productImg = shadowRoot.querySelector('#vton-product-img') as HTMLImageElement;
+                if (productPreview && productImg) {
+                    productImg.src = this.productImage;
+                    // Show product image in initial state
+                    productPreview.style.display = 'block';
+                }
+            }
+            
             this.setState(STATE.INITIAL);
         }
         
@@ -1206,7 +1285,11 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                             <div class="vton-preview">
                                 <img id="vton-preview-img" class="vton-preview-img" src="" alt="Preview">
                             </div>
-                            <button class="vton-generate" id="vton-generate-btn">Generate Try-On</button>
+                            <div class="vton-product-preview" id="vton-product-preview" style="display: none;">
+                                <div style="font-size: 14px; color: #6b7280; margin-bottom: 8px; text-align: center;">Produit à essayer:</div>
+                                <img id="vton-product-img" class="vton-preview-img" src="" alt="Product" style="max-height: 200px;">
+                            </div>
+                            <button class="vton-generate" id="vton-generate-btn">Générer</button>
                         </div>
                         
                         <!-- Loading State -->
@@ -1269,28 +1352,47 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                 }
             });
             
-            // File upload
+            // File upload - use capture phase to ensure events work in Shadow DOM
             const uploadArea = shadowRoot.querySelector('#vton-upload-area');
             const fileInput = shadowRoot.querySelector('#vton-file-input');
             if (uploadArea && fileInput) {
-                uploadArea.addEventListener('click', () => fileInput.click());
+                // Click on upload area
+                uploadArea.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    fileInput.click();
+                }, true);
+                
+                // Drag and drop handlers
                 uploadArea.addEventListener('dragover', (e) => {
                     e.preventDefault();
+                    e.stopPropagation();
                     uploadArea.style.borderColor = '#3b82f6';
-                });
-                uploadArea.addEventListener('dragleave', () => {
+                }, true);
+                
+                uploadArea.addEventListener('dragleave', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
                     uploadArea.style.borderColor = '#d1d5db';
-                });
+                }, true);
+                
                 uploadArea.addEventListener('drop', (e) => {
                     e.preventDefault();
+                    e.stopPropagation();
                     uploadArea.style.borderColor = '#d1d5db';
                     const file = e.dataTransfer.files[0];
-                    if (file) widget.handlePhotoUpload(file);
-                });
+                    if (file) {
+                        widget.handlePhotoUpload(file);
+                    }
+                }, true);
+                
+                // File input change
                 fileInput.addEventListener('change', (e) => {
-                    const file = e.target.files[0];
-                    if (file) widget.handlePhotoUpload(file);
-                });
+                    e.stopPropagation();
+                    const file = (e.target as HTMLInputElement).files?.[0];
+                    if (file) {
+                        widget.handlePhotoUpload(file);
+                    }
+                }, true);
             }
             
             // Generate button
@@ -1372,21 +1474,38 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         // ==========================================
         handlePhotoUpload(file) {
             if (!file || !file.type.startsWith('image/')) {
-                this.showError('Please upload an image file');
+                this.showError('Veuillez télécharger un fichier image');
+                return;
+            }
+            
+            // Validate file size (max 10MB)
+            if (file.size > 10 * 1024 * 1024) {
+                this.showError('L\'image est trop grande. Taille maximale: 10MB');
                 return;
             }
             
             const reader = new FileReader();
             reader.onload = (e) => {
-                this.userPhoto = e.target.result;
+                this.userPhoto = e.target?.result as string;
                 const modal = document.getElementById('vton-modal-overlay');
                 if (modal && modal.shadowRoot) {
-                    const previewImg = modal.shadowRoot.querySelector('#vton-preview-img');
+                    const previewImg = modal.shadowRoot.querySelector('#vton-preview-img') as HTMLImageElement;
                     if (previewImg && this.userPhoto) {
                         previewImg.src = this.userPhoto;
                     }
+                    
+                    // Show product image if available
+                    const productPreview = modal.shadowRoot.querySelector('#vton-product-preview') as HTMLElement;
+                    const productImg = modal.shadowRoot.querySelector('#vton-product-img') as HTMLImageElement;
+                    if (productPreview && productImg && this.productImage) {
+                        productImg.src = this.productImage;
+                        productPreview.style.display = 'block';
+                    }
                 }
                 this.setState(STATE.VERIFICATION);
+            };
+            reader.onerror = () => {
+                this.showError('Erreur lors de la lecture du fichier');
             };
             reader.readAsDataURL(file);
         }
@@ -1411,8 +1530,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                     ? this.userPhoto.split(',')[1] 
                     : this.userPhoto;
                 
-                // Build API URL
-                const url = new URL(\`\${CONFIG.apiBase}/generate\`, window.location.origin);
+                // Build API URL correctly - CONFIG.apiBase is already a full URL
+                const url = new URL(\`\${CONFIG.apiBase}/generate\`);
                 if (this.shop) {
                     url.searchParams.set('shop', this.shop);
                 }

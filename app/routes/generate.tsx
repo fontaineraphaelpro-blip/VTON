@@ -1,10 +1,17 @@
 /**
  * ==========================================
- * APP PROXY - GENERATE ENDPOINT
+ * APP PROXY - GENERATE ENDPOINT (App Proxy route)
  * ==========================================
  * 
- * Route: POST /apps/tryon/generate
- * Generates a virtual try-on from the storefront.
+ * Route: POST /generate (via Shopify App Proxy)
+ * This route handles requests from Shopify App Proxy which strips the /apps/tryon prefix.
+ * 
+ * Shopify App Proxy configuration:
+ * - prefix: "apps"
+ * - subpath: "tryon"
+ * 
+ * So requests to https://store.myshopify.com/apps/tryon/generate
+ * are proxied to this app as POST /generate
  */
 
 import type { ActionFunctionArgs } from "@remix-run/node";
@@ -266,7 +273,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       generation_time_ms: latencyMs,
     });
   } catch (error) {
-    console.error("Error in /apps/tryon/generate:", error);
+    console.error("Error in /generate (App Proxy):", error);
 
     // Log error in tryon_logs
     try {
