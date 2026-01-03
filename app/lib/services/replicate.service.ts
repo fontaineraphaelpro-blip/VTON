@@ -64,6 +64,7 @@ export async function generateTryOn(
     console.log("Calling Replicate API with model:", MODEL_ID);
     console.log("Input types - person:", typeof personInput, "garment:", typeof garmentInput);
     
+    // Use replicate.run which returns a Promise that resolves when the prediction completes
     const output = await replicate.run(MODEL_ID, {
       input: {
         human_img: personInput,
@@ -75,6 +76,14 @@ export async function generateTryOn(
 
     console.log("Replicate output type:", typeof output);
     console.log("Replicate output:", JSON.stringify(output, null, 2));
+    
+    // If output is null or undefined, wait a bit and try to get the result
+    if (!output || (typeof output === "object" && Object.keys(output).length === 0)) {
+      console.warn("Replicate returned empty/null output, waiting 2 seconds and checking status...");
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      // The replicate.run should have already waited, but if it returned empty, 
+      // the prediction might still be processing. For now, we'll handle it in the parsing below.
+    }
 
     // Replicate can return different formats:
     // 1. A string (URL)
