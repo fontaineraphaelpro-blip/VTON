@@ -444,7 +444,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                         }
                     } else {
                         // PRIORITY 4: Try to find main product container
-                        const productContainer = document.querySelector('[data-product-id]')?.closest('main') ||
+                        const productIdElement = document.querySelector('[data-product-id]');
+                        const productContainer = (productIdElement && productIdElement.closest('main')) ||
                                                 document.querySelector('.product') ||
                                                 document.querySelector('[data-product]') ||
                                                 document.querySelector('main');
