@@ -1,7 +1,7 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useLoaderData, useFetcher, useRevalidator, Link } from "@remix-run/react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   Page,
   Layout,
@@ -14,10 +14,12 @@ import {
   Divider,
   TextField,
   Box,
+  Switch,
+  Badge,
 } from "@shopify/polaris";
 import { TitleBar } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
-import { getShop, upsertShop, getTryonLogs, getTopProducts } from "../lib/services/db.service";
+import { getShop, upsertShop, getTryonLogs, getTopProducts, getTryonStatsByDay } from "../lib/services/db.service";
 import { ensureTables } from "../lib/db-init.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -27,10 +29,11 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
     await ensureTables();
 
-    const [shopData, recentLogs, topProducts] = await Promise.all([
+    const [shopData, recentLogs, topProducts, dailyStats] = await Promise.all([
       getShop(shop),
       getTryonLogs(shop, { limit: 10, offset: 0 }).catch(() => []),
       getTopProducts(shop, 5).catch(() => []),
+      getTryonStatsByDay(shop, 30).catch(() => []),
     ]);
 
     // Installer automatiquement le script tag si pas déjà installé
@@ -197,6 +200,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       shop: shopData || null,
       recentLogs: Array.isArray(recentLogs) ? recentLogs.slice(0, 5) : [],
       topProducts: Array.isArray(topProducts) ? topProducts : [],
+      dailyStats: Array.isArray(dailyStats) ? dailyStats : [],
     });
   } catch (error) {
     console.error("Dashboard loader error:", error);
@@ -218,19 +222,23 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const widgetBg = formData.get("widgetBg") as string;
   const widgetColor = formData.get("widgetColor") as string;
   const maxTriesPerUser = parseInt(formData.get("maxTriesPerUser") as string);
+  const isEnabled = formData.get("isEnabled") === "true";
+  const dailyLimit = parseInt(formData.get("dailyLimit") as string);
 
   await upsertShop(shop, {
     widgetText,
     widgetBg,
     widgetColor,
     maxTriesPerUser,
+    isEnabled,
+    dailyLimit,
   });
 
   return json({ success: true });
 };
 
 export default function Dashboard() {
-  const { shop, recentLogs, topProducts, error } = useLoaderData<typeof loader>();
+  const { shop, recentLogs, topProducts, dailyStats, error } = useLoaderData<typeof loader>();
   const fetcher = useFetcher<typeof action>();
   const revalidator = useRevalidator();
 
@@ -240,6 +248,9 @@ export default function Dashboard() {
   const conversionRate = totalTryons > 0
     ? ((totalAtc / totalTryons) * 100).toFixed(1)
     : "0.0";
+  
+  // Calculate 30-day total
+  const last30DaysTotal = dailyStats.reduce((sum: number, stat: any) => sum + stat.count, 0);
 
   const handleSave = (formData: FormData) => {
     // Ensure all required fields are present
@@ -255,8 +266,16 @@ export default function Dashboard() {
     if (!formData.get("maxTriesPerUser")) {
       formData.set("maxTriesPerUser", String(shop?.max_tries_per_user || 5));
     }
+    if (!formData.get("isEnabled")) {
+      formData.set("isEnabled", shop?.is_enabled !== false ? "true" : "false");
+    }
+    if (!formData.get("dailyLimit")) {
+      formData.set("dailyLimit", String(shop?.daily_limit || 100));
+    }
     fetcher.submit(formData, { method: "post" });
   };
+  
+  const [isEnabled, setIsEnabled] = useState(shop?.is_enabled !== false);
 
   useEffect(() => {
     if (fetcher.data?.success) {
@@ -296,76 +315,160 @@ export default function Dashboard() {
   return (
     <Page>
       <TitleBar title="Dashboard - VTON Magic" />
-      <div className="vton-page-container">
-        {/* Header */}
-        <header className="vton-header-simple">
-          <div className="vton-header-logo">
-            <div className="vton-logo-icon-blue">V</div>
-            <span className="vton-header-title">VTON Magic</span>
-          </div>
-          <div className="vton-status-badge">
-            <div className="vton-status-dot-green"></div>
-            Active
-          </div>
-        </header>
-
-        <div className="vton-page-content">
-          {error && (
+      <Layout>
+        {error && (
+          <Layout.Section>
             <Banner tone="critical" title="Error">
               {error}
             </Banner>
-          )}
+          </Layout.Section>
+        )}
 
-          {/* Main Stats - Horizontal Layout */}
-          <div className="vton-stats-grid">
-            {stats.map((stat) => (
-              <Link to={stat.link} key={stat.label} className="vton-stat-card-link">
-                <div className="vton-stat-card-white">
-                  <div className="vton-stat-content">
-                    <div className="vton-stat-value-white">{stat.value}</div>
-                    <div className="vton-stat-label-white">{stat.label}</div>
-                  </div>
-                  <div className="vton-stat-icon">{stat.icon}</div>
-                </div>
-              </Link>
-            ))}
-          </div>
-
-          {/* Success Message */}
-          {fetcher.data?.success && (
+        {fetcher.data?.success && (
+          <Layout.Section>
             <Banner tone="success">
               Configuration saved successfully
             </Banner>
-          )}
+          </Layout.Section>
+        )}
 
-          {/* Low Credits Alert */}
-          {credits < 50 && (
-            <div className="vton-alert-urgent">
-              <div className="vton-alert-icon">!</div>
-              <div className="vton-alert-content">
-                <div className="vton-alert-title">Low Credits</div>
-                <div className="vton-alert-message">
-                  You have {credits} credit{credits > 1 ? "s" : ""} remaining. Recharge now.
-                </div>
-              </div>
-              <Link to="/app/credits" className="vton-alert-button">
-                Buy Credits →
-              </Link>
-            </div>
-          )}
+        {/* Low Balance Alert */}
+        {credits < 50 && (
+          <Layout.Section>
+            <Banner tone="warning" title="Low Credits Balance">
+              <p>
+                You have <strong>{credits}</strong> credit{credits > 1 ? "s" : ""} remaining. 
+                <Link to="/app/credits" style={{ marginLeft: "8px" }}>
+                  Recharge now →
+                </Link>
+              </p>
+            </Banner>
+          </Layout.Section>
+        )}
 
-          {/* Main Content - Horizontal Layout */}
-          <div className="vton-main-layout">
-            {/* Left Column */}
-            <div className="vton-main-left">
-              {/* Widget Configuration */}
+        {/* KPI Cards */}
+        <Layout.Section>
+          <Layout>
+            <Layout.Section variant="oneQuarter">
+              <Card>
+                <BlockStack gap="200">
+                  <Text variant="heading2xl" as="p" fontWeight="bold">
+                    {credits.toLocaleString("en-US")}
+                  </Text>
+                  <Text variant="bodySm" tone="subdued" as="p">
+                    Jetons restants
+                  </Text>
+                  <Button url="/app/credits" variant="plain" size="slim">
+                    Acheter →
+                  </Button>
+                </BlockStack>
+              </Card>
+            </Layout.Section>
+            <Layout.Section variant="oneQuarter">
+              <Card>
+                <BlockStack gap="200">
+                  <Text variant="heading2xl" as="p" fontWeight="bold">
+                    {last30DaysTotal.toLocaleString("en-US")}
+                  </Text>
+                  <Text variant="bodySm" tone="subdued" as="p">
+                    Total Try-ons (30j)
+                  </Text>
+                  <Button url="/app/history" variant="plain" size="slim">
+                    Voir l'historique →
+                  </Button>
+                </BlockStack>
+              </Card>
+            </Layout.Section>
+            <Layout.Section variant="oneQuarter">
+              <Card>
+                <BlockStack gap="200">
+                  <Text variant="heading2xl" as="p" fontWeight="bold">
+                    {totalAtc.toLocaleString("en-US")}
+                  </Text>
+                  <Text variant="bodySm" tone="subdued" as="p">
+                    Add to Cart
+                  </Text>
+                </BlockStack>
+              </Card>
+            </Layout.Section>
+            <Layout.Section variant="oneQuarter">
+              <Card>
+                <BlockStack gap="200">
+                  <Text variant="heading2xl" as="p" fontWeight="bold">
+                    {conversionRate}%
+                  </Text>
+                  <Text variant="bodySm" tone="subdued" as="p">
+                    Taux de conversion
+                  </Text>
+                </BlockStack>
+              </Card>
+            </Layout.Section>
+          </Layout>
+        </Layout.Section>
+
+        {/* Graphique des générations par jour */}
+        <Layout.Section>
+          <Card>
+            <BlockStack gap="400">
+              <Text as="h2" variant="headingLg" fontWeight="semibold">
+                Générations par jour (30 derniers jours)
+              </Text>
+              <Divider />
+              {dailyStats.length > 0 ? (
+                <Box minHeight="300px" padding="400">
+                  {/* Simple bar chart representation with Polaris */}
+                  <BlockStack gap="200">
+                    {dailyStats.slice(-7).map((stat: any, index: number) => {
+                      const maxCount = Math.max(...dailyStats.map((s: any) => s.count));
+                      const percentage = maxCount > 0 ? (stat.count / maxCount) * 100 : 0;
+                      const date = new Date(stat.date);
+                      return (
+                        <BlockStack key={index} gap="100">
+                          <InlineStack align="space-between" blockAlign="center">
+                            <Text variant="bodySm" as="span">
+                              {date.toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
+                            </Text>
+                            <Text variant="bodySm" fontWeight="semibold" as="span">
+                              {stat.count}
+                            </Text>
+                          </InlineStack>
+                          <Box
+                            background="bg-surface-secondary"
+                            borderRadius="200"
+                            minHeight="8px"
+                            position="relative"
+                            overflow="hidden"
+                          >
+                            <Box
+                              background="bg-fill-brand"
+                              minHeight="8px"
+                              style={{ width: `${percentage}%` }}
+                            />
+                          </Box>
+                        </BlockStack>
+                      );
+                    })}
+                  </BlockStack>
+                </Box>
+              ) : (
+                <Box padding="400">
+                  <Text variant="bodyMd" tone="subdued" as="p" alignment="center">
+                    Aucune donnée disponible pour les 30 derniers jours
+                  </Text>
+                </Box>
+              )}
+            </BlockStack>
+          </Card>
+        </Layout.Section>
+
+        {/* Configuration et Réglages */}
+        <Layout.Section>
+          <Layout>
+            <Layout.Section variant="oneHalf">
               <Card>
                 <BlockStack gap="400">
                   <Text as="h2" variant="headingLg" fontWeight="semibold">
-                    Widget Configuration
-                  </Text>
-                  <Text variant="bodyMd" tone="subdued" as="p">
-                    Customize the appearance of the Try-On widget
+                    Réglages & Sécurité
                   </Text>
                   <Divider />
                   <form
@@ -376,74 +479,47 @@ export default function Dashboard() {
                     }}
                   >
                     <BlockStack gap="400">
-                      <TextField
-                        label="Button Text"
-                        name="widgetText"
-                        defaultValue={shop?.widget_text || "Try It On Now"}
-                        autoComplete="off"
-                        helpText="Text displayed on the widget button"
+                      <Switch
+                        label="Activer l'app sur le store"
+                        checked={isEnabled}
+                        onChange={setIsEnabled}
                       />
-                      <InlineStack gap="400" align="start">
-                        <Box minWidth="200px">
-                          <TextField
-                            label="Background Color"
-                            name="widgetBg"
-                            defaultValue={shop?.widget_bg || "#000000"}
-                            autoComplete="off"
-                            type="color"
-                          />
-                        </Box>
-                        <Box minWidth="200px">
-                          <TextField
-                            label="Text Color"
-                            name="widgetColor"
-                            defaultValue={shop?.widget_color || "#ffffff"}
-                            autoComplete="off"
-                            type="color"
-                          />
-                        </Box>
-                      </InlineStack>
+                      <input type="hidden" name="isEnabled" value={isEnabled ? "true" : "false"} />
                       <TextField
-                        label="Max try-ons per user/day"
+                        label="Plafond journalier"
+                        name="dailyLimit"
+                        type="number"
+                        defaultValue={String(shop?.daily_limit || 100)}
+                        autoComplete="off"
+                        helpText="Limite du nombre d'essais par jour (protection anti-abus)"
+                      />
+                      <TextField
+                        label="Max try-ons par utilisateur/jour"
                         name="maxTriesPerUser"
                         type="number"
                         defaultValue={String(shop?.max_tries_per_user || 5)}
                         autoComplete="off"
-                        helpText="Daily limit per user to prevent abuse"
+                        helpText="Limite quotidienne par utilisateur"
                       />
                       <InlineStack align="end">
                         <Button submit variant="primary" loading={fetcher.state === "submitting"}>
-                          Save Configuration
+                          Enregistrer
                         </Button>
                       </InlineStack>
                     </BlockStack>
                   </form>
                 </BlockStack>
               </Card>
-            </div>
+            </Layout.Section>
 
-            {/* Right Column */}
-            <div className="vton-main-right">
-              {/* Quick Actions */}
-              <div className="vton-actions-simple">
-                <Link to="/app/history" className="vton-action-secondary">
-                  <span className="vton-action-icon">📊</span>
-                  <div className="vton-action-text">
-                    <div className="vton-action-title">View History</div>
-                    <div className="vton-action-subtitle">See all sessions</div>
-                  </div>
-                  <span className="vton-action-arrow">→</span>
-                </Link>
-              </div>
-
-              {/* Popular Products */}
+            <Layout.Section variant="oneHalf">
               <Card>
                 <BlockStack gap="400">
                   <Text as="h2" variant="headingLg" fontWeight="semibold">
-                    Most Tried Products
+                    Produits les plus essayés
                   </Text>
                   <Text variant="bodyMd" tone="subdued" as="p">
-                    Your products with the most try-ons
+                    Vos produits avec le plus d'essayages
                   </Text>
                   <Divider />
                   {topProducts.length > 0 ? (
@@ -451,72 +527,74 @@ export default function Dashboard() {
                       {topProducts.map((product: any, index: number) => (
                         <InlineStack key={product.product_id || index} align="space-between" blockAlign="center">
                           <Text variant="bodyMd" as="span">
-                            {product.product_title || product.product_id}
+                            {product.product_title || product.product_id || "Produit inconnu"}
                           </Text>
-                          <Text variant="bodyMd" fontWeight="semibold" as="span">
-                            {product.count} try-on{product.count > 1 ? "s" : ""}
-                          </Text>
+                          <Badge tone="info">
+                            {product.tryons || product.count} essai{product.tryons > 1 ? "s" : ""}
+                          </Badge>
                         </InlineStack>
                       ))}
                     </BlockStack>
                   ) : (
-                    <div className="vton-empty-state">
-                      <Text variant="bodyMd" tone="subdued" as="p">
-                        No try-ons yet. Start using the widget on your products!
+                    <Box padding="400">
+                      <Text variant="bodyMd" tone="subdued" as="p" alignment="center">
+                        Aucun essai pour le moment. Commencez à utiliser le widget sur vos produits !
                       </Text>
-                    </div>
+                    </Box>
                   )}
                 </BlockStack>
               </Card>
+            </Layout.Section>
+          </Layout>
+        </Layout.Section>
 
-              {/* Recent Activity */}
-              <Card>
-                <BlockStack gap="400">
-                  <InlineStack align="space-between" blockAlign="center">
-                    <Text variant="headingLg" fontWeight="bold" as="h2">
-                      Recent Activity
-                    </Text>
-                    <Button url="/app/history" variant="plain">
-                      View All →
-                    </Button>
-                  </InlineStack>
-                  <Divider />
-                  {recentLogs.length > 0 ? (
-                    <BlockStack gap="300">
-                      {recentLogs.slice(0, 5).map((log: any, index: number) => (
-                        <div key={log.id || index} className="vton-activity-item">
-                          <div className="vton-activity-content">
-                            <Text variant="bodyMd" fontWeight="medium" as="p">
-                              {log.product_title || log.product_id || "Unknown Product"}
-                            </Text>
-                            <Text variant="bodySm" tone="subdued" as="p">
-                              {new Date(log.created_at).toLocaleDateString("en-US", { 
-                                month: "short", 
-                                day: "numeric",
-                                hour: "2-digit",
-                                minute: "2-digit"
-                              })}
-                            </Text>
-                          </div>
-                          <div className={`vton-activity-status ${log.success ? "vton-activity-success" : "vton-activity-failed"}`}>
-                            {log.success ? "✓" : "✗"}
-                          </div>
-                        </div>
-                      ))}
-                    </BlockStack>
-                  ) : (
-                    <div className="vton-empty-state">
-                      <Text variant="bodyMd" tone="subdued" as="p">
-                        No recent activity. Try-ons will appear here once customers start using the widget.
-                      </Text>
-                    </div>
-                  )}
+        {/* Activité récente */}
+        <Layout.Section>
+          <Card>
+            <BlockStack gap="400">
+              <InlineStack align="space-between" blockAlign="center">
+                <Text variant="headingLg" fontWeight="bold" as="h2">
+                  Activité récente
+                </Text>
+                <Button url="/app/history" variant="plain">
+                  Voir tout →
+                </Button>
+              </InlineStack>
+              <Divider />
+              {recentLogs.length > 0 ? (
+                <BlockStack gap="300">
+                  {recentLogs.slice(0, 5).map((log: any, index: number) => (
+                    <InlineStack key={log.id || index} align="space-between" blockAlign="center">
+                      <BlockStack gap="100">
+                        <Text variant="bodyMd" fontWeight="medium" as="p">
+                          {log.product_title || log.product_id || "Produit inconnu"}
+                        </Text>
+                        <Text variant="bodySm" tone="subdued" as="p">
+                          {new Date(log.created_at).toLocaleDateString("fr-FR", { 
+                            month: "short", 
+                            day: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit"
+                          })}
+                        </Text>
+                      </BlockStack>
+                      <Badge tone={log.success ? "success" : "critical"}>
+                        {log.success ? "✓ Réussi" : "✗ Échec"}
+                      </Badge>
+                    </InlineStack>
+                  ))}
                 </BlockStack>
-              </Card>
-            </div>
-          </div>
-        </div>
-      </div>
+              ) : (
+                <Box padding="400">
+                  <Text variant="bodyMd" tone="subdued" as="p" alignment="center">
+                    Aucune activité récente. Les essais apparaîtront ici une fois que les clients commenceront à utiliser le widget.
+                  </Text>
+                </Box>
+              )}
+            </BlockStack>
+          </Card>
+        </Layout.Section>
+      </Layout>
     </Page>
   );
 }

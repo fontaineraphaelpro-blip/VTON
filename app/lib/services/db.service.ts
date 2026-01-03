@@ -57,6 +57,8 @@ export async function upsertShop(domain: string, data: {
   widgetBg?: string;
   widgetColor?: string;
   maxTriesPerUser?: number;
+  isEnabled?: boolean;
+  dailyLimit?: number;
   incrementTotalTryons?: boolean;
   incrementTotalAtc?: boolean;
 }) {
@@ -95,6 +97,14 @@ export async function upsertShop(domain: string, data: {
     if (data.maxTriesPerUser !== undefined) {
       updates.push(`max_tries_per_user = $${paramIndex++}`);
       params.push(data.maxTriesPerUser);
+    }
+    if (data.isEnabled !== undefined) {
+      updates.push(`is_enabled = $${paramIndex++}`);
+      params.push(data.isEnabled);
+    }
+    if (data.dailyLimit !== undefined) {
+      updates.push(`daily_limit = $${paramIndex++}`);
+      params.push(data.dailyLimit);
     }
     if (data.incrementTotalTryons) {
       updates.push(`total_tryons = total_tryons + 1`);
@@ -257,6 +267,29 @@ export async function getTopProducts(shop: string, limit: number = 10) {
   return result.rows.map((p: any) => ({
     product_id: p.product_id,
     tryons: parseInt(p.count),
+  }));
+}
+
+/**
+ * Gets tryon counts grouped by day for the last 30 days.
+ */
+export async function getTryonStatsByDay(shop: string, days: number = 30) {
+  const result = await query(
+    `SELECT 
+      DATE(created_at) as date,
+      COUNT(*) as count
+     FROM tryon_logs 
+     WHERE shop = $1 
+       AND created_at >= CURRENT_DATE - INTERVAL '${days} days'
+       AND success = true
+     GROUP BY DATE(created_at)
+     ORDER BY date ASC`,
+    [shop]
+  );
+  
+  return result.rows.map((r: any) => ({
+    date: r.date,
+    count: parseInt(r.count),
   }));
 }
 

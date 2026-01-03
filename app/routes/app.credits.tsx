@@ -19,45 +19,25 @@ import { authenticate } from "../shopify.server";
 import { getShop, upsertShop } from "../lib/services/db.service";
 import { ensureTables } from "../lib/db-init.server";
 
-// 3 Credit packs optimized for conversion AND high average order value
-// Strategy: Entry point (Starter), Middle tier (Pro), Premium (Enterprise)
+// Packs de crédits selon le cahier des charges
 const CREDIT_PACKS = [
   {
     id: "starter",
     name: "Starter",
-    credits: 50,
-    price: 19.99,
-    pricePerCredit: 0.40,
-    description: "Perfect to get started",
-    badge: null,
+    credits: 100,
+    price: 29.99, // Prix à définir selon votre stratégie
+    pricePerCredit: 0.30,
+    description: "Parfait pour démarrer",
     highlight: false,
-    savings: "20%",
-    popular: false,
   },
   {
     id: "pro",
     name: "Pro",
-    credits: 150,
-    price: 49.99,
-    pricePerCredit: 0.33,
-    description: "Best value for growing stores",
-    badge: "BEST VALUE",
-    savePercent: 33,
-    highlight: true,
-    savings: "33%",
-    popular: false,
-  },
-  {
-    id: "enterprise",
-    name: "Enterprise",
     credits: 500,
-    price: 149.99,
-    pricePerCredit: 0.30,
-    description: "Maximum savings for high volume",
-    badge: null,
-    highlight: false,
-    savings: "40%",
-    popular: false,
+    price: 129.99, // Prix à définir selon votre stratégie
+    pricePerCredit: 0.26,
+    description: "Idéal pour les boutiques en croissance",
+    highlight: true,
   },
 ];
 
@@ -548,151 +528,128 @@ export default function Credits() {
 
   return (
     <Page>
-      <TitleBar title="Credits - VTON Magic" />
-      <div className="vton-credits-page">
-        {/* Header */}
-        <header className="vton-header-simple">
-          <div className="vton-header-logo">
-            <div className="vton-logo-icon-blue">V</div>
-            <span className="vton-header-title">VTON Magic</span>
-          </div>
-          <div className="vton-status-badge">
-            <div className="vton-status-dot-green"></div>
-            Active
-          </div>
-        </header>
-
-        <div className="vton-credits-content">
-          {/* Top Row: Credits + Value Prop */}
-          <div className="vton-credits-top">
-            {/* Current Credits Display */}
-            <div className="vton-credits-display">
-              <div className="vton-credits-label">Your Credits</div>
-              <div className="vton-credits-amount">
-                {currentCredits.toLocaleString("en-US")}
-              </div>
-              <div className="vton-credits-subtitle">Credits never expire</div>
-            </div>
-
-            {/* Value Proposition */}
-            <div className="vton-value-prop">
-              <div className="vton-value-icon"></div>
-              <div className="vton-value-text">
-                <strong>Reduce returns by 2.5x</strong> and boost conversions with virtual try-on
-              </div>
-            </div>
-          </div>
-
-          {/* 3 Pricing Plans */}
-          <div className="vton-pricing-simple">
-            {CREDIT_PACKS.map((pack) => (
-              <div 
-                key={pack.id} 
-                className={`vton-plan-card ${pack.highlight ? "vton-plan-featured" : ""} ${pack.popular ? "vton-plan-popular" : ""}`}
-              >
-                {pack.badge && (
-                  <div className={`vton-plan-badge ${pack.highlight ? "vton-plan-badge-featured" : ""}`}>
-                    {pack.badge}
-                  </div>
-                )}
-                
-                <div className="vton-plan-header">
-                  <h3 className="vton-plan-name">{pack.name}</h3>
-                  <div className="vton-plan-credits">{pack.credits}</div>
-                  <div className="vton-plan-credits-label">credits</div>
-                </div>
-
-                <div className="vton-plan-features">
-                  <p className="vton-plan-description">{pack.description}</p>
-                  {pack.savings && (
-                    <div className="vton-plan-savings">Save {pack.savings}</div>
-                  )}
-                  <div className="vton-plan-price-per">€{pack.pricePerCredit.toFixed(2)} per credit</div>
-                </div>
-
-                <div className="vton-plan-footer">
-                  <div className="vton-plan-price">€{pack.price.toFixed(2)}</div>
-                  <button
-                    className={`vton-plan-button ${pack.highlight ? "vton-plan-button-primary" : ""}`}
-                    onClick={() => handlePurchase(pack.id)}
-                    disabled={isSubmitting}
-                  >
-                    {isSubmitting ? "Processing..." : "Get Started"}
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Custom Pack Section */}
-          <div className="vton-custom-section">
-            <div className="vton-custom-header">
-              <span className="vton-custom-icon"></span>
-              <div className="vton-custom-info">
-                <div className="vton-custom-title">Custom Pack</div>
-                <div className="vton-custom-subtitle">Get bulk pricing for 250+ credits</div>
-              </div>
-            </div>
-            <form
-              onSubmit={handleCustomPurchase}
-              className="vton-custom-form"
-            >
-              <div className="vton-custom-input-group">
-                <input 
-                  type="number" 
-                  name="customCredits"
-                  value={customAmount}
-                  onChange={(e) => setCustomAmount(e.target.value)}
-                  className="vton-custom-input"
-                  min={250}
-                  placeholder="250"
-                />
-                <span className="vton-custom-input-label">credits</span>
-                <button
-                  type="submit"
-                  className="vton-custom-button-submit"
-                  disabled={isSubmitting || !customAmount || parseInt(customAmount) < 250}
-                >
-                  {isSubmitting ? "Processing..." : "Get Custom Pack"}
-                </button>
-              </div>
-              <div className="vton-custom-price-info">
-                €{(parseFloat(customAmount) || 0) * 0.30} total (€0.30 per credit)
-              </div>
-            </form>
-          </div>
-        </div>
-
+      <TitleBar title="Achat Crédits - VTON Magic" />
+      <Layout>
         {error && (
-          <Banner tone="critical" title="Error">
-            {error}
-          </Banner>
+          <Layout.Section>
+            <Banner tone="critical" title="Erreur">
+              {error}
+            </Banner>
+          </Layout.Section>
         )}
 
         {fetcher.data?.success && !fetcher.data?.redirect && (
-          <Banner tone="success" title="Success!">
-            {fetcher.data.creditsAdded || fetcher.data.credits} credits added to your account.
-          </Banner>
+          <Layout.Section>
+            <Banner tone="success" title="Succès !">
+              {fetcher.data.creditsAdded || fetcher.data.credits} crédits ajoutés à votre compte.
+            </Banner>
+          </Layout.Section>
         )}
+
         {fetcher.data?.success && fetcher.data?.redirect && (
-          <Banner tone="info" title="Redirecting to payment...">
-            Redirecting to Shopify checkout...
-          </Banner>
+          <Layout.Section>
+            <Banner tone="info" title="Redirection vers le paiement...">
+              Redirection vers le checkout Shopify...
+            </Banner>
+          </Layout.Section>
         )}
+
         {fetcher.data?.error && (
-          <Banner 
-            tone="critical" 
-            title={fetcher.data.requiresAuth ? "Authentication Required" : "Error"}
-            action={fetcher.data.requiresAuth && fetcher.data.reauthUrl ? {
-              content: "Re-authenticate",
-              url: fetcher.data.reauthUrl,
-              target: "_top",
-            } : undefined}
-          >
-            {fetcher.data.error}
-          </Banner>
+          <Layout.Section>
+            <Banner 
+              tone="critical" 
+              title={fetcher.data.requiresAuth ? "Authentification requise" : "Erreur"}
+              action={fetcher.data.requiresAuth && fetcher.data.reauthUrl ? {
+                content: "Ré-authentifier",
+                url: fetcher.data.reauthUrl,
+                target: "_top",
+              } : undefined}
+            >
+              {fetcher.data.error}
+            </Banner>
+          </Layout.Section>
         )}
-      </div>
+
+        {/* Affichage des crédits actuels */}
+        <Layout.Section>
+          <Card>
+            <BlockStack gap="400">
+              <Text variant="heading2xl" as="p" fontWeight="bold" alignment="center">
+                {currentCredits.toLocaleString("en-US")}
+              </Text>
+              <Text variant="bodyMd" tone="subdued" as="p" alignment="center">
+                Jetons restants
+              </Text>
+              <Text variant="bodySm" tone="subdued" as="p" alignment="center">
+                Les jetons n'expirent jamais
+              </Text>
+            </BlockStack>
+          </Card>
+        </Layout.Section>
+
+        {/* Packs de crédits */}
+        <Layout.Section>
+          <Layout>
+            {CREDIT_PACKS.map((pack) => (
+              <Layout.Section variant="oneHalf" key={pack.id}>
+                <Card>
+                  <BlockStack gap="400">
+                    {pack.highlight && (
+                      <Badge tone="info">Recommandé</Badge>
+                    )}
+                    <BlockStack gap="200">
+                      <Text variant="headingLg" as="h2" fontWeight="bold">
+                        {pack.name}
+                      </Text>
+                      <Text variant="heading2xl" as="p" fontWeight="bold">
+                        {pack.credits} jetons
+                      </Text>
+                      <Text variant="bodyMd" tone="subdued" as="p">
+                        {pack.description}
+                      </Text>
+                    </BlockStack>
+                    <Divider />
+                    <BlockStack gap="300">
+                      <Text variant="headingLg" as="p" fontWeight="bold">
+                        €{pack.price.toFixed(2)}
+                      </Text>
+                      <Text variant="bodySm" tone="subdued" as="p">
+                        €{pack.pricePerCredit.toFixed(2)} par jeton
+                      </Text>
+                      <Button
+                        variant={pack.highlight ? "primary" : "secondary"}
+                        onClick={() => handlePurchase(pack.id)}
+                        disabled={isSubmitting}
+                        loading={isSubmitting}
+                        fullWidth
+                      >
+                        {isSubmitting ? "Traitement..." : "Acheter"}
+                      </Button>
+                    </BlockStack>
+                  </BlockStack>
+                </Card>
+              </Layout.Section>
+            ))}
+          </Layout>
+        </Layout.Section>
+
+        {/* Historique des recharges */}
+        <Layout.Section>
+          <Card>
+            <BlockStack gap="400">
+              <Text as="h2" variant="headingLg" fontWeight="semibold">
+                Historique des recharges
+              </Text>
+              <Divider />
+              <Box padding="400">
+                <Text variant="bodyMd" tone="subdued" as="p" alignment="center">
+                  Aucun historique disponible pour le moment
+                </Text>
+              </Box>
+            </BlockStack>
+          </Card>
+        </Layout.Section>
+      </Layout>
     </Page>
   );
 }
