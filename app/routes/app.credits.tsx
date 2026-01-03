@@ -917,7 +917,7 @@ export default function Credits() {
                 <Text as="h2" variant="headingLg" fontWeight="semibold">
                   Historique des recharges
                 </Text>
-                <Button variant="plain" size="slim">
+                <Button url="/app/history" variant="plain" size="slim">
                   Voir tout →
                 </Button>
               </InlineStack>
