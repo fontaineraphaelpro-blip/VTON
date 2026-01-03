@@ -401,11 +401,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                 return;
             }
             
-            // Find Add to Cart button
-            const addToCartBtn = this.findAddToCartButton();
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'widget-v2.js:injectWidget',message:'Add to Cart button search',data:{found:!!addToCartBtn,retryCount:this.retryCount},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-            // #endregion
+            // PRIORITY 1: Check if there's a container from theme block/snippet
+            const themeContainer = document.querySelector('[data-vton-container="true"]') ||
+                                  document.getElementById('vton-widget-container');
             
             // Get product image
             this.productImage = this.getProductImage();
@@ -415,44 +413,57 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             container.id = CONFIG.shadowRootId;
             container.setAttribute('data-vton-widget', 'true');
             
-            // Try to insert after Add to Cart button, or use fallback strategies
-            if (addToCartBtn) {
-                this.insertAfterButton(addToCartBtn, container);
+            if (themeContainer) {
+                // Use theme container - widget will be injected inside
+                console.log('[VTON] Found theme container, injecting widget');
+                themeContainer.appendChild(container);
             } else {
-                // Fallback: Try to find product form and insert after it
-                const productForm = document.querySelector('form[action*="/cart/add"]') || 
-                                   document.querySelector('form[action*="cart"]') ||
-                                   document.querySelector('[data-product-form]') ||
-                                   document.querySelector('.product-form') ||
-                                   document.querySelector('form.product-form');
+                // PRIORITY 2: Find Add to Cart button and insert after it
+                const addToCartBtn = this.findAddToCartButton();
+                // #region agent log
+                fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'widget-v2.js:injectWidget',message:'Add to Cart button search',data:{found:!!addToCartBtn,retryCount:this.retryCount},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+                // #endregion
                 
-                if (productForm) {
-                    console.log('[VTON] Button not found, inserting after product form');
-                    if (productForm.parentElement) {
-                        productForm.parentElement.insertBefore(container, productForm.nextSibling);
-                    } else {
-                        productForm.insertAdjacentElement('afterend', container);
-                    }
+                if (addToCartBtn) {
+                    console.log('[VTON] Found Add to Cart button, inserting after it');
+                    this.insertAfterButton(addToCartBtn, container);
                 } else {
-                    // Last resort: Try to find main product container
-                    const productContainer = document.querySelector('[data-product-id]')?.closest('main') ||
-                                            document.querySelector('.product') ||
-                                            document.querySelector('[data-product]') ||
-                                            document.querySelector('main');
-                    if (productContainer) {
-                        console.log('[VTON] Button and form not found, inserting at end of product container');
-                        productContainer.appendChild(container);
+                    // PRIORITY 3: Try to find product form and insert after it
+                    const productForm = document.querySelector('form[action*="/cart/add"]') || 
+                                       document.querySelector('form[action*="cart"]') ||
+                                       document.querySelector('[data-product-form]') ||
+                                       document.querySelector('.product-form') ||
+                                       document.querySelector('form.product-form');
+                    
+                    if (productForm) {
+                        console.log('[VTON] Button not found, inserting after product form');
+                        if (productForm.parentElement) {
+                            productForm.parentElement.insertBefore(container, productForm.nextSibling);
+                        } else {
+                            productForm.insertAdjacentElement('afterend', container);
+                        }
                     } else {
-                        if (this.retryCount >= CONFIG.maxRetries) {
-                            console.warn('[VTON] Max retries reached, could not find insertion point for widget');
-                            // #region agent log
-                            fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'widget-v2.js:injectWidget',message:'Max retries reached',data:{retryCount:this.retryCount},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-                            // #endregion
+                        // PRIORITY 4: Try to find main product container
+                        const productContainer = document.querySelector('[data-product-id]')?.closest('main') ||
+                                                document.querySelector('.product') ||
+                                                document.querySelector('[data-product]') ||
+                                                document.querySelector('main');
+                        if (productContainer) {
+                            console.log('[VTON] Button and form not found, inserting at end of product container');
+                            productContainer.appendChild(container);
+                        } else {
+                            // Last resort: retry
+                            if (this.retryCount >= CONFIG.maxRetries) {
+                                console.warn('[VTON] Max retries reached, could not find insertion point for widget');
+                                // #region agent log
+                                fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'widget-v2.js:injectWidget',message:'Max retries reached',data:{retryCount:this.retryCount},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+                                // #endregion
+                                return;
+                            }
+                            this.retryCount++;
+                            setTimeout(() => this.injectWidget(), CONFIG.retryDelay);
                             return;
                         }
-                        this.retryCount++;
-                        setTimeout(() => this.injectWidget(), CONFIG.retryDelay);
-                        return;
                     }
                 }
             }

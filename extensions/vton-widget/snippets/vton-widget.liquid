@@ -1,6 +1,10 @@
 {% comment %}
-  Virtual Try-On Widget - Theme App Extension Block
-  This block loads the VTON widget script on product pages
+  Virtual Try-On Widget - Snippet for Manual Integration
+  Usage: {% render 'vton-widget' %}
+  
+  This snippet can be manually added to your theme's product template.
+  Add it in your product.liquid or product-form.liquid file, typically
+  after the "Add to Cart" button section.
 {% endcomment %}
 
 {% if template.name == 'product' %}
@@ -13,7 +17,7 @@
     {% comment %} Widget will be injected here automatically {% endcomment %}
   </div>
 
-<script>
+  <script>
     (function() {
       'use strict';
       
@@ -30,8 +34,7 @@
       const shopUrl = '{{ shop.url }}';
       const appUrl = shopUrl; // Use shop URL, app proxy will route to the app
       
-      // Use timestamp for cache busting - this ensures the widget updates on each page load
-      // The server will also set proper cache headers
+      // Use timestamp for cache busting
       const cacheBuster = Date.now();
       const widgetUrl = `${appUrl}/apps/tryon/widget-v2.js?v=${cacheBuster}`;
       
@@ -50,16 +53,6 @@
       
       script.onerror = function() {
         console.error('[VTON] Failed to load widget script from:', widgetUrl);
-        // Try fallback URL with new cache buster
-        const fallbackCacheBuster = Date.now();
-        const fallbackUrl = `${shopUrl}/apps/tryon/widget-v2.js?v=${fallbackCacheBuster}`;
-        console.log('[VTON] Trying fallback URL:', fallbackUrl);
-        const fallbackScript = document.createElement('script');
-        fallbackScript.src = fallbackUrl;
-        fallbackScript.defer = true;
-        fallbackScript.async = true;
-        fallbackScript.crossOrigin = 'anonymous';
-        document.head.appendChild(fallbackScript);
       };
       
       document.head.appendChild(script);
@@ -67,23 +60,3 @@
   </script>
 {% endif %}
 
-{% schema %}
-{
-  "name": "Virtual Try-On Widget",
-  "target": "section",
-  "settings": [
-    {
-      "type": "header",
-      "content": "Virtual Try-On Configuration"
-    },
-    {
-      "type": "paragraph",
-      "content": "This block automatically loads the Virtual Try-On widget on product pages. The widget will appear next to the 'Add to Cart' button."
-    },
-    {
-      "type": "paragraph",
-      "content": "Note: The widget is also automatically installed via Script Tags. This block is optional and can be used for manual integration."
-    }
-  ]
-}
-{% endschema %}
