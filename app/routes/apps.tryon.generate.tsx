@@ -24,38 +24,68 @@ import { generateTryOn } from "../lib/services/replicate.service";
 const SHOPIFY_API_SECRET = process.env.SHOPIFY_API_SECRET || "";
 
 /**
- * Verifies that the request comes from Shopify App Proxy.
+ * Verifies that the request comes from Shopify App Proxy or from a Shopify storefront.
  */
-function verifyProxySignature(queryParams: URLSearchParams): boolean {
+function verifyProxySignature(queryParams: URLSearchParams, request: Request): boolean {
   const signature = queryParams.get("signature");
-  if (!signature || !SHOPIFY_API_SECRET) {
+  
+  // If signature is present, verify it (App Proxy request)
+  if (signature && SHOPIFY_API_SECRET) {
+    // Create a copy without signature
+    const paramsToVerify: Record<string, string> = {};
+    queryParams.forEach((value, key) => {
+      if (key !== "signature") {
+        paramsToVerify[key] = value;
+      }
+    });
+
+    // Sort and build query string
+    const sortedParams = Object.keys(paramsToVerify)
+      .sort()
+      .map((key) => `${key}=${paramsToVerify[key]}`)
+      .join("&");
+
+    // Calculate HMAC
+    const computedSignature = crypto
+      .createHmac("sha256", SHOPIFY_API_SECRET)
+      .update(sortedParams)
+      .digest("hex");
+
+    return crypto.timingSafeEqual(
+      Buffer.from(signature),
+      Buffer.from(computedSignature)
+    );
+  }
+  
+  // If no signature, check if request comes from a Shopify storefront
+  const referer = request.headers.get("referer") || "";
+  const origin = request.headers.get("origin") || "";
+  const shop = queryParams.get("shop") || "";
+  
+  const isShopifyStorefront = 
+    referer.includes(".myshopify.com") || 
+    origin.includes(".myshopify.com") ||
+    (shop && shop.includes(".myshopify.com"));
+  
+  // In development, allow requests without signature if they come from a Shopify store
+  if (process.env.NODE_ENV !== "production" && isShopifyStorefront && shop) {
+    console.log("[Generate] Allowing request without signature from Shopify storefront:", { referer, origin, shop });
+    return true;
+  }
+  
+  // In production, require signature for security
+  if (process.env.NODE_ENV === "production") {
+    console.warn("[Generate] Production request without signature rejected:", { referer, origin, shop });
     return false;
   }
-
-  // Create a copy without signature
-  const paramsToVerify: Record<string, string> = {};
-  queryParams.forEach((value, key) => {
-    if (key !== "signature") {
-      paramsToVerify[key] = value;
-    }
-  });
-
-  // Sort and build query string
-  const sortedParams = Object.keys(paramsToVerify)
-    .sort()
-    .map((key) => `${key}=${paramsToVerify[key]}`)
-    .join("&");
-
-  // Calculate HMAC
-  const computedSignature = crypto
-    .createHmac("sha256", SHOPIFY_API_SECRET)
-    .update(sortedParams)
-    .digest("hex");
-
-  return crypto.timingSafeEqual(
-    Buffer.from(signature),
-    Buffer.from(computedSignature)
-  );
+  
+  // Development fallback: allow if shop parameter is present
+  if (shop && shop.includes(".myshopify.com")) {
+    console.log("[Generate] Development: Allowing request with valid shop parameter:", shop);
+    return true;
+  }
+  
+  return false;
 }
 
 /**
