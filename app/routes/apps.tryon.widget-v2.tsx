@@ -1737,10 +1737,12 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     // INITIALIZE WIDGET
     // ==========================================
     // Log immédiat pour confirmer que le script est chargé
-    console.log('[VTON Widget V2] Script loaded', {
+    console.log('[VTON Widget V2] Script loaded - Version: ${widgetVersion}', {
         url: window.location.href,
         readyState: document.readyState,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        apiBase: CONFIG.apiBase,
+        widgetVersion: CONFIG.version
     });
     
     // #region agent log
