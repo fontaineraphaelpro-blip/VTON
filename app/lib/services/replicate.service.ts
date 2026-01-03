@@ -86,45 +86,36 @@ export async function generateTryOn(
     console.log("[Replicate] Using prompt:", GARMENT_TRANSFER_PROMPT);
     
     // Use replicate.run which returns a Promise that resolves when the prediction completes
-    // For google/nano-banana-pro, we MUST send prompt + both images (person and product)
-    // The model requires: prompt + person_image + garment_image
+    // For google/nano-banana-pro, we MUST send:
+    // - image_input: array of image URLs/Buffers [person_image, garment_image]
+    // - prompt: the prompt text
+    // The SDK Replicate will automatically handle Buffers by uploading them
     let output;
     try {
+      // Build image_input array: [person_image, garment_image]
+      const imageInputArray = [personInput, garmentInput];
+      
       const inputParams = {
-        image: personInput, // Person image (client)
-        image2: garmentInput, // Garment image (product)
-        prompt: GARMENT_TRANSFER_PROMPT, // Prompt
+        image_input: imageInputArray, // Array of images: [person, garment]
+        prompt: GARMENT_TRANSFER_PROMPT,
+        aspect_ratio: "4:3",
+        output_format: "png",
+        resolution: "2K",
+        safety_filter_level: "block_only_high"
       };
+      
       console.log("[Replicate] Input params keys:", Object.keys(inputParams));
-      console.log("[Replicate] image type:", Buffer.isBuffer(inputParams.image) ? 'Buffer' : typeof inputParams.image, "exists:", !!inputParams.image);
-      console.log("[Replicate] image2 type:", Buffer.isBuffer(inputParams.image2) ? 'Buffer' : typeof inputParams.image2, "exists:", !!inputParams.image2);
-      console.log("[Replicate] prompt:", inputParams.prompt?.substring(0, 50) + "...", "exists:", !!inputParams.prompt);
+      console.log("[Replicate] image_input length:", imageInputArray.length);
+      console.log("[Replicate] image_input[0] type:", Buffer.isBuffer(imageInputArray[0]) ? 'Buffer' : typeof imageInputArray[0]);
+      console.log("[Replicate] image_input[1] type:", Buffer.isBuffer(imageInputArray[1]) ? 'Buffer' : typeof imageInputArray[1]);
+      console.log("[Replicate] prompt:", inputParams.prompt?.substring(0, 50) + "...");
       
       output = await replicate.run(MODEL_ID, {
         input: inputParams,
       });
     } catch (error: any) {
-      // If the above fails, try alternative parameter names
-      console.warn("First attempt failed, trying alternative parameter names:", error.message);
-      try {
-        output = await replicate.run(MODEL_ID, {
-          input: {
-            person_image: personInput,
-            garment_image: garmentInput,
-            prompt: GARMENT_TRANSFER_PROMPT,
-          },
-        });
-      } catch (error2: any) {
-        console.warn("Second attempt failed, trying with different names:", error2.message);
-        // Try with just prompt and images as separate parameters
-        output = await replicate.run(MODEL_ID, {
-          input: {
-            image1: personInput,
-            image2: garmentInput,
-            prompt: GARMENT_TRANSFER_PROMPT,
-          },
-        });
-      }
+      console.error("[Replicate] Error with image_input format:", error.message);
+      throw error;
     }
 
     console.log("Replicate output type:", typeof output);
