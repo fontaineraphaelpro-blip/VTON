@@ -431,7 +431,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           variables
         });
 
-        const graphqlData = await graphqlResponse.json();
+        const graphqlData = await graphqlResponse.json() as any;
 
         console.log("[Credits] Custom GraphQL response received", {
           hasData: !!graphqlData,
