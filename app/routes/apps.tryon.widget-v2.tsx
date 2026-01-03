@@ -435,15 +435,25 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                     product_id: this.productId
                 };
                 
-                // Use shop URL with app proxy path (Shopify handles routing)
+                // Use shop URL with app proxy path - Shopify App Proxy automatically adds signature
+                // The proxy route is /apps/tryon/generate
                 const shopUrl = window.location.origin;
-                const url = shopUrl + '/apps/tryon/generate?shop=' + encodeURIComponent(this.shop);
+                const proxyPath = '/apps/tryon/generate';
                 
+                // App Proxy requires shop parameter in query string (signature is added automatically by Shopify)
+                const queryParams = new URLSearchParams({
+                    shop: this.shop
+                });
+                
+                const url = shopUrl + proxyPath + '?' + queryParams.toString();
+                
+                // Make request with credentials to ensure cookies/referer are sent
                 const response = await fetch(url, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
+                    credentials: 'same-origin', // Important: ensures referer/origin headers are sent
                     body: JSON.stringify(requestBody)
                 });
                 
