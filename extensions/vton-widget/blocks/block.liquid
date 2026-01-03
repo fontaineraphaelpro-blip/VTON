@@ -49,13 +49,15 @@
       
       script.onerror = function() {
         console.error('[VTON] Failed to load widget script from:', widgetUrl);
-        // Try fallback URL
-        const fallbackUrl = `{{ shop.url }}/apps/tryon/widget-v2.js?v=${widgetVersion}&t=${Date.now()}`;
+        // Try fallback URL with new cache buster
+        const fallbackCacheBuster = Date.now();
+        const fallbackUrl = `${shopUrl}/apps/tryon/widget-v2.js?v=${fallbackCacheBuster}`;
         console.log('[VTON] Trying fallback URL:', fallbackUrl);
         const fallbackScript = document.createElement('script');
         fallbackScript.src = fallbackUrl;
         fallbackScript.defer = true;
         fallbackScript.async = true;
+        fallbackScript.crossOrigin = 'anonymous';
         document.head.appendChild(fallbackScript);
       };
       
