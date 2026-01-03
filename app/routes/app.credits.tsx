@@ -957,7 +957,6 @@ export default function Credits() {
                               loading={isSubmitting}
                               fullWidth
                               size="large"
-                              tone="critical"
                             >
                               {isSubmitting ? "Traitement..." : "Acheter maintenant"}
                             </Button>
