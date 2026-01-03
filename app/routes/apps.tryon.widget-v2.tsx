@@ -66,6 +66,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     // ==========================================
     class VTONWidgetV2 {
         constructor() {
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'widget-v2.js:constructor',message:'Widget constructor called',data:{url:window.location.href,pathname:window.location.pathname},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+            // #endregion
             this.shop = this.extractShop();
             this.productId = null;
             this.productImage = null;
@@ -77,9 +80,21 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             this.shadowRoot = null;
             this.isEnabled = false;
             
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'widget-v2.js:constructor',message:'Shop extracted',data:{shop:this.shop},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+            // #endregion
+            
             // Initialize only on product pages
-            if (this.isProductPage()) {
+            const isProduct = this.isProductPage();
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'widget-v2.js:constructor',message:'Product page check',data:{isProductPage:isProduct},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+            // #endregion
+            if (isProduct) {
                 this.init();
+            } else {
+                // #region agent log
+                fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'widget-v2.js:constructor',message:'Not a product page, skipping init',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+                // #endregion
             }
         }
         
@@ -87,23 +102,45 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         // INITIALIZATION
         // ==========================================
         async init() {
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'widget-v2.js:init',message:'Init started',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+            // #endregion
             // Extract product ID
             this.productId = this.extractProductId();
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'widget-v2.js:init',message:'Product ID extracted',data:{productId:this.productId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+            // #endregion
             if (!this.productId) {
                 console.log('[VTON] Product ID not found, skipping widget');
+                // #region agent log
+                fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'widget-v2.js:init',message:'Product ID not found, aborting',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+                // #endregion
                 return;
             }
             
             // Check if try-on is enabled for this product
             try {
+                // #region agent log
+                fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'widget-v2.js:init',message:'Checking status API',data:{shop:this.shop,productId:this.productId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+                // #endregion
                 const status = await this.checkStatus();
+                // #region agent log
+                fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'widget-v2.js:init',message:'Status check result',data:{enabled:status.enabled,shopEnabled:status.shop_enabled,productEnabled:status.product_enabled,hasSettings:!!status.widget_settings},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+                // #endregion
                 if (!status.enabled) {
                     console.log('[VTON] Try-on disabled for this product');
+                    // #region agent log
+                    fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'widget-v2.js:init',message:'Try-on disabled, aborting',data:{shopEnabled:status.shop_enabled,productEnabled:status.product_enabled},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+                    // #endregion
                     return;
                 }
                 
                 this.isEnabled = true;
                 this.widgetSettings = status.widget_settings;
+                
+                // #region agent log
+                fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'widget-v2.js:init',message:'Widget enabled, preparing injection',data:{readyState:document.readyState},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+                // #endregion
                 
                 // Wait for DOM to be ready
                 if (document.readyState === 'loading') {
@@ -113,6 +150,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                 }
             } catch (error) {
                 console.error('[VTON] Failed to check status:', error);
+                // #region agent log
+                fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'widget-v2.js:init',message:'Status check error',data:{error:error instanceof Error ? error.message : String(error)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+                // #endregion
                 // Don't inject widget if status check fails
             }
         }
@@ -122,12 +162,19 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         // ==========================================
         async checkStatus() {
             if (!this.shop || !this.productId) {
+                // #region agent log
+                fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'widget-v2.js:checkStatus',message:'Missing shop or product ID',data:{hasShop:!!this.shop,hasProductId:!!this.productId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+                // #endregion
                 throw new Error('Missing shop or product ID');
             }
             
             const url = new URL(\`\${CONFIG.apiBase}/status\`, window.location.origin);
             url.searchParams.set('shop', this.shop);
             url.searchParams.set('product_id', this.productId);
+            
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'widget-v2.js:checkStatus',message:'Making status API request',data:{url:url.toString()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+            // #endregion
             
             // Note: In production, Shopify App Proxy will add the signature automatically
             // For now, we make the request (the backend will verify signature if present)
@@ -139,11 +186,23 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                 }
             });
             
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'widget-v2.js:checkStatus',message:'Status API response',data:{ok:response.ok,status:response.status,statusText:response.statusText},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+            // #endregion
+            
             if (!response.ok) {
+                const errorText = await response.text().catch(() => '');
+                // #region agent log
+                fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'widget-v2.js:checkStatus',message:'Status API error',data:{status:response.status,errorText:errorText.substring(0,200)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+                // #endregion
                 throw new Error(\`Status check failed: \${response.status}\`);
             }
             
-            return await response.json();
+            const result = await response.json();
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'widget-v2.js:checkStatus',message:'Status API success',data:{enabled:result.enabled,shopEnabled:result.shop_enabled,productEnabled:result.product_enabled},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+            // #endregion
+            return result;
         }
         
         // ==========================================
@@ -246,13 +305,22 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         // WIDGET INJECTION
         // ==========================================
         injectWidget() {
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'widget-v2.js:injectWidget',message:'Inject widget called',data:{retryCount:this.retryCount,maxRetries:CONFIG.maxRetries},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+            // #endregion
             if (this.retryCount >= CONFIG.maxRetries) {
                 console.warn('[VTON] Max retries reached, could not inject widget');
+                // #region agent log
+                fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'widget-v2.js:injectWidget',message:'Max retries reached',data:{retryCount:this.retryCount},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+                // #endregion
                 return;
             }
             
             // Find Add to Cart button
             const addToCartBtn = this.findAddToCartButton();
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'widget-v2.js:injectWidget',message:'Add to Cart button search',data:{found:!!addToCartBtn,retryCount:this.retryCount},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+            // #endregion
             if (!addToCartBtn) {
                 this.retryCount++;
                 setTimeout(() => this.injectWidget(), CONFIG.retryDelay);
@@ -261,6 +329,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             
             // Check if widget already exists
             if (document.getElementById(CONFIG.shadowRootId)) {
+                // #region agent log
+                fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'widget-v2.js:injectWidget',message:'Widget already exists',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+                // #endregion
                 return;
             }
             
@@ -282,6 +353,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             this.renderWidget();
             
             console.log('[VTON] Widget injected successfully');
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'widget-v2.js:injectWidget',message:'Widget injected successfully',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+            // #endregion
         }
         
         findAddToCartButton() {
@@ -1449,12 +1523,21 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     // ==========================================
     // INITIALIZE WIDGET
     // ==========================================
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'widget-v2.js:global-init',message:'Widget script loaded',data:{readyState:document.readyState,url:window.location.href},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
     // Wait for DOM to be ready
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', () => {
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'widget-v2.js:DOMContentLoaded',message:'DOMContentLoaded fired, initializing widget',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+            // #endregion
             new VTONWidgetV2();
         });
     } else {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'widget-v2.js:immediate-init',message:'DOM already ready, initializing widget immediately',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+        // #endregion
         new VTONWidgetV2();
     }
 })();
