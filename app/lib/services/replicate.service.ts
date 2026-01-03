@@ -126,40 +126,19 @@ export async function generateTryOn(
       console.warn("Replicate returned empty object, creating prediction manually and polling...");
       
       try {
-        // Create a prediction manually
-        // Try different parameter names
-        let prediction;
-        try {
-          prediction = await replicate.predictions.create({
-            model: MODEL_ID,
-            input: {
-              image: personInput,
-              image2: garmentInput,
-              prompt: GARMENT_TRANSFER_PROMPT,
-            },
-          });
-        } catch (error: any) {
-          console.warn("First prediction attempt failed, trying alternatives:", error.message);
-          try {
-            prediction = await replicate.predictions.create({
-              model: MODEL_ID,
-              input: {
-                person_image: personInput,
-                garment_image: garmentInput,
-                prompt: GARMENT_TRANSFER_PROMPT,
-              },
-            });
-          } catch (error2: any) {
-            prediction = await replicate.predictions.create({
-              model: MODEL_ID,
-              input: {
-                image1: personInput,
-                image2: garmentInput,
-                prompt: GARMENT_TRANSFER_PROMPT,
-              },
-            });
-          }
-        }
+        // Create a prediction manually using image_input format
+        const imageInputArray = [personInput, garmentInput];
+        const prediction = await replicate.predictions.create({
+          model: MODEL_ID,
+          input: {
+            image_input: imageInputArray,
+            prompt: GARMENT_TRANSFER_PROMPT,
+            aspect_ratio: "4:3",
+            output_format: "png",
+            resolution: "2K",
+            safety_filter_level: "block_only_high"
+          },
+        });
         
         console.log("Created prediction:", prediction.id, "Status:", prediction.status);
         
