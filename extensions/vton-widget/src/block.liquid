@@ -436,10 +436,10 @@
         }
         
         setupEventListeners() {
-          const fileInput = this.shadowRoot?.getElementById('vton-file-input');
+          const fileInput = this.shadowRoot ? this.shadowRoot.getElementById('vton-file-input') : null;
           if (fileInput) {
             fileInput.addEventListener('change', (e) => {
-              const file = (e.target as HTMLInputElement).files?.[0];
+              const file = e.target.files && e.target.files[0];
               if (file) {
                 this.handleImageUpload(file);
               }
@@ -447,17 +447,17 @@
           }
         }
         
-        handleImageUpload(file: File) {
+        handleImageUpload(file) {
           const reader = new FileReader();
           reader.onload = (e) => {
-            this.userPhoto = e.target?.result as string;
+            this.userPhoto = e.target.result;
             this.setState(STATE.VERIFICATION);
             this.updateModal();
           };
           reader.readAsDataURL(file);
         }
         
-        setState(state: string) {
+        setState(state) {
           this.currentState = state;
           this.updateModal();
         }
@@ -508,14 +508,14 @@
         }
         
         openModal() {
-          const modal = this.shadowRoot?.getElementById('vton-modal-overlay');
+          const modal = this.shadowRoot ? this.shadowRoot.getElementById('vton-modal-overlay') : null;
           if (modal) {
             modal.classList.add('active');
           }
         }
         
         closeModal() {
-          const modal = this.shadowRoot?.getElementById('vton-modal-overlay');
+          const modal = this.shadowRoot ? this.shadowRoot.getElementById('vton-modal-overlay') : null;
           if (modal) {
             modal.classList.remove('active');
           }
