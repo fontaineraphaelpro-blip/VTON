@@ -72,26 +72,196 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     // Create widget HTML (without container div, will be injected into existing container)
     function createWidgetHTML() {
         return \`
-            <div style="margin: 20px 0; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px; background: #fff;">
-                <h3 style="margin: 0 0 15px 0; font-size: 18px; font-weight: 600;">Essayer avant d'acheter</h3>
-                
-                <div id="vton-upload-section" style="margin-bottom: 15px;">
-                    <label style="display: block; margin-bottom: 8px; font-weight: 500;">Téléchargez votre photo :</label>
-                    <input type="file" id="vton-photo-input" accept="image/*" style="margin-bottom: 10px; width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-                    <button id="vton-generate-btn" style="background: #4a90e2; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-size: 14px; width: 100%;" disabled>Générer l'essayage</button>
+            <style>
+                #vton-widget-content {
+                    margin: 24px 0;
+                    padding: 0;
+                    background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+                    border-radius: 12px;
+                    overflow: hidden;
+                    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+                }
+                #vton-widget-header {
+                    background: rgba(255, 255, 255, 0.05);
+                    padding: 20px 24px;
+                    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+                }
+                #vton-widget-header h3 {
+                    margin: 0;
+                    font-size: 22px;
+                    font-weight: 700;
+                    letter-spacing: -0.5px;
+                    color: #ffffff;
+                    text-transform: uppercase;
+                    letter-spacing: 1.5px;
+                }
+                #vton-widget-body {
+                    padding: 24px;
+                }
+                #vton-upload-section {
+                    margin-bottom: 0;
+                }
+                #vton-upload-label {
+                    display: block;
+                    margin-bottom: 12px;
+                    font-weight: 600;
+                    font-size: 14px;
+                    color: #ffffff;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                }
+                #vton-photo-input-wrapper {
+                    position: relative;
+                    margin-bottom: 16px;
+                }
+                #vton-photo-input {
+                    width: 100%;
+                    padding: 12px 16px;
+                    background: rgba(255, 255, 255, 0.08);
+                    border: 2px solid rgba(255, 255, 255, 0.15);
+                    border-radius: 8px;
+                    color: #ffffff;
+                    font-size: 14px;
+                    cursor: pointer;
+                    transition: all 0.3s ease;
+                    box-sizing: border-box;
+                }
+                #vton-photo-input:hover {
+                    background: rgba(255, 255, 255, 0.12);
+                    border-color: rgba(255, 255, 255, 0.25);
+                }
+                #vton-photo-input:focus {
+                    outline: none;
+                    border-color: #ffffff;
+                    background: rgba(255, 255, 255, 0.15);
+                }
+                #vton-generate-btn {
+                    width: 100%;
+                    padding: 16px 24px;
+                    background: linear-gradient(135deg, #000000 0%, #333333 100%);
+                    color: #ffffff;
+                    border: 2px solid #ffffff;
+                    border-radius: 8px;
+                    font-size: 14px;
+                    font-weight: 700;
+                    text-transform: uppercase;
+                    letter-spacing: 1px;
+                    cursor: pointer;
+                    transition: all 0.3s ease;
+                    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+                }
+                #vton-generate-btn:hover:not(:disabled) {
+                    background: linear-gradient(135deg, #ffffff 0%, #f0f0f0 100%);
+                    color: #000000;
+                    transform: translateY(-2px);
+                    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+                }
+                #vton-generate-btn:active:not(:disabled) {
+                    transform: translateY(0);
+                }
+                #vton-generate-btn:disabled {
+                    opacity: 0.5;
+                    cursor: not-allowed;
+                    border-color: rgba(255, 255, 255, 0.3);
+                }
+                #vton-loading {
+                    display: none;
+                    text-align: center;
+                    padding: 40px 24px;
+                }
+                #vton-loading-content {
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    gap: 16px;
+                }
+                #vton-loading-spinner {
+                    width: 48px;
+                    height: 48px;
+                    border: 4px solid rgba(255, 255, 255, 0.1);
+                    border-top-color: #ffffff;
+                    border-radius: 50%;
+                    animation: spin 1s linear infinite;
+                }
+                @keyframes spin {
+                    to { transform: rotate(360deg); }
+                }
+                #vton-loading-text {
+                    color: #ffffff;
+                    font-size: 14px;
+                    font-weight: 600;
+                    text-transform: uppercase;
+                    letter-spacing: 1px;
+                }
+                #vton-result {
+                    display: none;
+                    margin-top: 0;
+                }
+                #vton-result-content {
+                    background: rgba(255, 255, 255, 0.05);
+                    border-radius: 8px;
+                    padding: 16px;
+                    margin-top: 16px;
+                }
+                #vton-result h4 {
+                    margin: 0 0 16px 0;
+                    font-size: 14px;
+                    font-weight: 700;
+                    color: #ffffff;
+                    text-transform: uppercase;
+                    letter-spacing: 1px;
+                }
+                #vton-result-image {
+                    width: 100%;
+                    border-radius: 8px;
+                    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+                }
+                #vton-error {
+                    display: none;
+                    margin-top: 16px;
+                    padding: 16px;
+                    background: rgba(220, 38, 38, 0.2);
+                    border: 2px solid rgba(220, 38, 38, 0.5);
+                    border-radius: 8px;
+                }
+                #vton-error-message {
+                    margin: 0;
+                    color: #ff6b6b;
+                    font-size: 14px;
+                    font-weight: 600;
+                }
+            </style>
+            <div id="vton-widget-content">
+                <div id="vton-widget-header">
+                    <h3>✴ Try It On</h3>
                 </div>
-                
-                <div id="vton-loading" style="display: none; text-align: center; padding: 20px;">
-                    <p>Génération en cours...</p>
-                </div>
-                
-                <div id="vton-result" style="display: none; margin-top: 15px;">
-                    <h4 style="margin: 0 0 10px 0; font-size: 16px;">Résultat :</h4>
-                    <img id="vton-result-image" style="max-width: 100%; border-radius: 4px;" />
-                </div>
-                
-                <div id="vton-error" style="display: none; margin-top: 15px; padding: 10px; background: #fee; border: 1px solid #fcc; border-radius: 4px; color: #c33;">
-                    <p style="margin: 0;" id="vton-error-message"></p>
+                <div id="vton-widget-body">
+                    <div id="vton-upload-section">
+                        <label id="vton-upload-label" for="vton-photo-input">Upload Your Photo</label>
+                        <div id="vton-photo-input-wrapper">
+                            <input type="file" id="vton-photo-input" accept="image/*" />
+                        </div>
+                        <button id="vton-generate-btn" disabled>Generate Try-On</button>
+                    </div>
+                    
+                    <div id="vton-loading">
+                        <div id="vton-loading-content">
+                            <div id="vton-loading-spinner"></div>
+                            <div id="vton-loading-text">Generating...</div>
+                        </div>
+                    </div>
+                    
+                    <div id="vton-result">
+                        <div id="vton-result-content">
+                            <h4>Result</h4>
+                            <img id="vton-result-image" />
+                        </div>
+                    </div>
+                    
+                    <div id="vton-error">
+                        <p id="vton-error-message"></p>
+                    </div>
                 </div>
             </div>
         \`;
