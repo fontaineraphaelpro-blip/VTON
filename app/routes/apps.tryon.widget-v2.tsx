@@ -265,10 +265,11 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                     product_id: this.productId
                 };
                 
-                const url = new URL(CONFIG.apiBase + '/generate');
-                url.searchParams.set('shop', this.shop);
+                // Use shop URL with app proxy path (Shopify handles routing)
+                const shopUrl = window.location.origin;
+                const url = shopUrl + '/apps/tryon/generate?shop=' + encodeURIComponent(this.shop);
                 
-                const response = await fetch(url.toString(), {
+                const response = await fetch(url, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
