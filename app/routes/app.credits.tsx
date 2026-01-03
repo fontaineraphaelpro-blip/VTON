@@ -480,67 +480,51 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       const totalPrice = customCredits * pricePerCredit;
 
       try {
-        // Use Shopify Billing API for custom pack one-time charge
-        const mutation = `#graphql
-          mutation appPurchaseOneTimeCreate(
-            $name: String!
-            $price: MoneyInput!
-            $returnUrl: URL!
-          ) {
-            appPurchaseOneTimeCreate(
-              name: $name
-              price: $price
-              returnUrl: $returnUrl
-              test: false
-            ) {
-              confirmationUrl
-              userErrors {
-                message
-                field
-              }
-            }
-          }
-        `;
-
         // Build return URL - redirect back to credits page after payment
-        // Must be an absolute URL for Shopify Billing API
         const baseUrl = new URL(request.url).origin;
         const returnUrl = new URL("/app/credits", baseUrl);
         returnUrl.searchParams.set("purchase", "success");
         returnUrl.searchParams.set("pack", "custom");
         returnUrl.searchParams.set("credits", String(customCredits));
 
-        const variables = {
-          name: `Custom Pack - ${customCredits} Credits`,
-          price: {
-            amount: totalPrice.toFixed(2),
-            currencyCode: "EUR", // Adjust based on shop currency
-          },
-          returnUrl: returnUrl.toString(),
+        console.log("[Credits] Creating custom one-time charge using REST API", { customCredits, totalPrice });
+
+        // Use Shopify REST API to create a RecurringApplicationCharge for custom pack
+        const chargeData = {
+          recurring_application_charge: {
+            name: `Custom Pack - ${customCredits} Credits`,
+            price: totalPrice.toFixed(2),
+            return_url: returnUrl.toString(),
+            test: process.env.NODE_ENV !== "production",
+            trial_days: 0,
+            capped_amount: totalPrice.toFixed(2),
+          }
         };
 
-        console.log("[Credits] Creating custom app purchase", { customCredits, totalPrice });
+        // Make REST API call to Shopify
+        const apiUrl = `https://${shop}/admin/api/2025-01/recurring_application_charges.json`;
         
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:340',message:'Before admin.graphql call for custom draft order',data:{customCredits,shop},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'E'})}).catch(()=>{});
-        // #endregion
-        
-        let response;
+        let restResponse;
         try {
-          response = await admin.graphql(mutation, {
-            variables,
+          restResponse = await fetch(apiUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-Shopify-Access-Token": session.accessToken,
+            },
+            body: JSON.stringify(chargeData),
           });
-          console.log("[Credits] Custom GraphQL response received", { 
-            ok: response.ok, 
-            status: response.status,
-            statusText: response.statusText 
+
+          console.log("[Credits] Custom REST API response received", { 
+            ok: restResponse.ok, 
+            status: restResponse.status,
+            statusText: restResponse.statusText,
           });
-        } catch (graphqlError) {
-          console.error("[Credits] Custom GraphQL call threw error:", graphqlError);
-          // Si c'est une Response (redirection d'auth), la gérer
-          if (graphqlError instanceof Response) {
-            if (graphqlError.status === 401) {
-              const reauthUrl = graphqlError.headers.get('x-shopify-api-request-failure-reauthorize-url');
+        } catch (restError) {
+          console.error("[Credits] Custom REST API call threw error:", restError);
+          if (restError instanceof Response) {
+            if (restError.status === 401) {
+              const reauthUrl = restError.headers.get('x-shopify-api-request-failure-reauthorize-url');
               return json({ 
                 success: false, 
                 error: "Votre session a expiré. Veuillez rafraîchir la page pour vous ré-authentifier.",
@@ -549,22 +533,14 @@ export const action = async ({ request }: ActionFunctionArgs) => {
               });
             }
           }
-          throw graphqlError;
+          throw restError;
         }
-        
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:360',message:'After admin.graphql call for custom draft order',data:{isResponse:response instanceof Response,ok:response?.ok,status:response?.status,statusText:response?.statusText},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'E'})}).catch(()=>{});
-        // #endregion
 
         // Check if response is OK
-        if (!response.ok) {
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:331',message:'Custom response not OK',data:{status:response.status,statusText:response.statusText,is401:response.status===401},timestamp:Date.now(),sessionId:'debug-session',runId:'run3',hypothesisId:'A'})}).catch(()=>{});
-          // #endregion
-          // Handle 401 Unauthorized - authentication required
-          if (response.status === 401) {
-            const reauthUrl = response.headers.get('x-shopify-api-request-failure-reauthorize-url');
-            console.error("[Credits] Authentication required (401) for custom draft order creation", { reauthUrl });
+        if (!restResponse.ok) {
+          if (restResponse.status === 401) {
+            const reauthUrl = restResponse.headers.get('x-shopify-api-request-failure-reauthorize-url');
+            console.error("[Credits] Authentication required (401) for custom charge creation", { reauthUrl });
             return json({ 
               success: false, 
               error: "Votre session a expiré. Veuillez rafraîchir la page pour vous ré-authentifier.",
@@ -573,75 +549,44 @@ export const action = async ({ request }: ActionFunctionArgs) => {
             });
           }
           
-          const errorText = await response.text().catch(() => `HTTP ${response.status} ${response.statusText}`);
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:347',message:'Custom error response text',data:{status:response.status,errorTextLength:errorText.length,errorTextPreview:errorText.substring(0,200)},timestamp:Date.now(),sessionId:'debug-session',runId:'run3',hypothesisId:'A'})}).catch(()=>{});
-          // #endregion
-          console.error("GraphQL request failed (custom):", response.status, errorText);
+          const errorText = await restResponse.text().catch(() => `HTTP ${restResponse.status} ${restResponse.statusText}`);
+          console.error("REST API request failed (custom):", restResponse.status, errorText);
           return json({ 
             success: false, 
-            error: `Shopify API error (${response.status}): ${errorText.substring(0, 200)}`,
+            error: `Shopify API error (${restResponse.status}): ${errorText.substring(0, 200)}`,
           });
         }
-
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:355',message:'Before custom JSON parse',data:{status:response.status,contentType:response.headers.get('content-type'),ok:response.ok},timestamp:Date.now(),sessionId:'debug-session',runId:'run3',hypothesisId:'B'})}).catch(()=>{});
-        // #endregion
         
         let responseJson;
-        let responseText: string | null = null;
         try {
-          // Cloner la réponse pour pouvoir lire le texte si le JSON échoue
-          responseText = await response.clone().text();
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:361',message:'Custom response text captured',data:{textLength:responseText.length,textPreview:responseText.substring(0,500),isValidJSON:(()=>{try{JSON.parse(responseText);return true;}catch{return false;}})()},timestamp:Date.now(),sessionId:'debug-session',runId:'run3',hypothesisId:'B'})}).catch(()=>{});
-          // #endregion
-          responseJson = await response.json();
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:365',message:'Custom JSON parse successful',data:{hasData:!!responseJson.data,hasErrors:!!responseJson.errors},timestamp:Date.now(),sessionId:'debug-session',runId:'run3',hypothesisId:'B'})}).catch(()=>{});
-          // #endregion
+          responseJson = await restResponse.json();
+          console.log("[Credits] Custom REST API JSON parsed successfully");
+          console.log("[Credits] Response JSON:", JSON.stringify(responseJson, null, 2));
         } catch (jsonError) {
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:368',message:'Custom JSON parse failed',data:{errorType:jsonError?.constructor?.name,errorMessage:jsonError instanceof Error ? jsonError.message : String(jsonError),responseText:responseText?.substring(0,500)},timestamp:Date.now(),sessionId:'debug-session',runId:'run3',hypothesisId:'B'})}).catch(()=>{});
-          // #endregion
           console.error("Failed to parse JSON response (custom):", jsonError);
-          const errorText = responseText || await response.text().catch(() => "Unable to read response");
+          const errorText = await restResponse.text().catch(() => "Unable to read response");
           return json({ 
             success: false, 
             error: `Invalid response from Shopify: ${errorText.substring(0, 200)}`,
           });
         }
         
-        // Log the full response for debugging
-        console.log("Custom app purchase response:", JSON.stringify(responseJson, null, 2));
+        // Extract confirmation URL from REST API response
+        const charge = responseJson.recurring_application_charge;
         
-        // Check for GraphQL errors
-        if (responseJson.errors) {
-          const errorMessages = responseJson.errors.map((e: any) => e.message || String(e)).join(", ");
-          console.error("GraphQL errors (custom):", errorMessages);
+        if (!charge) {
+          console.error("No charge returned in response (custom):", responseJson);
           return json({ 
             success: false, 
-            error: `GraphQL error: ${errorMessages}`,
-          });
-        }
-        
-        const purchaseResult = responseJson.data?.appPurchaseOneTimeCreate;
-        const errors = purchaseResult?.userErrors || [];
-
-        if (errors && errors.length > 0) {
-          const errorMessages = errors.map((e: any) => `${e.field ? `${e.field}: ` : ""}${e.message}`).join(", ");
-          console.error("Custom app purchase errors:", errorMessages);
-          return json({ 
-            success: false, 
-            error: `Failed to create purchase: ${errorMessages}`,
+            error: "Failed to create charge. Please check your Shopify permissions.",
           });
         }
 
-        if (!purchaseResult || !purchaseResult.confirmationUrl) {
-          console.error("No confirmation URL returned (custom):", responseJson);
+        if (!charge.confirmation_url) {
+          console.error("No confirmation URL returned (custom):", charge);
           return json({ 
             success: false, 
-            error: "Failed to create app purchase. Please check your Shopify permissions.",
+            error: "Charge created but no confirmation URL available. Please try again.",
           });
         }
 
@@ -649,7 +594,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         return json({ 
           success: true, 
           redirect: true,
-          checkoutUrl: purchaseResult.confirmationUrl,
+          checkoutUrl: charge.confirmation_url,
           pack: "Custom", 
           credits: customCredits,
           price: totalPrice,
