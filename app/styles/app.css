@@ -2073,17 +2073,13 @@ body {
 .dashboard-stats-row > div {
   display: flex;
   flex-direction: column;
-  background: var(--white);
-  border-radius: var(--radius-xl);
-  border: 1px solid rgba(0,0,0,0.05);
-  box-shadow: var(--shadow-md);
-  padding: var(--spacing-lg);
-  transition: all var(--transition-base);
+  height: 100%;
 }
 
-.dashboard-stats-row > div:hover {
-  box-shadow: var(--shadow-lg);
-  transform: translateY(-2px);
+.dashboard-stats-row .vton-card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .dashboard-stats-value {
@@ -2343,17 +2339,13 @@ body {
 .dashboard-stats-row > div {
   display: flex;
   flex-direction: column;
-  background: var(--white);
-  border-radius: var(--radius-xl);
-  border: 1px solid rgba(0,0,0,0.05);
-  box-shadow: var(--shadow-md);
-  padding: var(--spacing-lg);
-  transition: all var(--transition-base);
+  height: 100%;
 }
 
-.dashboard-stats-row > div:hover {
-  box-shadow: var(--shadow-lg);
-  transform: translateY(-2px);
+.dashboard-stats-row .vton-card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .dashboard-stats-value {
