@@ -34,7 +34,16 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     
     // Extract shop domain
     function extractShop() {
-        return window.location.hostname.replace('.myshopify.com', '');
+        const hostname = window.location.hostname;
+        if (hostname.endsWith('.myshopify.com')) {
+            return hostname;
+        }
+        // For custom domains, try to get from Shopify object if available
+        if (typeof window !== 'undefined' && (window as any).Shopify && (window as any).Shopify.shop) {
+            return (window as any).Shopify.shop;
+        }
+        // Fallback: construct from hostname
+        return hostname.replace('.myshopify.com', '') + '.myshopify.com';
     }
     
     // Extract product ID from URL
