@@ -20,8 +20,24 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   // Get the app URL from environment or request
   const appUrl = process.env.SHOPIFY_APP_URL || process.env.APPLICATION_URL || new URL(request.url).origin;
   
+  // #region agent log
+  try {
+    await fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'apps.tryon.widget-v2.tsx:loader',message:'Loader called - checking appUrl',data:{appUrl,hasSpecialChars:/[^a-zA-Z0-9:\/\.-]/.test(appUrl),appUrlLength:appUrl.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+  } catch(e) {
+    console.error('[VTON] Failed to send log:', e);
+  }
+  // #endregion
+  
   // Add version/timestamp to force cache busting - MUST be defined before widgetCode
   const widgetVersion = process.env.WIDGET_VERSION || Date.now();
+  
+  // #region agent log
+  try {
+    await fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'apps.tryon.widget-v2.tsx:loader',message:'Before widgetCode generation',data:{widgetVersion,appUrl},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+  } catch(e) {
+    console.error('[VTON] Failed to send log:', e);
+  }
+  // #endregion
   
   const widgetCode = `
 (function() {
@@ -1875,13 +1891,21 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     // INITIALIZE WIDGET
     // ==========================================
     // Log immédiat pour confirmer que le script est chargé
-    console.log('[VTON Widget V2] Script loaded - Version: ${widgetVersion}', {
-        url: window.location.href,
-        readyState: document.readyState,
-        timestamp: new Date().toISOString(),
-        apiBase: CONFIG.apiBase,
-        widgetVersion: CONFIG.version
-    });
+    try {
+        console.log('[VTON Widget V2] Script loaded - Version: ${widgetVersion}', {
+            url: window.location.href,
+            readyState: document.readyState,
+            timestamp: new Date().toISOString(),
+            apiBase: CONFIG.apiBase,
+            widgetVersion: CONFIG.version
+        });
+    } catch(consoleError) {
+        // #region agent log
+        try {
+            fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'widget-v2.js:global-init',message:'Console.log ERROR',data:{error:consoleError instanceof Error ? consoleError.message : String(consoleError)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+        } catch(e) {}
+        // #endregion
+    }
     
     // #region agent log
     try {
@@ -1918,22 +1942,71 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 })();
   `;
 
+  // #region agent log
+  try {
+    await fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'apps.tryon.widget-v2.tsx:loader',message:'Before widgetCode string replacement',data:{widgetCodeLength:widgetCode.length,hasBackticks:widgetCode.includes('`'),hasDollarSigns:widgetCode.includes('${'),widgetVersion},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+  } catch(e) {
+    console.error('[VTON] Failed to send log:', e);
+  }
+  // #endregion
+  
   // Inject version into widget code (widgetVersion already defined above)
-  const widgetCodeWithVersion = widgetCode
-    .replace(
-      /console\.log\('\[VTON Widget V2\] Script loaded'/,
-      `console.log('[VTON Widget V2] Script loaded - Version: ${widgetVersion}')`
-    )
-    .replace(
-      /const CONFIG = \{/,
-      `const CONFIG = {
+  let widgetCodeWithVersion;
+  try {
+    widgetCodeWithVersion = widgetCode
+      .replace(
+        /console\.log\('\[VTON Widget V2\] Script loaded'/,
+        `console.log('[VTON Widget V2] Script loaded - Version: ${widgetVersion}')`
+      )
+      .replace(
+        /const CONFIG = \{/,
+        `const CONFIG = {
         version: '${widgetVersion}',`
-    );
+      );
+    
+    // #region agent log
+    try {
+      await fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'apps.tryon.widget-v2.tsx:loader',message:'After widgetCode string replacement - success',data:{widgetCodeWithVersionLength:widgetCodeWithVersion.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+    } catch(e) {
+      console.error('[VTON] Failed to send log:', e);
+    }
+    // #endregion
+  } catch(replaceError) {
+    // #region agent log
+    try {
+      await fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'apps.tryon.widget-v2.tsx:loader',message:'After widgetCode string replacement - ERROR',data:{error:replaceError instanceof Error ? replaceError.message : String(replaceError),stack:replaceError instanceof Error ? replaceError.stack : undefined},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+    } catch(e) {
+      console.error('[VTON] Failed to send log:', e);
+    }
+    // #endregion
+    throw replaceError;
+  }
+
+  // #region agent log
+  try {
+    // Validate JavaScript syntax before sending
+    const openParens = (widgetCodeWithVersion.match(/\(/g) || []).length;
+    const closeParens = (widgetCodeWithVersion.match(/\)/g) || []).length;
+    const openBraces = (widgetCodeWithVersion.match(/\{/g) || []).length;
+    const closeBraces = (widgetCodeWithVersion.match(/\}/g) || []).length;
+    await fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'apps.tryon.widget-v2.tsx:loader',message:'Before Response - syntax validation',data:{openParens,closeParens,parensMatch:openParens===closeParens,openBraces,closeBraces,bracesMatch:openBraces===closeBraces,codeLength:widgetCodeWithVersion.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+  } catch(e) {
+    console.error('[VTON] Failed to send log:', e);
+  }
+  // #endregion
 
   // Headers pour forcer la mise à jour et éviter le cache
   const cacheHeaders = process.env.NODE_ENV === "production" 
     ? "public, max-age=300, must-revalidate" // Cache court en production (5 min)
     : "no-cache, no-store, must-revalidate, max-age=0"; // Pas de cache en dev
+  
+  // #region agent log
+  try {
+    await fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'apps.tryon.widget-v2.tsx:loader',message:'Returning Response with widget code',data:{codeLength:widgetCodeWithVersion.length,headersSet:true},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+  } catch(e) {
+    console.error('[VTON] Failed to send log:', e);
+  }
+  // #endregion
   
   return new Response(widgetCodeWithVersion, {
     headers: {
