@@ -344,10 +344,10 @@ export default function Dashboard() {
           </Layout.Section>
         )}
 
-        {/* Section 1: 4 Statistiques en une ligne horizontale - Full Width */}
+        {/* Section 1: 4 Statistiques en une ligne horizontale - Full Width - Uniform Height */}
         <Layout.Section>
           <div className="dashboard-stats-row">
-            <Box minWidth="0" flexGrow={1}>
+            <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
               <Card>
                 <BlockStack gap="300">
                   <InlineStack gap="300" align="start" blockAlign="center">
@@ -355,11 +355,11 @@ export default function Dashboard() {
                       padding="300"
                       background="bg-surface-secondary"
                       borderRadius="200"
-                      style={{ minWidth: "48px", height: "48px", display: "flex", alignItems: "center", justifyContent: "center" }}
+                      style={{ minWidth: "48px", height: "48px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
                     >
                       <Text variant="headingLg" as="span">💰</Text>
                     </Box>
-                    <BlockStack gap="100">
+                    <BlockStack gap="100" style={{ flex: 1 }}>
                       <Text variant="heading2xl" as="p" fontWeight="bold">
                         {credits.toLocaleString("en-US")}
                       </Text>
@@ -373,8 +373,8 @@ export default function Dashboard() {
                   </InlineStack>
                 </BlockStack>
               </Card>
-            </Box>
-            <Box minWidth="0" flexGrow={1}>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
               <Card>
                 <BlockStack gap="300">
                   <InlineStack gap="300" align="start" blockAlign="center">
@@ -382,11 +382,11 @@ export default function Dashboard() {
                       padding="300"
                       background="bg-surface-secondary"
                       borderRadius="200"
-                      style={{ minWidth: "48px", height: "48px", display: "flex", alignItems: "center", justifyContent: "center" }}
+                      style={{ minWidth: "48px", height: "48px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
                     >
                       <Text variant="headingLg" as="span">📊</Text>
                     </Box>
-                    <BlockStack gap="100">
+                    <BlockStack gap="100" style={{ flex: 1 }}>
                       <Text variant="heading2xl" as="p" fontWeight="bold">
                         {last30DaysTotal.toLocaleString("en-US")}
                       </Text>
@@ -400,8 +400,8 @@ export default function Dashboard() {
                   </InlineStack>
                 </BlockStack>
               </Card>
-            </Box>
-            <Box minWidth="0" flexGrow={1}>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
               <Card>
                 <BlockStack gap="300">
                   <InlineStack gap="300" align="start" blockAlign="center">
@@ -409,11 +409,11 @@ export default function Dashboard() {
                       padding="300"
                       background="bg-surface-secondary"
                       borderRadius="200"
-                      style={{ minWidth: "48px", height: "48px", display: "flex", alignItems: "center", justifyContent: "center" }}
+                      style={{ minWidth: "48px", height: "48px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
                     >
                       <Text variant="headingLg" as="span">🛒</Text>
                     </Box>
-                    <BlockStack gap="100">
+                    <BlockStack gap="100" style={{ flex: 1 }}>
                       <Text variant="heading2xl" as="p" fontWeight="bold">
                         {totalAtc.toLocaleString("en-US")}
                       </Text>
@@ -424,8 +424,8 @@ export default function Dashboard() {
                   </InlineStack>
                 </BlockStack>
               </Card>
-            </Box>
-            <Box minWidth="0" flexGrow={1}>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
               <Card>
                 <BlockStack gap="300">
                   <InlineStack gap="300" align="start" blockAlign="center">
@@ -433,11 +433,11 @@ export default function Dashboard() {
                       padding="300"
                       background="bg-surface-secondary"
                       borderRadius="200"
-                      style={{ minWidth: "48px", height: "48px", display: "flex", alignItems: "center", justifyContent: "center" }}
+                      style={{ minWidth: "48px", height: "48px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
                     >
                       <Text variant="headingLg" as="span">📈</Text>
                     </Box>
-                    <BlockStack gap="100">
+                    <BlockStack gap="100" style={{ flex: 1 }}>
                       <Text variant="heading2xl" as="p" fontWeight="bold">
                         {conversionRate}%
                       </Text>

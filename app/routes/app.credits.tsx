@@ -916,7 +916,7 @@ export default function Credits() {
             <div className="credits-packs-row">
               {/* Pack Découverte */}
               {CREDIT_PACKS.filter(p => p.id === "decouverte").map((pack) => (
-                <Box key={pack.id} minWidth="0" flexGrow={1}>
+                <div key={pack.id} style={{ display: "flex", flexDirection: "column", height: "100%" }}>
                   <Card>
                     <BlockStack gap="400">
                       <BlockStack gap="200">
@@ -931,7 +931,7 @@ export default function Credits() {
                         </Text>
                       </BlockStack>
                       <Divider />
-                      <BlockStack gap="300">
+                      <BlockStack gap="300" style={{ marginTop: "auto" }}>
                         <BlockStack gap="100">
                           <Text variant="headingLg" as="p" fontWeight="bold">
                             €{pack.price.toFixed(2)}
@@ -952,21 +952,21 @@ export default function Credits() {
                       </BlockStack>
                     </BlockStack>
                   </Card>
-                </Box>
+                </div>
               ))}
 
               {/* Pack Pro - Recommandé (dominant) */}
               {CREDIT_PACKS.filter(p => p.highlight).map((pack) => {
                 const savings = pack.credits * 0.40 - pack.price; // Économie vs pack Découverte
                 return (
-                  <Box key={pack.id} minWidth="0" flexGrow={1.3} position="relative" className="recommended-pack-card">
+                  <div key={pack.id} style={{ display: "flex", flexDirection: "column", height: "100%" }} className="recommended-pack-card">
                     <Card>
                       <BlockStack gap="400">
                         {/* Badge "Recommandé" en haut */}
                         <Box paddingBlockStart="200">
                           <Badge tone="info" size="large">Recommandé</Badge>
                         </Box>
-                        <BlockStack gap="400">
+                        <BlockStack gap="400" style={{ flex: 1 }}>
                           <BlockStack gap="300">
                             <Text variant="headingLg" as="h3" fontWeight="bold">
                               {pack.name}
@@ -990,7 +990,7 @@ export default function Credits() {
                             )}
                           </BlockStack>
                           <Divider />
-                          <BlockStack gap="400">
+                          <BlockStack gap="400" style={{ marginTop: "auto" }}>
                             <BlockStack gap="200">
                               <Text variant="heading2xl" as="p" fontWeight="bold">
                                 €{pack.price.toFixed(2)}
@@ -1016,13 +1016,13 @@ export default function Credits() {
                         </BlockStack>
                       </BlockStack>
                     </Card>
-                  </Box>
+                  </div>
                 );
               })}
 
               {/* Pack Starter */}
               {CREDIT_PACKS.filter(p => p.id === "starter").map((pack) => (
-                <Box key={pack.id} minWidth="0" flexGrow={1}>
+                <div key={pack.id} style={{ display: "flex", flexDirection: "column", height: "100%" }}>
                   <Card>
                     <BlockStack gap="400">
                       <BlockStack gap="200">
@@ -1037,7 +1037,7 @@ export default function Credits() {
                         </Text>
                       </BlockStack>
                       <Divider />
-                      <BlockStack gap="300">
+                      <BlockStack gap="300" style={{ marginTop: "auto" }}>
                         <BlockStack gap="100">
                           <Text variant="headingLg" as="p" fontWeight="bold">
                             €{pack.price.toFixed(2)}
@@ -1058,7 +1058,7 @@ export default function Credits() {
                       </BlockStack>
                     </BlockStack>
                   </Card>
-                </Box>
+                </div>
               ))}
             </div>
 

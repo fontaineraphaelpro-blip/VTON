@@ -1719,6 +1719,8 @@ body {
 .Polaris-Page {
   max-width: 100% !important;
   width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 
 .Polaris-Page__Content {
@@ -1726,25 +1728,50 @@ body {
   width: 100% !important;
   padding-left: 24px !important;
   padding-right: 24px !important;
+  margin: 0 !important;
 }
 
 .Polaris-Layout {
   max-width: 100% !important;
   width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 
 .Polaris-Layout__Section {
   max-width: 100% !important;
   width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  margin-bottom: 24px !important;
 }
 
-/* Full width for dashboard stats row */
+/* Full width for dashboard stats row - Uniform height */
 .dashboard-stats-row {
   display: grid !important;
   grid-template-columns: repeat(4, 1fr) !important;
   gap: 24px !important;
   width: 100% !important;
   max-width: 100% !important;
+  align-items: stretch !important;
+}
+
+.dashboard-stats-row > * {
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.dashboard-stats-row .Polaris-Card {
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.dashboard-stats-row .Polaris-BlockStack {
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
 }
 
 /* Full width for credits balance card */
@@ -1753,13 +1780,44 @@ body {
   max-width: 100% !important;
 }
 
-/* Full width for credit packs */
+/* Full width for credit packs - Uniform height with buttons aligned at bottom */
 .credits-packs-row {
   display: grid !important;
   grid-template-columns: 1fr 1.3fr 1fr !important;
   gap: 24px !important;
   width: 100% !important;
   max-width: 100% !important;
+  align-items: stretch !important;
+}
+
+.credits-packs-row > * {
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.credits-packs-row .Polaris-Card {
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.credits-packs-row .Polaris-BlockStack {
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  flex-grow: 1 !important;
+}
+
+/* Align buttons at bottom of credit pack cards */
+.credits-packs-row .Polaris-BlockStack > .Polaris-BlockStack:last-child {
+  margin-top: auto !important;
+  flex-grow: 0 !important;
+}
+
+.credits-packs-row .Polaris-BlockStack > .Polaris-Divider + .Polaris-BlockStack {
+  margin-top: auto !important;
+  flex-grow: 0 !important;
 }
 
 /* Dashboard main content - 75% left, 25% right */
@@ -1769,6 +1827,17 @@ body {
   gap: 24px !important;
   width: 100% !important;
   max-width: 100% !important;
+  align-items: start !important;
+}
+
+/* Ensure cards in dashboard have consistent minimum heights */
+.dashboard-main-layout .Polaris-Card {
+  min-height: 200px !important;
+}
+
+/* Cards with empty states get fixed height */
+.dashboard-main-layout .Polaris-Card:has(.empty-state-large) {
+  min-height: 300px !important;
 }
 
 /* Full width for history section */
@@ -1777,10 +1846,18 @@ body {
   max-width: 100% !important;
 }
 
-/* Larger empty states */
+/* Larger empty states - Fixed minimum height */
 .empty-state-large {
   padding: 80px 40px !important;
   min-height: 200px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* Fixed height for cards with empty states */
+.Polaris-Card:has(.empty-state-large) {
+  min-height: 300px !important;
 }
 
 /* Larger graph container */
