@@ -196,22 +196,26 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             }
           }
           
-          // Vérifier si le nouveau script tag existe déjà (avec la bonne version)
-          const widgetVersion = process.env.WIDGET_VERSION || Date.now();
+          // Construire l'URL attendue avec l'URL de l'app
+          const appUrl = process.env.SHOPIFY_APP_URL || process.env.APPLICATION_URL || new URL(request.url).origin;
+          const widgetVersion = process.env.WIDGET_VERSION || `v${Date.now()}`;
+          const expectedScriptUrl = `${appUrl}/apps/tryon/widget-v2.js?v=${widgetVersion}`;
+          
+          // Vérifier si le nouveau script tag existe déjà (avec la bonne version et la bonne URL)
           const scriptExists = existingScripts.some((edge: any) => {
             const src = edge.node.src || '';
-            return src.includes('/apps/tryon/widget-v2.js') && src.includes(`?v=${widgetVersion}`);
+            return src === expectedScriptUrl || (src.includes('/apps/tryon/widget-v2.js') && src.includes(`?v=${widgetVersion}`));
           });
           
-          // Supprimer les anciens script tags avec ancienne version
-          const oldVersionScripts = existingScripts.filter((edge: any) => {
+          // Supprimer TOUS les anciens script tags du widget (peu importe la version)
+          const allOldWidgetScripts = existingScripts.filter((edge: any) => {
             const src = edge.node.src || '';
-            return src.includes('/apps/tryon/widget-v2.js') && 
-                   (src.includes('?v=') && !src.includes(`?v=${widgetVersion}`) || !src.includes('?v='));
+            // Supprimer tous les script tags qui contiennent widget-v2 ou widget
+            return (src.includes('/apps/tryon/widget') || src.includes('widget-v2')) && src !== expectedScriptUrl;
           });
           
-          // Supprimer les anciens script tags avec version
-          for (const oldScript of oldVersionScripts) {
+          // Supprimer tous les anciens script tags du widget
+          for (const oldScript of allOldWidgetScripts) {
             try {
               const deleteScriptTagMutation = `#graphql
                 mutation scriptTagDelete($id: ID!) {
