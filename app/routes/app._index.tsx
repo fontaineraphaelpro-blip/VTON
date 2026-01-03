@@ -346,23 +346,44 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   }
 
   // Action normale pour sauvegarder la configuration
-  const widgetText = formData.get("widgetText") as string;
-  const widgetBg = formData.get("widgetBg") as string;
-  const widgetColor = formData.get("widgetColor") as string;
-  const maxTriesPerUser = parseInt(formData.get("maxTriesPerUser") as string);
+  const widgetText = (formData.get("widgetText") as string) || "Try It On Now";
+  const widgetBg = (formData.get("widgetBg") as string) || "#000000";
+  const widgetColor = (formData.get("widgetColor") as string) || "#ffffff";
+  const maxTriesPerUserStr = formData.get("maxTriesPerUser") as string;
+  const maxTriesPerUser = maxTriesPerUserStr ? parseInt(maxTriesPerUserStr) : 5;
   const isEnabled = formData.get("isEnabled") === "true";
-  const dailyLimit = parseInt(formData.get("dailyLimit") as string);
+  const dailyLimitStr = formData.get("dailyLimit") as string;
+  const dailyLimit = dailyLimitStr ? parseInt(dailyLimitStr) : 100;
 
-  await upsertShop(shop, {
+  console.log("[Dashboard Action] Saving configuration:", {
+    shop,
+    isEnabled,
+    dailyLimit,
+    maxTriesPerUser,
     widgetText,
     widgetBg,
     widgetColor,
-    maxTriesPerUser,
-    isEnabled,
-    dailyLimit,
   });
 
-  return json({ success: true });
+  try {
+    await upsertShop(shop, {
+      widgetText,
+      widgetBg,
+      widgetColor,
+      maxTriesPerUser,
+      isEnabled,
+      dailyLimit,
+    });
+
+    console.log("[Dashboard Action] Configuration saved successfully");
+    return json({ success: true });
+  } catch (error) {
+    console.error("[Dashboard Action] Error saving configuration:", error);
+    return json({ 
+      success: false, 
+      error: error instanceof Error ? error.message : "Erreur lors de la sauvegarde" 
+    });
+  }
 };
 
 export default function Dashboard() {
