@@ -15,7 +15,7 @@ import {
   Badge,
   Divider,
   Banner,
-  Switch,
+  Checkbox,
 } from "@shopify/polaris";
 import { TitleBar } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
@@ -230,9 +230,9 @@ export default function Products() {
       <Text key={`tryon-count-${product.id}`} variant="bodyMd" as="span">
         {tryonCount.toLocaleString("en-US")}
       </Text>,
-      // ADDED: Try-on toggle switch
-      <Switch
-        key={`switch-${product.id}`}
+      // ADDED: Try-on toggle checkbox
+      <Checkbox
+        key={`checkbox-${product.id}`}
         checked={tryonEnabled}
         onChange={handleToggle}
         disabled={fetcher.state === "submitting"}
