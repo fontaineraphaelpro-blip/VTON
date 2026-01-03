@@ -12,8 +12,11 @@ import Replicate from "replicate";
 // CONFIGURATION
 // ==========================================
 
-const MODEL_ID =
-  "cuuupid/idm-vton:0513734a452173b8173e907e3a59d19a36266e55b48528559432bd21c7d7e985";
+const MODEL_ID = "google/nano-banana-pro";
+
+// Prompt for garment transfer task
+const GARMENT_TRANSFER_PROMPT = 
+  "This is NOT a redesign task. It is a garment transfer task. Use the clothing from the second image exactly as-is with zero creative interpretation. The output must look like the REAL clothing item was physically worn by the person. No invented graphics, no color changes, no simplification.";
 
 // Check if Replicate API token is configured
 if (!process.env.REPLICATE_API_TOKEN) {
@@ -63,16 +66,43 @@ export async function generateTryOn(
 
     console.log("Calling Replicate API with model:", MODEL_ID);
     console.log("Input types - person:", typeof personInput, "garment:", typeof garmentInput);
+    console.log("Using prompt:", GARMENT_TRANSFER_PROMPT);
     
     // Use replicate.run which returns a Promise that resolves when the prediction completes
-    let output = await replicate.run(MODEL_ID, {
-      input: {
-        human_img: personInput,
-        garm_img: garmentInput,
-        garment_des: category,
-        category: "upper_body",
-      },
-    });
+    // For google/nano-banana-pro, we use image inputs and a prompt
+    // Try different parameter names as the model might use different conventions
+    let output;
+    try {
+      output = await replicate.run(MODEL_ID, {
+        input: {
+          image: personInput, // Person image
+          image2: garmentInput, // Garment image
+          prompt: GARMENT_TRANSFER_PROMPT,
+        },
+      });
+    } catch (error: any) {
+      // If the above fails, try alternative parameter names
+      console.warn("First attempt failed, trying alternative parameter names:", error.message);
+      try {
+        output = await replicate.run(MODEL_ID, {
+          input: {
+            person_image: personInput,
+            garment_image: garmentInput,
+            prompt: GARMENT_TRANSFER_PROMPT,
+          },
+        });
+      } catch (error2: any) {
+        console.warn("Second attempt failed, trying with different names:", error2.message);
+        // Try with just prompt and images as separate parameters
+        output = await replicate.run(MODEL_ID, {
+          input: {
+            image1: personInput,
+            image2: garmentInput,
+            prompt: GARMENT_TRANSFER_PROMPT,
+          },
+        });
+      }
+    }
 
     console.log("Replicate output type:", typeof output);
     console.log("Replicate output:", JSON.stringify(output, null, 2));
@@ -83,15 +113,39 @@ export async function generateTryOn(
       
       try {
         // Create a prediction manually
-        const prediction = await replicate.predictions.create({
-          version: MODEL_ID.split(":")[1] || "0513734a452173b8173e907e3a59d19a36266e55b48528559432bd21c7d7e985",
-          input: {
-            human_img: personInput,
-            garm_img: garmentInput,
-            garment_des: category,
-            category: "upper_body",
-          },
-        });
+        // Try different parameter names
+        let prediction;
+        try {
+          prediction = await replicate.predictions.create({
+            model: MODEL_ID,
+            input: {
+              image: personInput,
+              image2: garmentInput,
+              prompt: GARMENT_TRANSFER_PROMPT,
+            },
+          });
+        } catch (error: any) {
+          console.warn("First prediction attempt failed, trying alternatives:", error.message);
+          try {
+            prediction = await replicate.predictions.create({
+              model: MODEL_ID,
+              input: {
+                person_image: personInput,
+                garment_image: garmentInput,
+                prompt: GARMENT_TRANSFER_PROMPT,
+              },
+            });
+          } catch (error2: any) {
+            prediction = await replicate.predictions.create({
+              model: MODEL_ID,
+              input: {
+                image1: personInput,
+                image2: garmentInput,
+                prompt: GARMENT_TRANSFER_PROMPT,
+              },
+            });
+          }
+        }
         
         console.log("Created prediction:", prediction.id, "Status:", prediction.status);
         
