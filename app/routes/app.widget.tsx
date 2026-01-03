@@ -552,7 +552,7 @@ export default function Widget() {
                 <strong>Manual Installation (Optional):</strong> If you prefer to install manually, add this script to your theme's `theme.liquid` file, just before the `&lt;/body&gt;` tag:
               </Text>
               <InlineCode>
-                &lt;script src="{`{ shop.url }`}/apps/tryon/widget.js" defer&gt;&lt;/script&gt;
+                &lt;script src="{`{ shop.url }`}/apps/tryon/widget-v2.js" defer&gt;&lt;/script&gt;
               </InlineCode>
             </BlockStack>
           </Card>

@@ -40,7 +40,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       // Construire l'URL du script - utiliser l'URL de la boutique + proxy path
       const url = new URL(request.url);
       const baseUrl = url.origin;
-      const scriptTagUrl = `${baseUrl}/apps/tryon/widget.js`;
+      const scriptTagUrl = `${baseUrl}/apps/tryon/widget-v2.js`;
       
       // Vérifier si le script tag existe déjà
       const scriptTagsQuery = `#graphql
@@ -149,13 +149,15 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
           const existingScripts = scriptTagsData.data?.scriptTags?.edges || [];
           
           // Supprimer les anciens script tags qui pourraient interférer
+          // Supprimer widget.js (ancien) mais garder widget-v2.js (nouveau)
           const oldScriptTags = existingScripts.filter((edge: any) => {
             const src = edge.node.src || '';
-            return src.includes('widget') || 
-                   src.includes('tryon') || 
+            // Supprimer l'ancien widget.js mais pas widget-v2.js
+            return (src.includes('/apps/tryon/widget.js') && !src.includes('widget-v2')) ||
+                   (src.includes('widget') && !src.includes('widget-v2') && !src.includes('/apps/tryon/')) ||
+                   src.includes('tryon') && !src.includes('widget-v2') ||
                    src.includes('try-on') ||
-                   src.includes('vton') ||
-                   (src.includes('/apps/') && src.includes('widget'));
+                   (src.includes('vton') && !src.includes('widget-v2'));
           });
           
           // Supprimer les anciens script tags
@@ -192,7 +194,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
           
           // Vérifier si le nouveau script tag existe déjà
           const scriptExists = existingScripts.some((edge: any) => 
-            edge.node.src.includes('/apps/tryon/widget.js')
+            edge.node.src.includes('/apps/tryon/widget-v2.js')
           );
 
           if (!scriptExists) {
