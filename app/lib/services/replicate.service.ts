@@ -95,10 +95,10 @@ export async function generateTryOn(
         image2: garmentInput, // Garment image (product)
         prompt: GARMENT_TRANSFER_PROMPT, // Prompt
       };
-      console.log("Sending to Replicate - input params keys:", Object.keys(inputParams));
-      console.log("Sending to Replicate - has image:", !!inputParams.image);
-      console.log("Sending to Replicate - has image2:", !!inputParams.image2);
-      console.log("Sending to Replicate - has prompt:", !!inputParams.prompt);
+      console.log("[Replicate] Input params keys:", Object.keys(inputParams));
+      console.log("[Replicate] image type:", Buffer.isBuffer(inputParams.image) ? 'Buffer' : typeof inputParams.image, "exists:", !!inputParams.image);
+      console.log("[Replicate] image2 type:", Buffer.isBuffer(inputParams.image2) ? 'Buffer' : typeof inputParams.image2, "exists:", !!inputParams.image2);
+      console.log("[Replicate] prompt:", inputParams.prompt?.substring(0, 50) + "...", "exists:", !!inputParams.prompt);
       
       output = await replicate.run(MODEL_ID, {
         input: inputParams,
