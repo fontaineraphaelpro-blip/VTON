@@ -711,77 +711,97 @@ export default function Credits() {
   return (
     <Page>
       <TitleBar title="Credits - VTON Magic" />
-      <div className="app-container">
+      <div className="vton-page-container">
         {error && (
-          <Banner tone="critical" title="Erreur" onDismiss={() => {}}>
-            {error}
-          </Banner>
+          <div className="vton-card" style={{ marginBottom: "2rem" }}>
+            <Banner tone="critical" title="Erreur" onDismiss={() => {}}>
+              {error}
+            </Banner>
+          </div>
         )}
 
         {(purchaseSuccess || (fetcher.data?.success && !fetcher.data?.redirect)) && (
-          <Banner tone="success" title="Succès !" onDismiss={() => {}}>
-            {creditsAdded || fetcher.data?.creditsAdded || fetcher.data?.credits || 0} crédits ajoutés à votre compte.
-          </Banner>
+          <div className="vton-card" style={{ marginBottom: "2rem" }}>
+            <Banner tone="success" title="Succès !" onDismiss={() => {}}>
+              {creditsAdded || fetcher.data?.creditsAdded || fetcher.data?.credits || 0} crédits ajoutés à votre compte.
+            </Banner>
+          </div>
         )}
 
         {fetcher.data?.success && fetcher.data?.redirect && (
-          <Banner tone="info" title="Redirection vers le paiement..." onDismiss={() => {}}>
-            Redirection vers le checkout Shopify...
-          </Banner>
+          <div className="vton-card" style={{ marginBottom: "2rem" }}>
+            <Banner tone="info" title="Redirection vers le paiement..." onDismiss={() => {}}>
+              Redirection vers le checkout Shopify...
+            </Banner>
+          </div>
         )}
 
         {fetcher.data?.error && (
-          <Banner 
-            tone="critical" 
-            title={fetcher.data.requiresAuth ? "Authentification requise" : "Erreur"}
-            onDismiss={() => {}}
-            action={fetcher.data.requiresAuth ? {
-              content: fetcher.data.reauthUrl ? "Ré-authentifier" : "Rafraîchir la page",
-              onAction: () => {
-                if (fetcher.data.reauthUrl) {
-                  window.location.href = fetcher.data.reauthUrl;
-                } else {
-                  window.location.reload();
-                }
-              },
-            } : undefined}
-          >
-            {fetcher.data.error}
-          </Banner>
+          <div className="vton-card" style={{ marginBottom: "2rem" }}>
+            <Banner 
+              tone="critical" 
+              title={fetcher.data.requiresAuth ? "Authentification requise" : "Erreur"}
+              onDismiss={() => {}}
+              action={fetcher.data.requiresAuth ? {
+                content: fetcher.data.reauthUrl ? "Ré-authentifier" : "Rafraîchir la page",
+                onAction: () => {
+                  if (fetcher.data.reauthUrl) {
+                    window.location.href = fetcher.data.reauthUrl;
+                  } else {
+                    window.location.reload();
+                  }
+                },
+              } : undefined}
+            >
+              {fetcher.data.error}
+            </Banner>
+          </div>
         )}
 
-        <header className="app-header">
-          <h1 className="app-title">Credits</h1>
-          <p className="app-subtitle">
+        <header className="vton-header-simple">
+          <h1 className="vton-header-title">Credits</h1>
+          <p style={{ fontSize: "0.95rem", color: "var(--text-secondary)", margin: "4px 0 0 0" }}>
             Use credits to generate virtual try-ons instantly
           </p>
         </header>
 
-        <div className="credits-balance">
-          <div>
-            <div className="credits-amount">{currentCredits.toLocaleString("en-US")}</div>
-            <div className="credits-label">Credits available</div>
+        <div className="vton-card">
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div>
+              <div className="vton-stat-value">{currentCredits.toLocaleString("en-US")}</div>
+              <div className="vton-stat-label">Credits available</div>
+            </div>
           </div>
         </div>
 
-        <div className="pricing-grid">
+        <div className="vton-grid-3">
           {CREDIT_PACKS.map((pack) => (
-            <div key={pack.id} className={`plan-card ${pack.highlight ? 'featured' : ''}`}>
+            <div key={pack.id} className={`vton-pricing-card ${pack.highlight ? 'featured' : ''}`}>
               {pack.highlight && (
-                <div className="plan-badge">Most popular</div>
+                <div className="vton-badge vton-badge-dark" style={{ position: "absolute", top: "-12px", left: "24px" }}>
+                  Most popular
+                </div>
               )}
-              <div className="plan-name">{pack.name}</div>
-              <div className="plan-price">
-                €{pack.price.toFixed(2)} <span>/ one-time</span>
+              <div style={{ fontSize: "1.5rem", fontWeight: 700, marginBottom: "1rem", color: "var(--text-main)" }}>
+                {pack.name}
               </div>
-              <div className="plan-features">
-                <div className="plan-feature">• {pack.credits} credits</div>
-                <div className="plan-feature">• No expiration</div>
-                <div className="plan-feature">• {pack.description}</div>
+              <div className="vton-pricing-price">
+                <strong>€{pack.price.toFixed(2)}</strong> <span>/ one-time</span>
               </div>
-              <div className="plan-cta">
+              <div style={{ marginBottom: "1.5rem", minHeight: "120px", flex: 1 }}>
+                <div style={{ fontSize: "0.875rem", color: "var(--text-secondary)", marginBottom: "0.5rem" }}>
+                  • {pack.credits} credits
+                </div>
+                <div style={{ fontSize: "0.875rem", color: "var(--text-secondary)", marginBottom: "0.5rem" }}>
+                  • No expiration
+                </div>
+                <div style={{ fontSize: "0.875rem", color: "var(--text-secondary)" }}>
+                  • {pack.description}
+                </div>
+              </div>
+              <div style={{ marginTop: "auto" }}>
                 <button 
-                  className="plan-button"
+                  className={`vton-btn vton-btn-primary vton-btn-full ${pack.highlight ? '' : ''}`}
                   onClick={() => handlePurchase(pack.id)}
                   disabled={isSubmitting || submittingPackId !== null}
                 >

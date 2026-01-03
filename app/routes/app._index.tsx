@@ -461,17 +461,17 @@ export default function Dashboard() {
   return (
     <Page>
       <TitleBar title="Dashboard - VTON Magic" />
-      <div className="app-container">
-        <header className="app-header">
-          <h1 className="app-title">Dashboard</h1>
-          <p className="app-subtitle">
+      <div className="vton-page-container">
+        <header className="vton-header-simple">
+          <h1 className="vton-header-title">Dashboard</h1>
+          <p style={{ fontSize: "0.95rem", color: "var(--text-secondary)", margin: "4px 0 0 0" }}>
             Vue d'ensemble de votre activité et statistiques
           </p>
         </header>
 
         {/* Alerts compactes en haut */}
         {(error || fetcher.data?.success || credits < 50) && (
-          <div className="vton-section" style={{ marginBottom: "2rem" }}>
+          <div className="vton-card" style={{ marginBottom: "2rem" }}>
             <BlockStack gap="300">
               {error && (
                 <Banner tone="critical" title="Error">
@@ -508,32 +508,34 @@ export default function Dashboard() {
         )}
 
         {/* Stats Grid */}
-        <div className="stats-grid">
-          <div className="stat-card">
-            <div className="stat-emoji">💰</div>
-            <div className="stat-value">{credits.toLocaleString("en-US")}</div>
-            <div className="stat-label">Jetons restants</div>
+        <div className="vton-grid-4">
+          <div className="vton-card">
+            <div style={{ fontSize: "2rem", marginBottom: "12px" }}>💰</div>
+            <div className="vton-stat-value">{credits.toLocaleString("en-US")}</div>
+            <div className="vton-stat-label">Jetons restants</div>
           </div>
-          <div className="stat-card">
-            <div className="stat-emoji">📊</div>
-            <div className="stat-value">{last30DaysTotal.toLocaleString("en-US")}</div>
-            <div className="stat-label">Total Try-ons (30j)</div>
+          <div className="vton-card">
+            <div style={{ fontSize: "2rem", marginBottom: "12px" }}>📊</div>
+            <div className="vton-stat-value">{last30DaysTotal.toLocaleString("en-US")}</div>
+            <div className="vton-stat-label">Total Try-ons (30j)</div>
           </div>
-          <div className="stat-card">
-            <div className="stat-emoji">🛒</div>
-            <div className="stat-value">{totalAtc.toLocaleString("en-US")}</div>
-            <div className="stat-label">Add to Cart</div>
+          <div className="vton-card">
+            <div style={{ fontSize: "2rem", marginBottom: "12px" }}>🛒</div>
+            <div className="vton-stat-value">{totalAtc.toLocaleString("en-US")}</div>
+            <div className="vton-stat-label">Add to Cart</div>
           </div>
-          <div className="stat-card">
-            <div className="stat-emoji">📈</div>
-            <div className="stat-value">{conversionRate}%</div>
-            <div className="stat-label">Taux de conversion</div>
+          <div className="vton-card">
+            <div style={{ fontSize: "2rem", marginBottom: "12px" }}>📈</div>
+            <div className="vton-stat-value">{conversionRate}%</div>
+            <div className="vton-stat-label">Taux de conversion</div>
           </div>
         </div>
 
         {/* Générations */}
-        <div className="dashboard-section">
-          <h2>Générations par jour (7 derniers jours)</h2>
+        <div className="vton-card">
+          <h2 style={{ fontSize: "1.25rem", fontWeight: 700, marginBottom: "1.5rem", color: "var(--text-main)" }}>
+            Générations par jour (7 derniers jours)
+          </h2>
           {dailyStats.length > 0 ? (
             <div className="graph-container-large">
               <div className="graph-bars">
@@ -563,65 +565,74 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Produits */}
-        <div className="dashboard-section">
-          <h2>Produits les plus essayés</h2>
-          {topProducts.length > 0 ? (
-            <div className="products-list">
-              {topProducts.map((product: any, index: number) => (
-                <div key={product.product_id || index} className="product-item">
-                  <span className="product-name">
-                    {product.product_title || product.product_id || "Produit inconnu"}
-                  </span>
-                  <Badge tone="info">
-                    {product.tryons || product.count} essai{product.tryons > 1 ? "s" : ""}
-                  </Badge>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="dashboard-placeholder">
-              Aucun essai pour le moment. Commencez à utiliser le widget sur vos produits !
-            </div>
-          )}
-        </div>
-
-        {/* Activité */}
-        <div className="dashboard-section">
-          <h2>Activité récente</h2>
-          {recentLogs.length > 0 ? (
-            <div className="activity-list">
-              {recentLogs.slice(0, 5).map((log: any, index: number) => (
-                <div key={log.id || index} className="activity-item">
-                  <div className="activity-info">
-                    <p className="activity-title">
-                      {log.product_title || log.product_id || "Produit inconnu"}
-                    </p>
-                    <p className="activity-date">
-                      {new Date(log.created_at).toLocaleDateString("fr-FR", { 
-                        month: "short", 
-                        day: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit"
-                      })}
-                    </p>
+        {/* Produits et Activité côte à côte */}
+        <div className="vton-grid-2">
+          {/* Produits */}
+          <div className="vton-card">
+            <h2 style={{ fontSize: "1.25rem", fontWeight: 700, marginBottom: "1.5rem", color: "var(--text-main)" }}>
+              Produits les plus essayés
+            </h2>
+            {topProducts.length > 0 ? (
+              <div className="products-list">
+                {topProducts.map((product: any, index: number) => (
+                  <div key={product.product_id || index} className="product-item">
+                    <span className="product-name">
+                      {product.product_title || product.product_id || "Produit inconnu"}
+                    </span>
+                    <Badge tone="info">
+                      {product.tryons || product.count} essai{product.tryons > 1 ? "s" : ""}
+                    </Badge>
                   </div>
-                  <Badge tone={log.success ? "success" : "critical"}>
-                    {log.success ? "✓ Réussi" : "✗ Échec"}
-                  </Badge>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="dashboard-placeholder">
-              Aucune activité récente. Les essais apparaîtront ici une fois que les clients commenceront à utiliser le widget.
-            </div>
-          )}
+                ))}
+              </div>
+            ) : (
+              <div className="dashboard-placeholder">
+                Aucun essai pour le moment. Commencez à utiliser le widget sur vos produits !
+              </div>
+            )}
+          </div>
+
+          {/* Activité */}
+          <div className="vton-card">
+            <h2 style={{ fontSize: "1.25rem", fontWeight: 700, marginBottom: "1.5rem", color: "var(--text-main)" }}>
+              Activité récente
+            </h2>
+            {recentLogs.length > 0 ? (
+              <div className="activity-list">
+                {recentLogs.slice(0, 5).map((log: any, index: number) => (
+                  <div key={log.id || index} className="activity-item">
+                    <div className="activity-info">
+                      <p className="activity-title">
+                        {log.product_title || log.product_id || "Produit inconnu"}
+                      </p>
+                      <p className="activity-date">
+                        {new Date(log.created_at).toLocaleDateString("fr-FR", { 
+                          month: "short", 
+                          day: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit"
+                        })}
+                      </p>
+                    </div>
+                    <Badge tone={log.success ? "success" : "critical"}>
+                      {log.success ? "✓ Réussi" : "✗ Échec"}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="dashboard-placeholder">
+                Aucune activité récente. Les essais apparaîtront ici une fois que les clients commenceront à utiliser le widget.
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Réglages & Sécurité */}
-        <div className="dashboard-section">
-          <h2>Réglages & Sécurité</h2>
+        <div className="vton-card">
+          <h2 style={{ fontSize: "1.25rem", fontWeight: 700, marginBottom: "1.5rem", color: "var(--text-main)" }}>
+            Réglages & Sécurité
+          </h2>
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -651,6 +662,7 @@ export default function Dashboard() {
                   name="dailyLimit"
                   defaultValue={String(shop?.daily_limit || 100)}
                   placeholder="Limite d'essais par jour"
+                  className="vton-input"
                 />
               </div>
               <div className="setting-card">
@@ -660,12 +672,14 @@ export default function Dashboard() {
                   name="maxTriesPerUser"
                   defaultValue={String(shop?.max_tries_per_user || 5)}
                   placeholder="0"
+                  className="vton-input"
                 />
               </div>
               <div className="setting-card">
                 <label>Nettoyage</label>
                 <button
                   type="button"
+                  className="vton-btn vton-btn-secondary"
                   onClick={async () => {
                     const formData = new FormData();
                     formData.append("intent", "cleanup-script-tags");
