@@ -827,17 +827,18 @@ export default function Dashboard() {
               </div>
               <div className="setting-card">
                 <label>Nettoyage</label>
-                <button
+                <Button
                   type="button"
-                  onClick={async () => {
+                  onClick={() => {
                     const formData = new FormData();
                     formData.append("intent", "cleanup-script-tags");
                     fetcher.submit(formData, { method: "post" });
                   }}
                   disabled={fetcher.state === "submitting"}
+                  loading={fetcher.state === "submitting"}
                 >
                   {fetcher.state === "submitting" ? "Traitement..." : "Supprimer les anciens widgets et scripts"}
-                </button>
+                </Button>
               </div>
             </div>
             <div style={{ marginTop: "20px" }}>
