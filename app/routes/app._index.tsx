@@ -11,7 +11,9 @@ import {
   TextField,
   Checkbox,
   Badge,
+  Icon,
 } from "@shopify/polaris";
+import { CreditCardMajor, AnalyticsMajor, CartMajor, TrendingUpMajor } from "@shopify/polaris-icons";
 import { TitleBar } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
 import { getShop, upsertShop, getTryonLogs, getTopProducts, getTryonStatsByDay } from "../lib/services/db.service";
