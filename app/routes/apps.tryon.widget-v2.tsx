@@ -1523,20 +1523,42 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     // ==========================================
     // INITIALIZE WIDGET
     // ==========================================
+    // Log immédiat pour confirmer que le script est chargé
+    console.log('[VTON Widget V2] Script loaded', {
+        url: window.location.href,
+        readyState: document.readyState,
+        timestamp: new Date().toISOString()
+    });
+    
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'widget-v2.js:global-init',message:'Widget script loaded',data:{readyState:document.readyState,url:window.location.href},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    try {
+        fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'widget-v2.js:global-init',message:'Widget script loaded',data:{readyState:document.readyState,url:window.location.href,pathname:window.location.pathname},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch((e)=>{console.error('[VTON] Log error:',e);});
+    } catch(e) {
+        console.error('[VTON] Failed to send log:', e);
+    }
     // #endregion
+    
     // Wait for DOM to be ready
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', () => {
+            console.log('[VTON Widget V2] DOMContentLoaded fired');
             // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'widget-v2.js:DOMContentLoaded',message:'DOMContentLoaded fired, initializing widget',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+            try {
+                fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'widget-v2.js:DOMContentLoaded',message:'DOMContentLoaded fired, initializing widget',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch((e)=>{console.error('[VTON] Log error:',e);});
+            } catch(e) {
+                console.error('[VTON] Failed to send log:', e);
+            }
             // #endregion
             new VTONWidgetV2();
         });
     } else {
+        console.log('[VTON Widget V2] DOM already ready, initializing immediately');
         // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'widget-v2.js:immediate-init',message:'DOM already ready, initializing widget immediately',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+        try {
+            fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'widget-v2.js:immediate-init',message:'DOM already ready, initializing widget immediately',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch((e)=>{console.error('[VTON] Log error:',e);});
+        } catch(e) {
+            console.error('[VTON] Failed to send log:', e);
+        }
         // #endregion
         new VTONWidgetV2();
     }
