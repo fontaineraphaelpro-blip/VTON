@@ -475,29 +475,51 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                         display: flex;
                         align-items: center;
                         justify-content: center;
-                        gap: 8px;
+                        gap: 10px;
                         width: 100%;
-                        padding: 14px 24px;
-                        background: \${settings.backgroundColor};
+                        padding: 16px 24px;
+                        background: linear-gradient(135deg, \${settings.backgroundColor} 0%, \${this.adjustColor(settings.backgroundColor, -10)} 100%);
                         color: \${settings.textColor};
                         border: none;
-                        border-radius: 8px;
+                        border-radius: 12px;
                         font-size: 16px;
-                        font-weight: 600;
+                        font-weight: 700;
                         cursor: pointer;
-                        transition: all 0.2s ease;
-                        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.1);
                         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+                        position: relative;
+                        overflow: hidden;
+                    }
+                    
+                    .vton-button::before {
+                        content: '';
+                        position: absolute;
+                        top: 0;
+                        left: -100%;
+                        width: 100%;
+                        height: 100%;
+                        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+                        transition: left 0.5s;
+                    }
+                    
+                    .vton-button:hover::before {
+                        left: 100%;
                     }
                     
                     .vton-button:hover {
-                        opacity: 0.9;
-                        transform: translateY(-1px);
-                        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+                        transform: translateY(-2px);
+                        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2), 0 4px 8px rgba(0, 0, 0, 0.15);
                     }
                     
                     .vton-button:active {
                         transform: translateY(0);
+                        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+                    }
+                    
+                    .vton-button:focus {
+                        outline: 3px solid rgba(59, 130, 246, 0.5);
+                        outline-offset: 2px;
                     }
                     
                     .vton-icon {
@@ -866,7 +888,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                     }
                 </style>
                 
-                <button class="vton-button" id="vton-trigger-btn">
+                <button class="vton-button" id="vton-trigger-btn" aria-label="Open virtual try-on">
                     <svg class="vton-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M12 2L2 7L12 12L22 7L12 2Z"/>
                         <path d="M2 17L12 22L22 17"/>
@@ -1340,8 +1362,11 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                         <div id="vton-state-loading" class="vton-state">
                             <div class="vton-loading">
                                 <div class="vton-spinner"></div>
-                                <div class="vton-loading-text">Generating your try-on...</div>
-                                <div class="vton-loading-subtext">This may take 15-30 seconds</div>
+                                <div class="vton-loading-text">Génération en cours...</div>
+                                <div class="vton-loading-subtext">Cela peut prendre 15-30 secondes</div>
+                                <div class="vton-progress-bar">
+                                    <div class="vton-progress-fill"></div>
+                                </div>
                             </div>
                         </div>
                         
@@ -1355,8 +1380,22 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                                 </div>
                             </div>
                             <div class="vton-actions">
-                                <button class="vton-action-btn vton-action-primary" id="vton-download-btn">Download</button>
-                                <button class="vton-action-btn vton-action-secondary" id="vton-new-try-btn">Try Again</button>
+                                <button class="vton-action-btn vton-action-primary" id="vton-download-btn" aria-label="Download result image">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 8px;">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                        <polyline points="7 10 12 15 17 10"></polyline>
+                                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                                    </svg>
+                                    Télécharger
+                                </button>
+                                <button class="vton-action-btn vton-action-secondary" id="vton-new-try-btn" aria-label="Try again with new photo">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 8px;">
+                                        <polyline points="23 4 23 10 17 10"></polyline>
+                                        <polyline points="1 20 1 14 7 14"></polyline>
+                                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                                    </svg>
+                                    Réessayer
+                                </button>
                             </div>
                         </div>
                         
