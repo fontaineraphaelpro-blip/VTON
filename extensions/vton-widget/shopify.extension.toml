@@ -3,6 +3,9 @@
 
 api_version = "2025-01"
 name = "Virtual Try-On Widget"
+
+uid = "d18f905c-9250-1dc8-ff03-4642490b6bb339a3139b"
+
 type = "theme_app_extension"
 
 [build]
@@ -11,5 +14,5 @@ watch = []
 
 [[extension_points]]
 target = "app_embed"
-module = "./src/block.liquid"
+module = "./blocks/block.liquid"
 
