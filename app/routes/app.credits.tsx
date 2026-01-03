@@ -77,7 +77,35 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
 export const action = async ({ request }: ActionFunctionArgs) => {
   try {
-    const { admin, session } = await authenticate.admin(request);
+    let admin, session;
+    try {
+      const authResult = await authenticate.admin(request);
+      admin = authResult.admin;
+      session = authResult.session;
+    } catch (authError) {
+      // Si authenticate.admin lance une Response (redirection), la gérer
+      if (authError instanceof Response) {
+        if (authError.status === 401 || authError.status === 302) {
+          const reauthUrl = authError.headers.get('x-shopify-api-request-failure-reauthorize-url') || 
+                           authError.headers.get('location');
+          console.error("[Credits] Authentication required in action", { status: authError.status, reauthUrl });
+          return json({ 
+            success: false, 
+            error: "Votre session a expiré. Veuillez rafraîchir la page pour vous ré-authentifier.",
+            requiresAuth: true,
+            reauthUrl: reauthUrl || null,
+          });
+        }
+        // Pour toute autre Response, retourner une erreur JSON
+        return json({ 
+          success: false, 
+          error: `Erreur d'authentification (${authError.status}). Veuillez rafraîchir la page.`,
+          requiresAuth: true,
+        });
+      }
+      // Pour les autres erreurs, les propager
+      throw authError;
+    }
     
     // Vérifier que la session est valide
     if (!session || !session.shop) {
@@ -621,15 +649,16 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   }
 
     return json({ success: false, error: "Invalid purchase" });
-  } catch (authError) {
-    // Gérer les erreurs d'authentification
-    console.error("[Credits] Authentication error in action:", authError);
+  } catch (error) {
+    // Gérer toutes les erreurs, y compris les Responses de redirection
+    console.error("[Credits] Error in action:", error);
     
     // Si c'est une Response de redirection (auth requise)
-    if (authError instanceof Response) {
-      if (authError.status === 401 || authError.status === 302) {
-        const reauthUrl = authError.headers.get('x-shopify-api-request-failure-reauthorize-url') || 
-                         authError.headers.get('location');
+    if (error instanceof Response) {
+      if (error.status === 401 || error.status === 302) {
+        const reauthUrl = error.headers.get('x-shopify-api-request-failure-reauthorize-url') || 
+                         error.headers.get('location');
+        console.error("[Credits] Authentication required (Response)", { status: error.status, reauthUrl });
         return json({ 
           success: false, 
           error: "Votre session a expiré. Veuillez rafraîchir la page pour vous ré-authentifier.",
@@ -637,12 +666,19 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           reauthUrl: reauthUrl || null,
         });
       }
+      // Pour toute autre Response, retourner une erreur JSON
+      return json({ 
+        success: false, 
+        error: `Erreur serveur (${error.status}). Veuillez réessayer.`,
+        requiresAuth: error.status === 401 || error.status === 302,
+      });
     }
     
+    // Pour les autres erreurs
     return json({ 
       success: false, 
-      error: authError instanceof Error ? authError.message : "Une erreur est survenue lors de l'authentification.",
-      requiresAuth: true,
+      error: error instanceof Error ? error.message : "Une erreur est survenue. Veuillez réessayer.",
+      requiresAuth: false,
     });
   }
 };
