@@ -81,6 +81,7 @@ export async function generateTryOn(
     // 2. An array of strings (URLs)
     // 3. An object with a URL property
     // 4. null or undefined
+    // 5. An empty object {} (which means we need to check the prediction status)
     
     let resultUrl: string | null = null;
 
@@ -101,17 +102,36 @@ export async function generateTryOn(
         } else if (Array.isArray(nested) && nested.length > 0) {
           resultUrl = String(nested[0]);
         }
+      } else if ("output_url" in output && typeof output.output_url === "string") {
+        resultUrl = output.output_url;
+      } else if ("image" in output && typeof output.image === "string") {
+        resultUrl = output.image;
       } else {
         // Try to stringify the first value
         const values = Object.values(output);
-        if (values.length > 0 && typeof values[0] === "string") {
-          resultUrl = values[0];
+        if (values.length > 0) {
+          const firstValue = values[0];
+          if (typeof firstValue === "string") {
+            resultUrl = firstValue;
+          } else if (Array.isArray(firstValue) && firstValue.length > 0) {
+            resultUrl = String(firstValue[0]);
+          }
         }
       }
     }
 
+    // If output is an empty object {}, it might mean the prediction is still processing
+    // or the result is available via the prediction ID
+    if (!resultUrl && output && typeof output === "object" && Object.keys(output).length === 0) {
+      console.warn("Replicate returned empty object - prediction might still be processing or result available via API");
+      // Try to get the prediction ID from the replicate instance if available
+      // For now, we'll throw a more helpful error
+      throw new Error("Replicate returned empty result. The prediction may still be processing. Please try again in a few seconds.");
+    }
+
     if (!resultUrl) {
       console.error("Replicate output format not recognized:", output);
+      console.error("Output keys:", output && typeof output === "object" ? Object.keys(output) : "N/A");
       throw new Error(`Replicate returned unexpected format: ${JSON.stringify(output)}`);
     }
 

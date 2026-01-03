@@ -770,7 +770,11 @@ export default function Credits() {
   revalidatorRef.current = revalidator;
 
   const isSubmitting = fetcher.state === "submitting";
-  console.log("[Credits] Component state initialized");
+  console.log("[Credits] Component state initialized", { 
+    isSubmitting, 
+    fetcherState: fetcher.state,
+    fetcherData: fetcher.data 
+  });
 
   // Rediriger vers le checkout Shopify après création de la commande
   useEffect(() => {
@@ -832,9 +836,18 @@ export default function Credits() {
   }, [fetcher.data]); // Retirer revalidator des dépendances pour éviter les re-renders infinis
 
   const handlePurchase = (packId: string) => {
+    console.log("[Credits] handlePurchase called", { packId, isSubmitting, fetcherState: fetcher.state });
+    
+    if (isSubmitting) {
+      console.warn("[Credits] Purchase already in progress, ignoring click");
+      return;
+    }
+    
     const formData = new FormData();
     formData.append("intent", "purchase-credits");
     formData.append("packId", packId);
+    
+    console.log("[Credits] Submitting purchase request", { packId });
     fetcher.submit(formData, { method: "post" });
   };
 
