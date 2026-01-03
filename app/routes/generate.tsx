@@ -133,7 +133,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const queryParams = url.searchParams;
 
     // 1. Verify Shopify signature or storefront origin
-    if (!verifyProxySignature(queryParams, request)) {
+    // Pass the raw URL search string for signature verification (to preserve URL encoding)
+    if (!verifyProxySignature(queryParams, request, url.search)) {
       console.error("[Generate] Request verification failed:", {
         hasSignature: !!queryParams.get("signature"),
         referer: request.headers.get("referer"),
