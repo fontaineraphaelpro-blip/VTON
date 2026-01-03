@@ -207,7 +207,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             
             // Build URL correctly - CONFIG.apiBase should be the store URL (window.location.origin)
             // This ensures the request goes through Shopify App Proxy which adds the signature
-            const url = new URL(\`\${CONFIG.apiBase}/status\`);
+            const url = new URL(CONFIG.apiBase + '/status');
             url.searchParams.set('shop', this.shop);
             url.searchParams.set('product_id', this.productId);
             
