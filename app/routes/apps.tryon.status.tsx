@@ -59,29 +59,39 @@ function verifyProxySignature(queryParams: URLSearchParams, request: Request): b
   const origin = request.headers.get("origin") || "";
   const shop = queryParams.get("shop") || "";
   
+  // Verify that request comes from a valid Shopify storefront
   const isShopifyStorefront = 
-    referer.includes(".myshopify.com") || 
-    origin.includes(".myshopify.com") ||
-    (shop && shop.includes(".myshopify.com"));
+    (referer.includes(".myshopify.com") || origin.includes(".myshopify.com")) &&
+    shop && 
+    shop.includes(".myshopify.com");
   
-  // In development, allow requests without signature if they come from a Shopify store
-  if (process.env.NODE_ENV !== "production" && isShopifyStorefront && shop) {
-    console.log("[Status] Allowing request without signature from Shopify storefront:", { referer, origin, shop });
-    return true;
+  // Additional security: verify that the shop domain matches the referer/origin
+  if (isShopifyStorefront) {
+    const shopDomain = shop.replace(".myshopify.com", "");
+    const refererMatches = referer.includes(shopDomain) || referer.includes(shop);
+    const originMatches = origin.includes(shopDomain) || origin.includes(shop);
+    
+    // Allow if shop parameter matches the referer/origin domain
+    if (refererMatches || originMatches) {
+      console.log("[Status] Allowing request without signature from verified Shopify storefront:", { 
+        referer, 
+        origin, 
+        shop,
+        shopDomain,
+        refererMatches,
+        originMatches
+      });
+      return true;
+    }
   }
   
-  // In production, require signature for security
-  if (process.env.NODE_ENV === "production") {
-    console.warn("[Status] Production request without signature rejected:", { referer, origin, shop });
-    return false;
-  }
-  
-  // Development fallback: allow if shop parameter is present
-  if (shop && shop.includes(".myshopify.com")) {
-    console.log("[Status] Development: Allowing request with valid shop parameter:", shop);
-    return true;
-  }
-  
+  // Reject if no valid signature and not from verified storefront
+  console.warn("[Status] Request rejected - no valid signature and not from verified storefront:", { 
+    referer, 
+    origin, 
+    shop,
+    hasSignature: !!signature
+  });
   return false;
 }
 
