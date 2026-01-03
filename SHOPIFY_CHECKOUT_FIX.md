@@ -78,3 +78,5 @@ Une fois les corrections appliquées et l'app ré-authentifiée :
 2. Les erreurs seront plus explicites si quelque chose ne fonctionne pas
 3. Les logs permettront de diagnostiquer rapidement les problèmes
 
+
+

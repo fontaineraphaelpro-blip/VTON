@@ -1,0 +1,1471 @@
+/**
+ * ==========================================
+ * APP PROXY - WIDGET JAVASCRIPT V2 (Shadow DOM)
+ * ==========================================
+ * 
+ * Route: GET /apps/tryon/widget-v2.js
+ * Self-contained Virtual Try-On widget with Shadow DOM isolation.
+ * 
+ * Features:
+ * - Complete CSS isolation using Shadow DOM
+ * - Status check before injection
+ * - Vanilla JS (no dependencies)
+ * - Mobile-responsive
+ * - Non-intrusive (doesn't modify theme)
+ */
+
+import type { LoaderFunctionArgs } from "@remix-run/node";
+
+export const loader = async ({ request }: LoaderFunctionArgs) => {
+  const widgetCode = `
+(function() {
+    'use strict';
+    
+    // ==========================================
+    // CONFIGURATION
+    // ==========================================
+    const CONFIG = {
+        apiBase: window.location.origin + '/apps/tryon',
+        selectors: {
+            addToCartButton: [
+                'form[action*="/cart/add"] button[type="submit"]',
+                'button[name="add"]',
+                '[data-add-to-cart]',
+                '.product-form__cart-submit',
+                '.btn--add-to-cart',
+                '.add-to-cart',
+                'button[type="submit"][form*="product"]',
+                '.product-form button[type="submit"]',
+                '.product-form__submit'
+            ],
+            productId: [
+                'meta[property="og:url"]',
+                'form[action*="/cart/add"] [name="id"]',
+                '[data-product-id]',
+                '.product-single__meta [data-product-id]'
+            ]
+        },
+        maxRetries: 15,
+        retryDelay: 500,
+        shadowRootId: 'vton-widget-root'
+    };
+    
+    // ==========================================
+    // STATE MANAGEMENT
+    // ==========================================
+    const STATE = {
+        INITIAL: 'initial',
+        VERIFICATION: 'verification',
+        LOADING: 'loading',
+        RESULT: 'result',
+        ERROR: 'error'
+    };
+    
+    // ==========================================
+    // MAIN WIDGET CLASS
+    // ==========================================
+    class VTONWidgetV2 {
+        constructor() {
+            this.shop = this.extractShop();
+            this.productId = null;
+            this.productImage = null;
+            this.widgetSettings = null;
+            this.currentState = STATE.INITIAL;
+            this.userPhoto = null;
+            this.resultImageUrl = null;
+            this.retryCount = 0;
+            this.shadowRoot = null;
+            this.isEnabled = false;
+            
+            // Initialize only on product pages
+            if (this.isProductPage()) {
+                this.init();
+            }
+        }
+        
+        // ==========================================
+        // INITIALIZATION
+        // ==========================================
+        async init() {
+            // Extract product ID
+            this.productId = this.extractProductId();
+            if (!this.productId) {
+                console.log('[VTON] Product ID not found, skipping widget');
+                return;
+            }
+            
+            // Check if try-on is enabled for this product
+            try {
+                const status = await this.checkStatus();
+                if (!status.enabled) {
+                    console.log('[VTON] Try-on disabled for this product');
+                    return;
+                }
+                
+                this.isEnabled = true;
+                this.widgetSettings = status.widget_settings;
+                
+                // Wait for DOM to be ready
+                if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', () => this.injectWidget());
+                } else {
+                    this.injectWidget();
+                }
+            } catch (error) {
+                console.error('[VTON] Failed to check status:', error);
+                // Don't inject widget if status check fails
+            }
+        }
+        
+        // ==========================================
+        // STATUS CHECK
+        // ==========================================
+        async checkStatus() {
+            if (!this.shop || !this.productId) {
+                throw new Error('Missing shop or product ID');
+            }
+            
+            const url = new URL(\`\${CONFIG.apiBase}/status\`, window.location.origin);
+            url.searchParams.set('shop', this.shop);
+            url.searchParams.set('product_id', this.productId);
+            
+            // Note: In production, Shopify App Proxy will add the signature automatically
+            // For now, we make the request (the backend will verify signature if present)
+            
+            const response = await fetch(url.toString(), {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            if (!response.ok) {
+                throw new Error(\`Status check failed: \${response.status}\`);
+            }
+            
+            return await response.json();
+        }
+        
+        // ==========================================
+        // PRODUCT PAGE DETECTION
+        // ==========================================
+        isProductPage() {
+            // Check URL
+            if (window.location.pathname.includes('/products/')) {
+                return true;
+            }
+            
+            // Check for product-specific elements
+            const productForm = document.querySelector('form[action*="/cart/add"]');
+            if (productForm) {
+                return true;
+            }
+            
+            return false;
+        }
+        
+        extractProductId() {
+            // Method 1: From meta tag
+            const meta = document.querySelector('meta[property="og:url"]');
+            if (meta) {
+                const match = meta.content.match(/products\\/([^?\\/]+)/);
+                if (match) return match[1];
+            }
+            
+            // Method 2: From form
+            const productForm = document.querySelector('form[action*="/cart/add"]');
+            if (productForm) {
+                const idInput = productForm.querySelector('[name="id"]');
+                if (idInput && idInput.value) {
+                    return idInput.value;
+                }
+            }
+            
+            // Method 3: From data attribute
+            const productElement = document.querySelector('[data-product-id]');
+            if (productElement) {
+                return productElement.getAttribute('data-product-id');
+            }
+            
+            // Method 4: From URL
+            const urlMatch = window.location.pathname.match(/products\\/([^?\\/]+)/);
+            if (urlMatch) {
+                return urlMatch[1];
+            }
+            
+            return null;
+        }
+        
+        extractShop() {
+            // Method 1: From Shopify global
+            if (window.Shopify && window.Shopify.shop) {
+                return window.Shopify.shop;
+            }
+            
+            // Method 2: From URL
+            const hostname = window.location.hostname;
+            const match = hostname.match(/([^.]+)\\.myshopify\\.com/);
+            if (match) {
+                return match[0];
+            }
+            
+            // Method 3: From meta tag
+            const shopMeta = document.querySelector('meta[name="shopify-checkout-api-token"]');
+            if (shopMeta) {
+                // Extract from data attributes if available
+            }
+            
+            return hostname; // Fallback to hostname
+        }
+        
+        getProductImage() {
+            // Try multiple selectors
+            const selectors = [
+                '.product__media img',
+                '.product-single__media img',
+                '[data-product-image]',
+                '.product-media img',
+                '.product-photos img',
+                '.product-gallery img',
+                'img[data-product-image]',
+                '.product__photo img',
+                '.product-images img'
+            ];
+            
+            for (const selector of selectors) {
+                const img = document.querySelector(selector);
+                if (img && img.src && !img.src.includes('placeholder')) {
+                    return img.src;
+                }
+            }
+            
+            return null;
+        }
+        
+        // ==========================================
+        // WIDGET INJECTION
+        // ==========================================
+        injectWidget() {
+            if (this.retryCount >= CONFIG.maxRetries) {
+                console.warn('[VTON] Max retries reached, could not inject widget');
+                return;
+            }
+            
+            // Find Add to Cart button
+            const addToCartBtn = this.findAddToCartButton();
+            if (!addToCartBtn) {
+                this.retryCount++;
+                setTimeout(() => this.injectWidget(), CONFIG.retryDelay);
+                return;
+            }
+            
+            // Check if widget already exists
+            if (document.getElementById(CONFIG.shadowRootId)) {
+                return;
+            }
+            
+            // Get product image
+            this.productImage = this.getProductImage();
+            
+            // Create shadow root container
+            const container = document.createElement('div');
+            container.id = CONFIG.shadowRootId;
+            container.setAttribute('data-vton-widget', 'true');
+            
+            // Insert after Add to Cart button
+            this.insertAfterButton(addToCartBtn, container);
+            
+            // Create shadow root
+            this.shadowRoot = container.attachShadow({ mode: 'closed' });
+            
+            // Inject widget content
+            this.renderWidget();
+            
+            console.log('[VTON] Widget injected successfully');
+        }
+        
+        findAddToCartButton() {
+            for (const selector of CONFIG.selectors.addToCartButton) {
+                const btn = document.querySelector(selector);
+                if (btn) {
+                    return btn;
+                }
+            }
+            return null;
+        }
+        
+        insertAfterButton(button, element) {
+            const parent = button.parentElement;
+            if (parent) {
+                // Try to insert after button
+                if (button.nextSibling) {
+                    parent.insertBefore(element, button.nextSibling);
+                } else {
+                    parent.appendChild(element);
+                }
+            } else {
+                // Fallback: insert after button
+                button.insertAdjacentElement('afterend', element);
+            }
+        }
+        
+        // ==========================================
+        // RENDERING (Shadow DOM)
+        // ==========================================
+        renderWidget() {
+            if (!this.shadowRoot) return;
+            
+            const settings = this.widgetSettings || {
+                text: 'Try It On',
+                backgroundColor: '#000000',
+                textColor: '#ffffff'
+            };
+            
+            this.shadowRoot.innerHTML = \`
+                <style>
+                    /* Complete CSS isolation - all styles scoped to shadow DOM */
+                    :host {
+                        display: block;
+                        width: 100%;
+                        margin-top: 12px;
+                    }
+                    
+                    .vton-button {
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        gap: 8px;
+                        width: 100%;
+                        padding: 14px 24px;
+                        background: \${settings.backgroundColor};
+                        color: \${settings.textColor};
+                        border: none;
+                        border-radius: 8px;
+                        font-size: 16px;
+                        font-weight: 600;
+                        cursor: pointer;
+                        transition: all 0.2s ease;
+                        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+                    }
+                    
+                    .vton-button:hover {
+                        opacity: 0.9;
+                        transform: translateY(-1px);
+                        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+                    }
+                    
+                    .vton-button:active {
+                        transform: translateY(0);
+                    }
+                    
+                    .vton-icon {
+                        width: 20px;
+                        height: 20px;
+                        flex-shrink: 0;
+                    }
+                    
+                    /* Modal Overlay */
+                    .vton-overlay {
+                        position: fixed;
+                        top: 0;
+                        left: 0;
+                        width: 100%;
+                        height: 100%;
+                        background: rgba(0, 0, 0, 0.6);
+                        display: none;
+                        align-items: center;
+                        justify-content: center;
+                        z-index: 999999;
+                        padding: 16px;
+                        backdrop-filter: blur(4px);
+                    }
+                    
+                    .vton-overlay.active {
+                        display: flex;
+                    }
+                    
+                    /* Modal */
+                    .vton-modal {
+                        background: #ffffff;
+                        border-radius: 16px;
+                        width: 100%;
+                        max-width: 600px;
+                        max-height: 90vh;
+                        overflow-y: auto;
+                        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+                        position: relative;
+                        animation: modalSlideIn 0.3s ease-out;
+                    }
+                    
+                    @keyframes modalSlideIn {
+                        from {
+                            opacity: 0;
+                            transform: scale(0.95) translateY(20px);
+                        }
+                        to {
+                            opacity: 1;
+                            transform: scale(1) translateY(0);
+                        }
+                    }
+                    
+                    /* Mobile: Bottom Sheet */
+                    @media (max-width: 640px) {
+                        .vton-overlay {
+                            align-items: flex-end;
+                            padding: 0;
+                        }
+                        .vton-modal {
+                            border-radius: 24px 24px 0 0;
+                            max-height: 85vh;
+                            animation: slideUp 0.3s ease-out;
+                        }
+                        @keyframes slideUp {
+                            from {
+                                transform: translateY(100%);
+                            }
+                            to {
+                                transform: translateY(0);
+                            }
+                        }
+                    }
+                    
+                    /* Modal Header */
+                    .vton-header {
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        padding: 20px 24px;
+                        border-bottom: 1px solid #e5e7eb;
+                    }
+                    
+                    .vton-title {
+                        font-size: 20px;
+                        font-weight: 700;
+                        color: #111827;
+                        margin: 0;
+                    }
+                    
+                    .vton-close {
+                        background: none;
+                        border: none;
+                        font-size: 28px;
+                        color: #6b7280;
+                        cursor: pointer;
+                        padding: 0;
+                        width: 32px;
+                        height: 32px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        border-radius: 6px;
+                        transition: all 0.2s;
+                    }
+                    
+                    .vton-close:hover {
+                        background: #f3f4f6;
+                        color: #111827;
+                    }
+                    
+                    /* Modal Body */
+                    .vton-body {
+                        padding: 24px;
+                    }
+                    
+                    /* State: Initial */
+                    .vton-state {
+                        display: none;
+                    }
+                    
+                    .vton-state.active {
+                        display: block;
+                    }
+                    
+                    .vton-upload-area {
+                        border: 2px dashed #d1d5db;
+                        border-radius: 12px;
+                        padding: 40px 24px;
+                        text-align: center;
+                        cursor: pointer;
+                        transition: all 0.2s;
+                        background: #f9fafb;
+                    }
+                    
+                    .vton-upload-area:hover {
+                        border-color: #3b82f6;
+                        background: #eff6ff;
+                    }
+                    
+                    .vton-upload-icon {
+                        font-size: 48px;
+                        margin-bottom: 12px;
+                    }
+                    
+                    .vton-upload-text {
+                        font-size: 16px;
+                        font-weight: 600;
+                        color: #111827;
+                        margin-bottom: 4px;
+                    }
+                    
+                    .vton-upload-hint {
+                        font-size: 14px;
+                        color: #6b7280;
+                    }
+                    
+                    .vton-file-input {
+                        display: none;
+                    }
+                    
+                    /* State: Verification */
+                    .vton-preview {
+                        border-radius: 12px;
+                        overflow: hidden;
+                        background: #f9fafb;
+                        margin-bottom: 16px;
+                    }
+                    
+                    .vton-preview-img {
+                        width: 100%;
+                        max-height: 400px;
+                        object-fit: contain;
+                        display: block;
+                    }
+                    
+                    .vton-generate {
+                        width: 100%;
+                        padding: 14px 24px;
+                        background: #3b82f6;
+                        color: #ffffff;
+                        border: none;
+                        border-radius: 8px;
+                        font-size: 16px;
+                        font-weight: 600;
+                        cursor: pointer;
+                        transition: all 0.2s;
+                        box-shadow: 0 4px 6px rgba(59, 130, 246, 0.3);
+                    }
+                    
+                    .vton-generate:hover:not(:disabled) {
+                        background: #2563eb;
+                        box-shadow: 0 6px 8px rgba(59, 130, 246, 0.4);
+                        transform: translateY(-1px);
+                    }
+                    
+                    .vton-generate:disabled {
+                        opacity: 0.6;
+                        cursor: not-allowed;
+                    }
+                    
+                    /* State: Loading */
+                    .vton-loading {
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        justify-content: center;
+                        padding: 60px 24px;
+                        gap: 24px;
+                    }
+                    
+                    .vton-spinner {
+                        width: 48px;
+                        height: 48px;
+                        border: 4px solid #e5e7eb;
+                        border-top-color: #3b82f6;
+                        border-radius: 50%;
+                        animation: spin 1s linear infinite;
+                    }
+                    
+                    @keyframes spin {
+                        to { transform: rotate(360deg); }
+                    }
+                    
+                    .vton-loading-text {
+                        font-size: 18px;
+                        font-weight: 600;
+                        color: #111827;
+                        text-align: center;
+                    }
+                    
+                    .vton-loading-subtext {
+                        font-size: 14px;
+                        color: #6b7280;
+                        text-align: center;
+                    }
+                    
+                    /* State: Result */
+                    .vton-result-container {
+                        position: relative;
+                        border-radius: 12px;
+                        overflow: hidden;
+                        background: #f9fafb;
+                        margin-bottom: 16px;
+                    }
+                    
+                    .vton-result-wrapper {
+                        position: relative;
+                        width: 100%;
+                        padding-bottom: 100%;
+                    }
+                    
+                    .vton-result-img {
+                        position: absolute;
+                        top: 0;
+                        left: 0;
+                        width: 100%;
+                        height: 100%;
+                        object-fit: contain;
+                    }
+                    
+                    .vton-result-before {
+                        clip-path: polygon(0 0, 50% 0, 50% 100%, 0 100%);
+                    }
+                    
+                    .vton-result-after {
+                        clip-path: polygon(50% 0, 100% 0, 100% 100%, 50% 100%);
+                    }
+                    
+                    .vton-slider-divider {
+                        position: absolute;
+                        top: 0;
+                        left: 50%;
+                        width: 3px;
+                        height: 100%;
+                        background: #3b82f6;
+                        transform: translateX(-50%);
+                        z-index: 10;
+                        cursor: col-resize;
+                    }
+                    
+                    .vton-actions {
+                        display: flex;
+                        gap: 12px;
+                    }
+                    
+                    .vton-action-btn {
+                        flex: 1;
+                        padding: 12px 24px;
+                        border-radius: 8px;
+                        font-size: 16px;
+                        font-weight: 600;
+                        cursor: pointer;
+                        transition: all 0.2s;
+                        border: none;
+                    }
+                    
+                    .vton-action-primary {
+                        background: #3b82f6;
+                        color: #ffffff;
+                    }
+                    
+                    .vton-action-primary:hover {
+                        background: #2563eb;
+                    }
+                    
+                    .vton-action-secondary {
+                        background: #ffffff;
+                        color: #374151;
+                        border: 2px solid #e5e7eb;
+                    }
+                    
+                    .vton-action-secondary:hover {
+                        border-color: #3b82f6;
+                        color: #3b82f6;
+                    }
+                    
+                    /* State: Error */
+                    .vton-error {
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        justify-content: center;
+                        padding: 60px 24px;
+                        gap: 16px;
+                        text-align: center;
+                    }
+                    
+                    .vton-error-icon {
+                        font-size: 64px;
+                    }
+                    
+                    .vton-error-title {
+                        font-size: 20px;
+                        font-weight: 700;
+                        color: #111827;
+                    }
+                    
+                    .vton-error-message {
+                        font-size: 14px;
+                        color: #6b7280;
+                        max-width: 400px;
+                    }
+                    
+                    .vton-error-retry {
+                        margin-top: 8px;
+                        padding: 12px 24px;
+                        background: #3b82f6;
+                        color: #ffffff;
+                        border: none;
+                        border-radius: 8px;
+                        font-size: 16px;
+                        font-weight: 600;
+                        cursor: pointer;
+                    }
+                    
+                    .vton-error-retry:hover {
+                        background: #2563eb;
+                    }
+                </style>
+                
+                <button class="vton-button" id="vton-trigger-btn">
+                    <svg class="vton-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2L2 7L12 12L22 7L12 2Z"/>
+                        <path d="M2 17L12 22L22 17"/>
+                        <path d="M2 12L12 17L22 12"/>
+                    </svg>
+                    <span>\${settings.text}</span>
+                </button>
+            \`;
+            
+            // Setup event listeners
+            this.setupButtonEvents();
+        }
+        
+        setupButtonEvents() {
+            const triggerBtn = this.shadowRoot.querySelector('#vton-trigger-btn');
+            if (triggerBtn) {
+                triggerBtn.addEventListener('click', () => this.openModal());
+            }
+        }
+        
+        // ==========================================
+        // MODAL MANAGEMENT
+        // ==========================================
+        openModal() {
+            // Create modal in document body (outside shadow DOM for z-index)
+            let modal = document.getElementById('vton-modal-overlay');
+            if (!modal) {
+                modal = this.createModal();
+                document.body.appendChild(modal);
+            }
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+            this.setState(STATE.INITIAL);
+        }
+        
+        closeModal() {
+            const modal = document.getElementById('vton-modal-overlay');
+            if (modal) {
+                modal.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+            this.resetState();
+        }
+        
+        createModal() {
+            const overlay = document.createElement('div');
+            overlay.id = 'vton-modal-overlay';
+            overlay.className = 'vton-overlay';
+            
+            // Create shadow root for modal too (complete isolation)
+            const shadowRoot = overlay.attachShadow({ mode: 'closed' });
+            
+            shadowRoot.innerHTML = \`
+                <style>
+                    /* Modal styles - completely isolated */
+                    .vton-overlay {
+                        position: fixed;
+                        top: 0;
+                        left: 0;
+                        width: 100%;
+                        height: 100%;
+                        background: rgba(0, 0, 0, 0.6);
+                        display: none;
+                        align-items: center;
+                        justify-content: center;
+                        z-index: 999999;
+                        padding: 16px;
+                        backdrop-filter: blur(4px);
+                    }
+                    
+                    .vton-overlay.active {
+                        display: flex;
+                    }
+                    
+                    .vton-modal {
+                        background: #ffffff;
+                        border-radius: 16px;
+                        width: 100%;
+                        max-width: 600px;
+                        max-height: 90vh;
+                        overflow-y: auto;
+                        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+                        position: relative;
+                        animation: modalSlideIn 0.3s ease-out;
+                    }
+                    
+                    @keyframes modalSlideIn {
+                        from {
+                            opacity: 0;
+                            transform: scale(0.95) translateY(20px);
+                        }
+                        to {
+                            opacity: 1;
+                            transform: scale(1) translateY(0);
+                        }
+                    }
+                    
+                    @media (max-width: 640px) {
+                        .vton-overlay {
+                            align-items: flex-end;
+                            padding: 0;
+                        }
+                        .vton-modal {
+                            border-radius: 24px 24px 0 0;
+                            max-height: 85vh;
+                            animation: slideUp 0.3s ease-out;
+                        }
+                        @keyframes slideUp {
+                            from { transform: translateY(100%); }
+                            to { transform: translateY(0); }
+                        }
+                    }
+                    
+                    .vton-header {
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        padding: 20px 24px;
+                        border-bottom: 1px solid #e5e7eb;
+                    }
+                    
+                    .vton-title {
+                        font-size: 20px;
+                        font-weight: 700;
+                        color: #111827;
+                        margin: 0;
+                    }
+                    
+                    .vton-close {
+                        background: none;
+                        border: none;
+                        font-size: 28px;
+                        color: #6b7280;
+                        cursor: pointer;
+                        padding: 0;
+                        width: 32px;
+                        height: 32px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        border-radius: 6px;
+                        transition: all 0.2s;
+                    }
+                    
+                    .vton-close:hover {
+                        background: #f3f4f6;
+                        color: #111827;
+                    }
+                    
+                    .vton-body {
+                        padding: 24px;
+                    }
+                    
+                    .vton-state {
+                        display: none;
+                    }
+                    
+                    .vton-state.active {
+                        display: block;
+                    }
+                    
+                    .vton-upload-area {
+                        border: 2px dashed #d1d5db;
+                        border-radius: 12px;
+                        padding: 40px 24px;
+                        text-align: center;
+                        cursor: pointer;
+                        transition: all 0.2s;
+                        background: #f9fafb;
+                    }
+                    
+                    .vton-upload-area:hover {
+                        border-color: #3b82f6;
+                        background: #eff6ff;
+                    }
+                    
+                    .vton-upload-icon {
+                        font-size: 48px;
+                        margin-bottom: 12px;
+                    }
+                    
+                    .vton-upload-text {
+                        font-size: 16px;
+                        font-weight: 600;
+                        color: #111827;
+                        margin-bottom: 4px;
+                    }
+                    
+                    .vton-upload-hint {
+                        font-size: 14px;
+                        color: #6b7280;
+                    }
+                    
+                    .vton-file-input {
+                        display: none;
+                    }
+                    
+                    .vton-preview {
+                        border-radius: 12px;
+                        overflow: hidden;
+                        background: #f9fafb;
+                        margin-bottom: 16px;
+                    }
+                    
+                    .vton-preview-img {
+                        width: 100%;
+                        max-height: 400px;
+                        object-fit: contain;
+                        display: block;
+                    }
+                    
+                    .vton-generate {
+                        width: 100%;
+                        padding: 14px 24px;
+                        background: #3b82f6;
+                        color: #ffffff;
+                        border: none;
+                        border-radius: 8px;
+                        font-size: 16px;
+                        font-weight: 600;
+                        cursor: pointer;
+                        transition: all 0.2s;
+                        box-shadow: 0 4px 6px rgba(59, 130, 246, 0.3);
+                    }
+                    
+                    .vton-generate:hover:not(:disabled) {
+                        background: #2563eb;
+                        box-shadow: 0 6px 8px rgba(59, 130, 246, 0.4);
+                        transform: translateY(-1px);
+                    }
+                    
+                    .vton-generate:disabled {
+                        opacity: 0.6;
+                        cursor: not-allowed;
+                    }
+                    
+                    .vton-loading {
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        justify-content: center;
+                        padding: 60px 24px;
+                        gap: 24px;
+                    }
+                    
+                    .vton-spinner {
+                        width: 48px;
+                        height: 48px;
+                        border: 4px solid #e5e7eb;
+                        border-top-color: #3b82f6;
+                        border-radius: 50%;
+                        animation: spin 1s linear infinite;
+                    }
+                    
+                    @keyframes spin {
+                        to { transform: rotate(360deg); }
+                    }
+                    
+                    .vton-loading-text {
+                        font-size: 18px;
+                        font-weight: 600;
+                        color: #111827;
+                        text-align: center;
+                    }
+                    
+                    .vton-loading-subtext {
+                        font-size: 14px;
+                        color: #6b7280;
+                        text-align: center;
+                    }
+                    
+                    .vton-result-container {
+                        position: relative;
+                        border-radius: 12px;
+                        overflow: hidden;
+                        background: #f9fafb;
+                        margin-bottom: 16px;
+                    }
+                    
+                    .vton-result-wrapper {
+                        position: relative;
+                        width: 100%;
+                        padding-bottom: 100%;
+                    }
+                    
+                    .vton-result-img {
+                        position: absolute;
+                        top: 0;
+                        left: 0;
+                        width: 100%;
+                        height: 100%;
+                        object-fit: contain;
+                    }
+                    
+                    .vton-result-before {
+                        clip-path: polygon(0 0, 50% 0, 50% 100%, 0 100%);
+                    }
+                    
+                    .vton-result-after {
+                        clip-path: polygon(50% 0, 100% 0, 100% 100%, 50% 100%);
+                    }
+                    
+                    .vton-slider-divider {
+                        position: absolute;
+                        top: 0;
+                        left: 50%;
+                        width: 3px;
+                        height: 100%;
+                        background: #3b82f6;
+                        transform: translateX(-50%);
+                        z-index: 10;
+                        cursor: col-resize;
+                    }
+                    
+                    .vton-actions {
+                        display: flex;
+                        gap: 12px;
+                    }
+                    
+                    .vton-action-btn {
+                        flex: 1;
+                        padding: 12px 24px;
+                        border-radius: 8px;
+                        font-size: 16px;
+                        font-weight: 600;
+                        cursor: pointer;
+                        transition: all 0.2s;
+                        border: none;
+                    }
+                    
+                    .vton-action-primary {
+                        background: #3b82f6;
+                        color: #ffffff;
+                    }
+                    
+                    .vton-action-primary:hover {
+                        background: #2563eb;
+                    }
+                    
+                    .vton-action-secondary {
+                        background: #ffffff;
+                        color: #374151;
+                        border: 2px solid #e5e7eb;
+                    }
+                    
+                    .vton-action-secondary:hover {
+                        border-color: #3b82f6;
+                        color: #3b82f6;
+                    }
+                    
+                    .vton-error {
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        justify-content: center;
+                        padding: 60px 24px;
+                        gap: 16px;
+                        text-align: center;
+                    }
+                    
+                    .vton-error-icon {
+                        font-size: 64px;
+                    }
+                    
+                    .vton-error-title {
+                        font-size: 20px;
+                        font-weight: 700;
+                        color: #111827;
+                    }
+                    
+                    .vton-error-message {
+                        font-size: 14px;
+                        color: #6b7280;
+                        max-width: 400px;
+                    }
+                    
+                    .vton-error-retry {
+                        margin-top: 8px;
+                        padding: 12px 24px;
+                        background: #3b82f6;
+                        color: #ffffff;
+                        border: none;
+                        border-radius: 8px;
+                        font-size: 16px;
+                        font-weight: 600;
+                        cursor: pointer;
+                    }
+                    
+                    .vton-error-retry:hover {
+                        background: #2563eb;
+                    }
+                </style>
+                
+                <div class="vton-modal">
+                    <div class="vton-header">
+                        <h2 class="vton-title">Virtual Try-On</h2>
+                        <button class="vton-close" id="vton-close-btn">×</button>
+                    </div>
+                    <div class="vton-body">
+                        <!-- Initial State -->
+                        <div id="vton-state-initial" class="vton-state active">
+                            <div class="vton-upload-area" id="vton-upload-area">
+                                <div class="vton-upload-icon">📷</div>
+                                <div class="vton-upload-text">Upload Your Photo</div>
+                                <div class="vton-upload-hint">Click or drag & drop an image</div>
+                                <input type="file" id="vton-file-input" class="vton-file-input" accept="image/*">
+                            </div>
+                        </div>
+                        
+                        <!-- Verification State -->
+                        <div id="vton-state-verification" class="vton-state">
+                            <div class="vton-preview">
+                                <img id="vton-preview-img" class="vton-preview-img" src="" alt="Preview">
+                            </div>
+                            <button class="vton-generate" id="vton-generate-btn">Generate Try-On</button>
+                        </div>
+                        
+                        <!-- Loading State -->
+                        <div id="vton-state-loading" class="vton-state">
+                            <div class="vton-loading">
+                                <div class="vton-spinner"></div>
+                                <div class="vton-loading-text">Generating your try-on...</div>
+                                <div class="vton-loading-subtext">This may take 15-30 seconds</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Result State -->
+                        <div id="vton-state-result" class="vton-state">
+                            <div class="vton-result-container">
+                                <div class="vton-result-wrapper">
+                                    <img id="vton-result-before" class="vton-result-img vton-result-before" src="" alt="Before">
+                                    <img id="vton-result-after" class="vton-result-img vton-result-after" src="" alt="After">
+                                    <div class="vton-slider-divider" id="vton-slider-divider"></div>
+                                </div>
+                            </div>
+                            <div class="vton-actions">
+                                <button class="vton-action-btn vton-action-primary" id="vton-download-btn">Download</button>
+                                <button class="vton-action-btn vton-action-secondary" id="vton-new-try-btn">Try Again</button>
+                            </div>
+                        </div>
+                        
+                        <!-- Error State -->
+                        <div id="vton-state-error" class="vton-state">
+                            <div class="vton-error">
+                                <div class="vton-error-icon">⚠️</div>
+                                <div class="vton-error-title">Error</div>
+                                <div class="vton-error-message" id="vton-error-message">An error occurred</div>
+                                <button class="vton-error-retry" id="vton-error-retry">Try Again</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            \`;
+            
+            // Setup modal events
+            this.setupModalEvents(shadowRoot);
+            
+            return overlay;
+        }
+        
+        setupModalEvents(shadowRoot) {
+            const widget = this;
+            
+            // Close button
+            const closeBtn = shadowRoot.querySelector('#vton-close-btn');
+            if (closeBtn) {
+                closeBtn.addEventListener('click', () => widget.closeModal());
+            }
+            
+            // Close on overlay click
+            const overlay = shadowRoot.host;
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) {
+                    widget.closeModal();
+                }
+            });
+            
+            // File upload
+            const uploadArea = shadowRoot.querySelector('#vton-upload-area');
+            const fileInput = shadowRoot.querySelector('#vton-file-input');
+            if (uploadArea && fileInput) {
+                uploadArea.addEventListener('click', () => fileInput.click());
+                uploadArea.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    uploadArea.style.borderColor = '#3b82f6';
+                });
+                uploadArea.addEventListener('dragleave', () => {
+                    uploadArea.style.borderColor = '#d1d5db';
+                });
+                uploadArea.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    uploadArea.style.borderColor = '#d1d5db';
+                    const file = e.dataTransfer.files[0];
+                    if (file) widget.handlePhotoUpload(file);
+                });
+                fileInput.addEventListener('change', (e) => {
+                    const file = e.target.files[0];
+                    if (file) widget.handlePhotoUpload(file);
+                });
+            }
+            
+            // Generate button
+            const generateBtn = shadowRoot.querySelector('#vton-generate-btn');
+            if (generateBtn) {
+                generateBtn.addEventListener('click', () => widget.generateTryOn());
+            }
+            
+            // Download button
+            const downloadBtn = shadowRoot.querySelector('#vton-download-btn');
+            if (downloadBtn) {
+                downloadBtn.addEventListener('click', () => widget.downloadResult());
+            }
+            
+            // New try button
+            const newTryBtn = shadowRoot.querySelector('#vton-new-try-btn');
+            if (newTryBtn) {
+                newTryBtn.addEventListener('click', () => widget.resetState());
+            }
+            
+            // Error retry
+            const errorRetryBtn = shadowRoot.querySelector('#vton-error-retry');
+            if (errorRetryBtn) {
+                errorRetryBtn.addEventListener('click', () => widget.resetState());
+            }
+            
+            // Slider divider
+            const sliderDivider = shadowRoot.querySelector('#vton-slider-divider');
+            if (sliderDivider) {
+                let isDragging = false;
+                sliderDivider.addEventListener('mousedown', (e) => {
+                    isDragging = true;
+                    e.preventDefault();
+                });
+                document.addEventListener('mousemove', (e) => {
+                    if (isDragging) {
+                        widget.updateSliderPosition(e.clientX, shadowRoot);
+                    }
+                });
+                document.addEventListener('mouseup', () => {
+                    isDragging = false;
+                });
+            }
+        }
+        
+        // ==========================================
+        // STATE MANAGEMENT
+        // ==========================================
+        setState(newState) {
+            this.currentState = newState;
+            const modal = document.getElementById('vton-modal-overlay');
+            if (!modal) return;
+            
+            const shadowRoot = modal.shadowRoot;
+            if (!shadowRoot) return;
+            
+            const states = ['initial', 'verification', 'loading', 'result', 'error'];
+            states.forEach(state => {
+                const el = shadowRoot.querySelector(\`#vton-state-\${state}\`);
+                if (el) {
+                    if (state === newState) {
+                        el.classList.add('active');
+                    } else {
+                        el.classList.remove('active');
+                    }
+                }
+            });
+        }
+        
+        resetState() {
+            this.currentState = STATE.INITIAL;
+            this.userPhoto = null;
+            this.resultImageUrl = null;
+            this.setState(STATE.INITIAL);
+        }
+        
+        // ==========================================
+        // PHOTO UPLOAD
+        // ==========================================
+        handlePhotoUpload(file) {
+            if (!file || !file.type.startsWith('image/')) {
+                this.showError('Please upload an image file');
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                this.userPhoto = e.target.result;
+                const modal = document.getElementById('vton-modal-overlay');
+                if (modal && modal.shadowRoot) {
+                    const previewImg = modal.shadowRoot.querySelector('#vton-preview-img');
+                    if (previewImg && this.userPhoto) {
+                        previewImg.src = this.userPhoto;
+                    }
+                }
+                this.setState(STATE.VERIFICATION);
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        // ==========================================
+        // GENERATE TRY-ON
+        // ==========================================
+        async generateTryOn() {
+            this.setState(STATE.LOADING);
+            
+            try {
+                if (!this.userPhoto) {
+                    throw new Error('No photo uploaded');
+                }
+                
+                if (!this.productImage) {
+                    throw new Error('Product image not found');
+                }
+                
+                // Extract base64 from data URL
+                const personBase64 = this.userPhoto.includes(',') 
+                    ? this.userPhoto.split(',')[1] 
+                    : this.userPhoto;
+                
+                // Build API URL
+                const url = new URL(\`\${CONFIG.apiBase}/generate\`, window.location.origin);
+                if (this.shop) {
+                    url.searchParams.set('shop', this.shop);
+                }
+                
+                // Make request
+                const response = await fetch(url.toString(), {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        person_image_base64: personBase64,
+                        clothing_url: this.productImage,
+                        product_id: this.productId
+                    })
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ 
+                        error: \`HTTP \${response.status}\` 
+                    }));
+                    throw new Error(errorData.error || \`Generation failed: \${response.status}\`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                if (!data.result_image_url) {
+                    throw new Error('No result image received');
+                }
+                
+                this.resultImageUrl = data.result_image_url;
+                this.showResult();
+                
+            } catch (error) {
+                console.error('[VTON] Generation error:', error);
+                const errorMessage = error instanceof Error 
+                    ? error.message 
+                    : 'An error occurred. Please try again.';
+                this.showError(errorMessage);
+            }
+        }
+        
+        showResult() {
+            const modal = document.getElementById('vton-modal-overlay');
+            if (!modal || !modal.shadowRoot) return;
+            
+            const shadowRoot = modal.shadowRoot;
+            const beforeImg = shadowRoot.querySelector('#vton-result-before');
+            const afterImg = shadowRoot.querySelector('#vton-result-after');
+            
+            if (beforeImg && this.userPhoto) {
+                beforeImg.src = this.userPhoto;
+            }
+            if (afterImg && this.resultImageUrl) {
+                afterImg.src = this.resultImageUrl;
+            }
+            
+            this.setState(STATE.RESULT);
+        }
+        
+        showError(message) {
+            const modal = document.getElementById('vton-modal-overlay');
+            if (!modal || !modal.shadowRoot) return;
+            
+            const shadowRoot = modal.shadowRoot;
+            const errorMsgEl = shadowRoot.querySelector('#vton-error-message');
+            if (errorMsgEl) {
+                errorMsgEl.textContent = message;
+            }
+            this.setState(STATE.ERROR);
+        }
+        
+        downloadResult() {
+            if (!this.resultImageUrl) return;
+            
+            const link = document.createElement('a');
+            link.href = this.resultImageUrl;
+            link.download = \`vton-result-\${Date.now()}.jpg\`;
+            link.target = '_blank';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+        
+        updateSliderPosition(x, shadowRoot) {
+            const slider = shadowRoot.querySelector('.vton-result-wrapper');
+            if (!slider) return;
+            
+            const rect = slider.getBoundingClientRect();
+            const percentage = Math.max(0, Math.min(100, ((x - rect.left) / rect.width) * 100));
+            
+            const beforeImg = shadowRoot.querySelector('#vton-result-before');
+            const divider = shadowRoot.querySelector('#vton-slider-divider');
+            
+            if (beforeImg) {
+                beforeImg.style.clipPath = \`polygon(0 0, \${percentage}% 0, \${percentage}% 100%, 0 100%)\`;
+            }
+            if (divider) {
+                divider.style.left = \`\${percentage}%\`;
+            }
+        }
+    }
+    
+    // ==========================================
+    // INITIALIZE WIDGET
+    // ==========================================
+    // Wait for DOM to be ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => {
+            new VTONWidgetV2();
+        });
+    } else {
+        new VTONWidgetV2();
+    }
+})();
+  `;
+
+  return new Response(widgetCode, {
+    headers: {
+      "Content-Type": "application/javascript",
+      "Cache-Control": "public, max-age=3600",
+      "Access-Control-Allow-Origin": "*",
+    },
+  });
+};
+

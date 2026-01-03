@@ -14,7 +14,7 @@ import {
 } from "@shopify/polaris";
 import { TitleBar } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
-import { getShop, upsertShop, getTryonLogs, getTopProducts, getTryonStatsByDay } from "../lib/services/db.service";
+import { getShop, upsertShop, getTryonLogs, getTopProducts, getTryonStatsByDay, getMonthlyTryonUsage } from "../lib/services/db.service";
 import { ensureTables } from "../lib/db-init.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -24,11 +24,12 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
     await ensureTables();
 
-    const [shopData, recentLogs, topProducts, dailyStats] = await Promise.all([
+    const [shopData, recentLogs, topProducts, dailyStats, monthlyUsage] = await Promise.all([
       getShop(shop),
       getTryonLogs(shop, { limit: 10, offset: 0 }).catch(() => []),
       getTopProducts(shop, 5).catch(() => []),
       getTryonStatsByDay(shop, 30).catch(() => []),
+      getMonthlyTryonUsage(shop).catch(() => 0), // ADDED: Get monthly usage
     ]);
 
     // Installer automatiquement le script tag si pas déjà installé
@@ -293,6 +294,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       recentLogs: Array.isArray(recentLogs) ? recentLogs.slice(0, 5) : [],
       topProducts: Array.isArray(topProducts) ? topProducts : [],
       dailyStats: Array.isArray(dailyStats) ? dailyStats : [],
+      monthlyUsage: monthlyUsage || 0, // ADDED: Monthly usage count
     });
   } catch (error) {
     console.error("Dashboard loader error:", error);
@@ -404,6 +406,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const isEnabled = formData.get("isEnabled") === "true";
   const dailyLimitStr = formData.get("dailyLimit") as string;
   const dailyLimit = dailyLimitStr ? parseInt(dailyLimitStr) : 100;
+  // ADDED: Monthly quota and quality mode
+  const monthlyQuotaStr = formData.get("monthlyQuota") as string;
+  const monthlyQuota = monthlyQuotaStr && monthlyQuotaStr.trim() !== "" ? parseInt(monthlyQuotaStr) : null;
+  const qualityMode = (formData.get("qualityMode") as string) || "balanced";
 
   console.log("[Dashboard Action] Saving configuration:", {
     shop,
@@ -413,6 +419,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     widgetText,
     widgetBg,
     widgetColor,
+    monthlyQuota, // ADDED
+    qualityMode, // ADDED
   });
 
   try {
@@ -423,6 +431,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       maxTriesPerUser,
       isEnabled,
       dailyLimit,
+      monthlyQuota, // ADDED
+      qualityMode, // ADDED
     });
 
     console.log("[Dashboard Action] Configuration saved successfully");
@@ -437,7 +447,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 };
 
 export default function Dashboard() {
-  const { shop, recentLogs, topProducts, dailyStats, error } = useLoaderData<typeof loader>();
+  const { shop, recentLogs, topProducts, dailyStats, monthlyUsage, error } = useLoaderData<typeof loader>();
   const fetcher = useFetcher<typeof action>();
   const revalidator = useRevalidator();
 
@@ -450,6 +460,17 @@ export default function Dashboard() {
   
   // Calculate 30-day total
   const last30DaysTotal = dailyStats.reduce((sum: number, stat: any) => sum + stat.count, 0);
+  
+  // ADDED: Monthly quota and usage
+  const monthlyQuota = shop?.monthly_quota || null;
+  const monthlyUsageCount = monthlyUsage || 0;
+  const quotaPercentage = monthlyQuota && monthlyQuota > 0 
+    ? Math.min((monthlyUsageCount / monthlyQuota) * 100, 100).toFixed(1)
+    : null;
+  const quotaExceeded = monthlyQuota && monthlyUsageCount >= monthlyQuota;
+  
+  // ADDED: Quality mode
+  const qualityMode = shop?.quality_mode || "balanced";
 
   const handleSave = (formData: FormData) => {
     // Ensure all required fields are present
@@ -470,6 +491,12 @@ export default function Dashboard() {
     }
     if (!formData.get("dailyLimit")) {
       formData.set("dailyLimit", String(shop?.daily_limit || 100));
+    }
+    if (!formData.get("monthlyQuota")) {
+      formData.set("monthlyQuota", shop?.monthly_quota ? String(shop.monthly_quota) : "");
+    }
+    if (!formData.get("qualityMode")) {
+      formData.set("qualityMode", shop?.quality_mode || "balanced");
     }
     fetcher.submit(formData, { method: "post" });
   };
@@ -553,6 +580,22 @@ export default function Dashboard() {
                     <Link to="/app/credits" style={{ marginLeft: "8px" }}>
                       Recharge now →
                     </Link>
+                  </p>
+                </Banner>
+              )}
+              {/* ADDED: Monthly quota warning */}
+              {quotaExceeded && (
+                <Banner tone="critical" title="Monthly Quota Exceeded">
+                  <p>
+                    You have reached your monthly quota of <strong>{monthlyQuota}</strong> try-ons. 
+                    {quotaPercentage && ` (${quotaPercentage}% used)`}
+                  </p>
+                </Banner>
+              )}
+              {monthlyQuota && !quotaExceeded && parseFloat(quotaPercentage || "0") > 80 && (
+                <Banner tone="warning" title="Approaching Monthly Quota">
+                  <p>
+                    You have used <strong>{quotaPercentage}%</strong> of your monthly quota ({monthlyUsageCount} / {monthlyQuota} try-ons).
                   </p>
                 </Banner>
               )}
@@ -738,6 +781,47 @@ export default function Dashboard() {
                   defaultValue={String(shop?.max_tries_per_user || 5)}
                   placeholder="0"
                 />
+              </div>
+              {/* ADDED: Monthly quota setting */}
+              <div className="setting-card">
+                <label>Monthly Quota Limit</label>
+                <input
+                  type="number"
+                  name="monthlyQuota"
+                  defaultValue={shop?.monthly_quota ? String(shop.monthly_quota) : ""}
+                  placeholder="Unlimited (leave empty)"
+                  className="vton-input"
+                />
+                <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "4px" }}>
+                  {monthlyQuota 
+                    ? `Current usage: ${monthlyUsageCount.toLocaleString()} / ${monthlyQuota.toLocaleString()} (${quotaPercentage}%)`
+                    : `Current usage: ${monthlyUsageCount.toLocaleString()} (no limit set)`
+                  }
+                </p>
+              </div>
+              {/* ADDED: Quality vs Speed setting */}
+              <div className="setting-card">
+                <label>Quality Mode</label>
+                <select
+                  name="qualityMode"
+                  defaultValue={qualityMode}
+                  style={{ 
+                    width: "100%", 
+                    padding: "8px", 
+                    borderRadius: "4px", 
+                    border: "1px solid var(--border)",
+                    fontSize: "14px"
+                  }}
+                >
+                  <option value="speed">Speed (Faster generation, lower quality)</option>
+                  <option value="balanced">Balanced (Recommended)</option>
+                  <option value="quality">Quality (Slower generation, higher quality)</option>
+                </select>
+                <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "4px" }}>
+                  {qualityMode === "speed" && "Optimized for faster generation times"}
+                  {qualityMode === "balanced" && "Good balance between speed and quality"}
+                  {qualityMode === "quality" && "Optimized for best image quality"}
+                </p>
               </div>
               <div className="setting-card">
                 <label>Nettoyage</label>

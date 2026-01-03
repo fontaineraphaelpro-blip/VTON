@@ -1,6 +1,6 @@
-import type { LoaderFunctionArgs } from "@remix-run/node";
+import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
-import { useLoaderData } from "@remix-run/react";
+import { useLoaderData, useFetcher } from "@remix-run/react";
 import {
   Page,
   Layout,
@@ -15,9 +15,12 @@ import {
   Badge,
   Divider,
   Banner,
+  Switch,
 } from "@shopify/polaris";
 import { TitleBar } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
+import { ensureTables } from "../lib/db-init.server";
+import { getProductTryonCounts, setProductTryonSetting, getProductTryonSetting } from "../lib/services/db.service";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin, session } = await authenticate.admin(request);
@@ -96,7 +99,31 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       responseJson.data?.products?.edges?.map((edge: any) => edge.node) || [];
 
     console.log(`Loaded ${products.length} products for shop ${session.shop}`);
-    return json({ products, shop: session.shop });
+    
+    // ADDED: Load product settings and try-on counts
+    await ensureTables();
+    const shop = session.shop;
+    
+    // Get product IDs
+    const productIds = products.map((p: any) => p.id);
+    
+    // Get try-on counts for all products
+    const tryonCounts = await getProductTryonCounts(shop, productIds).catch(() => ({}));
+    
+    // Get product settings (try-on enabled/disabled)
+    const productSettings: Record<string, boolean> = {};
+    for (const product of products) {
+      const setting = await getProductTryonSetting(shop, product.id).catch(() => null);
+      // Default to true if not set
+      productSettings[product.id] = setting !== false;
+    }
+    
+    return json({ 
+      products, 
+      shop, 
+      tryonCounts: tryonCounts || {},
+      productSettings: productSettings || {},
+    });
   } catch (error) {
     console.error("Error fetching products:", error);
     let errorMessage: string;
@@ -113,10 +140,44 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   }
 };
 
+// ADDED: Action handler for toggling product try-on
+export const action = async ({ request }: ActionFunctionArgs) => {
+  const { session } = await authenticate.admin(request);
+  const shop = session.shop;
+  const formData = await request.formData();
+  const intent = formData.get("intent") as string;
+  
+  if (intent === "toggle-product-tryon") {
+    const productId = formData.get("productId") as string;
+    const enabled = formData.get("enabled") === "true";
+    
+    if (!productId) {
+      return json({ success: false, error: "Product ID is required" });
+    }
+    
+    try {
+      await ensureTables();
+      await setProductTryonSetting(shop, productId, enabled);
+      return json({ success: true, productId, enabled });
+    } catch (error) {
+      console.error("Error toggling product try-on:", error);
+      return json({ 
+        success: false, 
+        error: error instanceof Error ? error.message : "Failed to update product setting" 
+      });
+    }
+  }
+  
+  return json({ success: false, error: "Invalid action" });
+};
+
 export default function Products() {
   const loaderData = useLoaderData<typeof loader>();
   const products = Array.isArray(loaderData?.products) ? loaderData.products : [];
   const error = loaderData?.error;
+  const tryonCounts = loaderData?.tryonCounts || {};
+  const productSettings = loaderData?.productSettings || {};
+  const fetcher = useFetcher<typeof action>();
 
   const productRows = products.map((product: any) => {
     if (!product || !product.id) {
@@ -124,6 +185,18 @@ export default function Products() {
     }
     
     const productId = product.id.replace("gid://shopify/Product/", "");
+    const tryonEnabled = productSettings[product.id] !== false; // Default to true
+    const tryonCount = tryonCounts[product.id] || 0;
+    
+    // ADDED: Handle toggle
+    const handleToggle = (checked: boolean) => {
+      const formData = new FormData();
+      formData.append("intent", "toggle-product-tryon");
+      formData.append("productId", product.id);
+      formData.append("enabled", checked ? "true" : "false");
+      fetcher.submit(formData, { method: "post" });
+    };
+    
     return [
       <InlineStack key={product.id} gap="300" align="start">
         {product.featuredImage?.url && (
@@ -153,6 +226,19 @@ export default function Products() {
       <Text key={`inventory-${product.id}`} variant="bodyMd" as="span">
         {product.totalInventory ?? 0}
       </Text>,
+      // ADDED: Try-on usage count
+      <Text key={`tryon-count-${product.id}`} variant="bodyMd" as="span">
+        {tryonCount.toLocaleString("en-US")}
+      </Text>,
+      // ADDED: Try-on toggle switch
+      <Switch
+        key={`switch-${product.id}`}
+        checked={tryonEnabled}
+        onChange={handleToggle}
+        disabled={fetcher.state === "submitting"}
+        label=""
+        labelHidden
+      />,
       <Button
         key={`btn-${product.id}`}
         url={`shopify:admin/products/${productId}`}
@@ -221,11 +307,23 @@ export default function Products() {
                     </p>
                   </EmptyState>
                 ) : (
-                  <DataTable
-                    columnContentTypes={["text", "text", "numeric", "text"]}
-                    headings={["Product", "Status", "Inventory", "Actions"]}
-                    rows={productRows}
-                  />
+                  <>
+                    {fetcher.data?.success && (
+                      <Banner tone="success" onDismiss={() => {}}>
+                        Product try-on setting updated successfully
+                      </Banner>
+                    )}
+                    {fetcher.data?.error && (
+                      <Banner tone="critical" onDismiss={() => {}}>
+                        {fetcher.data.error}
+                      </Banner>
+                    )}
+                    <DataTable
+                      columnContentTypes={["text", "text", "numeric", "numeric", "text", "text"]}
+                      headings={["Product", "Status", "Inventory", "Try-On Usage", "Try-On Enabled", "Actions"]}
+                      rows={productRows}
+                    />
+                  </>
                 )}
               </BlockStack>
             </Card>

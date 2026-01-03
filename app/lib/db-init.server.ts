@@ -81,6 +81,28 @@ export async function ensureTables() {
       )
     `);
 
+    // ADDED: Create product_settings table for per-product try-on toggle
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS product_settings (
+        id SERIAL PRIMARY KEY,
+        shop TEXT NOT NULL,
+        product_id TEXT NOT NULL,
+        tryon_enabled BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(shop, product_id)
+      )
+    `);
+
+    // ADDED: Add missing columns to shops table if they don't exist
+    await pool.query(`
+      ALTER TABLE shops 
+      ADD COLUMN IF NOT EXISTS is_enabled BOOLEAN DEFAULT true,
+      ADD COLUMN IF NOT EXISTS daily_limit INTEGER DEFAULT 100,
+      ADD COLUMN IF NOT EXISTS monthly_quota INTEGER DEFAULT NULL,
+      ADD COLUMN IF NOT EXISTS quality_mode TEXT DEFAULT 'balanced'
+    `);
+
     console.log("✅ Business tables initialized");
   } catch (error) {
     console.error("❌ Error initializing business tables:", error);

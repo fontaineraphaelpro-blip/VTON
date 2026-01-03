@@ -61,6 +61,8 @@ export async function upsertShop(domain: string, data: {
   dailyLimit?: number;
   incrementTotalTryons?: boolean;
   incrementTotalAtc?: boolean;
+  monthlyQuota?: number | null;
+  qualityMode?: string;
 }) {
   const shop = await getShop(domain);
   
@@ -111,6 +113,14 @@ export async function upsertShop(domain: string, data: {
     }
     if (data.incrementTotalAtc) {
       updates.push(`total_atc = total_atc + 1`);
+    }
+    if (data.monthlyQuota !== undefined) {
+      updates.push(`monthly_quota = $${paramIndex++}`);
+      params.push(data.monthlyQuota);
+    }
+    if (data.qualityMode !== undefined) {
+      updates.push(`quality_mode = $${paramIndex++}`);
+      params.push(data.qualityMode);
     }
     
     updates.push(`last_active_at = CURRENT_TIMESTAMP`);
@@ -291,5 +301,152 @@ export async function getTryonStatsByDay(shop: string, days: number = 30) {
     date: r.date,
     count: parseInt(r.count),
   }));
+}
+
+/**
+ * ADDED: Gets product try-on setting (enabled/disabled).
+ * Returns true if enabled, false if disabled, or null if not set (defaults to enabled).
+ */
+export async function getProductTryonSetting(shop: string, productId: string): Promise<boolean | null> {
+  const result = await query(
+    "SELECT tryon_enabled FROM product_settings WHERE shop = $1 AND product_id = $2",
+    [shop, productId]
+  );
+  
+  if (result.rows.length === 0) {
+    return null; // Not set, defaults to enabled
+  }
+  
+  return result.rows[0].tryon_enabled;
+}
+
+/**
+ * ADDED: Sets product try-on enabled/disabled state.
+ */
+export async function setProductTryonSetting(shop: string, productId: string, enabled: boolean) {
+  await query(
+    `INSERT INTO product_settings (shop, product_id, tryon_enabled, updated_at)
+     VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+     ON CONFLICT (shop, product_id) 
+     DO UPDATE SET tryon_enabled = $3, updated_at = CURRENT_TIMESTAMP`,
+    [shop, productId, enabled]
+  );
+}
+
+/**
+ * ADDED: Gets try-on usage count for a specific product.
+ */
+export async function getProductTryonCount(shop: string, productId: string): Promise<number> {
+  const result = await query(
+    `SELECT COUNT(*) as count 
+     FROM tryon_logs 
+     WHERE shop = $1 AND product_id = $2 AND success = true`,
+    [shop, productId]
+  );
+  
+  return result.rows.length > 0 ? parseInt(result.rows[0].count) : 0;
+}
+
+/**
+ * ADDED: Gets try-on usage counts for multiple products at once.
+ * Returns a map of product_id -> count.
+ */
+export async function getProductTryonCounts(shop: string, productIds: string[]): Promise<Record<string, number>> {
+  if (productIds.length === 0) {
+    return {};
+  }
+  
+  const placeholders = productIds.map((_, i) => `$${i + 2}`).join(', ');
+  const result = await query(
+    `SELECT product_id, COUNT(*) as count 
+     FROM tryon_logs 
+     WHERE shop = $1 AND product_id IN (${placeholders}) AND success = true
+     GROUP BY product_id`,
+    [shop, ...productIds]
+  );
+  
+  const counts: Record<string, number> = {};
+  result.rows.forEach((row: any) => {
+    counts[row.product_id] = parseInt(row.count);
+  });
+  
+  // Ensure all product IDs have a count (default to 0)
+  productIds.forEach(id => {
+    if (!(id in counts)) {
+      counts[id] = 0;
+    }
+  });
+  
+  return counts;
+}
+
+/**
+ * ADDED: Gets monthly try-on usage count for a shop (current month).
+ */
+export async function getMonthlyTryonUsage(shop: string): Promise<number> {
+  const result = await query(
+    `SELECT COUNT(*) as count 
+     FROM tryon_logs 
+     WHERE shop = $1 
+       AND success = true
+       AND DATE_TRUNC('month', created_at) = DATE_TRUNC('month', CURRENT_DATE)`,
+    [shop]
+  );
+  
+  return result.rows.length > 0 ? parseInt(result.rows[0].count) : 0;
+}
+
+/**
+ * ADDED: Gets comprehensive try-on status for a product.
+ * Returns both shop-level and product-level settings in one call.
+ * Used by the public status endpoint for widgets.
+ */
+export async function getProductTryonStatus(shop: string, productId: string): Promise<{
+  enabled: boolean;
+  shopEnabled: boolean;
+  productEnabled: boolean;
+  widgetSettings: {
+    text: string;
+    backgroundColor: string;
+    textColor: string;
+    maxTriesPerUser: number;
+  } | null;
+}> {
+  // Get shop settings
+  const shopRecord = await getShop(shop);
+  
+  if (!shopRecord) {
+    return {
+      enabled: false,
+      shopEnabled: false,
+      productEnabled: false,
+      widgetSettings: null,
+    };
+  }
+  
+  // Check shop-level enablement
+  const shopEnabled = shopRecord.is_enabled !== false; // Default to true if not set
+  
+  // Check product-level enablement
+  const productSetting = await getProductTryonSetting(shop, productId);
+  const productEnabled = productSetting !== false; // null or true means enabled
+  
+  // Final enabled status: both shop and product must be enabled
+  const enabled = shopEnabled && productEnabled;
+  
+  // Get widget settings (only if enabled)
+  const widgetSettings = enabled ? {
+    text: shopRecord.widget_text || "Try It On Now ✨",
+    backgroundColor: shopRecord.widget_bg || "#000000",
+    textColor: shopRecord.widget_color || "#ffffff",
+    maxTriesPerUser: shopRecord.max_tries_per_user || 5,
+  } : null;
+  
+  return {
+    enabled,
+    shopEnabled,
+    productEnabled,
+    widgetSettings,
+  };
 }
 

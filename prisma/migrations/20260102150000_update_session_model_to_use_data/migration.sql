@@ -9,3 +9,5 @@ ALTER TABLE "Session" DROP COLUMN IF EXISTS "expires";
 ALTER TABLE "Session" ADD COLUMN IF NOT EXISTS "data" JSONB;
 ALTER TABLE "Session" ALTER COLUMN "data" SET DEFAULT '{}'::jsonb;
 
+
+
