@@ -1,0 +1,15 @@
+# Theme App Extension Configuration
+# Learn more: https://shopify.dev/docs/apps/app-extensions/configuration
+
+api_version = "2025-01"
+name = "Virtual Try-On Widget"
+type = "theme_app_extension"
+
+[build]
+command = ""
+watch = []
+
+[[extension_points]]
+target = "app_embed"
+module = "./src/block.liquid"
+
