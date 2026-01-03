@@ -454,36 +454,64 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                 const url = shopUrl + proxyPath + '?' + queryParams.toString();
                 
                 // Make request with credentials to ensure cookies/referer are sent
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    credentials: 'same-origin', // Important: ensures referer/origin headers are sent
-                    body: JSON.stringify(requestBody)
-                });
+                // Increase timeout for long-running generation (up to 2 minutes)
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minutes timeout
                 
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({ error: 'Erreur HTTP ' + response.status }));
-                    throw new Error(errorData.error || 'Erreur lors de la génération');
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        credentials: 'same-origin',
+                        signal: controller.signal,
+                        body: JSON.stringify(requestBody)
+                    });
+                    
+                    clearTimeout(timeoutId);
+                    
+                    if (!response.ok) {
+                        const errorData = await response.json().catch(() => ({ error: 'Erreur HTTP ' + response.status }));
+                        throw new Error(errorData.error || 'Erreur lors de la génération');
+                    }
+                    
+                    const data = await response.json();
+                    
+                    if (data.error) {
+                        throw new Error(data.error);
+                    }
+                    
+                    if (!data.result_image_url) {
+                        throw new Error('Aucune image résultat reçue');
+                    }
+                    
+                    this.showResult(data.result_image_url);
+                    const generateBtn = document.getElementById('vton-generate-btn');
+                    if (generateBtn) {
+                        generateBtn.disabled = false;
+                    }
+                } catch (fetchError) {
+                    clearTimeout(timeoutId);
+                    if (fetchError.name === 'AbortError') {
+                        throw new Error('La génération prend trop de temps. Veuillez réessayer.');
+                    }
+                    throw fetchError;
                 }
-                
-                const data = await response.json();
-                
-                if (data.error) {
-                    throw new Error(data.error);
-                }
-                
-                if (!data.result_image_url) {
-                    throw new Error('Aucune image résultat reçue');
-                }
-                
-                this.showResult(data.result_image_url);
                 
             } catch (error) {
                 const errorMessage = error instanceof Error ? error.message : 'Une erreur est survenue';
                 this.showError(errorMessage);
+                const generateBtn = document.getElementById('vton-generate-btn');
+                if (generateBtn) {
+                    generateBtn.disabled = false;
+                }
             }
+        }
+        
+        async pollForResult(predictionId) {
+            // This function is reserved for future async polling implementation
+            // Currently not used as generate endpoint waits for result
         }
         
         getProductImage() {
