@@ -611,6 +611,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                         cursor: pointer;
                         transition: all 0.2s;
                         background: #f9fafb;
+                        position: relative;
                     }
                     
                     .vton-upload-area:hover {
@@ -636,7 +637,14 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                     }
                     
                     .vton-file-input {
-                        display: none;
+                        position: absolute;
+                        width: 100%;
+                        height: 100%;
+                        opacity: 0;
+                        cursor: pointer;
+                        top: 0;
+                        left: 0;
+                        z-index: 10;
                     }
                     
                     /* State: Verification */
@@ -893,13 +901,18 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             
             // Display product image in modal if available
             const shadowRoot = modal.shadowRoot;
-            if (shadowRoot && this.productImage) {
-                const productPreview = shadowRoot.querySelector('#vton-product-preview') as HTMLElement;
-                const productImg = shadowRoot.querySelector('#vton-product-img') as HTMLImageElement;
-                if (productPreview && productImg) {
-                    productImg.src = this.productImage;
-                    // Show product image in initial state
-                    productPreview.style.display = 'block';
+            if (shadowRoot) {
+                // Show product image in initial state
+                if (this.productImage) {
+                    const productPreviewInitial = shadowRoot.querySelector('#vton-product-preview-initial');
+                    const productImgInitial = shadowRoot.querySelector('#vton-product-img-initial');
+                    if (productPreviewInitial && productImgInitial) {
+                        productImgInitial.src = this.productImage;
+                        productPreviewInitial.style.display = 'block';
+                        console.log('[VTON] Product image displayed in initial state:', this.productImage);
+                    }
+                } else {
+                    console.warn('[VTON] No product image found');
                 }
             }
             
@@ -1040,6 +1053,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                         cursor: pointer;
                         transition: all 0.2s;
                         background: #f9fafb;
+                        position: relative;
                     }
                     
                     .vton-upload-area:hover {
@@ -1065,7 +1079,14 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                     }
                     
                     .vton-file-input {
-                        display: none;
+                        position: absolute;
+                        width: 100%;
+                        height: 100%;
+                        opacity: 0;
+                        cursor: pointer;
+                        top: 0;
+                        left: 0;
+                        z-index: 10;
                     }
                     
                     .vton-preview {
@@ -1273,10 +1294,14 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                         <!-- Initial State -->
                         <div id="vton-state-initial" class="vton-state active">
                             <div class="vton-upload-area" id="vton-upload-area">
-                                <div class="vton-upload-icon">📷</div>
-                                <div class="vton-upload-text">Upload Your Photo</div>
-                                <div class="vton-upload-hint">Click or drag & drop an image</div>
                                 <input type="file" id="vton-file-input" class="vton-file-input" accept="image/*">
+                                <div class="vton-upload-icon">📷</div>
+                                <div class="vton-upload-text">Cliquez pour télécharger votre photo</div>
+                                <div class="vton-upload-hint">ou glissez-déposez une image</div>
+                            </div>
+                            <div class="vton-product-preview" id="vton-product-preview-initial" style="margin-top: 16px; display: none;">
+                                <div style="font-size: 14px; color: #6b7280; margin-bottom: 8px; text-align: center;">Produit à essayer:</div>
+                                <img id="vton-product-img-initial" class="vton-preview-img" src="" alt="Product" style="max-height: 200px; border-radius: 8px;">
                             </div>
                         </div>
                         
@@ -1355,10 +1380,14 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             // File upload - use capture phase to ensure events work in Shadow DOM
             const uploadArea = shadowRoot.querySelector('#vton-upload-area');
             const fileInput = shadowRoot.querySelector('#vton-file-input');
+            console.log('[VTON] Setting up file upload:', { hasUploadArea: !!uploadArea, hasFileInput: !!fileInput });
             if (uploadArea && fileInput) {
-                // Click on upload area
+                // Click on upload area - make sure it's clickable
+                uploadArea.style.cursor = 'pointer';
                 uploadArea.addEventListener('click', (e) => {
+                    e.preventDefault();
                     e.stopPropagation();
+                    console.log('[VTON] Upload area clicked, triggering file input');
                     fileInput.click();
                 }, true);
                 
@@ -1385,14 +1414,21 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                     }
                 }, true);
                 
-                // File input change
+                // File input change - use JavaScript (not TypeScript) syntax
                 fileInput.addEventListener('change', (e) => {
                     e.stopPropagation();
-                    const file = (e.target as HTMLInputElement).files?.[0];
-                    if (file) {
-                        widget.handlePhotoUpload(file);
+                    const target = e.target;
+                    if (target && target.files && target.files.length > 0) {
+                        const file = target.files[0];
+                        if (file) {
+                            widget.handlePhotoUpload(file);
+                        }
                     }
                 }, true);
+                
+                // Also make file input directly clickable
+                fileInput.style.pointerEvents = 'auto';
+                fileInput.style.cursor = 'pointer';
             }
             
             // Generate button
