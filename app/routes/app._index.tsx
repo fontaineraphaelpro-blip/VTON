@@ -507,229 +507,177 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Section 1: 4 Statistiques en une ligne horizontale - Full Width - Uniform Height */}
-        <div className="vton-section">
-          <div className="dashboard-stats-row">
-            <div className="vton-card">
-              <div className="stat-card-content">
-                <div className="stat-icon">💰</div>
-                <div className="stat-info">
-                  <div className="stat-value">{credits.toLocaleString("en-US")}</div>
-                  <div className="stat-label">Jetons restants</div>
-                  <Button url="/app/credits" variant="plain" size="slim">
-                    Acheter →
-                  </Button>
-                </div>
-              </div>
-            </div>
-            <div className="vton-card">
-              <div className="stat-card-content">
-                <div className="stat-icon">📊</div>
-                <div className="stat-info">
-                  <div className="stat-value">{last30DaysTotal.toLocaleString("en-US")}</div>
-                  <div className="stat-label">Total Try-ons (30j)</div>
-                  <Button url="/app/history" variant="plain" size="slim">
-                    Voir l'historique →
-                  </Button>
-                </div>
-              </div>
-            </div>
-            <div className="vton-card">
-              <div className="stat-card-content">
-                <div className="stat-icon">🛒</div>
-                <div className="stat-info">
-                  <div className="stat-value">{totalAtc.toLocaleString("en-US")}</div>
-                  <div className="stat-label">Add to Cart</div>
-                </div>
-              </div>
-            </div>
-            <div className="vton-card">
-              <div className="stat-card-content">
-                <div className="stat-icon">📈</div>
-                <div className="stat-info">
-                  <div className="stat-value">{conversionRate}%</div>
-                  <div className="stat-label">Taux de conversion</div>
-                </div>
-              </div>
-            </div>
+        {/* Stats Grid */}
+        <div className="stats-grid">
+          <div className="stat-card">
+            <div className="stat-emoji">💰</div>
+            <div className="stat-value">{credits.toLocaleString("en-US")}</div>
+            <div className="stat-label">Jetons restants</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-emoji">📊</div>
+            <div className="stat-value">{last30DaysTotal.toLocaleString("en-US")}</div>
+            <div className="stat-label">Total Try-ons (30j)</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-emoji">🛒</div>
+            <div className="stat-value">{totalAtc.toLocaleString("en-US")}</div>
+            <div className="stat-label">Add to Cart</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-emoji">📈</div>
+            <div className="stat-value">{conversionRate}%</div>
+            <div className="stat-label">Taux de conversion</div>
           </div>
         </div>
 
-        {/* Section 2: Layout principal - Graphique + Top Produits/Activité | Réglages - Full Width */}
-        <div className="vton-section">
-          <div className="dashboard-main-layout">
-            {/* Colonne principale : Graphique + Top Produits + Activité (75%) */}
-            <div className="dashboard-main-column">
-              {/* Graphique des générations */}
-              <div className="vton-card">
-                <div className="vton-header">
-                  <h2>Générations par jour (7 derniers jours)</h2>
-                  <Button url="/app/history" variant="plain" size="slim">
-                    Voir tout →
-                  </Button>
-                </div>
-                <Divider />
-                {dailyStats.length > 0 ? (
-                  <div className="graph-container-large">
-                    <div className="graph-bars">
-                      {dailyStats.slice(-7).map((stat: any, index: number) => {
-                        const maxCount = Math.max(...dailyStats.map((s: any) => s.count));
-                        const percentage = maxCount > 0 ? (stat.count / maxCount) * 100 : 0;
-                        const date = new Date(stat.date);
-                        return (
-                          <div key={index} className="graph-bar-item">
-                            <div className="graph-bar-value">{stat.count}</div>
-                            <div 
-                              className="graph-bar" 
-                              style={{ height: `${Math.max(percentage, 5)}%` }}
-                            />
-                            <div className="graph-bar-label">
-                              {date.toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
-                            </div>
-                          </div>
-                        );
-                      })}
+        {/* Générations */}
+        <div className="dashboard-section">
+          <h2>Générations par jour (7 derniers jours)</h2>
+          {dailyStats.length > 0 ? (
+            <div className="graph-container-large">
+              <div className="graph-bars">
+                {dailyStats.slice(-7).map((stat: any, index: number) => {
+                  const maxCount = Math.max(...dailyStats.map((s: any) => s.count));
+                  const percentage = maxCount > 0 ? (stat.count / maxCount) * 100 : 0;
+                  const date = new Date(stat.date);
+                  return (
+                    <div key={index} className="graph-bar-item">
+                      <div className="graph-bar-value">{stat.count}</div>
+                      <div 
+                        className="graph-bar" 
+                        style={{ height: `${Math.max(percentage, 5)}%` }}
+                      />
+                      <div className="graph-bar-label">
+                        {date.toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
+                      </div>
                     </div>
-                  </div>
-                ) : (
-                  <div className="empty-state-large">
-                    <p>Aucune donnée disponible pour les 30 derniers jours</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Top Produits et Activité récente côte à côte */}
-              <div className="dashboard-two-columns">
-                <div className="vton-card">
-                  <h2>Produits les plus essayés</h2>
-                  <p className="card-subtitle">Vos produits avec le plus d'essayages</p>
-                  <Divider />
-                  {topProducts.length > 0 ? (
-                    <div className="products-list">
-                      {topProducts.map((product: any, index: number) => (
-                        <div key={product.product_id || index} className="product-item">
-                          <span className="product-name">
-                            {product.product_title || product.product_id || "Produit inconnu"}
-                          </span>
-                          <Badge tone="info">
-                            {product.tryons || product.count} essai{product.tryons > 1 ? "s" : ""}
-                          </Badge>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="empty-state-large">
-                      <p>Aucun essai pour le moment. Commencez à utiliser le widget sur vos produits !</p>
-                    </div>
-                  )}
-                </div>
-
-                <div className="vton-card">
-                  <div className="vton-header">
-                    <h2>Activité récente</h2>
-                    <Button url="/app/history" variant="plain">
-                      Voir tout →
-                    </Button>
-                  </div>
-                  <Divider />
-                  {recentLogs.length > 0 ? (
-                    <div className="activity-list">
-                      {recentLogs.slice(0, 5).map((log: any, index: number) => (
-                        <div key={log.id || index} className="activity-item">
-                          <div className="activity-info">
-                            <p className="activity-title">
-                              {log.product_title || log.product_id || "Produit inconnu"}
-                            </p>
-                            <p className="activity-date">
-                              {new Date(log.created_at).toLocaleDateString("fr-FR", { 
-                                month: "short", 
-                                day: "numeric",
-                                hour: "2-digit",
-                                minute: "2-digit"
-                              })}
-                            </p>
-                          </div>
-                          <Badge tone={log.success ? "success" : "critical"}>
-                            {log.success ? "✓ Réussi" : "✗ Échec"}
-                          </Badge>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="empty-state-large">
-                      <p>Aucune activité récente. Les essais apparaîtront ici une fois que les clients commenceront à utiliser le widget.</p>
-                    </div>
-                  )}
-                </div>
+                  );
+                })}
               </div>
             </div>
+          ) : (
+            <div className="dashboard-placeholder">
+              Aucune donnée disponible pour les 30 derniers jours
+            </div>
+          )}
+        </div>
 
-            {/* Colonne latérale droite : Réglages (25%) */}
-            <div className="dashboard-sidebar">
-              <div className="vton-card">
-                <h2>Réglages & Sécurité</h2>
-                <Divider />
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    const formData = new FormData(e.currentTarget);
-                    handleSave(formData);
-                  }}
-                >
-                  <div className="form-group">
-                    <Checkbox
-                      label="Activer l'app sur le store"
-                      checked={isEnabled}
-                      onChange={setIsEnabled}
-                    />
-                    <input type="hidden" name="isEnabled" value={isEnabled ? "true" : "false"} />
-                  </div>
-                  <div className="form-group">
-                    <TextField
-                      label="Plafond journalier"
-                      name="dailyLimit"
-                      type="number"
-                      defaultValue={String(shop?.daily_limit || 100)}
-                      autoComplete="off"
-                      helpText="Limite du nombre d'essais par jour (protection anti-abus)"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <TextField
-                      label="Max try-ons par utilisateur/jour"
-                      name="maxTriesPerUser"
-                      type="number"
-                      defaultValue={String(shop?.max_tries_per_user || 5)}
-                      autoComplete="off"
-                      helpText="Limite quotidienne par utilisateur"
-                    />
-                  </div>
-                  <Divider />
-                  <div className="form-group">
-                    <p className="form-help-text">
-                      <strong>Nettoyage :</strong> Supprime les anciens widgets et script tags qui pourraient interférer
+        {/* Produits */}
+        <div className="dashboard-section">
+          <h2>Produits les plus essayés</h2>
+          {topProducts.length > 0 ? (
+            <div className="products-list">
+              {topProducts.map((product: any, index: number) => (
+                <div key={product.product_id || index} className="product-item">
+                  <span className="product-name">
+                    {product.product_title || product.product_id || "Produit inconnu"}
+                  </span>
+                  <Badge tone="info">
+                    {product.tryons || product.count} essai{product.tryons > 1 ? "s" : ""}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="dashboard-placeholder">
+              Aucun essai pour le moment. Commencez à utiliser le widget sur vos produits !
+            </div>
+          )}
+        </div>
+
+        {/* Activité */}
+        <div className="dashboard-section">
+          <h2>Activité récente</h2>
+          {recentLogs.length > 0 ? (
+            <div className="activity-list">
+              {recentLogs.slice(0, 5).map((log: any, index: number) => (
+                <div key={log.id || index} className="activity-item">
+                  <div className="activity-info">
+                    <p className="activity-title">
+                      {log.product_title || log.product_id || "Produit inconnu"}
                     </p>
-                    <Button
-                      variant="secondary"
-                      onClick={async () => {
-                        const formData = new FormData();
-                        formData.append("intent", "cleanup-script-tags");
-                        fetcher.submit(formData, { method: "post" });
-                      }}
-                      loading={fetcher.state === "submitting"}
-                    >
-                      Nettoyer les anciens widgets
-                    </Button>
+                    <p className="activity-date">
+                      {new Date(log.created_at).toLocaleDateString("fr-FR", { 
+                        month: "short", 
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit"
+                      })}
+                    </p>
                   </div>
-                  <div className="form-actions">
-                    <Button submit variant="primary" loading={fetcher.state === "submitting"}>
-                      Enregistrer
-                    </Button>
-                  </div>
-                </form>
+                  <Badge tone={log.success ? "success" : "critical"}>
+                    {log.success ? "✓ Réussi" : "✗ Échec"}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="dashboard-placeholder">
+              Aucune activité récente. Les essais apparaîtront ici une fois que les clients commenceront à utiliser le widget.
+            </div>
+          )}
+        </div>
+
+        {/* Réglages & Sécurité */}
+        <div className="dashboard-section">
+          <h2>Réglages & Sécurité</h2>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              const formData = new FormData(e.currentTarget);
+              handleSave(formData);
+            }}
+          >
+            <div className="settings-grid">
+              <div className="setting-card">
+                <label>Activer l'app sur le store</label>
+                <Checkbox
+                  checked={isEnabled}
+                  onChange={setIsEnabled}
+                  label=""
+                />
+                <input type="hidden" name="isEnabled" value={isEnabled ? "true" : "false"} />
+              </div>
+              <div className="setting-card">
+                <label>Plafond journalier</label>
+                <input
+                  type="number"
+                  name="dailyLimit"
+                  defaultValue={String(shop?.daily_limit || 100)}
+                  placeholder="Limite d'essais par jour"
+                />
+              </div>
+              <div className="setting-card">
+                <label>Max try-ons par utilisateur/jour</label>
+                <input
+                  type="number"
+                  name="maxTriesPerUser"
+                  defaultValue={String(shop?.max_tries_per_user || 5)}
+                  placeholder="0"
+                />
+              </div>
+              <div className="setting-card">
+                <label>Nettoyage</label>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const formData = new FormData();
+                    formData.append("intent", "cleanup-script-tags");
+                    fetcher.submit(formData, { method: "post" });
+                  }}
+                  disabled={fetcher.state === "submitting"}
+                >
+                  {fetcher.state === "submitting" ? "Traitement..." : "Supprimer les anciens widgets et scripts"}
+                </button>
               </div>
             </div>
-          </div>
+            <div style={{ marginTop: "20px" }}>
+              <Button submit variant="primary" loading={fetcher.state === "submitting"}>
+                Enregistrer
+              </Button>
+            </div>
+          </form>
         </div>
       </div>
     </Page>
