@@ -325,7 +325,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             ];
             
             for (const selector of selectors) {
-                const img = document.querySelector(selector) as HTMLImageElement;
+                const img = document.querySelector(selector);
                 if (img && img.src) {
                     // Skip placeholders, loading images, and very small images
                     const src = img.src;
@@ -342,8 +342,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             }
             
             // Fallback: try to get from Shopify product data
-            if (window.Shopify && (window as any).Shopify.product) {
-                const product = (window as any).Shopify.product;
+            if (window.Shopify && window.Shopify.product) {
+                const product = window.Shopify.product;
                 if (product.featured_image) {
                     return product.featured_image;
                 }
@@ -359,7 +359,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             if (productArea) {
                 const imgs = productArea.querySelectorAll('img');
                 for (const img of Array.from(imgs)) {
-                    const imgEl = img as HTMLImageElement;
+                    const imgEl = img;
                     if (imgEl.src && 
                         imgEl.naturalWidth > 200 && 
                         !imgEl.src.includes('placeholder')) {
@@ -498,7 +498,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                         gap: 10px;
                         width: 100% !important;
                         padding: 16px 24px;
-                        background: linear-gradient(135deg, \${settings.backgroundColor} 0%, \${this.adjustColor(settings.backgroundColor, -10)} 100%) !important;
+                        background: \${settings.backgroundColor} !important;
                         color: \${settings.textColor} !important;
                         border: none;
                         border-radius: 12px;
@@ -1631,17 +1631,17 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             
             const reader = new FileReader();
             reader.onload = (e) => {
-                this.userPhoto = e.target?.result as string;
+                this.userPhoto = e.target && e.target.result ? e.target.result : null;
                 const modal = document.getElementById('vton-modal-overlay');
                 if (modal && modal.shadowRoot) {
-                    const previewImg = modal.shadowRoot.querySelector('#vton-preview-img') as HTMLImageElement;
+                    const previewImg = modal.shadowRoot.querySelector('#vton-preview-img');
                     if (previewImg && this.userPhoto) {
                         previewImg.src = this.userPhoto;
                     }
                     
                     // Show product image if available
-                    const productPreview = modal.shadowRoot.querySelector('#vton-product-preview') as HTMLElement;
-                    const productImg = modal.shadowRoot.querySelector('#vton-product-img') as HTMLImageElement;
+                    const productPreview = modal.shadowRoot.querySelector('#vton-product-preview');
+                    const productImg = modal.shadowRoot.querySelector('#vton-product-img');
                     if (productPreview && productImg && this.productImage) {
                         productImg.src = this.productImage;
                         productPreview.style.display = 'block';
