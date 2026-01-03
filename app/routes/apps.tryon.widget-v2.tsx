@@ -18,7 +18,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     
     // Configuration
     const CONFIG = {
-        apiBase: '${appUrl}/apps/tryon',
         selectors: {
             addToCartButton: [
                 'form[action*="/cart/add"] button[type="submit"]',
