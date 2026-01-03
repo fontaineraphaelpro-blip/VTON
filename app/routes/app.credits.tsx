@@ -397,101 +397,78 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
         console.log("[Credits] Creating custom one-time charge using REST API", { customCredits, totalPrice });
 
-        // Use Shopify REST API to create a RecurringApplicationCharge for custom pack
-        const chargeData = {
-          recurring_application_charge: {
-            name: `Custom Pack - ${customCredits} Credits`,
-            price: totalPrice.toFixed(2),
-            return_url: returnUrl.toString(),
-            test: process.env.NODE_ENV !== "production",
-            trial_days: 0,
-            capped_amount: totalPrice.toFixed(2),
-          }
-        };
-
-        // Make REST API call to Shopify
-        const apiUrl = `https://${shop}/admin/api/2025-01/recurring_application_charges.json`;
-        
-        let restResponse;
-        try {
-          restResponse = await fetch(apiUrl, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "X-Shopify-Access-Token": session.accessToken,
-            },
-            body: JSON.stringify(chargeData),
-          });
-
-          console.log("[Credits] Custom REST API response received", { 
-            ok: restResponse.ok, 
-            status: restResponse.status,
-            statusText: restResponse.statusText,
-          });
-        } catch (restError) {
-          console.error("[Credits] Custom REST API call threw error:", restError);
-          if (restError instanceof Response) {
-            if (restError.status === 401) {
-              const reauthUrl = restError.headers.get('x-shopify-api-request-failure-reauthorize-url');
-              return json({ 
-                success: false, 
-                error: "Votre session a expiré. Veuillez rafraîchir la page pour vous ré-authentifier.",
-                requiresAuth: true,
-                reauthUrl: reauthUrl || null,
-              });
+        // Use Shopify GraphQL API to create a one-time charge for custom pack
+        const mutation = `
+          mutation appPurchaseOneTimeCreate($name: String!, $price: MoneyInput!, $returnUrl: URL!, $test: Boolean) {
+            appPurchaseOneTimeCreate(
+              name: $name
+              price: $price
+              returnUrl: $returnUrl
+              test: $test
+            ) {
+              confirmationUrl
+              userErrors {
+                field
+                message
+              }
             }
           }
-          throw restError;
+        `;
+
+        const variables = {
+          name: `Custom Pack - ${customCredits} Credits`,
+          price: {
+            amount: totalPrice.toFixed(2),
+            currencyCode: "EUR"
+          },
+          returnUrl: returnUrl.toString(),
+          test: process.env.NODE_ENV !== "production"
+        };
+
+        console.log("[Credits] Creating custom one-time charge using GraphQL", { customCredits, totalPrice, variables });
+
+        const graphqlResponse = await admin.graphql(mutation, {
+          variables
+        });
+
+        const graphqlData = await graphqlResponse.json();
+
+        console.log("[Credits] Custom GraphQL response received", {
+          hasData: !!graphqlData,
+          hasErrors: !!graphqlData.errors,
+          data: graphqlData
+        });
+
+        if (graphqlData.errors) {
+          console.error("[Credits] Custom GraphQL errors:", graphqlData.errors);
+          const errorMessage = graphqlData.errors.map((e: any) => e.message).join(", ");
+          return json({ 
+            success: false, 
+            error: `Shopify API error: ${errorMessage}`,
+          });
         }
 
-        // Check if response is OK
-        if (!restResponse.ok) {
-          if (restResponse.status === 401) {
-            const reauthUrl = restResponse.headers.get('x-shopify-api-request-failure-reauthorize-url');
-            console.error("[Credits] Authentication required (401) for custom charge creation", { reauthUrl });
-            return json({ 
-              success: false, 
-              error: "Votre session a expiré. Veuillez rafraîchir la page pour vous ré-authentifier.",
-              requiresAuth: true,
-              reauthUrl: reauthUrl || null,
-            });
-          }
-          
-          const errorText = await restResponse.text().catch(() => `HTTP ${restResponse.status} ${restResponse.statusText}`);
-          console.error("REST API request failed (custom):", restResponse.status, errorText);
-          return json({ 
-            success: false, 
-            error: `Shopify API error (${restResponse.status}): ${errorText.substring(0, 200)}`,
-          });
-        }
+        const purchaseData = graphqlData.data?.appPurchaseOneTimeCreate;
         
-        let responseJson;
-        try {
-          responseJson = await restResponse.json();
-          console.log("[Credits] Custom REST API JSON parsed successfully");
-          console.log("[Credits] Response JSON:", JSON.stringify(responseJson, null, 2));
-        } catch (jsonError) {
-          console.error("Failed to parse JSON response (custom):", jsonError);
-          const errorText = await restResponse.text().catch(() => "Unable to read response");
-          return json({ 
-            success: false, 
-            error: `Invalid response from Shopify: ${errorText.substring(0, 200)}`,
-          });
-        }
-        
-        // Extract confirmation URL from REST API response
-        const charge = responseJson.recurring_application_charge;
-        
-        if (!charge) {
-          console.error("No charge returned in response (custom):", responseJson);
+        if (!purchaseData) {
+          console.error("No purchase data returned in response (custom):", graphqlData);
           return json({ 
             success: false, 
             error: "Failed to create charge. Please check your Shopify permissions.",
           });
         }
 
-        if (!charge.confirmation_url) {
-          console.error("No confirmation URL returned (custom):", charge);
+        if (purchaseData.userErrors && purchaseData.userErrors.length > 0) {
+          const errorMessage = purchaseData.userErrors.map((e: any) => e.message).join(", ");
+          console.error("User errors (custom):", purchaseData.userErrors);
+          return json({ 
+            success: false, 
+            error: `Shopify API error: ${errorMessage}`,
+          });
+        }
+
+        if (!purchaseData.confirmationUrl) {
+          console.error("No confirmation URL returned (custom):", purchaseData);
           return json({ 
             success: false, 
             error: "Charge created but no confirmation URL available. Please try again.",
@@ -502,7 +479,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         return json({ 
           success: true, 
           redirect: true,
-          checkoutUrl: charge.confirmation_url,
+          checkoutUrl: purchaseData.confirmationUrl,
           pack: "Custom", 
           credits: customCredits,
           price: totalPrice,
