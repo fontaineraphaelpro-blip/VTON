@@ -13,6 +13,8 @@ import {
   Banner,
   TextField,
   Box,
+  Divider,
+  Badge,
 } from "@shopify/polaris";
 import { TitleBar } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
