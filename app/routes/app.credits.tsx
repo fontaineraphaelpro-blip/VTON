@@ -725,15 +725,15 @@ export default function Credits() {
           </div>
         )}
 
-        {(purchaseSuccess || (fetcher.data?.success && !fetcher.data?.redirect)) && (
+        {(purchaseSuccess || (fetcher.data?.success && !(fetcher.data as any)?.redirect)) && (
           <div style={{ marginBottom: "var(--spacing-lg)" }}>
             <Banner tone="success" title="Succès !" onDismiss={() => {}}>
-              {creditsAdded || fetcher.data?.creditsAdded || fetcher.data?.credits || 0} crédits ajoutés à votre compte.
+              {creditsAdded || (fetcher.data as any)?.creditsAdded || (fetcher.data as any)?.credits || 0} crédits ajoutés à votre compte.
             </Banner>
           </div>
         )}
 
-        {fetcher.data?.success && fetcher.data?.redirect && (
+        {fetcher.data?.success && (fetcher.data as any)?.redirect && (
           <div style={{ marginBottom: "var(--spacing-lg)" }}>
             <Banner tone="info" title="Redirection vers le paiement..." onDismiss={() => {}}>
               Redirection vers le checkout Shopify...
@@ -741,11 +741,11 @@ export default function Credits() {
           </div>
         )}
 
-        {fetcher.data?.error && (
+        {(fetcher.data as any)?.error && (
           <div style={{ marginBottom: "var(--spacing-lg)" }}>
             <Banner 
               tone="critical" 
-              title={fetcher.data.requiresAuth ? "Authentification requise" : "Erreur"}
+              title={(fetcher.data as any)?.requiresAuth ? "Authentification requise" : "Erreur"}
               onDismiss={() => {}}
               action={fetcher.data.requiresAuth ? {
                 content: fetcher.data.reauthUrl ? "Ré-authentifier" : "Rafraîchir la page",
