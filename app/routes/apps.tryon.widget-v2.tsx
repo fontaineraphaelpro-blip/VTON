@@ -74,7 +74,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     // Create widget HTML
     function createWidgetHTML() {
         return \`
-            <div id="vton-widget-container" style="margin: 20px 0; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px; background: #fff;">
+            <div style="margin: 20px 0; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px; background: #fff;">
                 <h3 style="margin: 0 0 15px 0; font-size: 18px; font-weight: 600;">Essayer avant d'acheter</h3>
                 
                 <div id="vton-upload-section" style="margin-bottom: 15px;">
@@ -102,18 +102,13 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     // Main widget class
     class VTONWidget {
         constructor() {
-            console.log('[VTON] Widget constructor called');
             this.shop = extractShop();
             this.productId = extractProductId();
             this.userPhoto = null;
             this.resultImageUrl = null;
             
-            console.log('[VTON] Shop:', this.shop, 'Product ID:', this.productId, 'Is product page:', isProductPage());
-            
             if (isProductPage() && this.productId) {
                 this.init();
-            } else {
-                console.log('[VTON] Skipping init - not a product page or no product ID');
             }
         }
         
