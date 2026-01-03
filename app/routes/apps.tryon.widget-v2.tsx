@@ -168,23 +168,35 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                 throw new Error('Missing shop or product ID');
             }
             
-            // Build URL correctly - CONFIG.apiBase is already a full URL
+            // Build URL correctly - CONFIG.apiBase should be the store URL (window.location.origin)
+            // This ensures the request goes through Shopify App Proxy which adds the signature
             const url = new URL(\`\${CONFIG.apiBase}/status\`);
             url.searchParams.set('shop', this.shop);
             url.searchParams.set('product_id', this.productId);
             
+            console.log('[VTON] Making status request:', {
+                url: url.toString(),
+                apiBase: CONFIG.apiBase,
+                shop: this.shop,
+                productId: this.productId,
+                windowOrigin: window.location.origin
+            });
+            
             // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'widget-v2.js:checkStatus',message:'Making status API request',data:{url:url.toString()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+            fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'widget-v2.js:checkStatus',message:'Making status API request',data:{url:url.toString(),apiBase:CONFIG.apiBase,shop:this.shop,productId:this.productId,windowOrigin:window.location.origin},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
             // #endregion
             
-            // Note: In production, Shopify App Proxy will add the signature automatically
-            // For now, we make the request (the backend will verify signature if present)
+            // Note: The request should go through Shopify App Proxy which adds the signature automatically
+            // If no signature, the backend will check if request comes from a Shopify storefront
             
             const response = await fetch(url.toString(), {
                 method: 'GET',
                 headers: {
-                    'Content-Type': 'application/json'
-                }
+                    'Content-Type': 'application/json',
+                    'Referer': window.location.href,
+                    'Origin': window.location.origin
+                },
+                credentials: 'same-origin'
             });
             
             // #region agent log
