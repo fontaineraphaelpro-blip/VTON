@@ -233,8 +233,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         `;
 
         // Build return URL - redirect back to credits page after payment
-        const returnUrl = new URL(request.url);
-        returnUrl.pathname = "/app/credits";
+        // Must be an absolute URL for Shopify Billing API
+        const baseUrl = new URL(request.url).origin;
+        const returnUrl = new URL("/app/credits", baseUrl);
         returnUrl.searchParams.set("purchase", "success");
         returnUrl.searchParams.set("pack", pack.id);
         returnUrl.searchParams.set("credits", String(pack.credits));
@@ -502,8 +503,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         `;
 
         // Build return URL - redirect back to credits page after payment
-        const returnUrl = new URL(request.url);
-        returnUrl.pathname = "/app/credits";
+        // Must be an absolute URL for Shopify Billing API
+        const baseUrl = new URL(request.url).origin;
+        const returnUrl = new URL("/app/credits", baseUrl);
         returnUrl.searchParams.set("purchase", "success");
         returnUrl.searchParams.set("pack", "custom");
         returnUrl.searchParams.set("credits", String(customCredits));
