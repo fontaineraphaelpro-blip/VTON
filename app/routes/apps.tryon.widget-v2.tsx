@@ -118,10 +118,23 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         }
         
         init() {
-            // Wait for DOM to be ready
+            console.log('[VTON] init() called');
+            // Wait for DOM to be ready, but also add a timeout fallback
             if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', () => this.injectWidget());
+                console.log('[VTON] DOM still loading, waiting for DOMContentLoaded');
+                document.addEventListener('DOMContentLoaded', () => {
+                    console.log('[VTON] DOMContentLoaded fired, calling injectWidget');
+                    this.injectWidget();
+                });
+                // Fallback: try after a delay if DOMContentLoaded doesn't fire
+                setTimeout(() => {
+                    if (!document.getElementById('vton-widget-container')) {
+                        console.log('[VTON] Fallback timeout, trying to inject widget');
+                        this.injectWidget();
+                    }
+                }, 2000);
             } else {
+                console.log('[VTON] DOM already ready, calling injectWidget immediately');
                 this.injectWidget();
             }
         }
