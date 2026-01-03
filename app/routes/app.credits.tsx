@@ -869,281 +869,88 @@ export default function Credits() {
 
   return (
     <Page>
-      <TitleBar title="Achat Crédits - VTON Magic" />
-      <Layout>
+      <TitleBar title="Credits - VTON Magic" />
+      <div className="app-container">
         {error && (
-          <Layout.Section>
-            <Banner tone="critical" title="Erreur">
-              {error}
-            </Banner>
-          </Layout.Section>
+          <Banner tone="critical" title="Erreur" onDismiss={() => {}}>
+            {error}
+          </Banner>
         )}
 
         {(purchaseSuccess || (fetcher.data?.success && !fetcher.data?.redirect)) && (
-          <Layout.Section>
-            <Banner tone="success" title="Succès !">
-              {creditsAdded || fetcher.data?.creditsAdded || fetcher.data?.credits || 0} crédits ajoutés à votre compte.
-            </Banner>
-          </Layout.Section>
+          <Banner tone="success" title="Succès !" onDismiss={() => {}}>
+            {creditsAdded || fetcher.data?.creditsAdded || fetcher.data?.credits || 0} crédits ajoutés à votre compte.
+          </Banner>
         )}
 
         {fetcher.data?.success && fetcher.data?.redirect && (
-          <Layout.Section>
-            <Banner tone="info" title="Redirection vers le paiement...">
-              Redirection vers le checkout Shopify...
-            </Banner>
-          </Layout.Section>
+          <Banner tone="info" title="Redirection vers le paiement..." onDismiss={() => {}}>
+            Redirection vers le checkout Shopify...
+          </Banner>
         )}
 
         {fetcher.data?.error && (
-          <Layout.Section>
-            <Banner 
-              tone="critical" 
-              title={fetcher.data.requiresAuth ? "Authentification requise" : "Erreur"}
-              action={fetcher.data.requiresAuth ? {
-                content: fetcher.data.reauthUrl ? "Ré-authentifier" : "Rafraîchir la page",
-                onAction: () => {
-                  if (fetcher.data.reauthUrl) {
-                    window.location.href = fetcher.data.reauthUrl;
-                  } else {
-                    window.location.reload();
-                  }
-                },
-              } : undefined}
-            >
-              {fetcher.data.error}
-            </Banner>
-          </Layout.Section>
+          <Banner 
+            tone="critical" 
+            title={fetcher.data.requiresAuth ? "Authentification requise" : "Erreur"}
+            onDismiss={() => {}}
+            action={fetcher.data.requiresAuth ? {
+              content: fetcher.data.reauthUrl ? "Ré-authentifier" : "Rafraîchir la page",
+              onAction: () => {
+                if (fetcher.data.reauthUrl) {
+                  window.location.href = fetcher.data.reauthUrl;
+                } else {
+                  window.location.reload();
+                }
+              },
+            } : undefined}
+          >
+            {fetcher.data.error}
+          </Banner>
         )}
 
-        {/* Section 1: Solde actuel en pleine largeur */}
-        <Layout.Section>
-          <Card className="credits-balance-full">
-                <BlockStack gap="300">
-                  <Box textAlign="center" paddingBlockStart="200">
-                    <Text variant="heading2xl" as="p" fontWeight="bold">
-                      {currentCredits.toLocaleString("en-US")}
-                    </Text>
-                  </Box>
-                  <Box textAlign="center">
-                    <Text variant="bodyMd" tone="subdued" as="p">
-                      Jetons restants
-                    </Text>
-                  </Box>
-                  <Divider />
-                  <Box textAlign="center" paddingBlockEnd="200">
-                    <Text variant="bodySm" tone="subdued" as="p">
-                      Les jetons n'expirent jamais
-                    </Text>
-                  </Box>
-                </BlockStack>
-              </Card>
-        </Layout.Section>
+        <header className="app-header">
+          <h1 className="app-title">Credits</h1>
+          <p className="app-subtitle">
+            Use credits to generate virtual try-ons instantly
+          </p>
+        </header>
 
-        {/* Section 2: 3 offres alignées horizontalement avec Pro dominant - Full Width */}
-        <Layout.Section>
-          <BlockStack gap="400">
-            <div className="credits-packs-row">
-              {/* Pack Découverte */}
-              {CREDIT_PACKS.filter(p => p.id === "decouverte").map((pack) => (
-                <div key={pack.id} style={{ display: "flex", flexDirection: "column", height: "100%", width: "100%" }}>
-                  <Card>
-                    <BlockStack gap="400" style={{ height: "100%", display: "flex", flexDirection: "column" }}>
-                      <BlockStack gap="200">
-                        <Text variant="headingMd" as="h3" fontWeight="bold">
-                          {pack.name}
-                        </Text>
-                        <Text variant="headingLg" as="p" fontWeight="bold">
-                          {pack.credits} jetons
-                        </Text>
-                        <Text variant="bodySm" tone="subdued" as="p">
-                          {pack.description}
-                        </Text>
-                      </BlockStack>
-                      <Divider />
-                      <BlockStack gap="300" style={{ marginTop: "auto" }}>
-                        <BlockStack gap="100">
-                          <Text variant="headingLg" as="p" fontWeight="bold">
-                            €{pack.price.toFixed(2)}
-                          </Text>
-                          <Text variant="bodySm" tone="subdued" as="p">
-                            €{pack.pricePerCredit.toFixed(2)}/jeton
-                          </Text>
-                        </BlockStack>
-                        <Button
-                          variant="secondary"
-                          onClick={() => handlePurchase(pack.id)}
-                          disabled={isSubmitting}
-                          loading={isSubmitting}
-                          fullWidth
-                        >
-                          {isSubmitting ? "Traitement..." : "Acheter"}
-                        </Button>
-                      </BlockStack>
-                    </BlockStack>
-                  </Card>
-                </div>
-              ))}
+        <div className="credits-balance">
+          <div>
+            <div className="credits-amount">{currentCredits.toLocaleString("en-US")}</div>
+            <div className="credits-label">Credits available</div>
+          </div>
+        </div>
 
-              {/* Pack Pro - Recommandé (même taille mais visuellement mis en évidence) */}
-              {CREDIT_PACKS.filter(p => p.highlight).map((pack) => {
-                const savings = pack.credits * 0.40 - pack.price; // Économie vs pack Découverte
-                return (
-                  <div key={pack.id} style={{ display: "flex", flexDirection: "column", height: "100%", width: "100%" }} className="recommended-pack-card">
-                    <Card>
-                      <BlockStack gap="400" style={{ height: "100%", display: "flex", flexDirection: "column" }}>
-                        {/* Badge "Recommandé" en haut */}
-                        <Box paddingBlockStart="200">
-                          <Badge tone="info" size="large">Recommandé</Badge>
-                        </Box>
-                        <BlockStack gap="400" style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-                          <BlockStack gap="300">
-                            <Text variant="headingLg" as="h3" fontWeight="bold">
-                              {pack.name}
-                            </Text>
-                            <Text variant="heading2xl" as="p" fontWeight="bold">
-                              {pack.credits} jetons
-                            </Text>
-                            <Text variant="bodyMd" tone="subdued" as="p">
-                              {pack.description}
-                            </Text>
-                            {savings > 0 && (
-                              <Box
-                                padding="300"
-                                background="bg-surface-success-subdued"
-                                borderRadius="200"
-                              >
-                                <Text variant="bodySm" tone="success" as="p" fontWeight="semibold">
-                                  Économisez €{savings.toFixed(2)}
-                                </Text>
-                              </Box>
-                            )}
-                          </BlockStack>
-                          <Divider />
-                          <BlockStack gap="400" style={{ marginTop: "auto" }}>
-                            <BlockStack gap="200">
-                              <Text variant="heading2xl" as="p" fontWeight="bold">
-                                €{pack.price.toFixed(2)}
-                              </Text>
-                              <Text variant="bodySm" tone="subdued" as="p">
-                                €{pack.pricePerCredit.toFixed(2)}/jeton
-                              </Text>
-                              <Text variant="bodySm" tone="success" as="p" fontWeight="medium">
-                                Meilleur prix par jeton
-                              </Text>
-                            </BlockStack>
-                            <Button
-                              variant="primary"
-                              onClick={() => handlePurchase(pack.id)}
-                              disabled={isSubmitting}
-                              loading={isSubmitting}
-                              fullWidth
-                              size="large"
-                            >
-                              {isSubmitting ? "Traitement..." : "Acheter maintenant"}
-                            </Button>
-                          </BlockStack>
-                        </BlockStack>
-                      </BlockStack>
-                    </Card>
-                  </div>
-                );
-              })}
-
-              {/* Pack Starter */}
-              {CREDIT_PACKS.filter(p => p.id === "starter").map((pack) => (
-                <div key={pack.id} style={{ display: "flex", flexDirection: "column", height: "100%", width: "100%" }}>
-                  <Card>
-                    <BlockStack gap="400" style={{ height: "100%", display: "flex", flexDirection: "column" }}>
-                      <BlockStack gap="200">
-                        <Text variant="headingMd" as="h3" fontWeight="bold">
-                          {pack.name}
-                        </Text>
-                        <Text variant="headingLg" as="p" fontWeight="bold">
-                          {pack.credits} jetons
-                        </Text>
-                        <Text variant="bodySm" tone="subdued" as="p">
-                          {pack.description}
-                        </Text>
-                      </BlockStack>
-                      <Divider />
-                      <BlockStack gap="300" style={{ marginTop: "auto" }}>
-                        <BlockStack gap="100">
-                          <Text variant="headingLg" as="p" fontWeight="bold">
-                            €{pack.price.toFixed(2)}
-                          </Text>
-                          <Text variant="bodySm" tone="subdued" as="p">
-                            €{pack.pricePerCredit.toFixed(2)}/jeton
-                          </Text>
-                        </BlockStack>
-                        <Button
-                          variant="secondary"
-                          onClick={() => handlePurchase(pack.id)}
-                          disabled={isSubmitting}
-                          loading={isSubmitting}
-                          fullWidth
-                        >
-                          {isSubmitting ? "Traitement..." : "Acheter"}
-                        </Button>
-                      </BlockStack>
-                    </BlockStack>
-                  </Card>
-                </div>
-              ))}
+        <div className="pricing-grid">
+          {CREDIT_PACKS.map((pack) => (
+            <div key={pack.id} className={`plan-card ${pack.highlight ? 'featured' : ''}`}>
+              {pack.highlight && (
+                <div className="plan-badge">Most popular</div>
+              )}
+              <div className="plan-name">{pack.name}</div>
+              <div className="plan-price">
+                €{pack.price.toFixed(2)} <span>/ one-time</span>
+              </div>
+              <div className="plan-features">
+                <div className="plan-feature">• {pack.credits} credits</div>
+                <div className="plan-feature">• No expiration</div>
+                <div className="plan-feature">• {pack.description}</div>
+              </div>
+              <div className="plan-cta">
+                <button 
+                  className="plan-button"
+                  onClick={() => handlePurchase(pack.id)}
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? "Processing..." : "Buy credits"}
+                </button>
+              </div>
             </div>
-
-            {/* Mentions de confiance avec icônes */}
-            <Box padding="400">
-              <Box textAlign="center">
-                <InlineStack gap="500" align="center" blockAlign="center">
-                  <InlineStack gap="100" align="center" blockAlign="center">
-                    <Text variant="bodySm" tone="success" as="span" fontWeight="semibold">✓</Text>
-                    <Text variant="bodySm" tone="subdued" as="p">
-                      Paiement sécurisé via Shopify
-                    </Text>
-                  </InlineStack>
-                  <Text variant="bodySm" tone="subdued" as="span">•</Text>
-                  <InlineStack gap="100" align="center" blockAlign="center">
-                    <Text variant="bodySm" tone="success" as="span" fontWeight="semibold">✓</Text>
-                    <Text variant="bodySm" tone="subdued" as="p">
-                      Jetons crédités instantanément
-                    </Text>
-                  </InlineStack>
-                  <Text variant="bodySm" tone="subdued" as="span">•</Text>
-                  <InlineStack gap="100" align="center" blockAlign="center">
-                    <Text variant="bodySm" tone="success" as="span" fontWeight="semibold">✓</Text>
-                    <Text variant="bodySm" tone="subdued" as="p">
-                      Support 24/7
-                    </Text>
-                  </InlineStack>
-                </InlineStack>
-              </Box>
-            </Box>
-          </BlockStack>
-        </Layout.Section>
-
-        {/* Section 3: Historique des recharges sous les offres - Full Width */}
-        <Layout.Section>
-          <Card className="history-section-full">
-            <BlockStack gap="400">
-              <InlineStack align="space-between" blockAlign="center">
-                <Text as="h2" variant="headingLg" fontWeight="semibold">
-                  Historique des recharges
-                </Text>
-                <Button url="/app/history" variant="plain" size="slim">
-                  Voir tout →
-                </Button>
-              </InlineStack>
-              <Divider />
-              <Box className="empty-state-large" textAlign="center">
-                <Text variant="bodyLg" tone="subdued" as="p">
-                  Aucun historique disponible pour le moment
-                </Text>
-              </Box>
-            </BlockStack>
-          </Card>
-        </Layout.Section>
-      </Layout>
+          ))}
+        </div>
+      </div>
     </Page>
   );
 }
