@@ -9,11 +9,20 @@
  * So requests to https://store.myshopify.com/apps/tryon/widget-v2.js
  * are proxied to https://app-url.com/widget-v2.js (prefix stripped)
  * 
- * This route re-exports the loader from apps.tryon.widget-v2.tsx
+ * This route duplicates the loader logic from apps.tryon.widget-v2.tsx
+ * because Remix flatRoutes() doesn't recognize widget-v2.js.tsx as a valid route.
  */
 
-import * as widgetRoute from "./apps.tryon.widget-v2";
+import type { LoaderFunctionArgs } from "@remix-run/node";
 
-// Re-export the loader to serve the widget when App Proxy strips the prefix
-export const loader = widgetRoute.loader;
-
+export const loader = async ({ request }: LoaderFunctionArgs) => {
+  // Get the app URL from environment or request
+  const appUrl = process.env.SHOPIFY_APP_URL || process.env.APPLICATION_URL || new URL(request.url).origin;
+  
+  // Import the widget code from the actual route file
+  // We need to dynamically import it to avoid circular dependencies
+  const widgetRouteModule = await import("./apps.tryon.widget-v2");
+  
+  // Call the loader from the actual route
+  return widgetRouteModule.loader({ request });
+};
