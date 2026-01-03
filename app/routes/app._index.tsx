@@ -14,7 +14,7 @@ import {
   Divider,
   TextField,
   Box,
-  Switch,
+  Checkbox,
   Badge,
 } from "@shopify/polaris";
 import { TitleBar } from "@shopify/app-bridge-react";
@@ -479,7 +479,7 @@ export default function Dashboard() {
                     }}
                   >
                     <BlockStack gap="400">
-                      <Switch
+                      <Checkbox
                         label="Activer l'app sur le store"
                         checked={isEnabled}
                         onChange={setIsEnabled}
