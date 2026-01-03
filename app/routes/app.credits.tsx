@@ -830,13 +830,12 @@ export default function Credits() {
           </Layout.Section>
         )}
 
-        {/* Layout optimisé pour conversion : Crédits + Packs avec pack recommandé en évidence */}
+        {/* Section 1: Solde actuel en haut à gauche */}
         <Layout.Section>
           <Layout>
-            {/* Colonne gauche : Crédits actuels */}
             <Layout.Section variant="oneThird">
               <Card>
-                <BlockStack gap="300">
+                <BlockStack gap="400">
                   <Box textAlign="center">
                     <Text variant="heading2xl" as="p" fontWeight="bold">
                       {currentCredits.toLocaleString("en-US")}
@@ -853,172 +852,196 @@ export default function Credits() {
                       Les jetons n'expirent jamais
                     </Text>
                   </Box>
-                  <Button url="/app/history" variant="plain" size="slim" fullWidth>
-                    Voir l'historique →
-                  </Button>
                 </BlockStack>
               </Card>
-            </Layout.Section>
-
-            {/* Colonne droite : Packs de crédits avec pack recommandé au centre */}
-            <Layout.Section variant="twoThirds">
-              <BlockStack gap="300">
-                {/* Packs en layout optimisé : Découverte | Pro (Recommandé au centre) | Starter */}
-                <InlineStack gap="300" align="stretch" blockAlign="stretch">
-                  {/* Pack Découverte - à gauche */}
-                  {CREDIT_PACKS.filter(p => p.id === "decouverte").map((pack) => (
-                    <Box key={pack.id} minWidth="0" flexGrow={1}>
-                      <Card>
-                        <BlockStack gap="250">
-                          <BlockStack gap="100">
-                            <Text variant="headingMd" as="h3" fontWeight="bold">
-                              {pack.name}
-                            </Text>
-                            <Text variant="headingLg" as="p" fontWeight="bold">
-                              {pack.credits} jetons
-                            </Text>
-                            <Text variant="bodySm" tone="subdued" as="p">
-                              {pack.description}
-                            </Text>
-                          </BlockStack>
-                          <Divider />
-                          <BlockStack gap="150">
-                            <BlockStack gap="050">
-                              <Text variant="headingMd" as="p" fontWeight="bold">
-                                €{pack.price.toFixed(2)}
-                              </Text>
-                              <Text variant="bodySm" tone="subdued" as="p">
-                                €{pack.pricePerCredit.toFixed(2)}/jeton
-                              </Text>
-                            </BlockStack>
-                            <Button
-                              variant="secondary"
-                              onClick={() => handlePurchase(pack.id)}
-                              disabled={isSubmitting}
-                              loading={isSubmitting}
-                              fullWidth
-                            >
-                              {isSubmitting ? "Traitement..." : "Acheter"}
-                            </Button>
-                          </BlockStack>
-                        </BlockStack>
-                      </Card>
-                    </Box>
-                  ))}
-
-                  {/* Pack Pro - Recommandé (mis en évidence) */}
-                  {CREDIT_PACKS.filter(p => p.highlight).map((pack) => {
-                    const savings = pack.credits * 0.40 - pack.price; // Économie vs pack Découverte
-                    return (
-                      <Box key={pack.id} minWidth="0" flexGrow={1.2}>
-                        <Card>
-                          {/* Badge "Recommandé" en haut de la carte */}
-                          <Box paddingBlockStart="200">
-                            <Badge tone="info" size="large">Recommandé</Badge>
-                          </Box>
-                          <BlockStack gap="300">
-                            <BlockStack gap="150">
-                              <Text variant="headingLg" as="h3" fontWeight="bold">
-                                {pack.name}
-                              </Text>
-                              <Text variant="heading2xl" as="p" fontWeight="bold">
-                                {pack.credits} jetons
-                              </Text>
-                              <Text variant="bodyMd" tone="subdued" as="p">
-                                {pack.description}
-                              </Text>
-                              {savings > 0 && (
-                                <Badge tone="success" size="small">
-                                  Économisez €{savings.toFixed(2)} vs Découverte
-                                </Badge>
-                              )}
-                            </BlockStack>
-                            <Divider />
-                            <BlockStack gap="200">
-                              <BlockStack gap="050">
-                                <Text variant="heading2xl" as="p" fontWeight="bold">
-                                  €{pack.price.toFixed(2)}
-                                </Text>
-                                <Text variant="bodySm" tone="subdued" as="p">
-                                  €{pack.pricePerCredit.toFixed(2)}/jeton
-                                </Text>
-                                <Text variant="bodySm" tone="success" as="p" fontWeight="medium">
-                                  Meilleur prix par jeton
-                                </Text>
-                              </BlockStack>
-                              <Button
-                                variant="primary"
-                                onClick={() => handlePurchase(pack.id)}
-                                disabled={isSubmitting}
-                                loading={isSubmitting}
-                                fullWidth
-                                size="large"
-                              >
-                                {isSubmitting ? "Traitement..." : "Acheter maintenant"}
-                              </Button>
-                            </BlockStack>
-                          </BlockStack>
-                        </Card>
-                      </Box>
-                    );
-                  })}
-
-                  {/* Pack Starter */}
-                  {CREDIT_PACKS.filter(p => p.id === "starter").map((pack) => (
-                    <Box key={pack.id} minWidth="0" flexGrow={1}>
-                      <Card>
-                        <BlockStack gap="250">
-                          <BlockStack gap="100">
-                            <Text variant="headingMd" as="h3" fontWeight="bold">
-                              {pack.name}
-                            </Text>
-                            <Text variant="headingLg" as="p" fontWeight="bold">
-                              {pack.credits} jetons
-                            </Text>
-                            <Text variant="bodySm" tone="subdued" as="p">
-                              {pack.description}
-                            </Text>
-                          </BlockStack>
-                          <Divider />
-                          <BlockStack gap="150">
-                            <BlockStack gap="050">
-                              <Text variant="headingMd" as="p" fontWeight="bold">
-                                €{pack.price.toFixed(2)}
-                              </Text>
-                              <Text variant="bodySm" tone="subdued" as="p">
-                                €{pack.pricePerCredit.toFixed(2)}/jeton
-                              </Text>
-                            </BlockStack>
-                            <Button
-                              variant="secondary"
-                              onClick={() => handlePurchase(pack.id)}
-                              disabled={isSubmitting}
-                              loading={isSubmitting}
-                              fullWidth
-                            >
-                              {isSubmitting ? "Traitement..." : "Acheter"}
-                            </Button>
-                          </BlockStack>
-                        </BlockStack>
-                      </Card>
-                    </Box>
-                  ))}
-                </InlineStack>
-
-                {/* Message de garantie/confiance sous les packs */}
-                <Box padding="200">
-                  <Box textAlign="center">
-                    <Text variant="bodySm" tone="subdued" as="p">
-                      ✓ Paiement sécurisé via Shopify • ✓ Jetons crédités instantanément • ✓ Support 24/7
-                    </Text>
-                  </Box>
-                </Box>
-              </BlockStack>
             </Layout.Section>
           </Layout>
         </Layout.Section>
 
-        {/* Historique des recharges - Layout horizontal */}
+        {/* Section 2: 3 offres alignées horizontalement avec Pro dominant */}
+        <Layout.Section>
+          <BlockStack gap="400">
+            <InlineStack gap="300" align="stretch" blockAlign="stretch">
+              {/* Pack Découverte */}
+              {CREDIT_PACKS.filter(p => p.id === "decouverte").map((pack) => (
+                <Box key={pack.id} minWidth="0" flexGrow={1}>
+                  <Card>
+                    <BlockStack gap="300">
+                      <BlockStack gap="150">
+                        <Text variant="headingMd" as="h3" fontWeight="bold">
+                          {pack.name}
+                        </Text>
+                        <Text variant="headingLg" as="p" fontWeight="bold">
+                          {pack.credits} jetons
+                        </Text>
+                        <Text variant="bodySm" tone="subdued" as="p">
+                          {pack.description}
+                        </Text>
+                      </BlockStack>
+                      <Divider />
+                      <BlockStack gap="200">
+                        <BlockStack gap="050">
+                          <Text variant="headingLg" as="p" fontWeight="bold">
+                            €{pack.price.toFixed(2)}
+                          </Text>
+                          <Text variant="bodySm" tone="subdued" as="p">
+                            €{pack.pricePerCredit.toFixed(2)}/jeton
+                          </Text>
+                        </BlockStack>
+                        <Button
+                          variant="secondary"
+                          onClick={() => handlePurchase(pack.id)}
+                          disabled={isSubmitting}
+                          loading={isSubmitting}
+                          fullWidth
+                        >
+                          {isSubmitting ? "Traitement..." : "Acheter"}
+                        </Button>
+                      </BlockStack>
+                    </BlockStack>
+                  </Card>
+                </Box>
+              ))}
+
+              {/* Pack Pro - Recommandé (dominant) */}
+              {CREDIT_PACKS.filter(p => p.highlight).map((pack) => {
+                const savings = pack.credits * 0.40 - pack.price; // Économie vs pack Découverte
+                return (
+                  <Box key={pack.id} minWidth="0" flexGrow={1.3} position="relative">
+                    <Card>
+                      <BlockStack gap="400">
+                        {/* Badge "Recommandé" en haut */}
+                        <Box>
+                          <Badge tone="info" size="large">Recommandé</Badge>
+                        </Box>
+                        <BlockStack gap="300">
+                          <BlockStack gap="200">
+                            <Text variant="headingLg" as="h3" fontWeight="bold">
+                              {pack.name}
+                            </Text>
+                            <Text variant="heading2xl" as="p" fontWeight="bold">
+                              {pack.credits} jetons
+                            </Text>
+                            <Text variant="bodyMd" tone="subdued" as="p">
+                              {pack.description}
+                            </Text>
+                            {savings > 0 && (
+                              <Box
+                                padding="200"
+                                background="bg-surface-success-subdued"
+                                borderRadius="200"
+                              >
+                                <Text variant="bodySm" tone="success" as="p" fontWeight="semibold">
+                                  Économisez €{savings.toFixed(2)}
+                                </Text>
+                              </Box>
+                            )}
+                          </BlockStack>
+                          <Divider />
+                          <BlockStack gap="300">
+                            <BlockStack gap="100">
+                              <Text variant="heading2xl" as="p" fontWeight="bold">
+                                €{pack.price.toFixed(2)}
+                              </Text>
+                              <Text variant="bodySm" tone="subdued" as="p">
+                                €{pack.pricePerCredit.toFixed(2)}/jeton
+                              </Text>
+                              <Text variant="bodySm" tone="success" as="p" fontWeight="medium">
+                                Meilleur prix par jeton
+                              </Text>
+                            </BlockStack>
+                            <Button
+                              variant="primary"
+                              onClick={() => handlePurchase(pack.id)}
+                              disabled={isSubmitting}
+                              loading={isSubmitting}
+                              fullWidth
+                              size="large"
+                              tone="critical"
+                            >
+                              {isSubmitting ? "Traitement..." : "Acheter maintenant"}
+                            </Button>
+                          </BlockStack>
+                        </BlockStack>
+                      </BlockStack>
+                    </Card>
+                  </Box>
+                );
+              })}
+
+              {/* Pack Starter */}
+              {CREDIT_PACKS.filter(p => p.id === "starter").map((pack) => (
+                <Box key={pack.id} minWidth="0" flexGrow={1}>
+                  <Card>
+                    <BlockStack gap="300">
+                      <BlockStack gap="150">
+                        <Text variant="headingMd" as="h3" fontWeight="bold">
+                          {pack.name}
+                        </Text>
+                        <Text variant="headingLg" as="p" fontWeight="bold">
+                          {pack.credits} jetons
+                        </Text>
+                        <Text variant="bodySm" tone="subdued" as="p">
+                          {pack.description}
+                        </Text>
+                      </BlockStack>
+                      <Divider />
+                      <BlockStack gap="200">
+                        <BlockStack gap="050">
+                          <Text variant="headingLg" as="p" fontWeight="bold">
+                            €{pack.price.toFixed(2)}
+                          </Text>
+                          <Text variant="bodySm" tone="subdued" as="p">
+                            €{pack.pricePerCredit.toFixed(2)}/jeton
+                          </Text>
+                        </BlockStack>
+                        <Button
+                          variant="secondary"
+                          onClick={() => handlePurchase(pack.id)}
+                          disabled={isSubmitting}
+                          loading={isSubmitting}
+                          fullWidth
+                        >
+                          {isSubmitting ? "Traitement..." : "Acheter"}
+                        </Button>
+                      </BlockStack>
+                    </BlockStack>
+                  </Card>
+                </Box>
+              ))}
+            </InlineStack>
+
+            {/* Mentions de confiance avec icônes */}
+            <Box padding="300">
+              <Box textAlign="center">
+                <InlineStack gap="400" align="center" blockAlign="center">
+                  <InlineStack gap="100" align="center" blockAlign="center">
+                    <Text variant="bodySm" tone="success" as="span" fontWeight="semibold">✓</Text>
+                    <Text variant="bodySm" tone="subdued" as="p">
+                      Paiement sécurisé via Shopify
+                    </Text>
+                  </InlineStack>
+                  <Text variant="bodySm" tone="subdued" as="span">•</Text>
+                  <InlineStack gap="100" align="center" blockAlign="center">
+                    <Text variant="bodySm" tone="success" as="span" fontWeight="semibold">✓</Text>
+                    <Text variant="bodySm" tone="subdued" as="p">
+                      Jetons crédités instantanément
+                    </Text>
+                  </InlineStack>
+                  <Text variant="bodySm" tone="subdued" as="span">•</Text>
+                  <InlineStack gap="100" align="center" blockAlign="center">
+                    <Text variant="bodySm" tone="success" as="span" fontWeight="semibold">✓</Text>
+                    <Text variant="bodySm" tone="subdued" as="p">
+                      Support 24/7
+                    </Text>
+                  </InlineStack>
+                </InlineStack>
+              </Box>
+            </Box>
+          </BlockStack>
+        </Layout.Section>
+
+        {/* Section 3: Historique des recharges sous les offres */}
         <Layout.Section>
           <Card>
             <BlockStack gap="300">
@@ -1031,7 +1054,7 @@ export default function Credits() {
                 </Button>
               </InlineStack>
               <Divider />
-              <Box padding="300">
+              <Box padding="400">
                 <Box textAlign="center">
                   <Text variant="bodyMd" tone="subdued" as="p">
                     Aucun historique disponible pour le moment
