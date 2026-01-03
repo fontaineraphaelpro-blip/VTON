@@ -260,10 +260,10 @@ export default function Products() {
             {error && (
               <Banner 
                 tone="critical" 
-                title={loaderData?.requiresAuth ? "Authentication Required" : "Error"}
-                action={loaderData?.requiresAuth && loaderData?.reauthUrl ? {
+                title={(loaderData as any)?.requiresAuth ? "Authentication Required" : "Error"}
+                action={(loaderData as any)?.requiresAuth && (loaderData as any)?.reauthUrl ? {
                   content: "Re-authenticate",
-                  url: loaderData.reauthUrl,
+                  url: (loaderData as any).reauthUrl,
                   target: "_top",
                 } : undefined}
               >

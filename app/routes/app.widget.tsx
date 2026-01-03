@@ -519,17 +519,17 @@ export default function Widget() {
                 <Button variant="primary" onClick={handleTestTryOn} loading={fetcher.state === "submitting"}>
                   Run Try-On Test
                 </Button>
-                {(fetcher.data as any)?.testMode && fetcher.data.success && (
+                {(fetcher.data as any)?.testMode && fetcher.data?.success && (
                   <Banner tone="info">
                     Test initiated. Result:{" "}
-                    <a href={(fetcher.data as any).resultImageUrl} target="_blank" rel="noopener noreferrer">
+                    <a href={(fetcher.data as any)?.resultImageUrl} target="_blank" rel="noopener noreferrer">
                       View Image
                     </a>
                   </Banner>
                 )}
-                {(fetcher.data as any)?.testMode && !fetcher.data.success && (
+                {(fetcher.data as any)?.testMode && fetcher.data && !fetcher.data.success && (
                   <Banner tone="critical">
-                    Error during test: {(fetcher.data as any).error}
+                    Error during test: {(fetcher.data as any)?.error}
                   </Banner>
                 )}
               </BlockStack>
