@@ -1797,10 +1797,10 @@ body {
   max-width: 100% !important;
 }
 
-/* Full width for credit packs - Uniform height with buttons aligned at bottom */
+/* Full width for credit packs - Uniform height and width (same size for all 3) */
 .credits-packs-row {
   display: grid !important;
-  grid-template-columns: 1fr 1.3fr 1fr !important;
+  grid-template-columns: repeat(3, 1fr) !important;
   gap: 24px !important;
   width: 100% !important;
   max-width: 100% !important;
@@ -1809,14 +1809,20 @@ body {
 
 .credits-packs-row > * {
   height: 100% !important;
+  width: 100% !important;
   display: flex !important;
   flex-direction: column !important;
+  min-height: 0 !important;
+  min-width: 0 !important;
 }
 
 .credits-packs-row .Polaris-Card {
   height: 100% !important;
+  width: 100% !important;
   display: flex !important;
   flex-direction: column !important;
+  min-height: 400px !important;
+  flex: 1 1 auto !important;
 }
 
 .credits-packs-row .Polaris-BlockStack {
@@ -1824,6 +1830,7 @@ body {
   display: flex !important;
   flex-direction: column !important;
   flex-grow: 1 !important;
+  flex: 1 1 auto !important;
 }
 
 /* Align buttons at bottom of credit pack cards */
@@ -1835,6 +1842,12 @@ body {
 .credits-packs-row .Polaris-BlockStack > .Polaris-Divider + .Polaris-BlockStack {
   margin-top: auto !important;
   flex-grow: 0 !important;
+}
+
+/* Ensure recommended pack card maintains visual prominence without size difference */
+.recommended-pack-card .Polaris-Card {
+  min-height: 400px !important;
+  height: 100% !important;
 }
 
 /* Dashboard main content - 75% left, 25% right */

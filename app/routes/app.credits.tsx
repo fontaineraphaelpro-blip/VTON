@@ -916,9 +916,9 @@ export default function Credits() {
             <div className="credits-packs-row">
               {/* Pack Découverte */}
               {CREDIT_PACKS.filter(p => p.id === "decouverte").map((pack) => (
-                <div key={pack.id} style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+                <div key={pack.id} style={{ display: "flex", flexDirection: "column", height: "100%", width: "100%" }}>
                   <Card>
-                    <BlockStack gap="400">
+                    <BlockStack gap="400" style={{ height: "100%", display: "flex", flexDirection: "column" }}>
                       <BlockStack gap="200">
                         <Text variant="headingMd" as="h3" fontWeight="bold">
                           {pack.name}
@@ -955,18 +955,18 @@ export default function Credits() {
                 </div>
               ))}
 
-              {/* Pack Pro - Recommandé (dominant) */}
+              {/* Pack Pro - Recommandé (même taille mais visuellement mis en évidence) */}
               {CREDIT_PACKS.filter(p => p.highlight).map((pack) => {
                 const savings = pack.credits * 0.40 - pack.price; // Économie vs pack Découverte
                 return (
-                  <div key={pack.id} style={{ display: "flex", flexDirection: "column", height: "100%" }} className="recommended-pack-card">
+                  <div key={pack.id} style={{ display: "flex", flexDirection: "column", height: "100%", width: "100%" }} className="recommended-pack-card">
                     <Card>
-                      <BlockStack gap="400">
+                      <BlockStack gap="400" style={{ height: "100%", display: "flex", flexDirection: "column" }}>
                         {/* Badge "Recommandé" en haut */}
                         <Box paddingBlockStart="200">
                           <Badge tone="info" size="large">Recommandé</Badge>
                         </Box>
-                        <BlockStack gap="400" style={{ flex: 1 }}>
+                        <BlockStack gap="400" style={{ flex: 1, display: "flex", flexDirection: "column" }}>
                           <BlockStack gap="300">
                             <Text variant="headingLg" as="h3" fontWeight="bold">
                               {pack.name}
@@ -1022,9 +1022,9 @@ export default function Credits() {
 
               {/* Pack Starter */}
               {CREDIT_PACKS.filter(p => p.id === "starter").map((pack) => (
-                <div key={pack.id} style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+                <div key={pack.id} style={{ display: "flex", flexDirection: "column", height: "100%", width: "100%" }}>
                   <Card>
-                    <BlockStack gap="400">
+                    <BlockStack gap="400" style={{ height: "100%", display: "flex", flexDirection: "column" }}>
                       <BlockStack gap="200">
                         <Text variant="headingMd" as="h3" fontWeight="bold">
                           {pack.name}
