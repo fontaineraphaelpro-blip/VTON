@@ -17,6 +17,9 @@
 import type { LoaderFunctionArgs } from "@remix-run/node";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
+  // Get the app URL from environment or request
+  const appUrl = process.env.SHOPIFY_APP_URL || process.env.APPLICATION_URL || new URL(request.url).origin;
+  
   const widgetCode = `
 (function() {
     'use strict';
@@ -25,7 +28,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     // CONFIGURATION
     // ==========================================
     const CONFIG = {
-        apiBase: window.location.origin + '/apps/tryon',
+        apiBase: '${appUrl}/apps/tryon',
         selectors: {
             addToCartButton: [
                 'form[action*="/cart/add"] button[type="submit"]',
