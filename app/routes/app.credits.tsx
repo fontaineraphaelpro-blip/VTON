@@ -427,31 +427,31 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
         console.log("[Credits] Creating custom one-time charge using GraphQL", { customCredits, totalPrice, variables });
 
-        const graphqlResponse = await admin.graphql(mutation, {
+        const customGraphqlResponse = await admin.graphql(mutation, {
           variables
         });
 
-        const graphqlData = await graphqlResponse.json() as any;
+        const customGraphqlData = await customGraphqlResponse.json() as any;
 
         console.log("[Credits] Custom GraphQL response received", {
-          hasData: !!graphqlData,
-          hasErrors: !!graphqlData.errors,
-          data: graphqlData
+          hasData: !!customGraphqlData,
+          hasErrors: !!customGraphqlData.errors,
+          data: customGraphqlData
         });
 
-        if (graphqlData.errors) {
-          console.error("[Credits] Custom GraphQL errors:", graphqlData.errors);
-          const errorMessage = graphqlData.errors.map((e: any) => e.message).join(", ");
+        if (customGraphqlData.errors) {
+          console.error("[Credits] Custom GraphQL errors:", customGraphqlData.errors);
+          const errorMessage = customGraphqlData.errors.map((e: any) => e.message).join(", ");
           return json({ 
             success: false, 
             error: `Shopify API error: ${errorMessage}`,
           });
         }
 
-        const purchaseData = graphqlData.data?.appPurchaseOneTimeCreate;
+        const purchaseData = customGraphqlData.data?.appPurchaseOneTimeCreate;
         
         if (!purchaseData) {
-          console.error("No purchase data returned in response (custom):", graphqlData);
+          console.error("No purchase data returned in response (custom):", customGraphqlData);
           return json({ 
             success: false, 
             error: "Failed to create charge. Please check your Shopify permissions.",

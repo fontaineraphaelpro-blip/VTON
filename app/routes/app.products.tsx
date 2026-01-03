@@ -249,7 +249,7 @@ export default function Products() {
         View
       </Button>,
     ];
-  }).filter((row: any) => row !== null);
+  }).filter((row: (React.ReactNode | null)[]) => row !== null);
 
   return (
     <Page>
