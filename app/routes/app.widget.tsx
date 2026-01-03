@@ -425,7 +425,7 @@ export default function Widget() {
                                 marginBottom: "8px",
                               }}
                             />
-                            <Text variant="bodySm" tone="subdued">
+                            <Text variant="bodySm" tone="subdued" as="p">
                               Click or drag to replace
                             </Text>
                           </>
@@ -452,9 +452,9 @@ export default function Widget() {
                   </Box>
 
                   {/* Garment Image Upload */}
-                  <Box minWidth="300px" flex="1">
+                  <Box minWidth="300px">
                     <BlockStack gap="200">
-                      <Text variant="bodyMd" fontWeight="medium" as="label">
+                      <Text variant="bodyMd" fontWeight="medium" as="p">
                         Garment Image
                       </Text>
                       <div
@@ -488,17 +488,17 @@ export default function Widget() {
                                 marginBottom: "8px",
                               }}
                             />
-                            <Text variant="bodySm" tone="subdued">
+                            <Text variant="bodySm" tone="subdued" as="p">
                               Click or drag to replace
                             </Text>
                           </>
                         ) : (
                           <>
                             <div style={{ fontSize: "14px", marginBottom: "16px", fontWeight: 600 }}>UPLOAD GARMENT</div>
-                            <Text variant="bodyMd" fontWeight="medium">
+                            <Text variant="bodyMd" fontWeight="medium" as="p">
                               Drag & drop or click to upload
                             </Text>
-                            <Text variant="bodySm" tone="subdued">
+                            <Text variant="bodySm" tone="subdued" as="p">
                               Garment image to try on
                             </Text>
                           </>

@@ -746,18 +746,18 @@ export default function Credits() {
               tone="critical" 
               title={(fetcher.data as any)?.requiresAuth ? "Authentification requise" : "Erreur"}
               onDismiss={() => {}}
-              action={fetcher.data.requiresAuth ? {
-                content: fetcher.data.reauthUrl ? "Ré-authentifier" : "Rafraîchir la page",
+              action={(fetcher.data as any)?.requiresAuth ? {
+                content: (fetcher.data as any)?.reauthUrl ? "Ré-authentifier" : "Rafraîchir la page",
                 onAction: () => {
-                  if (fetcher.data.reauthUrl) {
-                    window.location.href = fetcher.data.reauthUrl;
+                  if ((fetcher.data as any)?.reauthUrl) {
+                    window.location.href = (fetcher.data as any).reauthUrl;
                   } else {
                     window.location.reload();
                   }
                 },
               } : undefined}
             >
-              {fetcher.data.error}
+              {(fetcher.data as any)?.error}
             </Banner>
           </div>
         )}
