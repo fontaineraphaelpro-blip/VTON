@@ -21,25 +21,37 @@ import { authenticate } from "../shopify.server";
 import { getShop, upsertShop } from "../lib/services/db.service";
 import { ensureTables } from "../lib/db-init.server";
 
-// Packs de crédits selon le cahier des charges
+// Packs de crédits optimisés avec pack Découverte
 const CREDIT_PACKS = [
+  {
+    id: "decouverte",
+    name: "Découverte",
+    credits: 25,
+    price: 9.99,
+    pricePerCredit: 0.40,
+    description: "Essai gratuit - Parfait pour tester",
+    highlight: false,
+    popular: false,
+  },
   {
     id: "starter",
     name: "Starter",
     credits: 100,
-    price: 29.99, // Prix à définir selon votre stratégie
+    price: 29.99,
     pricePerCredit: 0.30,
     description: "Parfait pour démarrer",
     highlight: false,
+    popular: false,
   },
   {
     id: "pro",
     name: "Pro",
     credits: 500,
-    price: 129.99, // Prix à définir selon votre stratégie
+    price: 129.99,
     pricePerCredit: 0.26,
     description: "Idéal pour les boutiques en croissance",
     highlight: true,
+    popular: true,
   },
 ];
 
@@ -673,84 +685,99 @@ export default function Credits() {
           </Layout.Section>
         )}
 
-        {/* Affichage des crédits actuels */}
+        {/* Layout horizontal : Crédits actuels + Packs */}
         <Layout.Section>
-          <Card>
-            <BlockStack gap="400">
-              <Box textAlign="center">
-                <Text variant="heading2xl" as="p" fontWeight="bold">
-                  {currentCredits.toLocaleString("en-US")}
-                </Text>
-              </Box>
-              <Box textAlign="center">
-                <Text variant="bodyMd" tone="subdued" as="p">
-                  Jetons restants
-                </Text>
-              </Box>
-              <Box textAlign="center">
-                <Text variant="bodySm" tone="subdued" as="p">
-                  Les jetons n'expirent jamais
-                </Text>
-              </Box>
-            </BlockStack>
-          </Card>
+          <Layout>
+            {/* Colonne gauche : Crédits actuels */}
+            <Layout.Section variant="oneThird">
+              <Card>
+                <BlockStack gap="400">
+                  <Box textAlign="center">
+                    <Text variant="heading2xl" as="p" fontWeight="bold">
+                      {currentCredits.toLocaleString("en-US")}
+                    </Text>
+                  </Box>
+                  <Box textAlign="center">
+                    <Text variant="bodyMd" tone="subdued" as="p">
+                      Jetons restants
+                    </Text>
+                  </Box>
+                  <Divider />
+                  <Box textAlign="center">
+                    <Text variant="bodySm" tone="subdued" as="p">
+                      Les jetons n'expirent jamais
+                    </Text>
+                  </Box>
+                </BlockStack>
+              </Card>
+            </Layout.Section>
+
+            {/* Colonne droite : Packs de crédits */}
+            <Layout.Section variant="twoThirds">
+              <InlineStack gap="300" align="stretch" blockAlign="stretch">
+                {CREDIT_PACKS.map((pack) => (
+                  <Box key={pack.id} minWidth="0" flexGrow={1}>
+                    <Card>
+                      <BlockStack gap="300">
+                        {pack.highlight && (
+                          <Badge tone="info">Recommandé</Badge>
+                        )}
+                        {pack.popular && !pack.highlight && (
+                          <Badge tone="success">Populaire</Badge>
+                        )}
+                        <BlockStack gap="150">
+                          <Text variant="headingMd" as="h3" fontWeight="bold">
+                            {pack.name}
+                          </Text>
+                          <Text variant="headingLg" as="p" fontWeight="bold">
+                            {pack.credits} jetons
+                          </Text>
+                          <Text variant="bodySm" tone="subdued" as="p">
+                            {pack.description}
+                          </Text>
+                        </BlockStack>
+                        <Divider />
+                        <BlockStack gap="200">
+                          <Text variant="headingMd" as="p" fontWeight="bold">
+                            €{pack.price.toFixed(2)}
+                          </Text>
+                          <Text variant="bodySm" tone="subdued" as="p">
+                            €{pack.pricePerCredit.toFixed(2)}/jeton
+                          </Text>
+                          <Button
+                            variant={pack.highlight ? "primary" : "secondary"}
+                            onClick={() => handlePurchase(pack.id)}
+                            disabled={isSubmitting}
+                            loading={isSubmitting}
+                            fullWidth
+                            size="medium"
+                          >
+                            {isSubmitting ? "Traitement..." : "Acheter"}
+                          </Button>
+                        </BlockStack>
+                      </BlockStack>
+                    </Card>
+                  </Box>
+                ))}
+              </InlineStack>
+            </Layout.Section>
+          </Layout>
         </Layout.Section>
 
-        {/* Packs de crédits */}
-        <Layout.Section>
-          <InlineStack gap="400" align="stretch" blockAlign="stretch">
-            {CREDIT_PACKS.map((pack) => (
-              <Box key={pack.id} minWidth="50%">
-                <Card>
-                  <BlockStack gap="400">
-                    {pack.highlight && (
-                      <Badge tone="info">Recommandé</Badge>
-                    )}
-                    <BlockStack gap="200">
-                      <Text variant="headingLg" as="h2" fontWeight="bold">
-                        {pack.name}
-                      </Text>
-                      <Text variant="heading2xl" as="p" fontWeight="bold">
-                        {pack.credits} jetons
-                      </Text>
-                      <Text variant="bodyMd" tone="subdued" as="p">
-                        {pack.description}
-                      </Text>
-                    </BlockStack>
-                    <Divider />
-                    <BlockStack gap="300">
-                      <Text variant="headingLg" as="p" fontWeight="bold">
-                        €{pack.price.toFixed(2)}
-                      </Text>
-                      <Text variant="bodySm" tone="subdued" as="p">
-                        €{pack.pricePerCredit.toFixed(2)} par jeton
-                      </Text>
-                      <Button
-                        variant={pack.highlight ? "primary" : "secondary"}
-                        onClick={() => handlePurchase(pack.id)}
-                        disabled={isSubmitting}
-                        loading={isSubmitting}
-                        fullWidth
-                      >
-                        {isSubmitting ? "Traitement..." : "Acheter"}
-                      </Button>
-                    </BlockStack>
-                  </BlockStack>
-                </Card>
-              </Box>
-            ))}
-          </InlineStack>
-        </Layout.Section>
-
-        {/* Historique des recharges */}
+        {/* Historique des recharges - Layout horizontal */}
         <Layout.Section>
           <Card>
-            <BlockStack gap="400">
-              <Text as="h2" variant="headingLg" fontWeight="semibold">
-                Historique des recharges
-              </Text>
+            <BlockStack gap="300">
+              <InlineStack align="space-between" blockAlign="center">
+                <Text as="h2" variant="headingLg" fontWeight="semibold">
+                  Historique des recharges
+                </Text>
+                <Button variant="plain" size="slim">
+                  Voir tout →
+                </Button>
+              </InlineStack>
               <Divider />
-              <Box padding="400">
+              <Box padding="300">
                 <Box textAlign="center">
                   <Text variant="bodyMd" tone="subdued" as="p">
                     Aucun historique disponible pour le moment

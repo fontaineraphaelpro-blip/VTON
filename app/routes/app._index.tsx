@@ -406,55 +406,56 @@ export default function Dashboard() {
           </Layout>
         </Layout.Section>
 
-        {/* Graphique des générations par jour */}
+        {/* Graphique des générations par jour - Layout horizontal */}
         <Layout.Section>
           <Card>
-            <BlockStack gap="400">
-              <Text as="h2" variant="headingLg" fontWeight="semibold">
-                Générations par jour (30 derniers jours)
-              </Text>
+            <BlockStack gap="300">
+              <InlineStack align="space-between" blockAlign="center">
+                <Text as="h2" variant="headingLg" fontWeight="semibold">
+                  Générations par jour (7 derniers jours)
+                </Text>
+                <Button url="/app/history" variant="plain" size="slim">
+                  Voir tout →
+                </Button>
+              </InlineStack>
               <Divider />
               {dailyStats.length > 0 ? (
-                <Box minHeight="300px" padding="400">
-                  {/* Simple bar chart representation with Polaris */}
-                  <BlockStack gap="200">
+                <Box minHeight="250px" padding="300">
+                  {/* Bar chart horizontal optimisé */}
+                  <InlineStack gap="200" align="stretch" blockAlign="end">
                     {dailyStats.slice(-7).map((stat: any, index: number) => {
                       const maxCount = Math.max(...dailyStats.map((s: any) => s.count));
                       const percentage = maxCount > 0 ? (stat.count / maxCount) * 100 : 0;
                       const date = new Date(stat.date);
                       return (
-                        <BlockStack key={index} gap="100">
-                          <InlineStack align="space-between" blockAlign="center">
-                            <Text variant="bodySm" as="span">
-                              {date.toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
-                            </Text>
-                            <Text variant="bodySm" fontWeight="semibold" as="span">
+                        <Box key={index} minWidth="0" flexGrow={1}>
+                          <BlockStack gap="100" align="center">
+                            <Text variant="bodySm" fontWeight="semibold" as="p">
                               {stat.count}
                             </Text>
-                          </InlineStack>
-                          <Box
-                            background="bg-surface-secondary"
-                            borderRadius="200"
-                            minHeight="8px"
-                            position="relative"
-                            overflow="hidden"
-                          >
                             <Box
                               background="bg-fill-brand"
-                              minHeight="8px"
-                              style={{ width: `${percentage}%` }}
+                              borderRadius="200"
+                              minHeight="120px"
+                              style={{ height: `${Math.max(percentage, 5)}%` }}
+                              position="relative"
                             />
-                          </Box>
-                        </BlockStack>
+                            <Text variant="bodySm" tone="subdued" as="p">
+                              {date.toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
+                            </Text>
+                          </BlockStack>
+                        </Box>
                       );
                     })}
-                  </BlockStack>
+                  </InlineStack>
                 </Box>
               ) : (
-                <Box padding="400">
-                  <Text variant="bodyMd" tone="subdued" as="p" alignment="center">
-                    Aucune donnée disponible pour les 30 derniers jours
-                  </Text>
+                <Box padding="300">
+                  <Box textAlign="center">
+                    <Text variant="bodyMd" tone="subdued" as="p">
+                      Aucune donnée disponible pour les 30 derniers jours
+                    </Text>
+                  </Box>
                 </Box>
               )}
             </BlockStack>
@@ -536,10 +537,12 @@ export default function Dashboard() {
                       ))}
                     </BlockStack>
                   ) : (
-                    <Box padding="400">
-                      <Text variant="bodyMd" tone="subdued" as="p" alignment="center">
-                        Aucun essai pour le moment. Commencez à utiliser le widget sur vos produits !
-                      </Text>
+                    <Box padding="300">
+                      <Box textAlign="center">
+                        <Text variant="bodyMd" tone="subdued" as="p">
+                          Aucun essai pour le moment. Commencez à utiliser le widget sur vos produits !
+                        </Text>
+                      </Box>
                     </Box>
                   )}
                 </BlockStack>
@@ -585,10 +588,12 @@ export default function Dashboard() {
                   ))}
                 </BlockStack>
               ) : (
-                <Box padding="400">
-                  <Text variant="bodyMd" tone="subdued" as="p" alignment="center">
-                    Aucune activité récente. Les essais apparaîtront ici une fois que les clients commenceront à utiliser le widget.
-                  </Text>
+                <Box padding="300">
+                  <Box textAlign="center">
+                    <Text variant="bodyMd" tone="subdued" as="p">
+                      Aucune activité récente. Les essais apparaîtront ici une fois que les clients commenceront à utiliser le widget.
+                    </Text>
+                  </Box>
                 </Box>
               )}
             </BlockStack>
