@@ -2872,6 +2872,202 @@ body {
 }
 
 /* ============================================
+   Dashboard Specific Styles (Billing Style)
+   ============================================ */
+
+/* Stat Cards Content */
+.stat-card-content {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  height: 100%;
+}
+
+.stat-icon {
+  font-size: 2rem;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.stat-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.stat-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.2;
+  margin-bottom: 0.25rem;
+}
+
+.stat-label {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.5rem;
+}
+
+/* Dashboard Main Layout */
+.dashboard-main-layout {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 1.5rem;
+}
+
+.dashboard-main-column {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.dashboard-two-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+.dashboard-sidebar {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Graph Styles */
+.graph-container-large {
+  padding: 1.5rem 0;
+  min-height: 200px;
+}
+
+.graph-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.75rem;
+  height: 200px;
+}
+
+.graph-bar-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.graph-bar-value {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.graph-bar {
+  width: 100%;
+  background: var(--primary);
+  border-radius: 4px 4px 0 0;
+  min-height: 10px;
+  transition: all var(--transition);
+}
+
+.graph-bar-label {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+/* Empty States */
+.empty-state-large {
+  min-height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 2rem;
+}
+
+.empty-state-large p {
+  color: var(--text-secondary);
+  font-size: 0.9375rem;
+  margin: 0;
+}
+
+/* Products and Activity Lists */
+.products-list,
+.activity-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.product-item,
+.activity-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.product-item:last-child,
+.activity-item:last-child {
+  border-bottom: none;
+}
+
+.product-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.9375rem;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.activity-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.activity-title {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--text);
+  margin: 0 0 0.25rem 0;
+}
+
+.activity-date {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+/* Card Subtitles */
+.card-subtitle {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin: 0.5rem 0 0 0;
+}
+
+/* Form Styles */
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-help-text {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.75rem;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1.5rem;
+}
+
+/* ============================================
    Billing Responsive
    ============================================ */
 @media (max-width: 1200px) {
@@ -2880,6 +3076,14 @@ body {
   }
   .vton-header h2 {
     font-size: 1.25rem;
+  }
+  
+  .dashboard-main-layout {
+    grid-template-columns: 1fr;
+  }
+  
+  .dashboard-two-columns {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -2898,5 +3102,13 @@ body {
   .vton-table th,
   .vton-table td {
     padding: 0.5rem 0.75rem;
+  }
+  
+  .dashboard-stats-row {
+    grid-template-columns: 1fr;
+  }
+  
+  .dashboard-main-layout {
+    grid-template-columns: 1fr;
   }
 }

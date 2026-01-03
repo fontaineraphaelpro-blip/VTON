@@ -4,14 +4,11 @@ import { useLoaderData, useFetcher, useRevalidator, Link } from "@remix-run/reac
 import { useEffect, useState } from "react";
 import {
   Page,
-  BlockStack,
-  InlineStack,
   Text,
   Button,
   Banner,
   Divider,
   TextField,
-  Box,
   Checkbox,
   Badge,
 } from "@shopify/polaris";
@@ -513,106 +510,46 @@ export default function Dashboard() {
         {/* Section 1: 4 Statistiques en une ligne horizontale - Full Width - Uniform Height */}
         <div className="vton-section">
           <div className="dashboard-stats-row">
-            <div style={{ display: "flex", flexDirection: "column", height: "100%", width: "100%" }}>
-              <div className="vton-card">
-                <BlockStack gap="300" style={{ height: "100%", display: "flex", flexDirection: "column" }}>
-                  <InlineStack gap="300" align="start" blockAlign="center" style={{ flex: 1 }}>
-                    <Box
-                      padding="300"
-                      background="bg-surface-secondary"
-                      borderRadius="200"
-                      style={{ minWidth: "48px", width: "48px", height: "48px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
-                    >
-                      <Text variant="headingLg" as="span">💰</Text>
-                    </Box>
-                    <BlockStack gap="100" style={{ flex: 1, minWidth: 0 }}>
-                      <Text variant="heading2xl" as="p" fontWeight="bold">
-                        {credits.toLocaleString("en-US")}
-                      </Text>
-                      <Text variant="bodySm" tone="subdued" as="p">
-                        Jetons restants
-                      </Text>
-                      <Button url="/app/credits" variant="plain" size="slim">
-                        Acheter →
-                      </Button>
-                    </BlockStack>
-                  </InlineStack>
-                </BlockStack>
+            <div className="vton-card">
+              <div className="stat-card-content">
+                <div className="stat-icon">💰</div>
+                <div className="stat-info">
+                  <div className="stat-value">{credits.toLocaleString("en-US")}</div>
+                  <div className="stat-label">Jetons restants</div>
+                  <Button url="/app/credits" variant="plain" size="slim">
+                    Acheter →
+                  </Button>
+                </div>
               </div>
             </div>
-            <div style={{ display: "flex", flexDirection: "column", height: "100%", width: "100%" }}>
-              <div className="vton-card">
-                <BlockStack gap="300" style={{ height: "100%", display: "flex", flexDirection: "column" }}>
-                  <InlineStack gap="300" align="start" blockAlign="center" style={{ flex: 1 }}>
-                    <Box
-                      padding="300"
-                      background="bg-surface-secondary"
-                      borderRadius="200"
-                      style={{ minWidth: "48px", width: "48px", height: "48px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
-                    >
-                      <Text variant="headingLg" as="span">📊</Text>
-                    </Box>
-                    <BlockStack gap="100" style={{ flex: 1, minWidth: 0 }}>
-                      <Text variant="heading2xl" as="p" fontWeight="bold">
-                        {last30DaysTotal.toLocaleString("en-US")}
-                      </Text>
-                      <Text variant="bodySm" tone="subdued" as="p">
-                        Total Try-ons (30j)
-                      </Text>
-                      <Button url="/app/history" variant="plain" size="slim">
-                        Voir l'historique →
-                      </Button>
-                    </BlockStack>
-                  </InlineStack>
-                </BlockStack>
+            <div className="vton-card">
+              <div className="stat-card-content">
+                <div className="stat-icon">📊</div>
+                <div className="stat-info">
+                  <div className="stat-value">{last30DaysTotal.toLocaleString("en-US")}</div>
+                  <div className="stat-label">Total Try-ons (30j)</div>
+                  <Button url="/app/history" variant="plain" size="slim">
+                    Voir l'historique →
+                  </Button>
+                </div>
               </div>
             </div>
-            <div style={{ display: "flex", flexDirection: "column", height: "100%", width: "100%" }}>
-              <div className="vton-card">
-                <BlockStack gap="300" style={{ height: "100%", display: "flex", flexDirection: "column" }}>
-                  <InlineStack gap="300" align="start" blockAlign="center" style={{ flex: 1 }}>
-                    <Box
-                      padding="300"
-                      background="bg-surface-secondary"
-                      borderRadius="200"
-                      style={{ minWidth: "48px", width: "48px", height: "48px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
-                    >
-                      <Text variant="headingLg" as="span">🛒</Text>
-                    </Box>
-                    <BlockStack gap="100" style={{ flex: 1, minWidth: 0 }}>
-                      <Text variant="heading2xl" as="p" fontWeight="bold">
-                        {totalAtc.toLocaleString("en-US")}
-                      </Text>
-                      <Text variant="bodySm" tone="subdued" as="p">
-                        Add to Cart
-                      </Text>
-                    </BlockStack>
-                  </InlineStack>
-                </BlockStack>
+            <div className="vton-card">
+              <div className="stat-card-content">
+                <div className="stat-icon">🛒</div>
+                <div className="stat-info">
+                  <div className="stat-value">{totalAtc.toLocaleString("en-US")}</div>
+                  <div className="stat-label">Add to Cart</div>
+                </div>
               </div>
             </div>
-            <div style={{ display: "flex", flexDirection: "column", height: "100%", width: "100%" }}>
-              <div className="vton-card">
-                <BlockStack gap="300" style={{ height: "100%", display: "flex", flexDirection: "column" }}>
-                  <InlineStack gap="300" align="start" blockAlign="center" style={{ flex: 1 }}>
-                    <Box
-                      padding="300"
-                      background="bg-surface-secondary"
-                      borderRadius="200"
-                      style={{ minWidth: "48px", width: "48px", height: "48px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
-                    >
-                      <Text variant="headingLg" as="span">📈</Text>
-                    </Box>
-                    <BlockStack gap="100" style={{ flex: 1, minWidth: 0 }}>
-                      <Text variant="heading2xl" as="p" fontWeight="bold">
-                        {conversionRate}%
-                      </Text>
-                      <Text variant="bodySm" tone="subdued" as="p">
-                        Taux de conversion
-                      </Text>
-                    </BlockStack>
-                  </InlineStack>
-                </BlockStack>
+            <div className="vton-card">
+              <div className="stat-card-content">
+                <div className="stat-icon">📈</div>
+                <div className="stat-info">
+                  <div className="stat-value">{conversionRate}%</div>
+                  <div className="stat-label">Taux de conversion</div>
+                </div>
               </div>
             </div>
           </div>
