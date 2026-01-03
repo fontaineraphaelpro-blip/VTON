@@ -38,30 +38,37 @@ function verifyProxySignature(queryParams: URLSearchParams, request: Request): b
   
   // If signature is present, verify it (App Proxy request)
   if (signature && SHOPIFY_API_SECRET) {
-    // Create a copy without signature
+    // Shopify App Proxy signature includes all params except signature
+    // Parameters are already URL-encoded by Shopify, we need to verify as-is
     const paramsToVerify: Record<string, string> = {};
     queryParams.forEach((value, key) => {
       if (key !== "signature") {
+        // Use values as-is (Shopify sends them URL-encoded)
         paramsToVerify[key] = value;
       }
     });
 
-    // Sort and build query string
-    const sortedParams = Object.keys(paramsToVerify)
-      .sort()
+    // Sort keys alphabetically and build query string
+    const sortedKeys = Object.keys(paramsToVerify).sort();
+    const sortedParams = sortedKeys
       .map((key) => `${key}=${paramsToVerify[key]}`)
       .join("&");
 
-    // Calculate HMAC
+    // Calculate HMAC using the API secret
     const computedSignature = crypto
       .createHmac("sha256", SHOPIFY_API_SECRET)
       .update(sortedParams)
       .digest("hex");
 
-    return crypto.timingSafeEqual(
-      Buffer.from(signature),
-      Buffer.from(computedSignature)
-    );
+    // Use timing-safe comparison
+    const signatureBuffer = Buffer.from(signature, "hex");
+    const computedBuffer = Buffer.from(computedSignature, "hex");
+    
+    if (signatureBuffer.length !== computedBuffer.length) {
+      return false;
+    }
+    
+    return crypto.timingSafeEqual(signatureBuffer, computedBuffer);
   }
   
   // If no signature, check if request comes from a Shopify storefront
