@@ -76,11 +76,24 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
-  const { admin, session } = await authenticate.admin(request);
-  const shop = session.shop;
-  const formData = await request.formData();
-
-  const intent = formData.get("intent");
+  try {
+    const { admin, session } = await authenticate.admin(request);
+    
+    // Vérifier que la session est valide
+    if (!session || !session.shop) {
+      console.error("[Credits] Invalid session in action");
+      return json({ 
+        success: false, 
+        error: "Session invalide. Veuillez rafraîchir la page.",
+        requiresAuth: true,
+      });
+    }
+    
+    const shop = session.shop;
+    const formData = await request.formData();
+    const intent = formData.get("intent");
+    
+    console.log("[Credits] Action called", { intent, shop });
 
   if (intent === "purchase-credits") {
     const packId = formData.get("packId") as string;
@@ -127,14 +140,41 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           }
         };
 
+        console.log("[Credits] Creating draft order for pack", pack.id);
+        
         // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:136',message:'Before admin.graphql call for draft order',data:{packId:pack.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+        fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:133',message:'Before admin.graphql call for draft order',data:{packId:pack.id,shop},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'E'})}).catch(()=>{});
         // #endregion
-        const response = await admin.graphql(mutation, {
-          variables,
-        });
+        
+        let response;
+        try {
+          response = await admin.graphql(mutation, {
+            variables,
+          });
+          console.log("[Credits] GraphQL response received", { 
+            ok: response.ok, 
+            status: response.status,
+            statusText: response.statusText 
+          });
+        } catch (graphqlError) {
+          console.error("[Credits] GraphQL call threw error:", graphqlError);
+          // Si c'est une Response (redirection d'auth), la gérer
+          if (graphqlError instanceof Response) {
+            if (graphqlError.status === 401) {
+              const reauthUrl = graphqlError.headers.get('x-shopify-api-request-failure-reauthorize-url');
+              return json({ 
+                success: false, 
+                error: "Votre session a expiré. Veuillez rafraîchir la page pour vous ré-authentifier.",
+                requiresAuth: true,
+                reauthUrl: reauthUrl || null,
+              });
+            }
+          }
+          throw graphqlError;
+        }
+        
         // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:140',message:'After admin.graphql call for draft order',data:{isResponse:response instanceof Response,ok:response?.ok,status:response?.status,statusText:response?.statusText},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+        fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:150',message:'After admin.graphql call for draft order',data:{isResponse:response instanceof Response,ok:response?.ok,status:response?.status,statusText:response?.statusText},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'E'})}).catch(()=>{});
         // #endregion
 
         // Check if response is OK
@@ -145,10 +185,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           // Handle 401 Unauthorized - authentication required
           if (response.status === 401) {
             const reauthUrl = response.headers.get('x-shopify-api-request-failure-reauthorize-url');
-            console.error("Authentication required (401) for draft order creation");
+            console.error("[Credits] Authentication required (401) for draft order creation", { reauthUrl });
             return json({ 
               success: false, 
-              error: "Your session has expired. Please refresh the page to re-authenticate.",
+              error: "Votre session a expiré. Veuillez rafraîchir la page pour vous ré-authentifier.",
               requiresAuth: true,
               reauthUrl: reauthUrl || null,
             });
@@ -371,14 +411,41 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           }
         };
 
+        console.log("[Credits] Creating custom draft order", { customCredits });
+        
         // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:321',message:'Before admin.graphql call for custom draft order',data:{customCredits},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+        fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:340',message:'Before admin.graphql call for custom draft order',data:{customCredits,shop},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'E'})}).catch(()=>{});
         // #endregion
-        const response = await admin.graphql(mutation, {
-          variables,
-        });
+        
+        let response;
+        try {
+          response = await admin.graphql(mutation, {
+            variables,
+          });
+          console.log("[Credits] Custom GraphQL response received", { 
+            ok: response.ok, 
+            status: response.status,
+            statusText: response.statusText 
+          });
+        } catch (graphqlError) {
+          console.error("[Credits] Custom GraphQL call threw error:", graphqlError);
+          // Si c'est une Response (redirection d'auth), la gérer
+          if (graphqlError instanceof Response) {
+            if (graphqlError.status === 401) {
+              const reauthUrl = graphqlError.headers.get('x-shopify-api-request-failure-reauthorize-url');
+              return json({ 
+                success: false, 
+                error: "Votre session a expiré. Veuillez rafraîchir la page pour vous ré-authentifier.",
+                requiresAuth: true,
+                reauthUrl: reauthUrl || null,
+              });
+            }
+          }
+          throw graphqlError;
+        }
+        
         // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:325',message:'After admin.graphql call for custom draft order',data:{isResponse:response instanceof Response,ok:response?.ok,status:response?.status,statusText:response?.statusText},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+        fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:360',message:'After admin.graphql call for custom draft order',data:{isResponse:response instanceof Response,ok:response?.ok,status:response?.status,statusText:response?.statusText},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'E'})}).catch(()=>{});
         // #endregion
 
         // Check if response is OK
@@ -389,10 +456,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           // Handle 401 Unauthorized - authentication required
           if (response.status === 401) {
             const reauthUrl = response.headers.get('x-shopify-api-request-failure-reauthorize-url');
-            console.error("Authentication required (401) for custom draft order creation");
+            console.error("[Credits] Authentication required (401) for custom draft order creation", { reauthUrl });
             return json({ 
               success: false, 
-              error: "Your session has expired. Please refresh the page to re-authenticate.",
+              error: "Votre session a expiré. Veuillez rafraîchir la page pour vous ré-authentifier.",
               requiresAuth: true,
               reauthUrl: reauthUrl || null,
             });
@@ -498,10 +565,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           // Handle 401 Unauthorized in catch block
           if (error.status === 401) {
             const reauthUrl = error.headers.get('x-shopify-api-request-failure-reauthorize-url');
-            console.warn(`Custom draft order creation failed: ${error.status} ${error.statusText} - Authentication required`);
+            console.warn(`[Credits] Custom draft order creation failed: ${error.status} ${error.statusText} - Authentication required`, { reauthUrl });
             return json({ 
               success: false, 
-              error: "Your session has expired. Please refresh the page to re-authenticate.",
+              error: "Votre session a expiré. Veuillez rafraîchir la page pour vous ré-authentifier.",
               requiresAuth: true,
               reauthUrl: reauthUrl || null,
             });
@@ -519,10 +586,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           if (errorAny.status === 401) {
             const reauthUrl = errorAny.headers?.get?.('x-shopify-api-request-failure-reauthorize-url') || 
                              errorAny.headers?.['x-shopify-api-request-failure-reauthorize-url'];
-            console.warn(`Custom draft order creation failed: ${errorAny.status} ${errorAny.statusText} - Authentication required`);
+            console.warn(`[Credits] Custom draft order creation failed: ${errorAny.status} ${errorAny.statusText} - Authentication required`, { reauthUrl });
             return json({ 
               success: false, 
-              error: "Your session has expired. Please refresh the page to re-authenticate.",
+              error: "Votre session a expiré. Veuillez rafraîchir la page pour vous ré-authentifier.",
               requiresAuth: true,
               reauthUrl: reauthUrl || null,
             });
@@ -553,7 +620,31 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     }
   }
 
-  return json({ success: false, error: "Invalid purchase" });
+    return json({ success: false, error: "Invalid purchase" });
+  } catch (authError) {
+    // Gérer les erreurs d'authentification
+    console.error("[Credits] Authentication error in action:", authError);
+    
+    // Si c'est une Response de redirection (auth requise)
+    if (authError instanceof Response) {
+      if (authError.status === 401 || authError.status === 302) {
+        const reauthUrl = authError.headers.get('x-shopify-api-request-failure-reauthorize-url') || 
+                         authError.headers.get('location');
+        return json({ 
+          success: false, 
+          error: "Votre session a expiré. Veuillez rafraîchir la page pour vous ré-authentifier.",
+          requiresAuth: true,
+          reauthUrl: reauthUrl || null,
+        });
+      }
+    }
+    
+    return json({ 
+      success: false, 
+      error: authError instanceof Error ? authError.message : "Une erreur est survenue lors de l'authentification.",
+      requiresAuth: true,
+    });
+  }
 };
 
 export default function Credits() {
@@ -577,15 +668,28 @@ export default function Credits() {
   // Rediriger vers le checkout Shopify après création de la commande
   useEffect(() => {
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:496',message:'useEffect entry',data:{hasFetcherData:!!fetcher.data,success:fetcher.data?.success,redirect:fetcher.data?.redirect,hasCheckoutUrl:!!fetcher.data?.checkoutUrl},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'D'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:559',message:'useEffect entry',data:{hasFetcherData:!!fetcher.data,success:fetcher.data?.success,redirect:fetcher.data?.redirect,hasCheckoutUrl:!!fetcher.data?.checkoutUrl,requiresAuth:fetcher.data?.requiresAuth,hasReauthUrl:!!fetcher.data?.reauthUrl},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'F'})}).catch(()=>{});
     // #endregion
     
     let timeoutId: NodeJS.Timeout | null = null;
     let isMounted = true;
     
+    // Gérer la ré-authentification automatique
+    if (fetcher.data?.requiresAuth && fetcher.data?.reauthUrl) {
+      console.log("[Credits] Redirecting to reauth URL:", fetcher.data.reauthUrl);
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:567',message:'Redirecting to reauth URL',data:{reauthUrl:fetcher.data.reauthUrl},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'F'})}).catch(()=>{});
+      // #endregion
+      // Rediriger automatiquement vers la ré-authentification
+      if (isMounted) {
+        window.location.href = fetcher.data.reauthUrl;
+      }
+      return;
+    }
+    
     if (fetcher.data?.success && fetcher.data?.redirect && fetcher.data?.checkoutUrl) {
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:504',message:'Before window.location.href redirect',data:{checkoutUrl:fetcher.data.checkoutUrl},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'B'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:577',message:'Before window.location.href redirect to checkout',data:{checkoutUrl:fetcher.data.checkoutUrl},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'B'})}).catch(()=>{});
       // #endregion
       // Rediriger vers le checkout Shopify
       if (isMounted) {
@@ -593,16 +697,16 @@ export default function Credits() {
       }
     } else if (fetcher.data?.success && !fetcher.data?.redirect) {
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:512',message:'Before setTimeout for revalidate',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'C'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:585',message:'Before setTimeout for revalidate',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'C'})}).catch(()=>{});
       // #endregion
       // Si pas de redirection, recharger les données (ancien comportement)
       timeoutId = setTimeout(() => {
         // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:517',message:'setTimeout callback executing',data:{isMounted},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'C'})}).catch(()=>{});
+        fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:590',message:'setTimeout callback executing',data:{isMounted},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'C'})}).catch(()=>{});
         // #endregion
         if (isMounted) {
           // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:520',message:'Calling revalidator.revalidate via ref',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'C'})}).catch(()=>{});
+          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:593',message:'Calling revalidator.revalidate via ref',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'C'})}).catch(()=>{});
           // #endregion
           revalidatorRef.current.revalidate();
         }
@@ -611,7 +715,7 @@ export default function Credits() {
     
     return () => {
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:528',message:'useEffect cleanup - component unmounting',data:{hasTimeout:!!timeoutId},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'D'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:601',message:'useEffect cleanup - component unmounting',data:{hasTimeout:!!timeoutId},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'F'})}).catch(()=>{});
       // #endregion
       isMounted = false;
       if (timeoutId) {
@@ -674,10 +778,15 @@ export default function Credits() {
             <Banner 
               tone="critical" 
               title={fetcher.data.requiresAuth ? "Authentification requise" : "Erreur"}
-              action={fetcher.data.requiresAuth && fetcher.data.reauthUrl ? {
-                content: "Ré-authentifier",
-                url: fetcher.data.reauthUrl,
-                target: "_top",
+              action={fetcher.data.requiresAuth ? {
+                content: fetcher.data.reauthUrl ? "Ré-authentifier" : "Rafraîchir la page",
+                onAction: () => {
+                  if (fetcher.data.reauthUrl) {
+                    window.location.href = fetcher.data.reauthUrl;
+                  } else {
+                    window.location.reload();
+                  }
+                },
               } : undefined}
             >
               {fetcher.data.error}
