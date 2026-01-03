@@ -266,7 +266,7 @@ export default function Widget() {
 
           {fetcher.data?.success && (
             <Banner tone="success">
-              {fetcher.data.testMode
+              {(fetcher.data as any)?.testMode
                 ? "Try-on test initiated (feature to be completed)"
                 : "Configuration saved successfully"}
             </Banner>
@@ -308,7 +308,6 @@ export default function Widget() {
                           setWidgetBg(value);
                         }}
                         autoComplete="off"
-                        type="color"
                         helpText="Button background color."
                       />
                     </Box>
@@ -323,7 +322,6 @@ export default function Widget() {
                           setWidgetColor(value);
                         }}
                         autoComplete="off"
-                        type="color"
                         helpText="Button text color."
                       />
                     </Box>
@@ -391,9 +389,9 @@ export default function Widget() {
                 <Divider />
                 <InlineStack gap="400" align="start" wrap>
                   {/* Person Image Upload */}
-                  <Box minWidth="300px" flex="1">
+                  <Box minWidth="300px">
                     <BlockStack gap="200">
-                      <Text variant="bodyMd" fontWeight="medium" as="label">
+                      <Text variant="bodyMd" fontWeight="medium" as="p">
                         Person Image
                       </Text>
                       <div
@@ -434,10 +432,10 @@ export default function Widget() {
                         ) : (
                           <>
                             <div style={{ fontSize: "14px", marginBottom: "16px", fontWeight: 600 }}>UPLOAD PHOTO</div>
-                            <Text variant="bodyMd" fontWeight="medium">
+                            <Text variant="bodyMd" fontWeight="medium" as="p">
                               Drag & drop or click to upload
                             </Text>
-                            <Text variant="bodySm" tone="subdued">
+                            <Text variant="bodySm" tone="subdued" as="p">
                               Person image for try-on
                             </Text>
                           </>

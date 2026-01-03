@@ -64,7 +64,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       shop: session?.shop || "NULL",
       hasAccessToken: !!session?.accessToken,
       isOnline: session?.isOnline,
-      userId: session?.userId,
+      userId: (session as any)?.userId,
     });
     
     if (!session || !session.shop) {
@@ -138,7 +138,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         shop: session?.shop || "NULL",
         hasAccessToken: !!session?.accessToken,
         isOnline: session?.isOnline,
-        userId: session?.userId,
+        userId: (session as any)?.userId,
         hasAdmin: !!admin,
       });
       
@@ -265,7 +265,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           variables
         });
 
-        const graphqlData = await graphqlResponse.json();
+        const graphqlData = await graphqlResponse.json() as any;
 
         console.log("[Credits Action] GraphQL response received", {
           hasData: !!graphqlData,
@@ -273,10 +273,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           data: graphqlData
         });
 
-        const graphqlResponse = graphqlData as any;
-        if (graphqlResponse.errors) {
-          console.error("[Credits] GraphQL errors:", graphqlResponse.errors);
-          const errorMessage = graphqlResponse.errors.map((e: any) => e.message).join(", ");
+        if (graphqlData.errors) {
+          console.error("[Credits] GraphQL errors:", graphqlData.errors);
+          const errorMessage = graphqlData.errors.map((e: any) => e.message).join(", ");
           return json({ 
             success: false, 
             error: `Shopify API error: ${errorMessage}`,

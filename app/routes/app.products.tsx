@@ -249,7 +249,7 @@ export default function Products() {
         View
       </Button>,
     ];
-  }).filter((row) => row !== null);
+  }).filter((row: any) => row !== null);
 
   return (
     <Page>
