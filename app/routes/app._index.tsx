@@ -448,7 +448,7 @@ export default function Dashboard() {
                   </InlineStack>
                 </BlockStack>
               </Card>
-            </Box>
+            </div>
           </div>
         </Layout.Section>
 
