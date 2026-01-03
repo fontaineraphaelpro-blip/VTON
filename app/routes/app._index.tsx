@@ -455,9 +455,19 @@ export default function Dashboard() {
                   {error}
                 </Banner>
               )}
-              {fetcher.data?.success && (
+              {fetcher.data?.success && fetcher.data?.deletedCount !== undefined && (
                 <Banner tone="success">
-                  Configuration saved successfully
+                  {fetcher.data.message || `Supprimé ${fetcher.data.deletedCount} ancien(s) script tag(s)`}
+                </Banner>
+              )}
+              {fetcher.data?.success && fetcher.data?.deletedCount === undefined && (
+                <Banner tone="success">
+                  Configuration sauvegardée avec succès
+                </Banner>
+              )}
+              {fetcher.data?.error && (
+                <Banner tone="critical">
+                  Erreur : {fetcher.data.error}
                 </Banner>
               )}
               {credits < 50 && (
