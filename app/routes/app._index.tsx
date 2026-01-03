@@ -564,28 +564,40 @@ export default function Dashboard() {
         <div className="stats-grid">
           <div className="stat-card">
             <div className="stat-icon-wrapper">
-              <Icon source={CreditCardMajor} />
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M2.5 5.83333H17.5M2.5 5.83333C1.39543 5.83333 0.5 6.72876 0.5 7.83333V15.8333C0.5 16.9379 1.39543 17.8333 2.5 17.8333H17.5C18.6046 17.8333 19.5 16.9379 19.5 15.8333V7.83333C19.5 6.72876 18.6046 5.83333 17.5 5.83333M2.5 5.83333V4.16667C2.5 3.0621 3.39543 2.16667 4.5 2.16667H15.5C16.6046 2.16667 17.5 3.0621 17.5 4.16667V5.83333" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
             </div>
             <div className="stat-value">{credits.toLocaleString("en-US")}</div>
             <div className="stat-label">Jetons restants</div>
           </div>
           <div className="stat-card">
             <div className="stat-icon-wrapper">
-              <Icon source={AnalyticsMajor} />
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M2.5 15.8333L10 2.5L17.5 15.8333H2.5Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M10 12.5V8.33333" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
             </div>
             <div className="stat-value">{last30DaysTotal.toLocaleString("en-US")}</div>
             <div className="stat-label">Total Try-ons (30j)</div>
           </div>
           <div className="stat-card">
             <div className="stat-icon-wrapper">
-              <Icon source={CartMajor} />
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M2.5 2.5H4.16667L5.83333 12.5H15.8333L17.5 5.83333H5.83333" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                <circle cx="7.5" cy="16.6667" r="1.66667" stroke="currentColor" strokeWidth="1.5"/>
+                <circle cx="15" cy="16.6667" r="1.66667" stroke="currentColor" strokeWidth="1.5"/>
+              </svg>
             </div>
             <div className="stat-value">{totalAtc.toLocaleString("en-US")}</div>
             <div className="stat-label">Add to Cart</div>
           </div>
           <div className="stat-card">
             <div className="stat-icon-wrapper">
-              <Icon source={TrendingUpMajor} />
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M2.5 15.8333L7.5 10.8333L12.5 15.8333L17.5 10.8333" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M7.5 10.8333V2.5H12.5V10.8333" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
             </div>
             <div className="stat-value">{conversionRate}%</div>
             <div className="stat-label">Taux de conversion</div>

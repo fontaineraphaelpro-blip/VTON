@@ -65,7 +65,7 @@ export async function generateTryOn(
     console.log("Input types - person:", typeof personInput, "garment:", typeof garmentInput);
     
     // Use replicate.run which returns a Promise that resolves when the prediction completes
-    const output = await replicate.run(MODEL_ID, {
+    let output = await replicate.run(MODEL_ID, {
       input: {
         human_img: personInput,
         garm_img: garmentInput,
@@ -109,9 +109,8 @@ export async function generateTryOn(
           
           console.log(`Poll ${pollCount}/${maxPolls} - Prediction status:`, prediction.status);
           
-            if (prediction.status === "succeeded" && prediction.output) {
-              const predictionOutput = prediction.output;
-              output = predictionOutput;
+          if (prediction.status === "succeeded" && prediction.output) {
+            output = prediction.output;
             console.log("Prediction succeeded, output:", output);
             break;
           } else if (prediction.status === "failed" || prediction.status === "canceled") {
