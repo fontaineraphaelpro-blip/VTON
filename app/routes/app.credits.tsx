@@ -207,75 +207,61 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const pack = CREDIT_PACKS.find((p) => p.id === packId);
 
     if (pack) {
-      // Create a Shopify checkout URL for payment
+      // Create a Shopify one-time charge using REST API (RecurringApplicationCharge)
       try {
-        // Use Shopify Billing API for one-time charge (app purchase)
-        // This is the recommended way for in-app purchases and credit packs
-        const mutation = `#graphql
-          mutation appPurchaseOneTimeCreate(
-            $name: String!
-            $price: MoneyInput!
-            $returnUrl: URL!
-          ) {
-            appPurchaseOneTimeCreate(
-              name: $name
-              price: $price
-              returnUrl: $returnUrl
-              test: false
-            ) {
-              confirmationUrl
-              userErrors {
-                message
-                field
-              }
-            }
-          }
-        `;
-
         // Build return URL - redirect back to credits page after payment
-        // Must be an absolute URL for Shopify Billing API
         const baseUrl = new URL(request.url).origin;
         const returnUrl = new URL("/app/credits", baseUrl);
         returnUrl.searchParams.set("purchase", "success");
         returnUrl.searchParams.set("pack", pack.id);
         returnUrl.searchParams.set("credits", String(pack.credits));
 
-        const variables = {
-          name: `${pack.name} Pack - ${pack.credits} Credits`,
-          price: {
-            amount: pack.price.toFixed(2),
-            currencyCode: "EUR", // Adjust based on shop currency
-          },
-          returnUrl: returnUrl.toString(),
-        };
-
-        console.log("[Credits Action] Creating app purchase one-time charge for pack", {
+        console.log("[Credits Action] Creating one-time charge using REST API for pack", {
           packId: pack.id,
           packName: pack.name,
           price: pack.price,
           shop,
           returnUrl: returnUrl.toString(),
         });
+
+        // Use Shopify REST API to create a RecurringApplicationCharge
+        // Even though it's called "Recurring", we can use it for one-time charges
+        // by setting trial_days: 0 and capped_amount to the exact price
+        const chargeData = {
+          recurring_application_charge: {
+            name: `${pack.name} Pack - ${pack.credits} Credits`,
+            price: pack.price.toFixed(2),
+            return_url: returnUrl.toString(),
+            test: process.env.NODE_ENV !== "production", // true in dev, false in prod
+            trial_days: 0, // No trial = one-time charge
+            capped_amount: pack.price.toFixed(2), // Exact amount, no additional charges
+          }
+        };
+
+        // Make REST API call to Shopify
+        const apiUrl = `https://${shop}/admin/api/2025-01/recurring_application_charges.json`;
         
-        let response;
+        let restResponse;
         try {
-          // Utiliser admin.graphql() - c'est la SEULE méthode valide
-          response = await admin.graphql(mutation, {
-            variables,
+          restResponse = await fetch(apiUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-Shopify-Access-Token": session.accessToken,
+            },
+            body: JSON.stringify(chargeData),
           });
-          
-          console.log("[Credits Action] ✅ GraphQL response received", { 
-            ok: response.ok, 
-            status: response.status,
-            statusText: response.statusText,
-            isResponse: response instanceof Response,
+
+          console.log("[Credits Action] ✅ REST API response received", { 
+            ok: restResponse.ok, 
+            status: restResponse.status,
+            statusText: restResponse.statusText,
           });
-        } catch (graphqlError) {
-          console.error("[Credits] GraphQL call threw error:", graphqlError);
-          // Si c'est une Response (redirection d'auth), la gérer
-          if (graphqlError instanceof Response) {
-            if (graphqlError.status === 401) {
-              const reauthUrl = graphqlError.headers.get('x-shopify-api-request-failure-reauthorize-url');
+        } catch (restError) {
+          console.error("[Credits] REST API call threw error:", restError);
+          if (restError instanceof Response) {
+            if (restError.status === 401) {
+              const reauthUrl = restError.headers.get('x-shopify-api-request-failure-reauthorize-url');
               return json({ 
                 success: false, 
                 error: "Votre session a expiré. Veuillez rafraîchir la page pour vous ré-authentifier.",
@@ -284,22 +270,15 @@ export const action = async ({ request }: ActionFunctionArgs) => {
               });
             }
           }
-          throw graphqlError;
+          throw restError;
         }
-        
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:150',message:'After admin.graphql call for draft order',data:{isResponse:response instanceof Response,ok:response?.ok,status:response?.status,statusText:response?.statusText},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'E'})}).catch(()=>{});
-        // #endregion
 
         // Check if response is OK
-        if (!response.ok) {
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:127',message:'Response not OK',data:{status:response.status,statusText:response.statusText,is401:response.status===401},timestamp:Date.now(),sessionId:'debug-session',runId:'run3',hypothesisId:'A'})}).catch(()=>{});
-          // #endregion
+        if (!restResponse.ok) {
           // Handle 401 Unauthorized - authentication required
-          if (response.status === 401) {
-            const reauthUrl = response.headers.get('x-shopify-api-request-failure-reauthorize-url');
-            console.error("[Credits] Authentication required (401) for app purchase creation", { reauthUrl });
+          if (restResponse.status === 401) {
+            const reauthUrl = restResponse.headers.get('x-shopify-api-request-failure-reauthorize-url');
+            console.error("[Credits] Authentication required (401) for charge creation", { reauthUrl });
             return json({ 
               success: false, 
               error: "Votre session a expiré. Veuillez rafraîchir la page pour vous ré-authentifier.",
@@ -308,96 +287,44 @@ export const action = async ({ request }: ActionFunctionArgs) => {
             });
           }
           
-          const errorText = await response.text().catch(() => `HTTP ${response.status} ${response.statusText}`);
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:143',message:'Error response text',data:{status:response.status,errorTextLength:errorText.length,errorTextPreview:errorText.substring(0,200)},timestamp:Date.now(),sessionId:'debug-session',runId:'run3',hypothesisId:'A'})}).catch(()=>{});
-          // #endregion
-          console.error("GraphQL request failed:", response.status, errorText);
+          const errorText = await restResponse.text().catch(() => `HTTP ${restResponse.status} ${restResponse.statusText}`);
+          console.error("REST API request failed:", restResponse.status, errorText);
           return json({ 
             success: false, 
-            error: `Shopify API error (${response.status}): ${errorText.substring(0, 200)}`,
+            error: `Shopify API error (${restResponse.status}): ${errorText.substring(0, 200)}`,
           });
         }
-
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:151',message:'Before JSON parse',data:{status:response.status,contentType:response.headers.get('content-type'),ok:response.ok},timestamp:Date.now(),sessionId:'debug-session',runId:'run3',hypothesisId:'B'})}).catch(()=>{});
-        // #endregion
         
         let responseJson;
-        let responseText: string | null = null;
         try {
-          // Cloner la réponse pour pouvoir lire le texte si le JSON échoue
-          responseText = await response.clone().text();
-          console.log("[Credits] Response text length:", responseText.length);
-          console.log("[Credits] Response text preview:", responseText.substring(0, 500));
-          
-          // Vérifier si c'est du JSON valide
-          try {
-            JSON.parse(responseText);
-            console.log("[Credits] Response text is valid JSON");
-          } catch (parseError) {
-            console.error("[Credits] Response text is NOT valid JSON:", parseError);
-            console.error("[Credits] Full response text:", responseText);
-          }
-          
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:157',message:'Response text captured',data:{textLength:responseText.length,textPreview:responseText.substring(0,500),isValidJSON:(()=>{try{JSON.parse(responseText);return true;}catch{return false;}})()},timestamp:Date.now(),sessionId:'debug-session',runId:'run3',hypothesisId:'B'})}).catch(()=>{});
-          // #endregion
-          
-          responseJson = await response.json();
-          console.log("[Credits] JSON parsed successfully");
-          console.log("[Credits] Response JSON keys:", Object.keys(responseJson));
-          
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:161',message:'JSON parse successful',data:{hasData:!!responseJson.data,hasErrors:!!responseJson.errors},timestamp:Date.now(),sessionId:'debug-session',runId:'run3',hypothesisId:'B'})}).catch(()=>{});
-          // #endregion
+          responseJson = await restResponse.json();
+          console.log("[Credits] REST API JSON parsed successfully");
+          console.log("[Credits] Response JSON:", JSON.stringify(responseJson, null, 2));
         } catch (jsonError) {
           console.error("[Credits] Failed to parse JSON response:", jsonError);
-          console.error("[Credits] JSON Error type:", jsonError?.constructor?.name);
-          console.error("[Credits] JSON Error message:", jsonError instanceof Error ? jsonError.message : String(jsonError));
-          console.error("[Credits] Response text that failed:", responseText?.substring(0, 1000));
-          
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:164',message:'JSON parse failed',data:{errorType:jsonError?.constructor?.name,errorMessage:jsonError instanceof Error ? jsonError.message : String(jsonError),responseText:responseText?.substring(0,500)},timestamp:Date.now(),sessionId:'debug-session',runId:'run3',hypothesisId:'B'})}).catch(()=>{});
-          // #endregion
-          
-          const errorText = responseText || await response.text().catch(() => "Unable to read response");
+          const errorText = await restResponse.text().catch(() => "Unable to read response");
           return json({ 
             success: false, 
             error: `Invalid JSON response from Shopify: ${jsonError instanceof Error ? jsonError.message : String(jsonError)}. Response preview: ${errorText.substring(0, 200)}`,
           });
         }
         
-        // Log the full response for debugging
-        console.log("App purchase one-time charge response:", JSON.stringify(responseJson, null, 2));
+        // Extract confirmation URL from REST API response
+        const charge = responseJson.recurring_application_charge;
         
-        // Check for GraphQL errors
-        if (responseJson.errors) {
-          const errorMessages = responseJson.errors.map((e: any) => e.message || String(e)).join(", ");
-          console.error("GraphQL errors:", errorMessages);
+        if (!charge) {
+          console.error("No charge returned in response:", responseJson);
           return json({ 
             success: false, 
-            error: `GraphQL error: ${errorMessages}`,
-          });
-        }
-        
-        const purchaseResult = responseJson.data?.appPurchaseOneTimeCreate;
-        const errors = purchaseResult?.userErrors || [];
-
-        if (errors && errors.length > 0) {
-          const errorMessages = errors.map((e: any) => `${e.field ? `${e.field}: ` : ""}${e.message}`).join(", ");
-          console.error("App purchase errors:", errorMessages);
-          return json({ 
-            success: false, 
-            error: `Failed to create purchase: ${errorMessages}`,
+            error: "Failed to create charge. Please check your Shopify permissions.",
           });
         }
 
-        if (!purchaseResult || !purchaseResult.confirmationUrl) {
-          console.error("No confirmation URL returned:", responseJson);
+        if (!charge.confirmation_url) {
+          console.error("No confirmation URL returned:", charge);
           return json({ 
             success: false, 
-            error: "Failed to create app purchase. Please check your Shopify permissions.",
+            error: "Charge created but no confirmation URL available. Please try again.",
           });
         }
 
@@ -405,7 +332,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         return json({ 
           success: true, 
           redirect: true,
-          checkoutUrl: purchaseResult.confirmationUrl,
+          checkoutUrl: charge.confirmation_url,
           pack: pack.name, 
           credits: pack.credits,
           price: pack.price,
