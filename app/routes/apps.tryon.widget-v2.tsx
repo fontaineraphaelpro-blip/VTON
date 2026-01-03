@@ -20,6 +20,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   // Get the app URL from environment or request
   const appUrl = process.env.SHOPIFY_APP_URL || process.env.APPLICATION_URL || new URL(request.url).origin;
   
+  // Add version/timestamp to force cache busting - MUST be defined before widgetCode
+  const widgetVersion = process.env.WIDGET_VERSION || Date.now();
+  
   const widgetCode = `
 (function() {
     'use strict';
@@ -1828,9 +1831,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 })();
   `;
 
-  // Add version/timestamp to force cache busting
-  const widgetVersion = process.env.WIDGET_VERSION || Date.now();
-  // Inject version into widget code
+  // Inject version into widget code (widgetVersion already defined above)
   const widgetCodeWithVersion = widgetCode
     .replace(
       /console\.log\('\[VTON Widget V2\] Script loaded'/,
