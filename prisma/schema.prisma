@@ -22,5 +22,5 @@ model Session {
   expires     DateTime?
   accessToken String
   userId      BigInt?
-  data        Json?
+  data        Json      @default("{}")
 }

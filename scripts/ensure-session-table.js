@@ -12,10 +12,10 @@ async function ensureSessionTable() {
     
     console.log('[SETUP] Session table exists ✓');
     
-    // Check and fix data column if needed
+    // Check and fix data column if needed (must be NOT NULL with default for PrismaSessionStorage)
     try {
       const columnInfo = await prisma.$queryRaw`
-        SELECT is_nullable
+        SELECT is_nullable, column_default
         FROM information_schema.columns 
         WHERE table_schema = 'public' 
         AND table_name = 'Session' 
@@ -24,11 +24,28 @@ async function ensureSessionTable() {
       
       if (Array.isArray(columnInfo) && columnInfo.length > 0) {
         const col = columnInfo[0];
-        if (col.is_nullable === 'NO') {
-          console.log('[SETUP] ⚠️  data column is NOT NULL - fixing...');
-          await prisma.$executeRaw`ALTER TABLE "Session" ALTER COLUMN "data" DROP NOT NULL`;
-          console.log('[SETUP] ✅ Fixed data column (now nullable)');
+        // PrismaSessionStorage requires data to be NOT NULL with default
+        if (col.is_nullable === 'YES' || !col.column_default) {
+          console.log('[SETUP] ⚠️  data column must be NOT NULL with default - fixing...');
+          
+          // Set default first
+          await prisma.$executeRaw`ALTER TABLE "Session" ALTER COLUMN "data" SET DEFAULT '{}'::jsonb`;
+          
+          // Update any NULL values
+          await prisma.$executeRaw`UPDATE "Session" SET "data" = '{}'::jsonb WHERE "data" IS NULL`;
+          
+          // Make it NOT NULL
+          await prisma.$executeRaw`ALTER TABLE "Session" ALTER COLUMN "data" SET NOT NULL`;
+          
+          console.log('[SETUP] ✅ Fixed data column (now NOT NULL with default)');
+        } else {
+          console.log('[SETUP] ✅ data column is correctly configured (NOT NULL with default)');
         }
+      } else {
+        // Column doesn't exist, add it
+        console.log('[SETUP] ⚠️  data column missing - adding...');
+        await prisma.$executeRaw`ALTER TABLE "Session" ADD COLUMN "data" JSONB NOT NULL DEFAULT '{}'::jsonb`;
+        console.log('[SETUP] ✅ Added data column (NOT NULL with default)');
       }
     } catch (error) {
       console.warn('[SETUP] ⚠️  Could not check/fix data column:', error.message);
