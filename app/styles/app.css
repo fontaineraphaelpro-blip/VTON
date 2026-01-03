@@ -2684,23 +2684,42 @@ body {
   --bg-glass: rgba(255,255,255,0.85);
   --bg-glass-dark: rgba(255,255,255,0.05);
   --shadow-hover: 0 6px 25px rgba(0,0,0,0.12);
+  
+  /* Ensure billing variables are defined for dashboard */
+  --radius: 16px;
+  --shadow: 0 4px 20px rgba(0,0,0,0.08);
+  --transition: 0.3s ease;
+  --text: #000000;
+  --text-secondary: #666666;
+  --border: rgba(0,0,0,0.1);
+  --primary: #000000;
+  --primary-hover: #111111;
+  --bg: #ffffff;
+  --bg-soft: #f7f7f8;
 }
 
 /* ============================================
    Billing Containers
    ============================================ */
 .vton-section {
-  background: var(--bg-glass);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  padding: 2rem;
-  margin-bottom: 2rem;
-  transition: all var(--transition);
+  background: var(--bg-glass) !important;
+  border-radius: var(--radius) !important;
+  box-shadow: var(--shadow) !important;
+  padding: 2rem !important;
+  margin-bottom: 2rem !important;
+  transition: all var(--transition) !important;
+  border: 1px solid var(--border) !important;
 }
 
 .vton-section:hover {
-  box-shadow: var(--shadow-hover);
-  transform: translateY(-2px);
+  box-shadow: var(--shadow-hover) !important;
+  transform: translateY(-2px) !important;
+}
+
+/* Ensure app-container has billing background */
+.app-container {
+  background: var(--bg-soft) !important;
+  min-height: 100vh;
 }
 
 /* ============================================
@@ -2789,16 +2808,27 @@ body {
    Billing Cards
    ============================================ */
 .vton-card {
-  background: var(--bg-glass);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  padding: 1.5rem;
-  transition: all var(--transition);
+  background: var(--bg-glass) !important;
+  border-radius: var(--radius) !important;
+  box-shadow: var(--shadow) !important;
+  padding: 1.5rem !important;
+  transition: all var(--transition) !important;
+  border: 1px solid var(--border) !important;
 }
 
 .vton-card:hover {
-  box-shadow: var(--shadow-hover);
-  transform: translateY(-2px);
+  box-shadow: var(--shadow-hover) !important;
+  transform: translateY(-2px) !important;
+}
+
+/* Override Polaris Card styles when using vton-card */
+.vton-card .Polaris-Card,
+.vton-card .Polaris-BlockStack,
+.vton-card .Polaris-InlineStack {
+  background: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+  padding: 0 !important;
 }
 
 /* ============================================
