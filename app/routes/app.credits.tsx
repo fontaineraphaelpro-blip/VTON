@@ -21,39 +21,56 @@ import { authenticate } from "../shopify.server";
 import { getShop, upsertShop } from "../lib/services/db.service";
 import { ensureTables } from "../lib/db-init.server";
 
-// Packs de crédits optimisés avec pack Découverte
-const CREDIT_PACKS = [
+// Plans tarifaires optimisés pour Virtual Try-On
+const PRICING_PLANS = [
   {
-    id: "decouverte",
-    name: "Découverte",
-    credits: 25,
-    price: 9.99,
+    id: "micro",
+    name: "Micro",
+    credits: 50,
+    price: 20.00,
     pricePerCredit: 0.40,
-    description: "Essai gratuit - Parfait pour tester",
+    description: "Ultra-accessible pour tester l'app",
     highlight: false,
     popular: false,
+    badge: "Essai",
   },
   {
     id: "starter",
     name: "Starter",
     credits: 100,
-    price: 29.99,
-    pricePerCredit: 0.30,
-    description: "Parfait pour démarrer",
+    price: 45.00,
+    pricePerCredit: 0.45,
+    description: "Usage entry-level pour démarrer",
     highlight: false,
-    popular: false,
+    popular: true,
+    badge: "Populaire",
   },
   {
     id: "pro",
     name: "Pro",
     credits: 500,
-    price: 129.99,
-    pricePerCredit: 0.26,
-    description: "Idéal pour les boutiques en croissance",
+    price: 188.00,
+    pricePerCredit: 0.376,
+    description: "Pour les boutiques sérieuses avec marge solide",
     highlight: true,
-    popular: true,
+    popular: false,
+    badge: "Recommandé",
+  },
+  {
+    id: "enterprise",
+    name: "Enterprise",
+    credits: 1000,
+    price: 300.00,
+    pricePerCredit: 0.30,
+    description: "Pour les grosses marques avec rendu parfait et marge garantie",
+    highlight: false,
+    popular: false,
+    badge: "Premium",
   },
 ];
+
+// Prix pay-per-use pour les try-ons supplémentaires
+const PAY_PER_USE_PRICE = 0.50; // Prix par try-on supplémentaire
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
@@ -204,7 +221,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
   if (intent === "purchase-credits") {
     const packId = formData.get("packId") as string;
-    const pack = CREDIT_PACKS.find((p) => p.id === packId);
+    const pack = PRICING_PLANS.find((p) => p.id === packId);
 
     if (pack) {
       // Create a Shopify one-time charge using REST API (RecurringApplicationCharge)
@@ -383,16 +400,15 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     }
   } else if (intent === "custom-pack") {
     const customCredits = parseInt(formData.get("customCredits") as string);
-    if (customCredits && customCredits >= 250) {
-      const pricePerCredit = 0.30;
-      const totalPrice = customCredits * pricePerCredit;
+    if (customCredits && customCredits >= 1) {
+      const totalPrice = customCredits * PAY_PER_USE_PRICE;
 
       try {
         // Build return URL - redirect back to credits page after payment
         const baseUrl = new URL(request.url).origin;
         const returnUrl = new URL("/app/credits", baseUrl);
         returnUrl.searchParams.set("purchase", "success");
-        returnUrl.searchParams.set("pack", "custom");
+        returnUrl.searchParams.set("pack", "pay-per-use");
         returnUrl.searchParams.set("credits", String(customCredits));
 
         console.log("[Credits] Creating custom one-time charge using REST API", { customCredits, totalPrice });
@@ -416,7 +432,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         `;
 
         const variables = {
-          name: `Custom Pack - ${customCredits} Credits`,
+          name: `${customCredits} Try-on${customCredits > 1 ? 's' : ''} supplémentaire${customCredits > 1 ? 's' : ''} (Pay-per-use)`,
           price: {
             amount: totalPrice.toFixed(2),
             currencyCode: "EUR"
@@ -546,8 +562,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           error: `Failed to create payment checkout: ${errorMessage}`
         });
       }
-    } else {
-      return json({ success: false, error: "Minimum 250 credits required for custom pack" });
+      } else {
+      return json({ success: false, error: "Minimum 1 try-on requis" });
     }
   }
 
@@ -703,8 +719,8 @@ export default function Credits() {
     const formData = new FormData(event.currentTarget);
     const credits = parseInt(formData.get("customCredits") as string);
     
-    if (!credits || credits < 250) {
-      alert("Minimum 250 credits required for custom pack.");
+    if (!credits || credits < 1) {
+      alert("Minimum 1 try-on requis.");
       return;
     }
     
@@ -777,32 +793,81 @@ export default function Credits() {
         </div>
 
         <div className="pricing-grid">
-          {CREDIT_PACKS.map((pack) => (
-            <div key={pack.id} className={`plan-card ${pack.highlight ? 'featured' : ''}`}>
-              {pack.highlight && (
-                <div className="plan-badge">Most popular</div>
+          {PRICING_PLANS.map((plan) => (
+            <div key={plan.id} className={`plan-card ${plan.highlight ? 'featured' : ''} ${plan.popular ? 'popular' : ''}`}>
+              {plan.badge && (
+                <div className="plan-badge">{plan.badge}</div>
               )}
-              <div className="plan-name">{pack.name}</div>
+              <div className="plan-name">{plan.name}</div>
               <div className="plan-price">
-                €{pack.price.toFixed(2)} <span>/ one-time</span>
+                €{plan.price.toFixed(2)} <span>/ one-time</span>
+              </div>
+              <div className="plan-credits">
+                <div className="plan-credits-amount">{plan.credits}</div>
+                <div className="plan-credits-label">try-ons</div>
               </div>
               <div className="plan-features">
-                <div className="plan-feature">{pack.credits} credits</div>
-                <div className="plan-feature">No expiration</div>
-                <div className="plan-feature">{pack.description}</div>
+                <div className="plan-feature">✓ {plan.credits} try-ons inclus</div>
+                <div className="plan-feature">✓ Pas d'expiration</div>
+                <div className="plan-feature">✓ {plan.description}</div>
+                <div className="plan-feature">✓ Try-ons supplémentaires: €{PAY_PER_USE_PRICE.toFixed(2)}/unité</div>
               </div>
               <div className="plan-cta">
                 <button 
                   className="plan-button"
-                  onClick={() => handlePurchase(pack.id)}
+                  onClick={() => handlePurchase(plan.id)}
                   disabled={isSubmitting || submittingPackId !== null}
                 >
-                  {isSubmitting && submittingPackId === pack.id ? "Processing..." : "Buy credits"}
+                  {isSubmitting && submittingPackId === plan.id ? "Traitement..." : "Acheter"}
                 </button>
               </div>
             </div>
           ))}
         </div>
+        
+        <Card>
+          <BlockStack gap="400">
+            <Text as="h2" variant="headingLg" fontWeight="semibold">
+              Try-ons supplémentaires (Pay-per-use)
+            </Text>
+            <Text variant="bodyMd" tone="subdued" as="p">
+              Achetez des try-ons supplémentaires à l'unité pour compléter votre plan.
+            </Text>
+            <Divider />
+            <BlockStack gap="300">
+              <Text variant="bodyMd" as="p">
+                <strong>Prix:</strong> €{PAY_PER_USE_PRICE.toFixed(2)} par try-on
+              </Text>
+              <Text variant="bodySm" tone="subdued" as="p">
+                Les try-ons supplémentaires sont ajoutés à votre solde de crédits et n'expirent pas.
+              </Text>
+              <form onSubmit={handleCustomPurchase}>
+                <InlineStack gap="300" align="end">
+                  <Box minWidth="200px">
+                    <TextField
+                      label="Nombre de try-ons"
+                      type="number"
+                      name="customCredits"
+                      value={customAmount}
+                      onChange={setCustomAmount}
+                      min={1}
+                      autoComplete="off"
+                      helpText={`Total: €${((parseFloat(customAmount) || 0) * PAY_PER_USE_PRICE).toFixed(2)}`}
+                    />
+                  </Box>
+                  <Button 
+                    variant="primary" 
+                    submit
+                    loading={isSubmitting}
+                    disabled={!customAmount || parseInt(customAmount) < 1}
+                  >
+                    Acheter {customAmount || '0'} try-on{(parseInt(customAmount) || 0) > 1 ? 's' : ''}
+                  </Button>
+                </InlineStack>
+              </form>
+            </BlockStack>
+          </BlockStack>
+        </Card>
       </div>
     </Page>
   );
