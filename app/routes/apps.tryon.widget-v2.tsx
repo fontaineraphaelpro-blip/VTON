@@ -354,13 +354,28 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         }
     }
     
-    // Initialize widget when script loads
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => {
+    // Initialize widget - wait for window load to ensure all elements are available
+    function initializeWidget() {
+        try {
             new VTONWidget();
-        });
+        } catch (error) {
+            console.error('[VTON] Error initializing widget:', error);
+        }
+    }
+    
+    // Wait for window to be fully loaded
+    if (document.readyState === 'complete' || document.readyState === 'interactive') {
+        // DOM is ready, but wait a bit for dynamic content
+        setTimeout(initializeWidget, 100);
     } else {
-        new VTONWidget();
+        // Wait for window load event (fires after all resources are loaded)
+        window.addEventListener('load', function() {
+            setTimeout(initializeWidget, 100);
+        });
+        // Also try on DOMContentLoaded as fallback
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(initializeWidget, 500);
+        });
     }
 })();
 `;
