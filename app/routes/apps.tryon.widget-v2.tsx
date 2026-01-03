@@ -487,14 +487,14 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                     }
                     
                     .vton-button {
-                        display: flex;
+                        display: flex !important;
                         align-items: center;
                         justify-content: center;
                         gap: 10px;
-                        width: 100%;
+                        width: 100% !important;
                         padding: 16px 24px;
-                        background: linear-gradient(135deg, \${settings.backgroundColor} 0%, \${this.adjustColor(settings.backgroundColor, -10)} 100%);
-                        color: \${settings.textColor};
+                        background: linear-gradient(135deg, \${settings.backgroundColor} 0%, \${this.adjustColor(settings.backgroundColor, -10)} 100%) !important;
+                        color: \${settings.textColor} !important;
                         border: none;
                         border-radius: 12px;
                         font-size: 16px;
@@ -505,6 +505,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
                         position: relative;
                         overflow: hidden;
+                        visibility: visible !important;
+                        opacity: 1 !important;
+                        z-index: 1;
                     }
                     
                     .vton-button::before {
