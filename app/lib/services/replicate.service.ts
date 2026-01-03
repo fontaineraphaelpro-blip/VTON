@@ -119,9 +119,10 @@ export async function generateTryOn(
       
       console.log("[Replicate] Created prediction:", prediction.id, "Status:", prediction.status);
       
-      // Poll for completion (max 120 seconds to allow for longer generations)
+      // Poll for completion (max 180 seconds / 3 minutes to allow for longer generations)
+      // Replicate predictions expire after 30 minutes, but we set a reasonable timeout
       let pollCount = 0;
-      const maxPolls = 120;
+      const maxPolls = 180; // 3 minutes max (generations typically take 30-45 seconds)
       let currentPrediction = prediction;
       
       while ((currentPrediction.status === "starting" || currentPrediction.status === "processing") && pollCount < maxPolls) {
@@ -130,19 +131,41 @@ export async function generateTryOn(
         currentPrediction = updated;
         pollCount++;
         
-        console.log(`[Replicate] Poll ${pollCount}/${maxPolls} - Status:`, currentPrediction.status);
+        console.log(`[Replicate] Poll ${pollCount}/${maxPolls} - Status: ${currentPrediction.status}, ID: ${currentPrediction.id}`);
         
-        if (currentPrediction.status === "succeeded" && currentPrediction.output) {
-          output = currentPrediction.output;
-          console.log("[Replicate] Prediction succeeded, output type:", typeof output);
-          break;
+        if (currentPrediction.status === "succeeded") {
+          if (currentPrediction.output) {
+            output = currentPrediction.output;
+            console.log("[Replicate] Prediction succeeded, output type:", typeof output);
+            console.log("[Replicate] Output value:", output);
+            break;
+          } else {
+            // Sometimes output can be null even when succeeded - check one more time
+            console.warn("[Replicate] Prediction succeeded but output is null/undefined, waiting 2 seconds and checking again...");
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            const finalCheck = await replicate.predictions.get(currentPrediction.id);
+            if (finalCheck.output) {
+              output = finalCheck.output;
+              console.log("[Replicate] Got output on retry, output type:", typeof output);
+              break;
+            } else {
+              throw new Error(`Prediction succeeded but output is empty. Prediction ID: ${currentPrediction.id}`);
+            }
+          }
         } else if (currentPrediction.status === "failed" || currentPrediction.status === "canceled") {
-          throw new Error(`Prediction ${currentPrediction.status}: ${currentPrediction.error || "Unknown error"}`);
+          const errorMsg = currentPrediction.error || "Unknown error";
+          console.error(`[Replicate] Prediction ${currentPrediction.status}:`, errorMsg);
+          throw new Error(`Prediction ${currentPrediction.status}: ${errorMsg}`);
         }
       }
       
+      // Final check - if we exited the loop, verify we got the output
       if (currentPrediction.status !== "succeeded") {
-        throw new Error(`Prediction did not complete in time. Final status: ${currentPrediction.status}`);
+        throw new Error(`Prediction did not complete in time. Final status: ${currentPrediction.status}, ID: ${currentPrediction.id}`);
+      }
+      
+      if (!output) {
+        throw new Error(`Prediction succeeded but output is missing. Prediction ID: ${currentPrediction.id}`);
       }
     } catch (error: any) {
       console.error("[Replicate] Error:", error.message);
