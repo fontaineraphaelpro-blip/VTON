@@ -2490,7 +2490,7 @@ body {
   max-width: 100% !important;
   margin: 0 auto;
   padding: 32px 24px 80px !important;
-  background: var(--bg-soft) !important;
+  background: var(--bg) !important;
   min-height: 100vh;
 }
 
@@ -2517,7 +2517,7 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: var(--bg-soft);
+  background: var(--bg);
   border: 1px solid var(--border-credits);
   border-radius: var(--radius-lg-credits);
   padding: 24px 28px;
@@ -2696,7 +2696,7 @@ body {
    Billing Containers
    ============================================ */
 .vton-section {
-  background: var(--bg-glass) !important;
+  background: var(--bg) !important;
   border-radius: var(--radius) !important;
   box-shadow: var(--shadow) !important;
   padding: 2rem !important;
@@ -2710,21 +2710,21 @@ body {
   transform: translateY(-2px) !important;
 }
 
-/* Ensure app-container has billing background */
+/* Ensure app-container has consistent white background for both pages */
 .app-container {
-  background: var(--bg-soft) !important;
+  background: var(--bg) !important;
   min-height: 100vh;
   max-width: 100% !important;
   padding: 32px 24px 80px !important;
 }
 
-/* Override Polaris Page styles for dashboard */
+/* Override Polaris Page styles for consistent white background */
 .Polaris-Page {
-  background: var(--bg-soft) !important;
+  background: var(--bg) !important;
 }
 
 .Polaris-Page__Content {
-  background: var(--bg-soft) !important;
+  background: var(--bg) !important;
   padding: 0 !important;
 }
 
@@ -2814,7 +2814,7 @@ body {
    Billing Cards
    ============================================ */
 .vton-card {
-  background: var(--bg-glass) !important;
+  background: var(--bg) !important;
   border-radius: var(--radius) !important;
   box-shadow: var(--shadow) !important;
   padding: 1.5rem !important;
