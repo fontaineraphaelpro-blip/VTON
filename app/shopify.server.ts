@@ -10,6 +10,7 @@ export const shopify = shopifyApp({
   authPathPrefix: "/auth",
   sessionStorage: new PrismaSessionStorage(prisma),
   distribution: "AppStore",
+  useOnlineTokens: true, // CRITIQUE: Utilise des tokens online pour les paiements et draft orders
 });
 
 export default shopify;

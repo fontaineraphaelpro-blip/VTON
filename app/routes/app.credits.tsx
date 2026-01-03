@@ -56,10 +56,27 @@ const CREDIT_PACKS = [
 ];
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { session } = await authenticate.admin(request);
-  const shop = session.shop;
-
   try {
+    const { admin, session } = await authenticate.admin(request);
+    
+    // Logs de diagnostic CRITIQUES
+    console.log("[Credits Loader] Session check:", {
+      shop: session?.shop || "NULL",
+      hasAccessToken: !!session?.accessToken,
+      isOnline: session?.isOnline,
+      userId: session?.userId,
+    });
+    
+    if (!session || !session.shop) {
+      console.error("[Credits Loader] ❌ Session invalide - shop is null!");
+      return json({
+        shop: null,
+        error: "Session invalide. Veuillez rafraîchir la page.",
+      });
+    }
+    
+    const shop = session.shop;
+
     await ensureTables();
     const shopData = await getShop(shop);
 
@@ -67,7 +84,11 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       shop: shopData || null,
     });
   } catch (error) {
-    console.error("Credits loader error:", error);
+    console.error("[Credits Loader] ❌ Error:", error);
+    // Si c'est une Response (redirection d'auth), la propager
+    if (error instanceof Response) {
+      throw error;
+    }
     return json({
       shop: null,
       error: error instanceof Error ? error.message : "Unknown error",
@@ -82,13 +103,27 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       const authResult = await authenticate.admin(request);
       admin = authResult.admin;
       session = authResult.session;
+      
+      // Logs de diagnostic CRITIQUES
+      console.log("[Credits Action] ✅ Authentication successful:", {
+        shop: session?.shop || "NULL",
+        hasAccessToken: !!session?.accessToken,
+        isOnline: session?.isOnline,
+        userId: session?.userId,
+        hasAdmin: !!admin,
+      });
+      
     } catch (authError) {
       // Si authenticate.admin lance une Response (redirection), la gérer
       if (authError instanceof Response) {
         if (authError.status === 401 || authError.status === 302) {
           const reauthUrl = authError.headers.get('x-shopify-api-request-failure-reauthorize-url') || 
                            authError.headers.get('location');
-          console.error("[Credits] Authentication required in action", { status: authError.status, reauthUrl });
+          console.error("[Credits Action] ❌ Authentication required (401/302):", { 
+            status: authError.status, 
+            reauthUrl,
+            headers: Object.fromEntries(authError.headers.entries()),
+          });
           return json({ 
             success: false, 
             error: "Votre session a expiré. Veuillez rafraîchir la page pour vous ré-authentifier.",
@@ -97,6 +132,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           });
         }
         // Pour toute autre Response, retourner une erreur JSON
+        console.error("[Credits Action] ❌ Authentication error:", authError.status);
         return json({ 
           success: false, 
           error: `Erreur d'authentification (${authError.status}). Veuillez rafraîchir la page.`,
@@ -104,15 +140,29 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         });
       }
       // Pour les autres erreurs, les propager
+      console.error("[Credits Action] ❌ Authentication error (non-Response):", authError);
       throw authError;
     }
     
     // Vérifier que la session est valide
     if (!session || !session.shop) {
-      console.error("[Credits] Invalid session in action");
+      console.error("[Credits Action] ❌ Invalid session - shop is null!", {
+        hasSession: !!session,
+        shop: session?.shop,
+        accessToken: session?.accessToken ? "EXISTS" : "MISSING",
+      });
       return json({ 
         success: false, 
         error: "Session invalide. Veuillez rafraîchir la page.",
+        requiresAuth: true,
+      });
+    }
+    
+    if (!admin) {
+      console.error("[Credits Action] ❌ Admin client is missing!");
+      return json({ 
+        success: false, 
+        error: "Client GraphQL non disponible. Veuillez rafraîchir la page.",
         requiresAuth: true,
       });
     }
@@ -168,21 +218,27 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           }
         };
 
-        console.log("[Credits] Creating draft order for pack", pack.id);
-        
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:133',message:'Before admin.graphql call for draft order',data:{packId:pack.id,shop},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'E'})}).catch(()=>{});
-        // #endregion
+        console.log("[Credits Action] Creating draft order for pack", {
+          packId: pack.id,
+          packName: pack.name,
+          price: pack.price,
+          shop,
+          isOnline: session.isOnline,
+          hasAccessToken: !!session.accessToken,
+        });
         
         let response;
         try {
+          // Utiliser admin.graphql() - c'est la SEULE méthode valide
           response = await admin.graphql(mutation, {
             variables,
           });
-          console.log("[Credits] GraphQL response received", { 
+          
+          console.log("[Credits Action] ✅ GraphQL response received", { 
             ok: response.ok, 
             status: response.status,
-            statusText: response.statusText 
+            statusText: response.statusText,
+            isResponse: response instanceof Response,
           });
         } catch (graphqlError) {
           console.error("[Credits] GraphQL call threw error:", graphqlError);
