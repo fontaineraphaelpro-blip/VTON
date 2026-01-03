@@ -39,8 +39,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             return hostname;
         }
         // For custom domains, try to get from Shopify object if available
-        if (typeof window !== 'undefined' && (window as any).Shopify && (window as any).Shopify.shop) {
-            return (window as any).Shopify.shop;
+        if (typeof window !== 'undefined' && window.Shopify && window.Shopify.shop) {
+            return window.Shopify.shop;
         }
         // Fallback: construct from hostname
         return hostname.replace('.myshopify.com', '') + '.myshopify.com';
