@@ -255,18 +255,6 @@ export default function Widget() {
     <Page>
       <TitleBar title="Widget Configuration - VTON Magic" />
       <div className="vton-page-container">
-        {/* Header */}
-        <header className="vton-header-simple">
-          <div className="vton-header-logo">
-            <div className="vton-logo-icon-blue">V</div>
-            <span className="vton-header-title">VTON Magic</span>
-          </div>
-          <div className="vton-status-badge">
-            <div className="vton-status-dot-green"></div>
-            Active
-          </div>
-        </header>
-
         <div className="vton-page-content">
           {error && (
             <Banner tone="critical" title="Error">
