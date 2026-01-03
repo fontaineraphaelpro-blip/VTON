@@ -12,6 +12,29 @@ async function ensureSessionTable() {
     
     console.log('[SETUP] Session table exists ✓');
     
+    // Check and fix data column if needed
+    try {
+      const columnInfo = await prisma.$queryRaw`
+        SELECT is_nullable
+        FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'Session' 
+        AND column_name = 'data'
+      `;
+      
+      if (Array.isArray(columnInfo) && columnInfo.length > 0) {
+        const col = columnInfo[0];
+        if (col.is_nullable === 'NO') {
+          console.log('[SETUP] ⚠️  data column is NOT NULL - fixing...');
+          await prisma.$executeRaw`ALTER TABLE "Session" ALTER COLUMN "data" DROP NOT NULL`;
+          console.log('[SETUP] ✅ Fixed data column (now nullable)');
+        }
+      }
+    } catch (error) {
+      console.warn('[SETUP] ⚠️  Could not check/fix data column:', error.message);
+      // Continue anyway - migration should handle this
+    }
+    
     await prisma.$disconnect();
     return true;
   } catch (error) {
