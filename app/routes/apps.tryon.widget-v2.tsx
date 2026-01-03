@@ -35,14 +35,29 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         selectors: {
             addToCartButton: [
                 'form[action*="/cart/add"] button[type="submit"]',
+                'form[action*="/cart/add"] button',
                 'button[name="add"]',
                 '[data-add-to-cart]',
+                '[data-add-to-cart-button]',
                 '.product-form__cart-submit',
                 '.btn--add-to-cart',
                 '.add-to-cart',
+                '.product-form__submit',
                 'button[type="submit"][form*="product"]',
                 '.product-form button[type="submit"]',
-                '.product-form__submit'
+                '.product-form button',
+                '[data-product-form] button[type="submit"]',
+                '[data-product-form] button',
+                'button[aria-label*="Add to cart" i]',
+                'button[aria-label*="Ajouter au panier" i]',
+                'button[id*="add"]',
+                'button[id*="AddToCart"]',
+                'button[id*="add-to-cart"]',
+                '.product-single__form button[type="submit"]',
+                '.product-single__form button',
+                'form.product-form button[type="submit"]',
+                'form[action*="cart"] button[type="submit"]',
+                'form[action*="cart"] button'
             ],
             productId: [
                 'meta[property="og:url"]',
@@ -378,10 +393,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             // #region agent log
             fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'widget-v2.js:injectWidget',message:'Inject widget called',data:{retryCount:this.retryCount,maxRetries:CONFIG.maxRetries},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
             // #endregion
-            if (this.retryCount >= CONFIG.maxRetries) {
-                console.warn('[VTON] Max retries reached, could not inject widget');
+            // Check if widget already exists
+            if (document.getElementById(CONFIG.shadowRootId)) {
                 // #region agent log
-                fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'widget-v2.js:injectWidget',message:'Max retries reached',data:{retryCount:this.retryCount},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+                fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'widget-v2.js:injectWidget',message:'Widget already exists',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
                 // #endregion
                 return;
             }
@@ -391,19 +406,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             // #region agent log
             fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'widget-v2.js:injectWidget',message:'Add to Cart button search',data:{found:!!addToCartBtn,retryCount:this.retryCount},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
             // #endregion
-            if (!addToCartBtn) {
-                this.retryCount++;
-                setTimeout(() => this.injectWidget(), CONFIG.retryDelay);
-                return;
-            }
-            
-            // Check if widget already exists
-            if (document.getElementById(CONFIG.shadowRootId)) {
-                // #region agent log
-                fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'widget-v2.js:injectWidget',message:'Widget already exists',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-                // #endregion
-                return;
-            }
             
             // Get product image
             this.productImage = this.getProductImage();
@@ -413,8 +415,47 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             container.id = CONFIG.shadowRootId;
             container.setAttribute('data-vton-widget', 'true');
             
-            // Insert after Add to Cart button
-            this.insertAfterButton(addToCartBtn, container);
+            // Try to insert after Add to Cart button, or use fallback strategies
+            if (addToCartBtn) {
+                this.insertAfterButton(addToCartBtn, container);
+            } else {
+                // Fallback: Try to find product form and insert after it
+                const productForm = document.querySelector('form[action*="/cart/add"]') || 
+                                   document.querySelector('form[action*="cart"]') ||
+                                   document.querySelector('[data-product-form]') ||
+                                   document.querySelector('.product-form') ||
+                                   document.querySelector('form.product-form');
+                
+                if (productForm) {
+                    console.log('[VTON] Button not found, inserting after product form');
+                    if (productForm.parentElement) {
+                        productForm.parentElement.insertBefore(container, productForm.nextSibling);
+                    } else {
+                        productForm.insertAdjacentElement('afterend', container);
+                    }
+                } else {
+                    // Last resort: Try to find main product container
+                    const productContainer = document.querySelector('[data-product-id]')?.closest('main') ||
+                                            document.querySelector('.product') ||
+                                            document.querySelector('[data-product]') ||
+                                            document.querySelector('main');
+                    if (productContainer) {
+                        console.log('[VTON] Button and form not found, inserting at end of product container');
+                        productContainer.appendChild(container);
+                    } else {
+                        if (this.retryCount >= CONFIG.maxRetries) {
+                            console.warn('[VTON] Max retries reached, could not find insertion point for widget');
+                            // #region agent log
+                            fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'widget-v2.js:injectWidget',message:'Max retries reached',data:{retryCount:this.retryCount},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+                            // #endregion
+                            return;
+                        }
+                        this.retryCount++;
+                        setTimeout(() => this.injectWidget(), CONFIG.retryDelay);
+                        return;
+                    }
+                }
+            }
             
             // Create shadow root
             this.shadowRoot = container.attachShadow({ mode: 'closed' });
@@ -429,12 +470,45 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         }
         
         findAddToCartButton() {
+            // Try all selectors first
             for (const selector of CONFIG.selectors.addToCartButton) {
                 const btn = document.querySelector(selector);
                 if (btn) {
+                    console.log('[VTON] Found Add to Cart button with selector:', selector);
                     return btn;
                 }
             }
+            
+            // Fallback: Try to find product form and any submit button in it
+            const productForm = document.querySelector('form[action*="/cart/add"]') || 
+                               document.querySelector('form[action*="cart"]') ||
+                               document.querySelector('[data-product-form]') ||
+                               document.querySelector('.product-form') ||
+                               document.querySelector('form.product-form');
+            
+            if (productForm) {
+                console.log('[VTON] Found product form, looking for button inside');
+                // Try to find any button in the form
+                const btn = productForm.querySelector('button[type="submit"]') ||
+                           productForm.querySelector('button') ||
+                           productForm.querySelector('input[type="submit"]');
+                if (btn) {
+                    console.log('[VTON] Found button in product form');
+                    return btn;
+                }
+            }
+            
+            // Last resort: Find any form with cart action and get the first button
+            const cartForms = document.querySelectorAll('form[action*="cart"]');
+            for (const form of Array.from(cartForms)) {
+                const btn = form.querySelector('button[type="submit"]') || form.querySelector('button');
+                if (btn) {
+                    console.log('[VTON] Found button in cart form (fallback)');
+                    return btn;
+                }
+            }
+            
+            console.warn('[VTON] Could not find Add to Cart button with any selector');
             return null;
         }
         
