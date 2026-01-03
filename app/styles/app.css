@@ -1636,15 +1636,18 @@ body {
    Dashboard & Credits Page Enhancements
    ============================================ */
 
-/* Card enhancements for better visual hierarchy */
+/* Card enhancements for better visual hierarchy - Modern & Clean */
 .Polaris-Card {
-  border-radius: 8px;
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
-  transition: box-shadow 0.15s ease-in-out;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.08), 0 1px 2px 0 rgba(0, 0, 0, 0.04);
+  transition: box-shadow 0.2s ease-in-out, transform 0.2s ease-in-out;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  background: #ffffff;
 }
 
 .Polaris-Card:hover {
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4px 12px 0 rgba(0, 0, 0, 0.12), 0 2px 4px 0 rgba(0, 0, 0, 0.08);
+  transform: translateY(-1px);
 }
 
 /* Button hover states */
@@ -1661,18 +1664,49 @@ body {
 /* Recommended pack card - enhanced shadow and visual prominence */
 .recommended-pack-card,
 .recommended-pack-card .Polaris-Card {
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 111, 187, 0.15), 0 4px 10px -2px rgba(0, 111, 187, 0.1) !important;
   border: 2px solid #006fbb !important;
+  border-radius: 12px !important;
+  background: #ffffff !important;
 }
 
-/* Primary button - black theme */
+.recommended-pack-card:hover,
+.recommended-pack-card .Polaris-Card:hover {
+  box-shadow: 0 12px 30px -5px rgba(0, 111, 187, 0.2), 0 6px 12px -2px rgba(0, 111, 187, 0.15) !important;
+  transform: translateY(-2px) !important;
+}
+
+/* Primary button - black theme with smooth transitions */
 .Polaris-Button--primary {
   background-color: #000000 !important;
   border-color: #000000 !important;
   color: #ffffff !important;
+  border-radius: 8px !important;
+  font-weight: 600 !important;
+  transition: all 0.2s ease-in-out !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
 }
 
 .Polaris-Button--primary:hover:not(:disabled) {
   background-color: #1a1a1a !important;
   border-color: #1a1a1a !important;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15) !important;
+  transform: translateY(-1px);
+}
+
+.Polaris-Button--primary:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Secondary button improvements */
+.Polaris-Button--secondary {
+  border-radius: 8px !important;
+  font-weight: 500 !important;
+  transition: all 0.2s ease-in-out !important;
+}
+
+.Polaris-Button--secondary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08) !important;
 }
