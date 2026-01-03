@@ -111,9 +111,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         }
         // Continue without installing script tag
       } else {
-        let scriptTagsData;
+        let scriptTagsData: any;
         try {
-          scriptTagsData = await scriptTagsResponse.json();
+          scriptTagsData = await scriptTagsResponse.json() as any;
           // #region agent log
           fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:98',message:'scriptTagsData parsed successfully',data:{hasData:!!scriptTagsData,hasErrors:!!scriptTagsData?.errors,errors:scriptTagsData?.errors,hasScriptTags:!!scriptTagsData?.data?.scriptTags},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'A'})}).catch(()=>{});
           // #endregion
@@ -703,7 +703,7 @@ export default function Dashboard() {
                       {product.product_title || product.product_id || "Produit inconnu"}
                     </span>
                     <Badge tone="info">
-                      {String(product.tryons || product.count)} essai{(product.tryons || product.count) > 1 ? "s" : ""}
+                      {`${product.tryons || product.count} essai${(product.tryons || product.count) > 1 ? "s" : ""}`}
                     </Badge>
                   </div>
                 ))}
