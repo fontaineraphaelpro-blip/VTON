@@ -49,10 +49,11 @@ function verifyProxySignature(queryParams: URLSearchParams, request: Request): b
     });
 
     // Sort keys alphabetically and build query string
+    // IMPORTANT: For App Proxy, Shopify concatenates params WITHOUT & delimiter
     const sortedKeys = Object.keys(paramsToVerify).sort();
     const sortedParams = sortedKeys
       .map((key) => `${key}=${paramsToVerify[key]}`)
-      .join("&");
+      .join(""); // No delimiter for App Proxy!
 
     // Calculate HMAC using the API secret
     const computedSignature = crypto
