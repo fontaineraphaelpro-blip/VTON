@@ -273,6 +273,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             this.productId = extractProductId();
             this.userPhoto = null;
             this.resultImageUrl = null;
+            this.isGenerating = false; // Flag to prevent double submissions
             
             if (isProductPage() && this.productId) {
                 this.init();
