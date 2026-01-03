@@ -160,22 +160,43 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         try {
           // Cloner la réponse pour pouvoir lire le texte si le JSON échoue
           responseText = await response.clone().text();
+          console.log("[Credits] Response text length:", responseText.length);
+          console.log("[Credits] Response text preview:", responseText.substring(0, 500));
+          
+          // Vérifier si c'est du JSON valide
+          try {
+            JSON.parse(responseText);
+            console.log("[Credits] Response text is valid JSON");
+          } catch (parseError) {
+            console.error("[Credits] Response text is NOT valid JSON:", parseError);
+            console.error("[Credits] Full response text:", responseText);
+          }
+          
           // #region agent log
           fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:157',message:'Response text captured',data:{textLength:responseText.length,textPreview:responseText.substring(0,500),isValidJSON:(()=>{try{JSON.parse(responseText);return true;}catch{return false;}})()},timestamp:Date.now(),sessionId:'debug-session',runId:'run3',hypothesisId:'B'})}).catch(()=>{});
           // #endregion
+          
           responseJson = await response.json();
+          console.log("[Credits] JSON parsed successfully");
+          console.log("[Credits] Response JSON keys:", Object.keys(responseJson));
+          
           // #region agent log
           fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:161',message:'JSON parse successful',data:{hasData:!!responseJson.data,hasErrors:!!responseJson.errors},timestamp:Date.now(),sessionId:'debug-session',runId:'run3',hypothesisId:'B'})}).catch(()=>{});
           // #endregion
         } catch (jsonError) {
+          console.error("[Credits] Failed to parse JSON response:", jsonError);
+          console.error("[Credits] JSON Error type:", jsonError?.constructor?.name);
+          console.error("[Credits] JSON Error message:", jsonError instanceof Error ? jsonError.message : String(jsonError));
+          console.error("[Credits] Response text that failed:", responseText?.substring(0, 1000));
+          
           // #region agent log
           fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:164',message:'JSON parse failed',data:{errorType:jsonError?.constructor?.name,errorMessage:jsonError instanceof Error ? jsonError.message : String(jsonError),responseText:responseText?.substring(0,500)},timestamp:Date.now(),sessionId:'debug-session',runId:'run3',hypothesisId:'B'})}).catch(()=>{});
           // #endregion
-          console.error("Failed to parse JSON response:", jsonError);
+          
           const errorText = responseText || await response.text().catch(() => "Unable to read response");
           return json({ 
             success: false, 
-            error: `Invalid response from Shopify: ${errorText.substring(0, 200)}`,
+            error: `Invalid JSON response from Shopify: ${jsonError instanceof Error ? jsonError.message : String(jsonError)}. Response preview: ${errorText.substring(0, 200)}`,
           });
         }
         
