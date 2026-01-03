@@ -102,13 +102,18 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     // Main widget class
     class VTONWidget {
         constructor() {
+            console.log('[VTON] Widget constructor called');
             this.shop = extractShop();
             this.productId = extractProductId();
             this.userPhoto = null;
             this.resultImageUrl = null;
             
+            console.log('[VTON] Shop:', this.shop, 'Product ID:', this.productId, 'Is product page:', isProductPage());
+            
             if (isProductPage() && this.productId) {
                 this.init();
+            } else {
+                console.log('[VTON] Skipping init - not a product page or no product ID');
             }
         }
         
@@ -122,17 +127,35 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         }
         
         injectWidget() {
+            console.log('[VTON] injectWidget called');
+            
             // Check if widget already exists
             if (document.getElementById('vton-widget-container')) {
+                console.log('[VTON] Widget already exists, skipping');
                 return;
             }
             
             // Find Add to Cart button
             const addToCartBtn = findAddToCartButton();
             if (!addToCartBtn) {
-                console.log('[VTON] Add to Cart button not found');
+                console.log('[VTON] Add to Cart button not found - trying to inject anyway');
+                // Try to find product form instead
+                const productForm = document.querySelector('form[action*="/cart/add"]') || document.querySelector('.product-form') || document.querySelector('form.product-form');
+                if (productForm) {
+                    console.log('[VTON] Found product form, injecting widget after form');
+                    const widgetHTML = createWidgetHTML();
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = widgetHTML;
+                    const widgetContainer = tempDiv.firstElementChild;
+                    productForm.parentNode.insertBefore(widgetContainer, productForm.nextSibling);
+                    this.setupEventListeners();
+                    return;
+                }
+                console.log('[VTON] Could not find Add to Cart button or product form');
                 return;
             }
+            
+            console.log('[VTON] Found Add to Cart button:', addToCartBtn);
             
             // Create widget container
             const widgetHTML = createWidgetHTML();
@@ -142,16 +165,22 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             
             // Insert widget after Add to Cart button's parent (form) or after the button itself
             const parent = addToCartBtn.closest('form') || addToCartBtn.parentElement;
+            console.log('[VTON] Parent element:', parent);
+            
             if (parent && parent.nextSibling) {
                 parent.parentNode.insertBefore(widgetContainer, parent.nextSibling);
+                console.log('[VTON] Widget inserted after parent');
             } else if (parent) {
                 parent.parentNode.appendChild(widgetContainer);
+                console.log('[VTON] Widget appended to parent');
             } else {
                 addToCartBtn.parentNode.insertBefore(widgetContainer, addToCartBtn.nextSibling);
+                console.log('[VTON] Widget inserted after button');
             }
             
             // Setup event listeners
             this.setupEventListeners();
+            console.log('[VTON] Widget injected successfully');
         }
         
         setupEventListeners() {
