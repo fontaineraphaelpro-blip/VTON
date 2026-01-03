@@ -336,7 +336,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       const scriptTagsResponse = await admin.graphql(scriptTagsQuery);
       
       if (scriptTagsResponse.ok) {
-        const scriptTagsData = await scriptTagsResponse.json();
+        const scriptTagsData = await scriptTagsResponse.json() as any;
         const existingScripts = scriptTagsData.data?.scriptTags?.edges || [];
         
         // Trouver tous les anciens script tags liés au widget
