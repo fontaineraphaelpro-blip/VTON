@@ -1699,7 +1699,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             
             const states = ['initial', 'verification', 'loading', 'result', 'error'];
             states.forEach(state => {
-                const el = shadowRoot.querySelector(\`#vton-state-\${state}\`);
+                const el = shadowRoot.querySelector('#vton-state-' + state);
                 if (el) {
                     if (state === newState) {
                         el.classList.add('active');
