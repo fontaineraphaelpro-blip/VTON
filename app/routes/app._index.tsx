@@ -4,8 +4,6 @@ import { useLoaderData, useFetcher, useRevalidator, Link } from "@remix-run/reac
 import { useEffect, useState } from "react";
 import {
   Page,
-  Layout,
-  Card,
   BlockStack,
   InlineStack,
   Text,
@@ -488,7 +486,7 @@ export default function Dashboard() {
         <Layout.Section>
           <div className="dashboard-stats-row">
             <div style={{ display: "flex", flexDirection: "column", height: "100%", width: "100%" }}>
-              <Card>
+              <div className="vton-card">
                 <BlockStack gap="300" style={{ height: "100%", display: "flex", flexDirection: "column" }}>
                   <InlineStack gap="300" align="start" blockAlign="center" style={{ flex: 1 }}>
                     <Box
@@ -587,19 +585,19 @@ export default function Dashboard() {
                     </BlockStack>
                   </InlineStack>
                 </BlockStack>
-              </Card>
+              </div>
             </div>
           </div>
-        </Layout.Section>
+        </div>
 
         {/* Section 2: Layout principal - Graphique + Top Produits/Activité | Réglages - Full Width */}
-        <Layout.Section>
+        <div className="vton-section">
           <div className="dashboard-main-layout">
             {/* Colonne principale : Graphique + Top Produits + Activité (75%) */}
             <div>
               <BlockStack gap="300">
                 {/* Graphique des générations */}
-                <Card>
+                <div className="vton-card">
                   <BlockStack gap="300">
                     <InlineStack align="space-between" blockAlign="center">
                       <Text as="h2" variant="headingLg" fontWeight="semibold">
@@ -647,12 +645,12 @@ export default function Dashboard() {
                       </Box>
                     )}
                   </BlockStack>
-                </Card>
+                </div>
 
                 {/* Top Produits et Activité récente côte à côte */}
-                <Layout>
-                  <Layout.Section variant="oneHalf">
-                    <Card>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }}>
+                  <div>
+                    <div className="vton-card">
                       <BlockStack gap="300">
                         <Text as="h2" variant="headingLg" fontWeight="semibold">
                           Produits les plus essayés
@@ -682,11 +680,11 @@ export default function Dashboard() {
                           </Box>
                         )}
                       </BlockStack>
-                    </Card>
-                  </Layout.Section>
+                    </div>
+                  </div>
 
-                  <Layout.Section variant="oneHalf">
-                    <Card>
+                  <div>
+                    <div className="vton-card">
                       <BlockStack gap="300">
                         <InlineStack align="space-between" blockAlign="center">
                           <Text variant="headingLg" fontWeight="bold" as="h2">
@@ -728,15 +726,15 @@ export default function Dashboard() {
                           </Box>
                         )}
                       </BlockStack>
-                    </Card>
-                  </Layout.Section>
-                </Layout>
+                    </div>
+                  </div>
+                </div>
               </BlockStack>
             </div>
 
             {/* Colonne latérale droite : Réglages (25%) */}
             <div>
-              <Card>
+              <div className="vton-card">
                 <BlockStack gap="400">
                   <Text as="h2" variant="headingLg" fontWeight="semibold">
                     Réglages & Sécurité
@@ -797,11 +795,11 @@ export default function Dashboard() {
                     </BlockStack>
                   </form>
                 </BlockStack>
-              </Card>
+              </div>
             </div>
           </div>
-        </Layout.Section>
-      </Layout>
+        </div>
+      </div>
     </Page>
   );
 }
