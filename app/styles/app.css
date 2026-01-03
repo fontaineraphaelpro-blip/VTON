@@ -1746,7 +1746,7 @@ body {
   margin-bottom: 24px !important;
 }
 
-/* Full width for dashboard stats row - Uniform height */
+/* Full width for dashboard stats row - Uniform height and width */
 .dashboard-stats-row {
   display: grid !important;
   grid-template-columns: repeat(4, 1fr) !important;
@@ -1758,20 +1758,37 @@ body {
 
 .dashboard-stats-row > * {
   height: 100% !important;
+  width: 100% !important;
   display: flex !important;
   flex-direction: column !important;
+  min-height: 0 !important;
 }
 
 .dashboard-stats-row .Polaris-Card {
   height: 100% !important;
+  width: 100% !important;
   display: flex !important;
   flex-direction: column !important;
+  min-height: 180px !important;
+  flex: 1 1 auto !important;
 }
 
 .dashboard-stats-row .Polaris-BlockStack {
   height: 100% !important;
   display: flex !important;
   flex-direction: column !important;
+  flex: 1 1 auto !important;
+}
+
+.dashboard-stats-row .Polaris-InlineStack {
+  flex: 1 1 auto !important;
+  align-items: flex-start !important;
+}
+
+/* Ensure all stat cards have identical dimensions */
+.dashboard-stats-row > div {
+  min-width: 0 !important;
+  flex: 1 1 0 !important;
 }
 
 /* Full width for credits balance card */
