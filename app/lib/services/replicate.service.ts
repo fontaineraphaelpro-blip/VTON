@@ -51,17 +51,35 @@ export async function generateTryOn(
 
   try {
     // Convert Buffer to data URL if needed for Replicate
+    // IMPORTANT: Replicate SDK accepts Buffer directly OR data URLs
+    // For google/nano-banana-pro, we need to send images as data URLs or Buffers
     let personInput: string | Buffer = personImage;
     let garmentInput: string | Buffer = garmentImage;
 
     // If Buffer, convert to data URL format that Replicate expects
+    // Replicate SDK should accept data URLs, but let's ensure they're properly formatted
     if (Buffer.isBuffer(personImage)) {
       const base64 = personImage.toString("base64");
       personInput = `data:image/jpeg;base64,${base64}`;
+      console.log("Person image converted to data URL, length:", personInput.length);
     }
     if (Buffer.isBuffer(garmentImage)) {
       const base64 = garmentImage.toString("base64");
       garmentInput = `data:image/jpeg;base64,${base64}`;
+      console.log("Garment image converted to data URL, length:", garmentInput.length);
+    }
+    
+    // Validate that we have valid image inputs
+    if (!personInput || !garmentInput) {
+      throw new Error("Invalid image inputs: personInput or garmentInput is empty");
+    }
+    
+    // Validate data URL format if strings
+    if (typeof personInput === 'string' && !personInput.startsWith('data:') && !personInput.startsWith('http')) {
+      throw new Error("Person image must be a data URL, HTTP URL, or Buffer");
+    }
+    if (typeof garmentInput === 'string' && !garmentInput.startsWith('data:') && !garmentInput.startsWith('http')) {
+      throw new Error("Garment image must be a data URL, HTTP URL, or Buffer");
     }
 
     console.log("Calling Replicate API with model:", MODEL_ID);

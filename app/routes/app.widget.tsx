@@ -220,6 +220,12 @@ export default function Widget() {
   };
 
   const handleTestTryOn = () => {
+    // Prevent double submission
+    if (fetcher.state === "submitting") {
+      console.log("[Widget] Already submitting, ignoring duplicate click");
+      return;
+    }
+    
     if (!personImage || !garmentImage) {
       alert("Please upload both person and garment images");
       return;
