@@ -421,9 +421,22 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         }
         
         async generateTryOn() {
+            // Prevent double submission
+            if (this.isGenerating) {
+                console.log('[VTON] Generation already in progress, ignoring request');
+                return;
+            }
+            
             if (!this.userPhoto) {
                 this.showError('Veuillez télécharger une photo');
                 return;
+            }
+            
+            // Set flag and disable button to prevent double submission
+            this.isGenerating = true;
+            const generateBtn = document.getElementById('vton-generate-btn');
+            if (generateBtn) {
+                generateBtn.disabled = true;
             }
             
             this.showLoading();
