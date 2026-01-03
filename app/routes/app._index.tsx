@@ -316,288 +316,262 @@ export default function Dashboard() {
     <Page>
       <TitleBar title="Dashboard - VTON Magic" />
       <Layout>
-        {error && (
+        {/* Alerts compactes en haut */}
+        {(error || fetcher.data?.success || credits < 50) && (
           <Layout.Section>
-            <Banner tone="critical" title="Error">
-              {error}
-            </Banner>
-          </Layout.Section>
-        )}
-
-        {fetcher.data?.success && (
-          <Layout.Section>
-            <Banner tone="success">
-              Configuration saved successfully
-            </Banner>
-          </Layout.Section>
-        )}
-
-        {/* Low Balance Alert */}
-        {credits < 50 && (
-          <Layout.Section>
-            <Banner tone="warning" title="Low Credits Balance">
-              <p>
-                You have <strong>{credits}</strong> credit{credits > 1 ? "s" : ""} remaining. 
-                <Link to="/app/credits" style={{ marginLeft: "8px" }}>
-                  Recharge now →
-                </Link>
-              </p>
-            </Banner>
-          </Layout.Section>
-        )}
-
-        {/* KPI Cards */}
-        <Layout.Section>
-          <Layout>
-            <Layout.Section variant="oneQuarter">
-              <Card>
-                <BlockStack gap="200">
-                  <Text variant="heading2xl" as="p" fontWeight="bold">
-                    {credits.toLocaleString("en-US")}
-                  </Text>
-                  <Text variant="bodySm" tone="subdued" as="p">
-                    Jetons restants
-                  </Text>
-                  <Button url="/app/credits" variant="plain" size="slim">
-                    Acheter →
-                  </Button>
-                </BlockStack>
-              </Card>
-            </Layout.Section>
-            <Layout.Section variant="oneQuarter">
-              <Card>
-                <BlockStack gap="200">
-                  <Text variant="heading2xl" as="p" fontWeight="bold">
-                    {last30DaysTotal.toLocaleString("en-US")}
-                  </Text>
-                  <Text variant="bodySm" tone="subdued" as="p">
-                    Total Try-ons (30j)
-                  </Text>
-                  <Button url="/app/history" variant="plain" size="slim">
-                    Voir l'historique →
-                  </Button>
-                </BlockStack>
-              </Card>
-            </Layout.Section>
-            <Layout.Section variant="oneQuarter">
-              <Card>
-                <BlockStack gap="200">
-                  <Text variant="heading2xl" as="p" fontWeight="bold">
-                    {totalAtc.toLocaleString("en-US")}
-                  </Text>
-                  <Text variant="bodySm" tone="subdued" as="p">
-                    Add to Cart
-                  </Text>
-                </BlockStack>
-              </Card>
-            </Layout.Section>
-            <Layout.Section variant="oneQuarter">
-              <Card>
-                <BlockStack gap="200">
-                  <Text variant="heading2xl" as="p" fontWeight="bold">
-                    {conversionRate}%
-                  </Text>
-                  <Text variant="bodySm" tone="subdued" as="p">
-                    Taux de conversion
-                  </Text>
-                </BlockStack>
-              </Card>
-            </Layout.Section>
-          </Layout>
-        </Layout.Section>
-
-        {/* Graphique des générations par jour - Layout horizontal */}
-        <Layout.Section>
-          <Card>
-            <BlockStack gap="300">
-              <InlineStack align="space-between" blockAlign="center">
-                <Text as="h2" variant="headingLg" fontWeight="semibold">
-                  Générations par jour (7 derniers jours)
-                </Text>
-                <Button url="/app/history" variant="plain" size="slim">
-                  Voir tout →
-                </Button>
-              </InlineStack>
-              <Divider />
-              {dailyStats.length > 0 ? (
-                <Box minHeight="250px" padding="300">
-                  {/* Bar chart horizontal optimisé */}
-                  <InlineStack gap="200" align="stretch" blockAlign="end">
-                    {dailyStats.slice(-7).map((stat: any, index: number) => {
-                      const maxCount = Math.max(...dailyStats.map((s: any) => s.count));
-                      const percentage = maxCount > 0 ? (stat.count / maxCount) * 100 : 0;
-                      const date = new Date(stat.date);
-                      return (
-                        <Box key={index} minWidth="0" flexGrow={1}>
-                          <BlockStack gap="100" align="center">
-                            <Text variant="bodySm" fontWeight="semibold" as="p">
-                              {stat.count}
-                            </Text>
-                            <Box
-                              background="bg-fill-brand"
-                              borderRadius="200"
-                              minHeight="120px"
-                              style={{ height: `${Math.max(percentage, 5)}%` }}
-                              position="relative"
-                            />
-                            <Text variant="bodySm" tone="subdued" as="p">
-                              {date.toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
-                            </Text>
-                          </BlockStack>
-                        </Box>
-                      );
-                    })}
-                  </InlineStack>
-                </Box>
-              ) : (
-                <Box padding="300">
-                  <Box textAlign="center">
-                    <Text variant="bodyMd" tone="subdued" as="p">
-                      Aucune donnée disponible pour les 30 derniers jours
-                    </Text>
-                  </Box>
-                </Box>
+            <BlockStack gap="200">
+              {error && (
+                <Banner tone="critical" title="Error">
+                  {error}
+                </Banner>
+              )}
+              {fetcher.data?.success && (
+                <Banner tone="success">
+                  Configuration saved successfully
+                </Banner>
+              )}
+              {credits < 50 && (
+                <Banner tone="warning" title="Low Credits Balance">
+                  <p>
+                    You have <strong>{credits}</strong> credit{credits > 1 ? "s" : ""} remaining. 
+                    <Link to="/app/credits" style={{ marginLeft: "8px" }}>
+                      Recharge now →
+                    </Link>
+                  </p>
+                </Banner>
               )}
             </BlockStack>
-          </Card>
-        </Layout.Section>
+          </Layout.Section>
+        )}
 
-        {/* Configuration et Réglages */}
+        {/* Layout principal : KPI + Graphique + Config côte à côte */}
         <Layout.Section>
           <Layout>
-            <Layout.Section variant="oneHalf">
-              <Card>
-                <BlockStack gap="400">
-                  <Text as="h2" variant="headingLg" fontWeight="semibold">
-                    Réglages & Sécurité
-                  </Text>
-                  <Divider />
-                  <form
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      const formData = new FormData(e.currentTarget);
-                      handleSave(formData);
-                    }}
-                  >
-                    <BlockStack gap="400">
-                      <Checkbox
-                        label="Activer l'app sur le store"
-                        checked={isEnabled}
-                        onChange={setIsEnabled}
-                      />
-                      <input type="hidden" name="isEnabled" value={isEnabled ? "true" : "false"} />
-                      <TextField
-                        label="Plafond journalier"
-                        name="dailyLimit"
-                        type="number"
-                        defaultValue={String(shop?.daily_limit || 100)}
-                        autoComplete="off"
-                        helpText="Limite du nombre d'essais par jour (protection anti-abus)"
-                      />
-                      <TextField
-                        label="Max try-ons par utilisateur/jour"
-                        name="maxTriesPerUser"
-                        type="number"
-                        defaultValue={String(shop?.max_tries_per_user || 5)}
-                        autoComplete="off"
-                        helpText="Limite quotidienne par utilisateur"
-                      />
-                      <InlineStack align="end">
-                        <Button submit variant="primary" loading={fetcher.state === "submitting"}>
-                          Enregistrer
-                        </Button>
-                      </InlineStack>
-                    </BlockStack>
-                  </form>
-                </BlockStack>
-              </Card>
+            {/* Colonne gauche : KPI Cards (2x2) */}
+            <Layout.Section variant="oneThird">
+              <BlockStack gap="200">
+                <Card>
+                  <BlockStack gap="150">
+                    <Text variant="heading2xl" as="p" fontWeight="bold">
+                      {credits.toLocaleString("en-US")}
+                    </Text>
+                    <Text variant="bodySm" tone="subdued" as="p">
+                      Jetons restants
+                    </Text>
+                    <Button url="/app/credits" variant="plain" size="slim">
+                      Acheter →
+                    </Button>
+                  </BlockStack>
+                </Card>
+                <Card>
+                  <BlockStack gap="150">
+                    <Text variant="heading2xl" as="p" fontWeight="bold">
+                      {last30DaysTotal.toLocaleString("en-US")}
+                    </Text>
+                    <Text variant="bodySm" tone="subdued" as="p">
+                      Total Try-ons (30j)
+                    </Text>
+                    <Button url="/app/history" variant="plain" size="slim">
+                      Voir l'historique →
+                    </Button>
+                  </BlockStack>
+                </Card>
+                <Card>
+                  <BlockStack gap="150">
+                    <Text variant="heading2xl" as="p" fontWeight="bold">
+                      {totalAtc.toLocaleString("en-US")}
+                    </Text>
+                    <Text variant="bodySm" tone="subdued" as="p">
+                      Add to Cart
+                    </Text>
+                  </BlockStack>
+                </Card>
+                <Card>
+                  <BlockStack gap="150">
+                    <Text variant="heading2xl" as="p" fontWeight="bold">
+                      {conversionRate}%
+                    </Text>
+                    <Text variant="bodySm" tone="subdued" as="p">
+                      Taux de conversion
+                    </Text>
+                  </BlockStack>
+                </Card>
+              </BlockStack>
             </Layout.Section>
 
-            <Layout.Section variant="oneHalf">
+            {/* Colonne centrale : Graphique compact */}
+            <Layout.Section variant="oneThird">
               <Card>
-                <BlockStack gap="400">
-                  <Text as="h2" variant="headingLg" fontWeight="semibold">
-                    Produits les plus essayés
-                  </Text>
-                  <Text variant="bodyMd" tone="subdued" as="p">
-                    Vos produits avec le plus d'essayages
-                  </Text>
+                <BlockStack gap="200">
+                  <InlineStack align="space-between" blockAlign="center">
+                    <Text as="h2" variant="headingMd" fontWeight="semibold">
+                      Générations (7j)
+                    </Text>
+                    <Button url="/app/history" variant="plain" size="slim">
+                      Voir tout →
+                    </Button>
+                  </InlineStack>
                   <Divider />
-                  {topProducts.length > 0 ? (
-                    <BlockStack gap="300">
-                      {topProducts.map((product: any, index: number) => (
-                        <InlineStack key={product.product_id || index} align="space-between" blockAlign="center">
-                          <Text variant="bodyMd" as="span">
-                            {product.product_title || product.product_id || "Produit inconnu"}
-                          </Text>
-                          <Badge tone="info">
-                            {product.tryons || product.count} essai{product.tryons > 1 ? "s" : ""}
-                          </Badge>
-                        </InlineStack>
-                      ))}
-                    </BlockStack>
+                  {dailyStats.length > 0 ? (
+                    <Box minHeight="180px" padding="200">
+                      <InlineStack gap="150" align="stretch" blockAlign="end">
+                        {dailyStats.slice(-7).map((stat: any, index: number) => {
+                          const maxCount = Math.max(...dailyStats.map((s: any) => s.count));
+                          const percentage = maxCount > 0 ? (stat.count / maxCount) * 100 : 0;
+                          const date = new Date(stat.date);
+                          return (
+                            <Box key={index} minWidth="0" flexGrow={1}>
+                              <BlockStack gap="050" align="center">
+                                <Text variant="bodySm" fontWeight="semibold" as="p">
+                                  {stat.count}
+                                </Text>
+                                <Box
+                                  background="bg-fill-brand"
+                                  borderRadius="200"
+                                  minHeight="80px"
+                                  style={{ height: `${Math.max(percentage, 5)}%` }}
+                                  position="relative"
+                                />
+                                <Text variant="bodySm" tone="subdued" as="p" alignment="center">
+                                  {date.toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
+                                </Text>
+                              </BlockStack>
+                            </Box>
+                          );
+                        })}
+                      </InlineStack>
+                    </Box>
                   ) : (
-                    <Box padding="300">
-                      <Box textAlign="center">
-                        <Text variant="bodyMd" tone="subdued" as="p">
-                          Aucun essai pour le moment. Commencez à utiliser le widget sur vos produits !
-                        </Text>
-                      </Box>
+                    <Box padding="200" textAlign="center">
+                      <Text variant="bodySm" tone="subdued" as="p">
+                        Aucune donnée disponible
+                      </Text>
                     </Box>
                   )}
                 </BlockStack>
               </Card>
             </Layout.Section>
-          </Layout>
-        </Layout.Section>
 
-        {/* Activité récente */}
-        <Layout.Section>
-          <Card>
-            <BlockStack gap="400">
-              <InlineStack align="space-between" blockAlign="center">
-                <Text variant="headingLg" fontWeight="bold" as="h2">
-                  Activité récente
-                </Text>
-                <Button url="/app/history" variant="plain">
-                  Voir tout →
-                </Button>
-              </InlineStack>
-              <Divider />
-              {recentLogs.length > 0 ? (
-                <BlockStack gap="300">
-                  {recentLogs.slice(0, 5).map((log: any, index: number) => (
-                    <InlineStack key={log.id || index} align="space-between" blockAlign="center">
-                      <BlockStack gap="100">
-                        <Text variant="bodyMd" fontWeight="medium" as="p">
-                          {log.product_title || log.product_id || "Produit inconnu"}
-                        </Text>
-                        <Text variant="bodySm" tone="subdued" as="p">
-                          {new Date(log.created_at).toLocaleDateString("fr-FR", { 
-                            month: "short", 
-                            day: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit"
-                          })}
-                        </Text>
-                      </BlockStack>
-                      <Badge tone={log.success ? "success" : "critical"}>
-                        {log.success ? "✓ Réussi" : "✗ Échec"}
-                      </Badge>
-                    </InlineStack>
-                  ))}
-                </BlockStack>
-              ) : (
-                <Box padding="300">
-                  <Box textAlign="center">
-                    <Text variant="bodyMd" tone="subdued" as="p">
-                      Aucune activité récente. Les essais apparaîtront ici une fois que les clients commenceront à utiliser le widget.
+            {/* Colonne droite : Config + Produits + Activité */}
+            <Layout.Section variant="oneThird">
+              <BlockStack gap="200">
+                {/* Configuration compacte */}
+                <Card>
+                  <BlockStack gap="200">
+                    <Text as="h2" variant="headingMd" fontWeight="semibold">
+                      Réglages
                     </Text>
-                  </Box>
-                </Box>
-              )}
-            </BlockStack>
-          </Card>
+                    <Divider />
+                    <form
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        const formData = new FormData(e.currentTarget);
+                        handleSave(formData);
+                      }}
+                    >
+                      <BlockStack gap="200">
+                        <Checkbox
+                          label="Activer l'app"
+                          checked={isEnabled}
+                          onChange={setIsEnabled}
+                        />
+                        <input type="hidden" name="isEnabled" value={isEnabled ? "true" : "false"} />
+                        <TextField
+                          label="Plafond journalier"
+                          name="dailyLimit"
+                          type="number"
+                          defaultValue={String(shop?.daily_limit || 100)}
+                          autoComplete="off"
+                          size="slim"
+                        />
+                        <TextField
+                          label="Max/user/jour"
+                          name="maxTriesPerUser"
+                          type="number"
+                          defaultValue={String(shop?.max_tries_per_user || 5)}
+                          autoComplete="off"
+                          size="slim"
+                        />
+                        <Button submit variant="primary" size="slim" loading={fetcher.state === "submitting"}>
+                          Enregistrer
+                        </Button>
+                      </BlockStack>
+                    </form>
+                  </BlockStack>
+                </Card>
+
+                {/* Produits les plus essayés - compact */}
+                <Card>
+                  <BlockStack gap="150">
+                    <Text as="h2" variant="headingMd" fontWeight="semibold">
+                      Top Produits
+                    </Text>
+                    <Divider />
+                    {topProducts.length > 0 ? (
+                      <BlockStack gap="100">
+                        {topProducts.slice(0, 3).map((product: any, index: number) => (
+                          <InlineStack key={product.product_id || index} align="space-between" blockAlign="center">
+                            <Text variant="bodySm" as="span" truncate>
+                              {product.product_title || product.product_id || "Produit inconnu"}
+                            </Text>
+                            <Badge tone="info" size="small">
+                              {product.tryons || product.count}
+                            </Badge>
+                          </InlineStack>
+                        ))}
+                      </BlockStack>
+                    ) : (
+                      <Text variant="bodySm" tone="subdued" as="p">
+                        Aucun essai
+                      </Text>
+                    )}
+                  </BlockStack>
+                </Card>
+
+                {/* Activité récente - compact */}
+                <Card>
+                  <BlockStack gap="150">
+                    <InlineStack align="space-between" blockAlign="center">
+                      <Text variant="headingMd" fontWeight="semibold" as="h2">
+                        Activité récente
+                      </Text>
+                      <Button url="/app/history" variant="plain" size="slim">
+                        Tout →
+                      </Button>
+                    </InlineStack>
+                    <Divider />
+                    {recentLogs.length > 0 ? (
+                      <BlockStack gap="100">
+                        {recentLogs.slice(0, 3).map((log: any, index: number) => (
+                          <InlineStack key={log.id || index} align="space-between" blockAlign="center">
+                            <BlockStack gap="050">
+                              <Text variant="bodySm" fontWeight="medium" as="p" truncate>
+                                {log.product_title || log.product_id || "Produit inconnu"}
+                              </Text>
+                              <Text variant="bodySm" tone="subdued" as="p">
+                                {new Date(log.created_at).toLocaleDateString("fr-FR", { 
+                                  day: "numeric",
+                                  hour: "2-digit",
+                                  minute: "2-digit"
+                                })}
+                              </Text>
+                            </BlockStack>
+                            <Badge tone={log.success ? "success" : "critical"} size="small">
+                              {log.success ? "✓" : "✗"}
+                            </Badge>
+                          </InlineStack>
+                        ))}
+                      </BlockStack>
+                    ) : (
+                      <Text variant="bodySm" tone="subdued" as="p">
+                        Aucune activité
+                      </Text>
+                    )}
+                  </BlockStack>
+                </Card>
+              </BlockStack>
+            </Layout.Section>
+          </Layout>
         </Layout.Section>
       </Layout>
     </Page>
