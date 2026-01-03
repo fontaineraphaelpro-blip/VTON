@@ -2487,9 +2487,11 @@ body {
 
 /* ---------- PAGE LAYOUT ---------- */
 .app-container {
-  max-width: 1100px;
+  max-width: 100% !important;
   margin: 0 auto;
-  padding: 32px 24px 80px;
+  padding: 32px 24px 80px !important;
+  background: var(--bg-soft) !important;
+  min-height: 100vh;
 }
 
 .app-header {
