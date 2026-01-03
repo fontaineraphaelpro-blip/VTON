@@ -222,18 +222,21 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             
             try {
                 // Extract product image from page
-                const productImage = this.getProductImage();
+                const productImageUrl = this.getProductImage();
                 
-                if (!productImage) {
+                if (!productImageUrl) {
                     throw new Error('Image produit non trouvée');
                 }
                 
-                // Prepare form data
-                const formData = new FormData();
-                formData.append('person_image', this.userPhoto);
-                formData.append('garment_image', productImage);
-                formData.append('shop', this.shop);
-                formData.append('product_id', this.productId);
+                // Convert user photo data URL to base64
+                const personBase64 = this.userPhoto.split(',')[1];
+                
+                // Prepare request body
+                const requestBody = {
+                    person_image_base64: personBase64,
+                    clothing_url: productImageUrl,
+                    product_id: this.productId
+                };
                 
                 // Make API request
                 const url = new URL(CONFIG.apiBase + '/generate');
@@ -241,7 +244,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                 
                 const response = await fetch(url.toString(), {
                     method: 'POST',
-                    body: formData
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestBody)
                 });
                 
                 if (!response.ok) {
