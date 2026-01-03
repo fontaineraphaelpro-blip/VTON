@@ -368,7 +368,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             }
             
             // Last resort: get first large image in the product area
-            const productArea = document.querySelector('[data-product-id]')?.closest('main') || 
+            const productIdElement2 = document.querySelector('[data-product-id]');
+            const productArea = (productIdElement2 && productIdElement2.closest('main')) || 
                                document.querySelector('.product') ||
                                document.querySelector('main');
             if (productArea) {
