@@ -12,46 +12,6 @@ async function ensureSessionTable() {
     
     console.log('[SETUP] Session table exists ✓');
     
-    // Check if 'data' column exists and remove it if it does
-    try {
-      const columnCheck = await prisma.$queryRaw`
-        SELECT column_name 
-        FROM information_schema.columns 
-        WHERE table_schema = 'public' 
-        AND table_name = 'Session' 
-        AND column_name = 'data'
-      `;
-      
-      if (Array.isArray(columnCheck) && columnCheck.length > 0) {
-        console.log('[SETUP] ⚠️  Found obsolete "data" column in Session table');
-        console.log('[SETUP] Removing "data" column...');
-        
-        // Make column nullable first
-        try {
-          await prisma.$executeRaw`ALTER TABLE "Session" ALTER COLUMN "data" DROP NOT NULL`;
-        } catch (e) {
-          // Ignore if already nullable or constraint doesn't exist
-          console.log('[SETUP]   (Column might already be nullable)');
-        }
-        
-        // Remove default
-        try {
-          await prisma.$executeRaw`ALTER TABLE "Session" ALTER COLUMN "data" DROP DEFAULT`;
-        } catch (e) {
-          // Ignore if no default
-        }
-        
-        // Drop the column
-        await prisma.$executeRaw`ALTER TABLE "Session" DROP COLUMN "data" CASCADE`;
-        console.log('[SETUP] ✓ Successfully removed "data" column');
-      } else {
-        console.log('[SETUP] ✓ Session table schema is correct (no "data" column)');
-      }
-    } catch (error) {
-      console.warn('[SETUP] ⚠️  Could not check/remove "data" column:', error.message);
-      // Continue anyway - migrations should handle this
-    }
-    
     await prisma.$disconnect();
     return true;
   } catch (error) {

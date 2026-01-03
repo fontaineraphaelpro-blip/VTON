@@ -16,10 +16,7 @@ datasource db {
 model Session {
   id          String    @id
   shop        String
-  state       String?
-  isOnline    Boolean   @default(false)
-  scope       String?
-  expires     DateTime?
   accessToken String
   userId      BigInt?
+  data        Json      @default("{}")
 }
