@@ -364,8 +364,15 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                 });
             }
             
-            if (generateBtn) {
-                generateBtn.addEventListener('click', () => {
+            if (generateBtn && !generateBtn.dataset.listenerAdded) {
+                generateBtn.dataset.listenerAdded = 'true';
+                generateBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    // Prevent double submission
+                    if (generateBtn.disabled) {
+                        return;
+                    }
                     this.generateTryOn();
                 });
             }
