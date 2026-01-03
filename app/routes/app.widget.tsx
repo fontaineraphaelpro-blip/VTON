@@ -241,7 +241,7 @@ export default function Widget() {
   // Recharger les données après une sauvegarde réussie
   useEffect(() => {
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.widget.tsx:225',message:'useEffect triggered for revalidator',data:{fetcherSuccess:fetcher.data?.success,fetcherTestMode:fetcher.data?.testMode},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.widget.tsx:225',message:'useEffect triggered for revalidator',data:{fetcherSuccess:fetcher.data?.success,fetcherTestMode:(fetcher.data as any)?.testMode},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
     // #endregion
     if (fetcher.data?.success && !(fetcher.data as any)?.testMode) {
       // #region agent log

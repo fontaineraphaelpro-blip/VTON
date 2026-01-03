@@ -273,9 +273,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           data: graphqlData
         });
 
-        if (graphqlData.errors) {
-          console.error("[Credits] GraphQL errors:", graphqlData.errors);
-          const errorMessage = graphqlData.errors.map((e: any) => e.message).join(", ");
+        const graphqlResponse = graphqlData as any;
+        if (graphqlResponse.errors) {
+          console.error("[Credits] GraphQL errors:", graphqlResponse.errors);
+          const errorMessage = graphqlResponse.errors.map((e: any) => e.message).join(", ");
           return json({ 
             success: false, 
             error: `Shopify API error: ${errorMessage}`,
@@ -589,7 +590,11 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 export default function Credits() {
   console.log("[Credits] Component rendering");
   
-  const { shop, error, purchaseSuccess, creditsAdded } = useLoaderData<typeof loader>();
+  const loaderData = useLoaderData<typeof loader>();
+  const shop = (loaderData as any)?.shop || null;
+  const error = (loaderData as any)?.error || null;
+  const purchaseSuccess = (loaderData as any)?.purchaseSuccess || false;
+  const creditsAdded = (loaderData as any)?.creditsAdded || 0;
   console.log("[Credits] Loader data:", { hasShop: !!shop, hasError: !!error, credits: shop?.credits, purchaseSuccess, creditsAdded });
   
   const fetcher = useFetcher<typeof action>();
@@ -613,7 +618,7 @@ export default function Credits() {
   // Rediriger vers le checkout Shopify après création de la commande
   useEffect(() => {
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:559',message:'useEffect entry',data:{hasFetcherData:!!fetcher.data,success:fetcher.data?.success,redirect:fetcher.data?.redirect,hasCheckoutUrl:!!fetcher.data?.checkoutUrl,requiresAuth:fetcher.data?.requiresAuth,hasReauthUrl:!!fetcher.data?.reauthUrl},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'F'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:559',message:'useEffect entry',data:{hasFetcherData:!!fetcher.data,success:fetcher.data?.success,redirect:(fetcher.data as any)?.redirect,hasCheckoutUrl:!!(fetcher.data as any)?.checkoutUrl,requiresAuth:(fetcher.data as any)?.requiresAuth,hasReauthUrl:!!(fetcher.data as any)?.reauthUrl},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'F'})}).catch(()=>{});
     // #endregion
     
     let timeoutId: NodeJS.Timeout | null = null;
