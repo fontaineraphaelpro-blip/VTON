@@ -907,7 +907,7 @@ export default function Credits() {
               {CREDIT_PACKS.filter(p => p.highlight).map((pack) => {
                 const savings = pack.credits * 0.40 - pack.price; // Économie vs pack Découverte
                 return (
-                  <Box key={pack.id} minWidth="0" flexGrow={1.3} position="relative">
+                  <Box key={pack.id} minWidth="0" flexGrow={1.3} position="relative" className="recommended-pack-card">
                     <Card>
                       <BlockStack gap="400">
                         {/* Badge "Recommandé" en haut */}
