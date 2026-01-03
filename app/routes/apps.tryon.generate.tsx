@@ -78,8 +78,15 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const url = new URL(request.url);
     const queryParams = url.searchParams;
 
-    // 1. Verify Shopify signature (CRITICAL)
-    if (!verifyProxySignature(queryParams)) {
+    // 1. Verify Shopify signature or storefront origin
+    if (!verifyProxySignature(queryParams, request)) {
+      console.error("[Generate] Request verification failed:", {
+        hasSignature: !!queryParams.get("signature"),
+        referer: request.headers.get("referer"),
+        origin: request.headers.get("origin"),
+        shop: queryParams.get("shop"),
+        url: request.url
+      });
       return json(
         { error: "Invalid signature - request not from Shopify" },
         { status: 403 }
