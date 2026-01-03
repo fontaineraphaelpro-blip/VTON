@@ -307,11 +307,20 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       throw new Error("Invalid result URL format from Replicate");
     }
 
-    return json({
-      result_image_url: resultUrl,
-      credits_remaining: creditsRemaining,
-      generation_time_ms: latencyMs,
-    });
+    return json(
+      {
+        result_image_url: resultUrl,
+        credits_remaining: creditsRemaining,
+        generation_time_ms: latencyMs,
+      },
+      {
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "POST, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type",
+        },
+      }
+    );
   } catch (error) {
     console.error("Error in /apps/tryon/generate:", error);
 

@@ -157,15 +157,24 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     // 5. Get comprehensive try-on status (shop + product level)
     const status = await getProductTryonStatus(shop, productId);
 
-    // 6. Return status
-    return json({
-      enabled: status.enabled,
-      shop_enabled: status.shopEnabled,
-      product_enabled: status.productEnabled,
-      product_id: productId,
-      shop: shop,
-      widget_settings: status.widgetSettings, // Only set if enabled, null otherwise
-    });
+    // 6. Return status with CORS headers
+    return json(
+      {
+        enabled: status.enabled,
+        shop_enabled: status.shopEnabled,
+        product_enabled: status.productEnabled,
+        product_id: productId,
+        shop: shop,
+        widget_settings: status.widgetSettings, // Only set if enabled, null otherwise
+      },
+      {
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "GET, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type",
+        },
+      }
+    );
   } catch (error) {
     console.error("Error in /apps/tryon/status:", error);
     return json(
@@ -173,7 +182,14 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         error: "Failed to check try-on status",
         message: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 }
+      {
+        status: 500,
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "GET, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type",
+        },
+      }
     );
   }
 };
