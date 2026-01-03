@@ -85,11 +85,12 @@ export async function generateTryOn(
     console.log("[Replicate] Garment image size:", Buffer.isBuffer(garmentInput) ? garmentInput.length + " bytes" : (typeof garmentInput === 'string' ? garmentInput.length + " chars" : 'unknown'));
     console.log("[Replicate] Using prompt:", GARMENT_TRANSFER_PROMPT);
     
-    // Use replicate.run which returns a Promise that resolves when the prediction completes
     // For google/nano-banana-pro, we MUST send:
     // - image_input: array of image URLs/Buffers [person_image, garment_image]
     // - prompt: the prompt text
     // The SDK Replicate will automatically handle Buffers by uploading them
+    // Use predictions.create() + polling instead of replicate.run() because
+    // replicate.run() sometimes returns {} for this model even when successful
     let output;
     try {
       // Build image_input array: [person_image, garment_image]
@@ -110,69 +111,46 @@ export async function generateTryOn(
       console.log("[Replicate] image_input[1] type:", Buffer.isBuffer(imageInputArray[1]) ? 'Buffer' : typeof imageInputArray[1]);
       console.log("[Replicate] prompt:", inputParams.prompt?.substring(0, 50) + "...");
       
-      output = await replicate.run(MODEL_ID, {
+      // Create prediction
+      const prediction = await replicate.predictions.create({
+        model: MODEL_ID,
         input: inputParams,
       });
+      
+      console.log("[Replicate] Created prediction:", prediction.id, "Status:", prediction.status);
+      
+      // Poll for completion (max 120 seconds to allow for longer generations)
+      let pollCount = 0;
+      const maxPolls = 120;
+      let currentPrediction = prediction;
+      
+      while ((currentPrediction.status === "starting" || currentPrediction.status === "processing") && pollCount < maxPolls) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        const updated = await replicate.predictions.get(currentPrediction.id);
+        currentPrediction = updated;
+        pollCount++;
+        
+        console.log(`[Replicate] Poll ${pollCount}/${maxPolls} - Status:`, currentPrediction.status);
+        
+        if (currentPrediction.status === "succeeded" && currentPrediction.output) {
+          output = currentPrediction.output;
+          console.log("[Replicate] Prediction succeeded, output type:", typeof output);
+          break;
+        } else if (currentPrediction.status === "failed" || currentPrediction.status === "canceled") {
+          throw new Error(`Prediction ${currentPrediction.status}: ${currentPrediction.error || "Unknown error"}`);
+        }
+      }
+      
+      if (currentPrediction.status !== "succeeded") {
+        throw new Error(`Prediction did not complete in time. Final status: ${currentPrediction.status}`);
+      }
     } catch (error: any) {
-      console.error("[Replicate] Error with image_input format:", error.message);
+      console.error("[Replicate] Error:", error.message);
       throw error;
     }
 
-    console.log("Replicate output type:", typeof output);
-    console.log("Replicate output:", JSON.stringify(output, null, 2));
-    
-    // If output is an empty object {}, create a prediction manually and poll for results
-    if (output && typeof output === "object" && Object.keys(output).length === 0) {
-      console.warn("Replicate returned empty object, creating prediction manually and polling...");
-      
-      try {
-        // Create a prediction manually using image_input format
-        const imageInputArray = [personInput, garmentInput];
-        const prediction = await replicate.predictions.create({
-          model: MODEL_ID,
-          input: {
-            image_input: imageInputArray,
-            prompt: GARMENT_TRANSFER_PROMPT,
-            aspect_ratio: "4:3",
-            output_format: "png",
-            resolution: "2K",
-            safety_filter_level: "block_only_high"
-          },
-        });
-        
-        console.log("Created prediction:", prediction.id, "Status:", prediction.status);
-        
-        // Poll for completion (max 60 seconds)
-        let pollCount = 0;
-        const maxPolls = 60;
-        
-        while ((prediction.status === "starting" || prediction.status === "processing") && pollCount < maxPolls) {
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          const updated = await replicate.predictions.get(prediction.id);
-          prediction.status = updated.status;
-          prediction.output = updated.output;
-          prediction.error = updated.error;
-          pollCount++;
-          
-          console.log(`Poll ${pollCount}/${maxPolls} - Prediction status:`, prediction.status);
-          
-          if (prediction.status === "succeeded" && prediction.output) {
-            output = prediction.output;
-            console.log("Prediction succeeded, output:", output);
-            break;
-          } else if (prediction.status === "failed" || prediction.status === "canceled") {
-            throw new Error(`Prediction ${prediction.status}: ${prediction.error || "Unknown error"}`);
-          }
-        }
-        
-        if (prediction.status !== "succeeded") {
-          throw new Error(`Prediction did not complete in time. Final status: ${prediction.status}`);
-        }
-      } catch (pollError) {
-        console.error("Error polling prediction:", pollError);
-        throw pollError;
-      }
-    }
+    console.log("[Replicate] Final output type:", typeof output);
+    console.log("[Replicate] Final output:", JSON.stringify(output, null, 2));
 
     // Replicate can return different formats:
     // 1. A string (URL)
