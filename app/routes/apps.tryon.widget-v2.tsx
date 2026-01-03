@@ -481,9 +481,11 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                 <style>
                     /* Complete CSS isolation - all styles scoped to shadow DOM */
                     :host {
-                        display: block;
-                        width: 100%;
-                        margin-top: 12px;
+                        display: block !important;
+                        width: 100% !important;
+                        margin-top: 12px !important;
+                        visibility: visible !important;
+                        opacity: 1 !important;
                     }
                     
                     .vton-button {
