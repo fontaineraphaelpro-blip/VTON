@@ -559,207 +559,174 @@ export default function Dashboard() {
         <div className="vton-section">
           <div className="dashboard-main-layout">
             {/* Colonne principale : Graphique + Top Produits + Activité (75%) */}
-            <div>
-              <BlockStack gap="300">
-                {/* Graphique des générations */}
+            <div className="dashboard-main-column">
+              {/* Graphique des générations */}
+              <div className="vton-card">
+                <div className="vton-header">
+                  <h2>Générations par jour (7 derniers jours)</h2>
+                  <Button url="/app/history" variant="plain" size="slim">
+                    Voir tout →
+                  </Button>
+                </div>
+                <Divider />
+                {dailyStats.length > 0 ? (
+                  <div className="graph-container-large">
+                    <div className="graph-bars">
+                      {dailyStats.slice(-7).map((stat: any, index: number) => {
+                        const maxCount = Math.max(...dailyStats.map((s: any) => s.count));
+                        const percentage = maxCount > 0 ? (stat.count / maxCount) * 100 : 0;
+                        const date = new Date(stat.date);
+                        return (
+                          <div key={index} className="graph-bar-item">
+                            <div className="graph-bar-value">{stat.count}</div>
+                            <div 
+                              className="graph-bar" 
+                              style={{ height: `${Math.max(percentage, 5)}%` }}
+                            />
+                            <div className="graph-bar-label">
+                              {date.toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="empty-state-large">
+                    <p>Aucune donnée disponible pour les 30 derniers jours</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Top Produits et Activité récente côte à côte */}
+              <div className="dashboard-two-columns">
                 <div className="vton-card">
-                  <BlockStack gap="300">
-                    <InlineStack align="space-between" blockAlign="center">
-                      <Text as="h2" variant="headingLg" fontWeight="semibold">
-                        Générations par jour (7 derniers jours)
-                      </Text>
-                      <Button url="/app/history" variant="plain" size="slim">
-                        Voir tout →
-                      </Button>
-                    </InlineStack>
-                    <Divider />
-                    {dailyStats.length > 0 ? (
-                      <Box className="graph-container-large">
-                        <InlineStack gap="300" align="stretch" blockAlign="end">
-                          {dailyStats.slice(-7).map((stat: any, index: number) => {
-                            const maxCount = Math.max(...dailyStats.map((s: any) => s.count));
-                            const percentage = maxCount > 0 ? (stat.count / maxCount) * 100 : 0;
-                            const date = new Date(stat.date);
-                            return (
-                              <Box key={index} minWidth="0" flexGrow={1}>
-                                <BlockStack gap="200" align="center">
-                                  <Text variant="bodySm" fontWeight="semibold" as="p">
-                                    {stat.count}
-                                  </Text>
-                                  <Box
-                                    background="bg-fill-brand"
-                                    borderRadius="200"
-                                    minHeight="100px"
-                                    style={{ height: `${Math.max(percentage, 5)}%` }}
-                                    position="relative"
-                                  />
-                                  <Text variant="bodySm" tone="subdued" as="p" alignment="center">
-                                    {date.toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
-                                  </Text>
-                                </BlockStack>
-                              </Box>
-                            );
-                          })}
-                        </InlineStack>
-                      </Box>
-                    ) : (
-                      <Box className="empty-state-large" textAlign="center">
-                        <Text variant="bodyLg" tone="subdued" as="p">
-                          Aucune donnée disponible pour les 30 derniers jours
-                        </Text>
-                      </Box>
-                    )}
-                  </BlockStack>
+                  <h2>Produits les plus essayés</h2>
+                  <p className="card-subtitle">Vos produits avec le plus d'essayages</p>
+                  <Divider />
+                  {topProducts.length > 0 ? (
+                    <div className="products-list">
+                      {topProducts.map((product: any, index: number) => (
+                        <div key={product.product_id || index} className="product-item">
+                          <span className="product-name">
+                            {product.product_title || product.product_id || "Produit inconnu"}
+                          </span>
+                          <Badge tone="info">
+                            {product.tryons || product.count} essai{product.tryons > 1 ? "s" : ""}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="empty-state-large">
+                      <p>Aucun essai pour le moment. Commencez à utiliser le widget sur vos produits !</p>
+                    </div>
+                  )}
                 </div>
 
-                {/* Top Produits et Activité récente côte à côte */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }}>
-                  <div>
-                    <div className="vton-card">
-                      <BlockStack gap="300">
-                        <Text as="h2" variant="headingLg" fontWeight="semibold">
-                          Produits les plus essayés
-                        </Text>
-                        <Text variant="bodyMd" tone="subdued" as="p">
-                          Vos produits avec le plus d'essayages
-                        </Text>
-                        <Divider />
-                        {topProducts.length > 0 ? (
-                          <BlockStack gap="400">
-                            {topProducts.map((product: any, index: number) => (
-                              <InlineStack key={product.product_id || index} align="space-between" blockAlign="center">
-                                <Text variant="bodyMd" as="span" truncate>
-                                  {product.product_title || product.product_id || "Produit inconnu"}
-                                </Text>
-                                <Badge tone="info">
-                                  {product.tryons || product.count} essai{product.tryons > 1 ? "s" : ""}
-                                </Badge>
-                              </InlineStack>
-                            ))}
-                          </BlockStack>
-                        ) : (
-                          <Box className="empty-state-large" textAlign="center">
-                            <Text variant="bodyLg" tone="subdued" as="p">
-                              Aucun essai pour le moment. Commencez à utiliser le widget sur vos produits !
-                            </Text>
-                          </Box>
-                        )}
-                      </BlockStack>
-                    </div>
+                <div className="vton-card">
+                  <div className="vton-header">
+                    <h2>Activité récente</h2>
+                    <Button url="/app/history" variant="plain">
+                      Voir tout →
+                    </Button>
                   </div>
-
-                  <div>
-                    <div className="vton-card">
-                      <BlockStack gap="300">
-                        <InlineStack align="space-between" blockAlign="center">
-                          <Text variant="headingLg" fontWeight="bold" as="h2">
-                            Activité récente
-                          </Text>
-                          <Button url="/app/history" variant="plain">
-                            Voir tout →
-                          </Button>
-                        </InlineStack>
-                        <Divider />
-                        {recentLogs.length > 0 ? (
-                          <BlockStack gap="400">
-                            {recentLogs.slice(0, 5).map((log: any, index: number) => (
-                              <InlineStack key={log.id || index} align="space-between" blockAlign="center">
-                                <BlockStack gap="100">
-                                  <Text variant="bodyMd" fontWeight="medium" as="p">
-                                    {log.product_title || log.product_id || "Produit inconnu"}
-                                  </Text>
-                                  <Text variant="bodySm" tone="subdued" as="p">
-                                    {new Date(log.created_at).toLocaleDateString("fr-FR", { 
-                                      month: "short", 
-                                      day: "numeric",
-                                      hour: "2-digit",
-                                      minute: "2-digit"
-                                    })}
-                                  </Text>
-                                </BlockStack>
-                                <Badge tone={log.success ? "success" : "critical"}>
-                                  {log.success ? "✓ Réussi" : "✗ Échec"}
-                                </Badge>
-                              </InlineStack>
-                            ))}
-                          </BlockStack>
-                        ) : (
-                          <Box className="empty-state-large" textAlign="center">
-                            <Text variant="bodyLg" tone="subdued" as="p">
-                              Aucune activité récente. Les essais apparaîtront ici une fois que les clients commenceront à utiliser le widget.
-                            </Text>
-                          </Box>
-                        )}
-                      </BlockStack>
+                  <Divider />
+                  {recentLogs.length > 0 ? (
+                    <div className="activity-list">
+                      {recentLogs.slice(0, 5).map((log: any, index: number) => (
+                        <div key={log.id || index} className="activity-item">
+                          <div className="activity-info">
+                            <p className="activity-title">
+                              {log.product_title || log.product_id || "Produit inconnu"}
+                            </p>
+                            <p className="activity-date">
+                              {new Date(log.created_at).toLocaleDateString("fr-FR", { 
+                                month: "short", 
+                                day: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit"
+                              })}
+                            </p>
+                          </div>
+                          <Badge tone={log.success ? "success" : "critical"}>
+                            {log.success ? "✓ Réussi" : "✗ Échec"}
+                          </Badge>
+                        </div>
+                      ))}
                     </div>
-                  </div>
+                  ) : (
+                    <div className="empty-state-large">
+                      <p>Aucune activité récente. Les essais apparaîtront ici une fois que les clients commenceront à utiliser le widget.</p>
+                    </div>
+                  )}
                 </div>
-              </BlockStack>
+              </div>
             </div>
 
             {/* Colonne latérale droite : Réglages (25%) */}
-            <div>
+            <div className="dashboard-sidebar">
               <div className="vton-card">
-                <BlockStack gap="400">
-                  <Text as="h2" variant="headingLg" fontWeight="semibold">
-                    Réglages & Sécurité
-                  </Text>
+                <h2>Réglages & Sécurité</h2>
+                <Divider />
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    const formData = new FormData(e.currentTarget);
+                    handleSave(formData);
+                  }}
+                >
+                  <div className="form-group">
+                    <Checkbox
+                      label="Activer l'app sur le store"
+                      checked={isEnabled}
+                      onChange={setIsEnabled}
+                    />
+                    <input type="hidden" name="isEnabled" value={isEnabled ? "true" : "false"} />
+                  </div>
+                  <div className="form-group">
+                    <TextField
+                      label="Plafond journalier"
+                      name="dailyLimit"
+                      type="number"
+                      defaultValue={String(shop?.daily_limit || 100)}
+                      autoComplete="off"
+                      helpText="Limite du nombre d'essais par jour (protection anti-abus)"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <TextField
+                      label="Max try-ons par utilisateur/jour"
+                      name="maxTriesPerUser"
+                      type="number"
+                      defaultValue={String(shop?.max_tries_per_user || 5)}
+                      autoComplete="off"
+                      helpText="Limite quotidienne par utilisateur"
+                    />
+                  </div>
                   <Divider />
-                  <form
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      const formData = new FormData(e.currentTarget);
-                      handleSave(formData);
-                    }}
-                  >
-                    <BlockStack gap="400">
-                      <Checkbox
-                        label="Activer l'app sur le store"
-                        checked={isEnabled}
-                        onChange={setIsEnabled}
-                      />
-                      <input type="hidden" name="isEnabled" value={isEnabled ? "true" : "false"} />
-                      <TextField
-                        label="Plafond journalier"
-                        name="dailyLimit"
-                        type="number"
-                        defaultValue={String(shop?.daily_limit || 100)}
-                        autoComplete="off"
-                        helpText="Limite du nombre d'essais par jour (protection anti-abus)"
-                      />
-                      <TextField
-                        label="Max try-ons par utilisateur/jour"
-                        name="maxTriesPerUser"
-                        type="number"
-                        defaultValue={String(shop?.max_tries_per_user || 5)}
-                        autoComplete="off"
-                        helpText="Limite quotidienne par utilisateur"
-                      />
-                      <Divider />
-                      <BlockStack gap="200">
-                        <Text variant="bodySm" tone="subdued" as="p">
-                          <strong>Nettoyage :</strong> Supprime les anciens widgets et script tags qui pourraient interférer
-                        </Text>
-                        <Button
-                          variant="secondary"
-                          onClick={async () => {
-                            const formData = new FormData();
-                            formData.append("intent", "cleanup-script-tags");
-                            fetcher.submit(formData, { method: "post" });
-                          }}
-                          loading={fetcher.state === "submitting"}
-                        >
-                          Nettoyer les anciens widgets
-                        </Button>
-                      </BlockStack>
-                      <InlineStack align="end">
-                        <Button submit variant="primary" loading={fetcher.state === "submitting"}>
-                          Enregistrer
-                        </Button>
-                      </InlineStack>
-                    </BlockStack>
-                  </form>
-                </BlockStack>
+                  <div className="form-group">
+                    <p className="form-help-text">
+                      <strong>Nettoyage :</strong> Supprime les anciens widgets et script tags qui pourraient interférer
+                    </p>
+                    <Button
+                      variant="secondary"
+                      onClick={async () => {
+                        const formData = new FormData();
+                        formData.append("intent", "cleanup-script-tags");
+                        fetcher.submit(formData, { method: "post" });
+                      }}
+                      loading={fetcher.state === "submitting"}
+                    >
+                      Nettoyer les anciens widgets
+                    </Button>
+                  </div>
+                  <div className="form-actions">
+                    <Button submit variant="primary" loading={fetcher.state === "submitting"}>
+                      Enregistrer
+                    </Button>
+                  </div>
+                </form>
               </div>
             </div>
           </div>
