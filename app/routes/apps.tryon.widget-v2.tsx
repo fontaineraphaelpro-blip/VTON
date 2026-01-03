@@ -1792,14 +1792,20 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         version: '${widgetVersion}',`
     );
 
+  // Headers pour forcer la mise à jour et éviter le cache
+  const cacheHeaders = process.env.NODE_ENV === "production" 
+    ? "public, max-age=300, must-revalidate" // Cache court en production (5 min)
+    : "no-cache, no-store, must-revalidate, max-age=0"; // Pas de cache en dev
+  
   return new Response(widgetCodeWithVersion, {
     headers: {
       "Content-Type": "application/javascript",
-      "Cache-Control": process.env.NODE_ENV === "production" 
-        ? "public, max-age=3600, must-revalidate" 
-        : "no-cache, no-store, must-revalidate",
+      "Cache-Control": cacheHeaders,
+      "Pragma": "no-cache",
+      "Expires": "0",
       "Access-Control-Allow-Origin": "*",
       "X-Widget-Version": String(widgetVersion),
+      "X-Widget-Build-Time": new Date().toISOString(),
     },
   });
 };

@@ -38,12 +38,13 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       // #region agent log
       fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:37',message:'Script tag installation attempt started',data:{shop},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
       // #endregion
-      // Construire l'URL du script - utiliser l'URL de la boutique + proxy path
+      // Construire l'URL du script - utiliser l'URL de l'app directement (pas le store)
       // Ajouter un paramètre de version pour forcer le rechargement après déploiement
       const url = new URL(request.url);
-      const baseUrl = url.origin;
-      const widgetVersion = process.env.WIDGET_VERSION || Date.now();
-      const scriptTagUrl = `${baseUrl}/apps/tryon/widget-v2.js?v=${widgetVersion}`;
+      const appUrl = process.env.SHOPIFY_APP_URL || process.env.APPLICATION_URL || url.origin;
+      // Utiliser un timestamp pour forcer la mise à jour à chaque déploiement
+      const widgetVersion = process.env.WIDGET_VERSION || `v${Date.now()}`;
+      const scriptTagUrl = `${appUrl}/apps/tryon/widget-v2.js?v=${widgetVersion}`;
       
       // Vérifier si le script tag existe déjà
       const scriptTagsQuery = `#graphql
