@@ -3,8 +3,7 @@
   This block injects the VTON widget script on product pages
 {% endcomment %}
 
-{% if template.name == 'product' %}
-  <script>
+<script>
     (function() {
       'use strict';
       
@@ -49,7 +48,9 @@
         constructor() {
           console.log('[VTON Widget V2] Initializing...', {
             url: window.location.href,
-            readyState: document.readyState
+            pathname: window.location.pathname,
+            readyState: document.readyState,
+            templateName: '{{ template.name }}'
           });
           
           this.shop = this.extractShop();
@@ -63,7 +64,19 @@
           this.shadowRoot = null;
           this.isEnabled = false;
           
-          if (this.isProductPage()) {
+          // Always try to initialize on product pages
+          // Check both Liquid template and JavaScript detection
+          const isProductPageLiquid = '{{ template.name }}' === 'product';
+          const isProductPageJS = this.isProductPage();
+          
+          console.log('[VTON] Page detection:', {
+            isProductPageLiquid,
+            isProductPageJS,
+            pathname: window.location.pathname
+          });
+          
+          if (isProductPageLiquid || isProductPageJS) {
+            console.log('[VTON] Product page detected, initializing widget');
             this.init();
           } else {
             console.log('[VTON] Not a product page, skipping widget');
@@ -76,10 +89,24 @@
           console.log('[VTON] Product ID:', this.productId);
           
           if (!this.productId) {
-            console.log('[VTON] Product ID not found, skipping widget');
+            console.warn('[VTON] Product ID not found, will retry...');
+            // Retry after a delay in case DOM isn't ready
+            setTimeout(() => {
+              this.productId = this.extractProductId();
+              if (this.productId) {
+                console.log('[VTON] Product ID found on retry:', this.productId);
+                this.continueInit();
+              } else {
+                console.error('[VTON] Product ID still not found after retry');
+              }
+            }, 1000);
             return;
           }
           
+          this.continueInit();
+        }
+        
+        async continueInit() {
           try {
             console.log('[VTON] Checking status...', { shop: this.shop, productId: this.productId });
             const status = await this.checkStatus();
@@ -90,12 +117,15 @@
                 shopEnabled: status.shop_enabled,
                 productEnabled: status.product_enabled
               });
-              return;
+              // Still show widget but with a message or disabled state
+              this.isEnabled = false;
+              this.widgetSettings = status.widget_settings || {};
+            } else {
+              this.isEnabled = true;
+              this.widgetSettings = status.widget_settings;
             }
             
-            this.isEnabled = true;
-            this.widgetSettings = status.widget_settings;
-            
+            // Always inject widget, even if disabled (for debugging)
             if (document.readyState === 'loading') {
               document.addEventListener('DOMContentLoaded', () => this.injectWidget());
             } else {
@@ -103,6 +133,15 @@
             }
           } catch (error) {
             console.error('[VTON] Failed to check status:', error);
+            // Inject widget anyway for debugging
+            console.log('[VTON] Injecting widget despite status check failure (for debugging)');
+            this.isEnabled = false;
+            this.widgetSettings = {};
+            if (document.readyState === 'loading') {
+              document.addEventListener('DOMContentLoaded', () => this.injectWidget());
+            } else {
+              this.injectWidget();
+            }
           }
         }
         
@@ -144,34 +183,54 @@
         }
         
         extractProductId() {
-          // Method 1: From meta tag
-          const meta = document.querySelector('meta[property="og:url"]');
-          if (meta) {
-            const match = meta.content.match(/products\/([^?\/]+)/);
-            if (match) return match[1];
+          console.log('[VTON] Extracting product ID...');
+          
+          // Method 1: From Shopify global (most reliable)
+          if (window.Shopify && window.Shopify.products) {
+            const productIds = Object.keys(window.Shopify.products);
+            if (productIds.length > 0) {
+              console.log('[VTON] Product ID from Shopify.products:', productIds[0]);
+              return productIds[0];
+            }
           }
           
-          // Method 2: From form
+          // Method 2: From meta tag
+          const meta = document.querySelector('meta[property="og:url"]');
+          if (meta && meta.content) {
+            const match = meta.content.match(/products\/([^?\/]+)/);
+            if (match) {
+              console.log('[VTON] Product ID from meta tag:', match[1]);
+              return match[1];
+            }
+          }
+          
+          // Method 3: From form
           const productForm = document.querySelector('form[action*="/cart/add"]');
           if (productForm) {
             const idInput = productForm.querySelector('[name="id"]');
             if (idInput && idInput.value) {
+              console.log('[VTON] Product ID from form input:', idInput.value);
               return idInput.value;
             }
           }
           
-          // Method 3: From data attribute
+          // Method 4: From data attribute
           const productElement = document.querySelector('[data-product-id]');
           if (productElement) {
-            return productElement.getAttribute('data-product-id');
+            const productId = productElement.getAttribute('data-product-id');
+            console.log('[VTON] Product ID from data attribute:', productId);
+            return productId;
           }
           
-          // Method 4: From URL
+          // Method 5: From URL (handle)
           const urlMatch = window.location.pathname.match(/products\/([^?\/]+)/);
           if (urlMatch) {
+            console.log('[VTON] Product handle from URL:', urlMatch[1]);
+            // This is a handle, not an ID, but we can try to use it
             return urlMatch[1];
           }
           
+          console.warn('[VTON] Could not extract product ID');
           return null;
         }
         
@@ -569,7 +628,6 @@
       }
     })();
   </script>
-{% endif %}
 
 {% schema %}
 {
