@@ -1,8 +1,6 @@
 {% comment %}
   Virtual Try-On Widget - Theme App Extension Block
   This block loads the VTON widget script on product pages
-  The widget is automatically injected via Script Tags, but this block provides
-  a way for merchants to manually add it to their theme if needed.
 {% endcomment %}
 
 {% if template.name == 'product' %}
@@ -20,22 +18,45 @@
       
       // Only load widget script if not already loaded
       if (window.VTONWidgetLoaded) {
-            return;
-          }
-          
+        console.log('[VTON] Widget already loaded, skipping');
+        return;
+      }
+      
       window.VTONWidgetLoaded = true;
       
-      // Get app URL from shop settings or use default
-      const appUrl = '{{ shop.metafields.vton.app_url }}' || '{{ shop.url }}';
-      const widgetUrl = `${appUrl}/apps/tryon/widget-v2.js?v=${Date.now()}`;
+      // Get app URL - use shop URL with app proxy path
+      // The app proxy is configured to route /apps/tryon/* to the app
+      const shopUrl = '{{ shop.url }}';
+      const appUrl = shopUrl; // Use shop URL, app proxy will route to the app
+      
+      // Use timestamp for cache busting - this ensures the widget updates on each page load
+      // The server will also set proper cache headers
+      const cacheBuster = Date.now();
+      const widgetUrl = `${appUrl}/apps/tryon/widget-v2.js?v=${cacheBuster}`;
+      
+      console.log('[VTON] Loading widget from:', widgetUrl);
       
       // Load widget script
       const script = document.createElement('script');
       script.src = widgetUrl;
       script.defer = true;
       script.async = true;
+      script.crossOrigin = 'anonymous';
+      
+      script.onload = function() {
+        console.log('[VTON] Widget script loaded successfully');
+      };
+      
       script.onerror = function() {
         console.error('[VTON] Failed to load widget script from:', widgetUrl);
+        // Try fallback URL
+        const fallbackUrl = `{{ shop.url }}/apps/tryon/widget-v2.js?v=${widgetVersion}&t=${Date.now()}`;
+        console.log('[VTON] Trying fallback URL:', fallbackUrl);
+        const fallbackScript = document.createElement('script');
+        fallbackScript.src = fallbackUrl;
+        fallbackScript.defer = true;
+        fallbackScript.async = true;
+        document.head.appendChild(fallbackScript);
       };
       
       document.head.appendChild(script);
