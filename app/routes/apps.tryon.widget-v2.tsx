@@ -454,13 +454,28 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         // RENDERING (Shadow DOM)
         // ==========================================
         renderWidget() {
-            if (!this.shadowRoot) return;
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'widget-v2.js:renderWidget',message:'renderWidget called',data:{hasShadowRoot:!!this.shadowRoot,widgetSettings:this.widgetSettings},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
+            // #endregion
+            
+            if (!this.shadowRoot) {
+                console.error('[VTON] Cannot render widget: shadowRoot is null');
+                // #region agent log
+                fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'widget-v2.js:renderWidget',message:'renderWidget failed - no shadowRoot',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
+                // #endregion
+                return;
+            }
             
             const settings = this.widgetSettings || {
                 text: 'Try It On',
                 backgroundColor: '#000000',
                 textColor: '#ffffff'
             };
+            
+            console.log('[VTON] Rendering widget with settings:', settings);
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'widget-v2.js:renderWidget',message:'Rendering widget HTML',data:{settings},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
+            // #endregion
             
             this.shadowRoot.innerHTML = \`
                 <style>
@@ -900,12 +915,40 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             
             // Setup event listeners
             this.setupButtonEvents();
+            
+            // Verify button is visible
+            setTimeout(() => {
+                const triggerBtn = this.shadowRoot?.querySelector('#vton-trigger-btn');
+                if (triggerBtn) {
+                    const styles = window.getComputedStyle(triggerBtn);
+                    console.log('[VTON] Button visibility check:', {
+                        display: styles.display,
+                        visibility: styles.visibility,
+                        opacity: styles.opacity,
+                        width: styles.width,
+                        height: styles.height,
+                        position: styles.position,
+                        zIndex: styles.zIndex
+                    });
+                    // #region agent log
+                    fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'widget-v2.js:renderWidget',message:'Button visibility check',data:{display:styles.display,visibility:styles.visibility,opacity:styles.opacity,width:styles.width,height:styles.height,position:styles.position,zIndex:styles.zIndex},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'G'})}).catch(()=>{});
+                    // #endregion
+                } else {
+                    console.error('[VTON] Button not found in shadow DOM!');
+                    // #region agent log
+                    fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'widget-v2.js:renderWidget',message:'Button not found in shadow DOM',data:{shadowRootExists:!!this.shadowRoot,innerHTMLLength:this.shadowRoot?.innerHTML?.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'G'})}).catch(()=>{});
+                    // #endregion
+                }
+            }, 100);
         }
         
         setupButtonEvents() {
             const triggerBtn = this.shadowRoot?.querySelector('#vton-trigger-btn');
             if (triggerBtn) {
                 console.log('[VTON] Setting up button events');
+                // #region agent log
+                fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'widget-v2.js:setupButtonEvents',message:'Button found, setting up events',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
+                // #endregion
                 triggerBtn.addEventListener('click', (e) => {
                     e.preventDefault();
                     e.stopPropagation();
