@@ -80,6 +80,35 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     await ensureTables();
     const shopData = await getShop(shop);
 
+    // Handle return from Shopify payment (app purchase one-time charge)
+    const url = new URL(request.url);
+    const purchaseSuccess = url.searchParams.get("purchase");
+    const packId = url.searchParams.get("pack");
+    const creditsParam = url.searchParams.get("credits");
+
+    if (purchaseSuccess === "success" && packId && creditsParam) {
+      const creditsToAdd = parseInt(creditsParam);
+      if (creditsToAdd > 0 && shopData) {
+        // Credit the tokens automatically
+        const newCredits = (shopData.credits || 0) + creditsToAdd;
+        await upsertShop(shop, { credits: newCredits });
+        
+        console.log(`[Credits] Auto-credited ${creditsToAdd} credits for pack ${packId}`, {
+          shop,
+          oldCredits: shopData.credits,
+          newCredits,
+        });
+
+        // Reload shop data after crediting
+        const updatedShopData = await getShop(shop);
+        return json({
+          shop: updatedShopData || null,
+          purchaseSuccess: true,
+          creditsAdded: creditsToAdd,
+        });
+      }
+    }
+
     return json({
       shop: shopData || null,
     });
