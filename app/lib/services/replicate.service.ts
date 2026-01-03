@@ -77,12 +77,54 @@ export async function generateTryOn(
     console.log("Replicate output type:", typeof output);
     console.log("Replicate output:", JSON.stringify(output, null, 2));
     
-    // If output is null or undefined, wait a bit and try to get the result
-    if (!output || (typeof output === "object" && Object.keys(output).length === 0)) {
-      console.warn("Replicate returned empty/null output, waiting 2 seconds and checking status...");
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      // The replicate.run should have already waited, but if it returned empty, 
-      // the prediction might still be processing. For now, we'll handle it in the parsing below.
+    // If output is an empty object {}, create a prediction manually and poll for results
+    if (output && typeof output === "object" && Object.keys(output).length === 0) {
+      console.warn("Replicate returned empty object, creating prediction manually and polling...");
+      
+      try {
+        // Create a prediction manually
+        const prediction = await replicate.predictions.create({
+          version: MODEL_ID.split(":")[1] || "0513734a452173b8173e907e3a59d19a36266e55b48528559432bd21c7d7e985",
+          input: {
+            human_img: personInput,
+            garm_img: garmentInput,
+            garment_des: category,
+            category: "upper_body",
+          },
+        });
+        
+        console.log("Created prediction:", prediction.id, "Status:", prediction.status);
+        
+        // Poll for completion (max 60 seconds)
+        let pollCount = 0;
+        const maxPolls = 60;
+        
+        while ((prediction.status === "starting" || prediction.status === "processing") && pollCount < maxPolls) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          const updated = await replicate.predictions.get(prediction.id);
+          prediction.status = updated.status;
+          prediction.output = updated.output;
+          prediction.error = updated.error;
+          pollCount++;
+          
+          console.log(`Poll ${pollCount}/${maxPolls} - Prediction status:`, prediction.status);
+          
+          if (prediction.status === "succeeded" && prediction.output) {
+            output = prediction.output;
+            console.log("Prediction succeeded, output:", output);
+            break;
+          } else if (prediction.status === "failed" || prediction.status === "canceled") {
+            throw new Error(`Prediction ${prediction.status}: ${prediction.error || "Unknown error"}`);
+          }
+        }
+        
+        if (prediction.status !== "succeeded") {
+          throw new Error(`Prediction did not complete in time. Final status: ${prediction.status}`);
+        }
+      } catch (pollError) {
+        console.error("Error polling prediction:", pollError);
+        throw pollError;
+      }
     }
 
     // Replicate can return different formats:
