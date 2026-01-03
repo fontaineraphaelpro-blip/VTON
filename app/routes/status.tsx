@@ -130,6 +130,18 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     const url = new URL(request.url);
     const queryParams = url.searchParams;
 
+    // #region agent log
+    const logData = {
+      hasSignature: !!queryParams.get("signature"),
+      referer: request.headers.get("referer"),
+      origin: request.headers.get("origin"),
+      shop: queryParams.get("shop"),
+      url: request.url,
+      allHeaders: Object.fromEntries(request.headers.entries())
+    };
+    console.log("[Status] Request received:", logData);
+    // #endregion
+
     // 1. Verify Shopify signature or storefront origin
     if (!verifyProxySignature(queryParams, request)) {
       console.error("[Status] Request verification failed:", {
@@ -144,6 +156,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         { status: 403 }
       );
     }
+    
+    // #region agent log
+    console.log("[Status] Request verified successfully");
+    // #endregion
 
     // 2. Extract shop
     const shop = extractShopFromProxy(queryParams);
@@ -163,15 +179,24 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     // 5. Get comprehensive try-on status (shop + product level)
     const status = await getProductTryonStatus(shop, productId);
 
-    // 6. Return status
-    return json({
-      enabled: status.enabled,
-      shop_enabled: status.shopEnabled,
-      product_enabled: status.productEnabled,
-      product_id: productId,
-      shop: shop,
-      widget_settings: status.widgetSettings, // Only set if enabled, null otherwise
-    });
+    // 6. Return status with CORS headers
+    return json(
+      {
+        enabled: status.enabled,
+        shop_enabled: status.shopEnabled,
+        product_enabled: status.productEnabled,
+        product_id: productId,
+        shop: shop,
+        widget_settings: status.widgetSettings, // Only set if enabled, null otherwise
+      },
+      {
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "GET, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type",
+        },
+      }
+    );
   } catch (error) {
     console.error("Error in /status (App Proxy):", error);
     return json(
@@ -179,8 +204,14 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         error: "Failed to check try-on status",
         message: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 }
+      {
+        status: 500,
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "GET, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type",
+        },
+      }
     );
   }
 };
-
