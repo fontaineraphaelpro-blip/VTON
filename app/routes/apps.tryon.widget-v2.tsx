@@ -189,6 +189,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             // Note: The request should go through Shopify App Proxy which adds the signature automatically
             // If no signature, the backend will check if request comes from a Shopify storefront
             
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'widget-v2.js:checkStatus',message:'Before fetch request',data:{url:url.toString(),referer:window.location.href,origin:window.location.origin,shop:this.shop},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+            // #endregion
+            
             const response = await fetch(url.toString(), {
                 method: 'GET',
                 headers: {
