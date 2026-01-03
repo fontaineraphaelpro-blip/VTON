@@ -66,19 +66,27 @@ export async function generateTryOn(
 
     console.log("Calling Replicate API with model:", MODEL_ID);
     console.log("Input types - person:", typeof personInput, "garment:", typeof garmentInput);
+    console.log("Person image length:", typeof personInput === 'string' ? personInput.length : 'Buffer');
+    console.log("Garment image length:", typeof garmentInput === 'string' ? garmentInput.length : 'Buffer');
     console.log("Using prompt:", GARMENT_TRANSFER_PROMPT);
     
     // Use replicate.run which returns a Promise that resolves when the prediction completes
-    // For google/nano-banana-pro, we use image inputs and a prompt
-    // Try different parameter names as the model might use different conventions
+    // For google/nano-banana-pro, we MUST send prompt + both images (person and product)
+    // The model requires: prompt + person_image + garment_image
     let output;
     try {
+      const inputParams = {
+        image: personInput, // Person image (client)
+        image2: garmentInput, // Garment image (product)
+        prompt: GARMENT_TRANSFER_PROMPT, // Prompt
+      };
+      console.log("Sending to Replicate - input params keys:", Object.keys(inputParams));
+      console.log("Sending to Replicate - has image:", !!inputParams.image);
+      console.log("Sending to Replicate - has image2:", !!inputParams.image2);
+      console.log("Sending to Replicate - has prompt:", !!inputParams.prompt);
+      
       output = await replicate.run(MODEL_ID, {
-        input: {
-          image: personInput, // Person image
-          image2: garmentInput, // Garment image
-          prompt: GARMENT_TRANSFER_PROMPT,
-        },
+        input: inputParams,
       });
     } catch (error: any) {
       // If the above fails, try alternative parameter names
