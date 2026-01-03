@@ -85,8 +85,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     }
 
     // Check for GraphQL errors
-    if (responseJson.errors) {
-      const errorMessages = responseJson.errors.map((e: any) => e.message || String(e)).join(", ");
+    const responseData = responseJson as any;
+    if (responseData.errors) {
+      const errorMessages = responseData.errors.map((e: any) => e.message || String(e)).join(", ");
       console.error("GraphQL errors:", errorMessages);
       return json({ 
         products: [], 
@@ -173,10 +174,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
 export default function Products() {
   const loaderData = useLoaderData<typeof loader>();
-  const products = Array.isArray(loaderData?.products) ? loaderData.products : [];
-  const error = loaderData?.error;
-  const tryonCounts = loaderData?.tryonCounts || {};
-  const productSettings = loaderData?.productSettings || {};
+  const products = Array.isArray((loaderData as any)?.products) ? (loaderData as any).products : [];
+  const error = (loaderData as any)?.error || null;
+  const tryonCounts = (loaderData as any)?.tryonCounts || {};
+  const productSettings = (loaderData as any)?.productSettings || {};
   const fetcher = useFetcher<typeof action>();
 
   const productRows = products.map((product: any) => {
@@ -313,9 +314,9 @@ export default function Products() {
                         Product try-on setting updated successfully
                       </Banner>
                     )}
-                    {fetcher.data?.error && (
+                    {(fetcher.data as any)?.error && (
                       <Banner tone="critical" onDismiss={() => {}}>
-                        {fetcher.data.error}
+                        {(fetcher.data as any).error}
                       </Banner>
                     )}
                     <DataTable

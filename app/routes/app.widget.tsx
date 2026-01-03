@@ -135,7 +135,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 };
 
 export default function Widget() {
-  const { shop, error } = useLoaderData<typeof loader>();
+  const loaderData = useLoaderData<typeof loader>();
+  const shop = (loaderData as any)?.shop || null;
+  const error = (loaderData as any)?.error || null;
   const fetcher = useFetcher<typeof action>();
   const revalidator = useRevalidator();
 
@@ -241,7 +243,7 @@ export default function Widget() {
     // #region agent log
     fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.widget.tsx:225',message:'useEffect triggered for revalidator',data:{fetcherSuccess:fetcher.data?.success,fetcherTestMode:fetcher.data?.testMode},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
     // #endregion
-    if (fetcher.data?.success && !fetcher.data?.testMode) {
+    if (fetcher.data?.success && !(fetcher.data as any)?.testMode) {
       // #region agent log
       fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.widget.tsx:228',message:'Calling revalidator.revalidate()',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
       // #endregion
@@ -249,7 +251,7 @@ export default function Widget() {
         revalidator.revalidate();
       }, 500);
     }
-  }, [fetcher.data?.success, fetcher.data?.testMode, revalidator]);
+  }, [fetcher.data?.success, (fetcher.data as any)?.testMode, revalidator]);
 
   return (
     <Page>
@@ -517,17 +519,17 @@ export default function Widget() {
                 <Button variant="primary" onClick={handleTestTryOn} loading={fetcher.state === "submitting"}>
                   Run Try-On Test
                 </Button>
-                {fetcher.data?.testMode && fetcher.data.success && (
+                {(fetcher.data as any)?.testMode && fetcher.data.success && (
                   <Banner tone="info">
                     Test initiated. Result:{" "}
-                    <a href={fetcher.data.resultImageUrl} target="_blank" rel="noopener noreferrer">
+                    <a href={(fetcher.data as any).resultImageUrl} target="_blank" rel="noopener noreferrer">
                       View Image
                     </a>
                   </Banner>
                 )}
-                {fetcher.data?.testMode && !fetcher.data.success && (
+                {(fetcher.data as any)?.testMode && !fetcher.data.success && (
                   <Banner tone="critical">
-                    Error during test: {fetcher.data.error}
+                    Error during test: {(fetcher.data as any).error}
                   </Banner>
                 )}
               </BlockStack>
