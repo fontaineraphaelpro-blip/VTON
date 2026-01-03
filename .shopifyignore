@@ -1,0 +1,30 @@
+# Shopify ignore file
+# Files and directories to exclude from app deployment
+
+# Extensions directory (we don't use theme extensions)
+extensions/
+
+# Development files
+node_modules/
+.env
+.env.local
+*.log
+
+# Build artifacts (will be regenerated)
+build/
+dist/
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
