@@ -443,10 +443,17 @@ export default function Dashboard() {
   return (
     <Page>
       <TitleBar title="Dashboard - VTON Magic" />
-      <Layout>
+      <div className="app-container">
+        <header className="app-header">
+          <h1 className="app-title">Dashboard</h1>
+          <p className="app-subtitle">
+            Vue d'ensemble de votre activité et statistiques
+          </p>
+        </header>
+
         {/* Alerts compactes en haut */}
         {(error || fetcher.data?.success || credits < 50) && (
-          <Layout.Section>
+          <div className="vton-section" style={{ marginBottom: "2rem" }}>
             <BlockStack gap="300">
               {error && (
                 <Banner tone="critical" title="Error">
@@ -479,11 +486,11 @@ export default function Dashboard() {
                 </Banner>
               )}
             </BlockStack>
-          </Layout.Section>
+          </div>
         )}
 
         {/* Section 1: 4 Statistiques en une ligne horizontale - Full Width - Uniform Height */}
-        <Layout.Section>
+        <div className="vton-section">
           <div className="dashboard-stats-row">
             <div style={{ display: "flex", flexDirection: "column", height: "100%", width: "100%" }}>
               <div className="vton-card">
@@ -510,10 +517,10 @@ export default function Dashboard() {
                     </BlockStack>
                   </InlineStack>
                 </BlockStack>
-              </Card>
+              </div>
             </div>
             <div style={{ display: "flex", flexDirection: "column", height: "100%", width: "100%" }}>
-              <Card>
+              <div className="vton-card">
                 <BlockStack gap="300" style={{ height: "100%", display: "flex", flexDirection: "column" }}>
                   <InlineStack gap="300" align="start" blockAlign="center" style={{ flex: 1 }}>
                     <Box
@@ -537,10 +544,10 @@ export default function Dashboard() {
                     </BlockStack>
                   </InlineStack>
                 </BlockStack>
-              </Card>
+              </div>
             </div>
             <div style={{ display: "flex", flexDirection: "column", height: "100%", width: "100%" }}>
-              <Card>
+              <div className="vton-card">
                 <BlockStack gap="300" style={{ height: "100%", display: "flex", flexDirection: "column" }}>
                   <InlineStack gap="300" align="start" blockAlign="center" style={{ flex: 1 }}>
                     <Box
@@ -561,10 +568,10 @@ export default function Dashboard() {
                     </BlockStack>
                   </InlineStack>
                 </BlockStack>
-              </Card>
+              </div>
             </div>
             <div style={{ display: "flex", flexDirection: "column", height: "100%", width: "100%" }}>
-              <Card>
+              <div className="vton-card">
                 <BlockStack gap="300" style={{ height: "100%", display: "flex", flexDirection: "column" }}>
                   <InlineStack gap="300" align="start" blockAlign="center" style={{ flex: 1 }}>
                     <Box
