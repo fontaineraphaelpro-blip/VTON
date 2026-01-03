@@ -256,6 +256,12 @@ export async function generateTryOn(
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error("Replicate generation error:", errorMessage);
+    
+    // Handle specific Replicate error: "No images were returned"
+    if (errorMessage.includes("No images were returned") || errorMessage.includes("No images")) {
+      throw new Error("La génération n'a pas retourné d'image. Veuillez réessayer avec une autre photo.");
+    }
+    
     throw new Error(`Replicate generation failed: ${errorMessage}`);
   }
 }

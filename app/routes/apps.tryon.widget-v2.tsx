@@ -355,7 +355,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                         const reader = new FileReader();
                         reader.onload = (event) => {
                             this.userPhoto = event.target.result;
-                            if (generateBtn) {
+                            if (generateBtn && !this.isGenerating) {
                                 generateBtn.disabled = false;
                             }
                         };
@@ -370,7 +370,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                     e.preventDefault();
                     e.stopPropagation();
                     // Prevent double submission
-                    if (generateBtn.disabled) {
+                    if (this.isGenerating || generateBtn.disabled) {
+                        console.log('[VTON] Generation already in progress, ignoring click');
                         return;
                     }
                     this.generateTryOn();
@@ -487,10 +488,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                     }
                     
                     this.showResult(data.result_image_url);
-                    const generateBtn = document.getElementById('vton-generate-btn');
-                    if (generateBtn) {
-                        generateBtn.disabled = false;
-                    }
                 } catch (fetchError) {
                     clearTimeout(timeoutId);
                     if (fetchError.name === 'AbortError') {
@@ -502,6 +499,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             } catch (error) {
                 const errorMessage = error instanceof Error ? error.message : 'Une erreur est survenue';
                 this.showError(errorMessage);
+            } finally {
+                // Always reset flag and re-enable button
+                this.isGenerating = false;
                 const generateBtn = document.getElementById('vton-generate-btn');
                 if (generateBtn) {
                     generateBtn.disabled = false;
