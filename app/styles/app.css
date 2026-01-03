@@ -2720,6 +2720,18 @@ body {
 .app-container {
   background: var(--bg-soft) !important;
   min-height: 100vh;
+  max-width: 100% !important;
+  padding: 32px 24px 80px !important;
+}
+
+/* Override Polaris Page styles for dashboard */
+.Polaris-Page {
+  background: var(--bg-soft) !important;
+}
+
+.Polaris-Page__Content {
+  background: var(--bg-soft) !important;
+  padding: 0 !important;
 }
 
 /* ============================================
