@@ -180,51 +180,51 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     if (pack) {
       // Create a Shopify checkout URL for payment
       try {
-        // Create a draft order for the credit purchase
+        // Use Shopify Billing API for one-time charge (app purchase)
+        // This is the recommended way for in-app purchases and credit packs
         const mutation = `#graphql
-          mutation draftOrderCreate($input: DraftOrderInput!) {
-            draftOrderCreate(input: $input) {
-              draftOrder {
-                id
-                invoiceUrl
-              }
+          mutation appPurchaseOneTimeCreate(
+            $name: String!
+            $price: MoneyInput!
+            $returnUrl: URL!
+          ) {
+            appPurchaseOneTimeCreate(
+              name: $name
+              price: $price
+              returnUrl: $returnUrl
+              test: false
+            ) {
+              confirmationUrl
               userErrors {
-                field
                 message
+                field
               }
             }
           }
         `;
 
-        // Get customer email from session if available
-        const customerEmail = session.email || undefined;
+        // Build return URL - redirect back to credits page after payment
+        const returnUrl = new URL(request.url);
+        returnUrl.pathname = "/app/credits";
+        returnUrl.searchParams.set("purchase", "success");
+        returnUrl.searchParams.set("pack", pack.id);
+        returnUrl.searchParams.set("credits", String(pack.credits));
 
         const variables = {
-          input: {
-            lineItems: [
-              {
-                title: `${pack.name} Pack - ${pack.credits} Credits`,
-                quantity: 1,
-                originalUnitPrice: pack.price.toFixed(2),
-              }
-            ],
-            note: `VTON Magic Credits Purchase: ${pack.credits} credits`,
-            tags: ["vton-credits", `pack-${pack.id}`],
-            ...(customerEmail && {
-              customer: {
-                email: customerEmail,
-              }
-            }),
-          }
+          name: `${pack.name} Pack - ${pack.credits} Credits`,
+          price: {
+            amount: pack.price.toFixed(2),
+            currencyCode: "EUR", // Adjust based on shop currency
+          },
+          returnUrl: returnUrl.toString(),
         };
 
-        console.log("[Credits Action] Creating draft order for pack", {
+        console.log("[Credits Action] Creating app purchase one-time charge for pack", {
           packId: pack.id,
           packName: pack.name,
           price: pack.price,
           shop,
-          isOnline: session.isOnline,
-          hasAccessToken: !!session.accessToken,
+          returnUrl: returnUrl.toString(),
         });
         
         let response;
@@ -269,7 +269,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           // Handle 401 Unauthorized - authentication required
           if (response.status === 401) {
             const reauthUrl = response.headers.get('x-shopify-api-request-failure-reauthorize-url');
-            console.error("[Credits] Authentication required (401) for draft order creation", { reauthUrl });
+            console.error("[Credits] Authentication required (401) for app purchase creation", { reauthUrl });
             return json({ 
               success: false, 
               error: "Votre session a expiré. Veuillez rafraîchir la page pour vous ré-authentifier.",
@@ -339,7 +339,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         }
         
         // Log the full response for debugging
-        console.log("Draft order response:", JSON.stringify(responseJson, null, 2));
+        console.log("App purchase one-time charge response:", JSON.stringify(responseJson, null, 2));
         
         // Check for GraphQL errors
         if (responseJson.errors) {
@@ -351,42 +351,35 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           });
         }
         
-        const draftOrder = responseJson.data?.draftOrderCreate?.draftOrder;
-        const errors = responseJson.data?.draftOrderCreate?.userErrors;
+        const purchaseResult = responseJson.data?.appPurchaseOneTimeCreate;
+        const errors = purchaseResult?.userErrors || [];
 
         if (errors && errors.length > 0) {
           const errorMessages = errors.map((e: any) => `${e.field ? `${e.field}: ` : ""}${e.message}`).join(", ");
-          console.error("Draft order errors:", errorMessages);
+          console.error("App purchase errors:", errorMessages);
           return json({ 
             success: false, 
-            error: `Failed to create checkout: ${errorMessages}`,
+            error: `Failed to create purchase: ${errorMessages}`,
           });
         }
 
-        if (!draftOrder) {
-          console.error("No draft order returned:", responseJson);
+        if (!purchaseResult || !purchaseResult.confirmationUrl) {
+          console.error("No confirmation URL returned:", responseJson);
           return json({ 
             success: false, 
-            error: "Failed to create draft order. Please check your Shopify permissions.",
+            error: "Failed to create app purchase. Please check your Shopify permissions.",
           });
         }
 
-        if (draftOrder.invoiceUrl) {
-          return json({ 
-            success: true, 
-            redirect: true,
-            checkoutUrl: draftOrder.invoiceUrl,
-            pack: pack.name, 
-            credits: pack.credits,
-            price: pack.price,
-          });
-        } else {
-          console.error("Draft order created but no invoiceUrl:", draftOrder);
-          return json({ 
-            success: false, 
-            error: "Draft order created but no checkout URL available. Please try again.",
-          });
-        }
+        // Return confirmation URL for redirect to Shopify checkout
+        return json({ 
+          success: true, 
+          redirect: true,
+          checkoutUrl: purchaseResult.confirmationUrl,
+          pack: pack.name, 
+          credits: pack.credits,
+          price: pack.price,
+        });
       } catch (error) {
         // #region agent log
         fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:224',message:'Catch block - error caught',data:{errorType:error?.constructor?.name,isResponse:error instanceof Response,isError:error instanceof Error,hasStatus:!!(error as any)?.status,status:(error as any)?.status,message:error instanceof Error ? error.message : String(error)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
@@ -399,7 +392,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           // Handle 401 Unauthorized in catch block
           if (error.status === 401) {
             const reauthUrl = error.headers.get('x-shopify-api-request-failure-reauthorize-url');
-            console.warn(`Draft order creation failed: ${error.status} ${error.statusText} - Authentication required`);
+            console.warn(`App purchase creation failed: ${error.status} ${error.statusText} - Authentication required`);
             return json({ 
               success: false, 
               error: "Your session has expired. Please refresh the page to re-authenticate.",
@@ -407,7 +400,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
               reauthUrl: reauthUrl || null,
             });
           }
-          console.warn(`Draft order creation failed: ${error.status} ${error.statusText}`);
+          console.warn(`App purchase creation failed: ${error.status} ${error.statusText}`);
           return json({ 
             success: false, 
             error: `Shopify API error (${error.status}): ${error.statusText}` 
@@ -435,7 +428,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           });
         }
         // Log normal errors (not Response objects)
-        console.error("Error creating draft order:", error instanceof Error ? error.message : String(error));
+        console.error("Error creating app purchase:", error instanceof Error ? error.message : String(error));
         let errorMessage: string;
         if (error instanceof Error) {
           errorMessage = error.message;
@@ -457,45 +450,45 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       const totalPrice = customCredits * pricePerCredit;
 
       try {
-        // Create a draft order for custom pack
+        // Use Shopify Billing API for custom pack one-time charge
         const mutation = `#graphql
-          mutation draftOrderCreate($input: DraftOrderInput!) {
-            draftOrderCreate(input: $input) {
-              draftOrder {
-                id
-                invoiceUrl
-              }
+          mutation appPurchaseOneTimeCreate(
+            $name: String!
+            $price: MoneyInput!
+            $returnUrl: URL!
+          ) {
+            appPurchaseOneTimeCreate(
+              name: $name
+              price: $price
+              returnUrl: $returnUrl
+              test: false
+            ) {
+              confirmationUrl
               userErrors {
-                field
                 message
+                field
               }
             }
           }
         `;
 
-        // Get customer email from session if available
-        const customerEmail = session.email || undefined;
+        // Build return URL - redirect back to credits page after payment
+        const returnUrl = new URL(request.url);
+        returnUrl.pathname = "/app/credits";
+        returnUrl.searchParams.set("purchase", "success");
+        returnUrl.searchParams.set("pack", "custom");
+        returnUrl.searchParams.set("credits", String(customCredits));
 
         const variables = {
-          input: {
-            lineItems: [
-              {
-                title: `Custom Pack - ${customCredits} Credits`,
-                quantity: 1,
-                originalUnitPrice: totalPrice.toFixed(2),
-              }
-            ],
-            note: `VTON Magic Credits Purchase: ${customCredits} credits (Custom Pack)`,
-            tags: ["vton-credits", "custom-pack"],
-            ...(customerEmail && {
-              customer: {
-                email: customerEmail,
-              }
-            }),
-          }
+          name: `Custom Pack - ${customCredits} Credits`,
+          price: {
+            amount: totalPrice.toFixed(2),
+            currencyCode: "EUR", // Adjust based on shop currency
+          },
+          returnUrl: returnUrl.toString(),
         };
 
-        console.log("[Credits] Creating custom draft order", { customCredits });
+        console.log("[Credits] Creating custom app purchase", { customCredits, totalPrice });
         
         // #region agent log
         fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:340',message:'Before admin.graphql call for custom draft order',data:{customCredits,shop},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'E'})}).catch(()=>{});
@@ -589,7 +582,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         }
         
         // Log the full response for debugging
-        console.log("Custom draft order response:", JSON.stringify(responseJson, null, 2));
+        console.log("Custom app purchase response:", JSON.stringify(responseJson, null, 2));
         
         // Check for GraphQL errors
         if (responseJson.errors) {
@@ -601,42 +594,35 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           });
         }
         
-        const draftOrder = responseJson.data?.draftOrderCreate?.draftOrder;
-        const errors = responseJson.data?.draftOrderCreate?.userErrors;
+        const purchaseResult = responseJson.data?.appPurchaseOneTimeCreate;
+        const errors = purchaseResult?.userErrors || [];
 
         if (errors && errors.length > 0) {
           const errorMessages = errors.map((e: any) => `${e.field ? `${e.field}: ` : ""}${e.message}`).join(", ");
-          console.error("Custom draft order errors:", errorMessages);
+          console.error("Custom app purchase errors:", errorMessages);
           return json({ 
             success: false, 
-            error: `Failed to create checkout: ${errorMessages}`,
+            error: `Failed to create purchase: ${errorMessages}`,
           });
         }
 
-        if (!draftOrder) {
-          console.error("No custom draft order returned:", responseJson);
+        if (!purchaseResult || !purchaseResult.confirmationUrl) {
+          console.error("No confirmation URL returned (custom):", responseJson);
           return json({ 
             success: false, 
-            error: "Failed to create draft order. Please check your Shopify permissions.",
+            error: "Failed to create app purchase. Please check your Shopify permissions.",
           });
         }
 
-        if (draftOrder.invoiceUrl) {
-          return json({ 
-            success: true, 
-            redirect: true,
-            checkoutUrl: draftOrder.invoiceUrl,
-            pack: "Custom", 
-            credits: customCredits,
-            price: totalPrice,
-          });
-        } else {
-          console.error("Custom draft order created but no invoiceUrl:", draftOrder);
-          return json({ 
-            success: false, 
-            error: "Draft order created but no checkout URL available. Please try again.",
-          });
-        }
+        // Return confirmation URL for redirect to Shopify checkout
+        return json({ 
+          success: true, 
+          redirect: true,
+          checkoutUrl: purchaseResult.confirmationUrl,
+          pack: "Custom", 
+          credits: customCredits,
+          price: totalPrice,
+        });
       } catch (error) {
         // #region agent log
         fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:399',message:'Catch block - custom error caught',data:{errorType:error?.constructor?.name,isResponse:error instanceof Response,isError:error instanceof Error,hasStatus:!!(error as any)?.status,status:(error as any)?.status,message:error instanceof Error ? error.message : String(error)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
@@ -649,7 +635,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           // Handle 401 Unauthorized in catch block
           if (error.status === 401) {
             const reauthUrl = error.headers.get('x-shopify-api-request-failure-reauthorize-url');
-            console.warn(`[Credits] Custom draft order creation failed: ${error.status} ${error.statusText} - Authentication required`, { reauthUrl });
+            console.warn(`[Credits] Custom app purchase creation failed: ${error.status} ${error.statusText} - Authentication required`, { reauthUrl });
             return json({ 
               success: false, 
               error: "Votre session a expiré. Veuillez rafraîchir la page pour vous ré-authentifier.",
@@ -657,7 +643,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
               reauthUrl: reauthUrl || null,
             });
           }
-          console.warn(`Custom draft order creation failed: ${error.status} ${error.statusText}`);
+          console.warn(`Custom app purchase creation failed: ${error.status} ${error.statusText}`);
           return json({ 
             success: false, 
             error: `Shopify API error (${error.status}): ${error.statusText}` 
@@ -685,7 +671,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           });
         }
         // Log normal errors (not Response objects)
-        console.error("Error creating custom draft order:", error instanceof Error ? error.message : String(error));
+        console.error("Error creating custom app purchase:", error instanceof Error ? error.message : String(error));
         let errorMessage: string;
         if (error instanceof Error) {
           errorMessage = error.message;
@@ -742,8 +728,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 export default function Credits() {
   console.log("[Credits] Component rendering");
   
-  const { shop, error } = useLoaderData<typeof loader>();
-  console.log("[Credits] Loader data:", { hasShop: !!shop, hasError: !!error, credits: shop?.credits });
+  const { shop, error, purchaseSuccess, creditsAdded } = useLoaderData<typeof loader>();
+  console.log("[Credits] Loader data:", { hasShop: !!shop, hasError: !!error, credits: shop?.credits, purchaseSuccess, creditsAdded });
   
   const fetcher = useFetcher<typeof action>();
   const revalidator = useRevalidator();
@@ -849,10 +835,10 @@ export default function Credits() {
           </Layout.Section>
         )}
 
-        {fetcher.data?.success && !fetcher.data?.redirect && (
+        {(purchaseSuccess || (fetcher.data?.success && !fetcher.data?.redirect)) && (
           <Layout.Section>
             <Banner tone="success" title="Succès !">
-              {fetcher.data.creditsAdded || fetcher.data.credits} crédits ajoutés à votre compte.
+              {creditsAdded || fetcher.data?.creditsAdded || fetcher.data?.credits || 0} crédits ajoutés à votre compte.
             </Banner>
           </Layout.Section>
         )}
