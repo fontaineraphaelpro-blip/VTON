@@ -98,8 +98,52 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         
         if (scriptTagsData) {
           const existingScripts = scriptTagsData.data?.scriptTags?.edges || [];
+          
+          // Supprimer les anciens script tags qui pourraient interférer
+          const oldScriptTags = existingScripts.filter((edge: any) => {
+            const src = edge.node.src || '';
+            return src.includes('widget') || 
+                   src.includes('tryon') || 
+                   src.includes('try-on') ||
+                   src.includes('vton') ||
+                   (src.includes('/apps/') && src.includes('widget'));
+          });
+          
+          // Supprimer les anciens script tags
+          for (const oldScript of oldScriptTags) {
+            try {
+              const deleteScriptTagMutation = `#graphql
+                mutation scriptTagDelete($id: ID!) {
+                  scriptTagDelete(id: $id) {
+                    deletedScriptTagId
+                    userErrors {
+                      field
+                      message
+                    }
+                  }
+                }
+              `;
+              
+              const deleteResult = await admin.graphql(deleteScriptTagMutation, {
+                variables: {
+                  id: oldScript.node.id
+                }
+              });
+              
+              if (deleteResult.ok) {
+                const deleteData = await deleteResult.json().catch(() => null);
+                if (deleteData?.data?.scriptTagDelete?.deletedScriptTagId) {
+                  console.log("Old script tag deleted:", oldScript.node.src);
+                }
+              }
+            } catch (deleteError) {
+              console.warn("Error deleting old script tag:", deleteError);
+            }
+          }
+          
+          // Vérifier si le nouveau script tag existe déjà
           const scriptExists = existingScripts.some((edge: any) => 
-            edge.node.src.includes('/apps/tryon/widget.js') || edge.node.src.includes('widget.js')
+            edge.node.src.includes('/apps/tryon/widget.js')
           );
 
           if (!scriptExists) {
@@ -214,10 +258,96 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
-  const { session } = await authenticate.admin(request);
+  const { session, admin } = await authenticate.admin(request);
   const shop = session.shop;
   const formData = await request.formData();
 
+  const intent = formData.get("intent") as string;
+
+  // Action pour nettoyer les anciens script tags
+  if (intent === "cleanup-script-tags") {
+    try {
+      const scriptTagsQuery = `#graphql
+        query {
+          scriptTags(first: 50) {
+            edges {
+              node {
+                id
+                src
+              }
+            }
+          }
+        }
+      `;
+      
+      const scriptTagsResponse = await admin.graphql(scriptTagsQuery);
+      
+      if (scriptTagsResponse.ok) {
+        const scriptTagsData = await scriptTagsResponse.json();
+        const existingScripts = scriptTagsData.data?.scriptTags?.edges || [];
+        
+        // Trouver tous les anciens script tags liés au widget
+        const oldScriptTags = existingScripts.filter((edge: any) => {
+          const src = edge.node.src || '';
+          return src.includes('widget') || 
+                 src.includes('tryon') || 
+                 src.includes('try-on') ||
+                 src.includes('vton') ||
+                 (src.includes('/apps/') && src.includes('widget'));
+        });
+        
+        let deletedCount = 0;
+        
+        // Supprimer chaque ancien script tag
+        for (const oldScript of oldScriptTags) {
+          try {
+            const deleteScriptTagMutation = `#graphql
+              mutation scriptTagDelete($id: ID!) {
+                scriptTagDelete(id: $id) {
+                  deletedScriptTagId
+                  userErrors {
+                    field
+                    message
+                  }
+                }
+              }
+            `;
+            
+            const deleteResult = await admin.graphql(deleteScriptTagMutation, {
+              variables: {
+                id: oldScript.node.id
+              }
+            });
+            
+            if (deleteResult.ok) {
+              const deleteData = await deleteResult.json().catch(() => null);
+              if (deleteData?.data?.scriptTagDelete?.deletedScriptTagId) {
+                deletedCount++;
+              }
+            }
+          } catch (deleteError) {
+            console.warn("Error deleting script tag:", deleteError);
+          }
+        }
+        
+        return json({ 
+          success: true, 
+          deletedCount,
+          message: `Supprimé ${deletedCount} ancien(s) script tag(s)` 
+        });
+      }
+      
+      return json({ success: false, error: "Impossible de récupérer les script tags" });
+    } catch (error) {
+      console.error("Error cleaning up script tags:", error);
+      return json({ 
+        success: false, 
+        error: error instanceof Error ? error.message : "Erreur inconnue" 
+      });
+    }
+  }
+
+  // Action normale pour sauvegarder la configuration
   const widgetText = formData.get("widgetText") as string;
   const widgetBg = formData.get("widgetBg") as string;
   const widgetColor = formData.get("widgetColor") as string;
@@ -632,6 +762,23 @@ export default function Dashboard() {
                         autoComplete="off"
                         helpText="Limite quotidienne par utilisateur"
                       />
+                      <Divider />
+                      <BlockStack gap="200">
+                        <Text variant="bodySm" tone="subdued" as="p">
+                          <strong>Nettoyage :</strong> Supprime les anciens widgets et script tags qui pourraient interférer
+                        </Text>
+                        <Button
+                          variant="secondary"
+                          onClick={async () => {
+                            const formData = new FormData();
+                            formData.append("intent", "cleanup-script-tags");
+                            fetcher.submit(formData, { method: "post" });
+                          }}
+                          loading={fetcher.state === "submitting"}
+                        >
+                          Nettoyer les anciens widgets
+                        </Button>
+                      </BlockStack>
                       <InlineStack align="end">
                         <Button submit variant="primary" loading={fetcher.state === "submitting"}>
                           Enregistrer

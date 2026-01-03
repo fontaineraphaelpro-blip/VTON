@@ -24,9 +24,11 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     const CONFIG = {
         apiBase: window.location.origin + '/apps/tryon',
         selectors: {
-            productImage: '.product__media img, .product-single__media img, [data-product-image]',
-            addToCartButton: 'form[action*="/cart/add"] button[type="submit"], button[name="add"], [data-add-to-cart]'
-        }
+            productImage: '.product__media img, .product-single__media img, [data-product-image], .product-media img, .product-photos img, .product-gallery img, img[data-product-image]',
+            addToCartButton: 'form[action*="/cart/add"] button[type="submit"], button[name="add"], [data-add-to-cart], .product-form__cart-submit, .btn--add-to-cart, .add-to-cart, button[type="submit"][form*="product"], .product-form button[type="submit"], .product-form__submit, [aria-label*="cart" i], [aria-label*="add" i]'
+        },
+        maxRetries: 10,
+        retryDelay: 500
     };
     
     // États du modal
@@ -46,6 +48,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             this.currentState = STATE.INITIAL;
             this.userPhoto = null;
             this.resultImageUrl = null;
+            this.retryCount = 0;
             this.init();
         }
         
@@ -106,6 +109,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                 return;
             }
             
+            // Supprimer les anciens widgets qui pourraient exister
+            this.removeOldWidgets();
+            
             // Vérifier les crédits avant d'afficher le bouton
             this.checkCredits().then(hasCredits => {
                 if (hasCredits) {
@@ -118,25 +124,65 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             });
         }
         
+        removeOldWidgets() {
+            // Supprimer les anciens boutons widget
+            const oldButtons = document.querySelectorAll('.vton-widget-button, [data-vton-widget], .try-on-button, .virtual-try-on-button');
+            oldButtons.forEach(btn => btn.remove());
+            
+            // Supprimer les anciens styles
+            const oldStyles = document.getElementById('vton-v2-styles');
+            if (oldStyles) oldStyles.remove();
+        }
+        
         injectButton() {
-            const cartSelectors = CONFIG.selectors.addToCartButton.split(', ');
-            let addToCartBtn = null;
-            
-            for (const selector of cartSelectors) {
-                addToCartBtn = document.querySelector(selector.trim());
-                if (addToCartBtn) break;
-            }
-            
-            if (!addToCartBtn) {
-                setTimeout(() => this.injectButton(), 500);
+            // Vérifier si le bouton existe déjà
+            if (document.querySelector('.vton-widget-button')) {
                 return;
             }
             
-            if (document.querySelector('.vton-widget-button')) return;
+            // Limiter le nombre de tentatives
+            if (this.retryCount >= CONFIG.maxRetries) {
+                console.warn('[VTON] Max retries reached, could not find Add to Cart button');
+                return;
+            }
             
+            const cartSelectors = CONFIG.selectors.addToCartButton.split(', ');
+            let addToCartBtn = null;
+            
+            // Essayer tous les sélecteurs
+            for (const selector of cartSelectors) {
+                const trimmedSelector = selector.trim();
+                if (!trimmedSelector) continue;
+                
+                addToCartBtn = document.querySelector(trimmedSelector);
+                if (addToCartBtn) {
+                    console.log('[VTON] Found Add to Cart button with selector:', trimmedSelector);
+                    break;
+                }
+            }
+            
+            // Si pas trouvé, essayer de trouver le formulaire de produit
+            if (!addToCartBtn) {
+                const productForm = document.querySelector('form[action*="/cart/add"]');
+                if (productForm) {
+                    addToCartBtn = productForm.querySelector('button[type="submit"]') || 
+                                   productForm.querySelector('button') ||
+                                   productForm.querySelector('[type="submit"]');
+                }
+            }
+            
+            // Si toujours pas trouvé, réessayer
+            if (!addToCartBtn) {
+                this.retryCount++;
+                setTimeout(() => this.injectButton(), CONFIG.retryDelay);
+                return;
+            }
+            
+            // Créer le bouton widget
             const vtonBtn = document.createElement('button');
             vtonBtn.type = 'button';
             vtonBtn.className = 'vton-widget-button';
+            vtonBtn.setAttribute('data-vton-widget', 'true');
             vtonBtn.innerHTML = \`
                 <svg class="vton-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M12 2L2 7L12 12L22 7L12 2Z"/>
@@ -147,16 +193,47 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             \`;
             vtonBtn.onclick = () => this.openModal();
             
+            // Essayer plusieurs méthodes d'insertion
             const parent = addToCartBtn.parentElement;
-            if (parent) {
-                if (parent.style.display === 'flex' || parent.classList.contains('flex')) {
+            const grandParent = parent?.parentElement;
+            
+            // Méthode 1: Insérer après le bouton directement
+            if (addToCartBtn.nextSibling) {
+                addToCartBtn.parentNode.insertBefore(vtonBtn, addToCartBtn.nextSibling);
+            } else {
+                // Méthode 2: Ajouter dans le parent si c'est un flex container
+                if (parent && (parent.style.display === 'flex' || 
+                               parent.classList.contains('flex') || 
+                               getComputedStyle(parent).display === 'flex')) {
                     parent.appendChild(vtonBtn);
-                } else {
-                    parent.insertAdjacentElement('afterend', vtonBtn);
+                } 
+                // Méthode 3: Créer un wrapper pour les deux boutons
+                else if (parent) {
+                    const wrapper = document.createElement('div');
+                    wrapper.style.display = 'flex';
+                    wrapper.style.flexDirection = 'column';
+                    wrapper.style.gap = '12px';
+                    wrapper.style.width = '100%';
+                    
+                    parent.insertBefore(wrapper, addToCartBtn);
+                    wrapper.appendChild(addToCartBtn);
+                    wrapper.appendChild(vtonBtn);
+                }
+                // Méthode 4: Insérer après le parent
+                else {
+                    addToCartBtn.insertAdjacentElement('afterend', vtonBtn);
                 }
             }
             
+            // Ajuster le style pour que le bouton prenne toute la largeur
+            if (addToCartBtn.style.width === '100%' || 
+                getComputedStyle(addToCartBtn).width === '100%' ||
+                addToCartBtn.classList.contains('full-width')) {
+                vtonBtn.style.width = '100%';
+            }
+            
             this.injectStyles();
+            console.log('[VTON] Widget button injected successfully');
         }
         
         injectStyles() {
