@@ -835,8 +835,8 @@ export default function Credits() {
           <Layout>
             <Layout.Section variant="oneThird">
               <Card>
-                <BlockStack gap="400">
-                  <Box textAlign="center">
+                <BlockStack gap="300">
+                  <Box textAlign="center" paddingBlockStart="200">
                     <Text variant="heading2xl" as="p" fontWeight="bold">
                       {currentCredits.toLocaleString("en-US")}
                     </Text>
@@ -847,7 +847,7 @@ export default function Credits() {
                     </Text>
                   </Box>
                   <Divider />
-                  <Box textAlign="center">
+                  <Box textAlign="center" paddingBlockEnd="200">
                     <Text variant="bodySm" tone="subdued" as="p">
                       Les jetons n'expirent jamais
                     </Text>
@@ -861,13 +861,13 @@ export default function Credits() {
         {/* Section 2: 3 offres alignées horizontalement avec Pro dominant */}
         <Layout.Section>
           <BlockStack gap="400">
-            <InlineStack gap="300" align="stretch" blockAlign="stretch">
+            <InlineStack gap="400" align="stretch" blockAlign="stretch">
               {/* Pack Découverte */}
               {CREDIT_PACKS.filter(p => p.id === "decouverte").map((pack) => (
                 <Box key={pack.id} minWidth="0" flexGrow={1}>
                   <Card>
-                    <BlockStack gap="300">
-                      <BlockStack gap="150">
+                    <BlockStack gap="400">
+                      <BlockStack gap="200">
                         <Text variant="headingMd" as="h3" fontWeight="bold">
                           {pack.name}
                         </Text>
@@ -879,8 +879,8 @@ export default function Credits() {
                         </Text>
                       </BlockStack>
                       <Divider />
-                      <BlockStack gap="200">
-                        <BlockStack gap="050">
+                      <BlockStack gap="300">
+                        <BlockStack gap="100">
                           <Text variant="headingLg" as="p" fontWeight="bold">
                             €{pack.price.toFixed(2)}
                           </Text>
@@ -911,11 +911,11 @@ export default function Credits() {
                     <Card>
                       <BlockStack gap="400">
                         {/* Badge "Recommandé" en haut */}
-                        <Box>
+                        <Box paddingBlockStart="200">
                           <Badge tone="info" size="large">Recommandé</Badge>
                         </Box>
-                        <BlockStack gap="300">
-                          <BlockStack gap="200">
+                        <BlockStack gap="400">
+                          <BlockStack gap="300">
                             <Text variant="headingLg" as="h3" fontWeight="bold">
                               {pack.name}
                             </Text>
@@ -927,7 +927,7 @@ export default function Credits() {
                             </Text>
                             {savings > 0 && (
                               <Box
-                                padding="200"
+                                padding="300"
                                 background="bg-surface-success-subdued"
                                 borderRadius="200"
                               >
@@ -938,8 +938,8 @@ export default function Credits() {
                             )}
                           </BlockStack>
                           <Divider />
-                          <BlockStack gap="300">
-                            <BlockStack gap="100">
+                          <BlockStack gap="400">
+                            <BlockStack gap="200">
                               <Text variant="heading2xl" as="p" fontWeight="bold">
                                 €{pack.price.toFixed(2)}
                               </Text>
@@ -972,8 +972,8 @@ export default function Credits() {
               {CREDIT_PACKS.filter(p => p.id === "starter").map((pack) => (
                 <Box key={pack.id} minWidth="0" flexGrow={1}>
                   <Card>
-                    <BlockStack gap="300">
-                      <BlockStack gap="150">
+                    <BlockStack gap="400">
+                      <BlockStack gap="200">
                         <Text variant="headingMd" as="h3" fontWeight="bold">
                           {pack.name}
                         </Text>
@@ -985,8 +985,8 @@ export default function Credits() {
                         </Text>
                       </BlockStack>
                       <Divider />
-                      <BlockStack gap="200">
-                        <BlockStack gap="050">
+                      <BlockStack gap="300">
+                        <BlockStack gap="100">
                           <Text variant="headingLg" as="p" fontWeight="bold">
                             €{pack.price.toFixed(2)}
                           </Text>
@@ -1011,9 +1011,9 @@ export default function Credits() {
             </InlineStack>
 
             {/* Mentions de confiance avec icônes */}
-            <Box padding="300">
+            <Box padding="400">
               <Box textAlign="center">
-                <InlineStack gap="400" align="center" blockAlign="center">
+                <InlineStack gap="500" align="center" blockAlign="center">
                   <InlineStack gap="100" align="center" blockAlign="center">
                     <Text variant="bodySm" tone="success" as="span" fontWeight="semibold">✓</Text>
                     <Text variant="bodySm" tone="subdued" as="p">
@@ -1043,7 +1043,7 @@ export default function Credits() {
         {/* Section 3: Historique des recharges sous les offres */}
         <Layout.Section>
           <Card>
-            <BlockStack gap="300">
+            <BlockStack gap="400">
               <InlineStack align="space-between" blockAlign="center">
                 <Text as="h2" variant="headingLg" fontWeight="semibold">
                   Historique des recharges
@@ -1053,12 +1053,10 @@ export default function Credits() {
                 </Button>
               </InlineStack>
               <Divider />
-              <Box padding="400">
-                <Box textAlign="center">
-                  <Text variant="bodyMd" tone="subdued" as="p">
-                    Aucun historique disponible pour le moment
-                  </Text>
-                </Box>
+              <Box padding="500" textAlign="center">
+                <Text variant="bodyMd" tone="subdued" as="p">
+                  Aucun historique disponible pour le moment
+                </Text>
               </Box>
             </BlockStack>
           </Card>

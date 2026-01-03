@@ -319,7 +319,7 @@ export default function Dashboard() {
         {/* Alerts compactes en haut */}
         {(error || fetcher.data?.success || credits < 50) && (
           <Layout.Section>
-            <BlockStack gap="200">
+            <BlockStack gap="300">
               {error && (
                 <Banner tone="critical" title="Error">
                   {error}
@@ -346,20 +346,20 @@ export default function Dashboard() {
 
         {/* Section 1: 4 Statistiques en une ligne horizontale */}
         <Layout.Section>
-          <InlineStack gap="300" align="stretch" blockAlign="stretch">
+          <InlineStack gap="400" align="stretch" blockAlign="stretch">
             <Box minWidth="0" flexGrow={1}>
               <Card>
-                <BlockStack gap="200">
-                  <InlineStack gap="200" align="start" blockAlign="center">
+                <BlockStack gap="300">
+                  <InlineStack gap="300" align="start" blockAlign="center">
                     <Box
-                      padding="200"
+                      padding="300"
                       background="bg-surface-secondary"
                       borderRadius="200"
                       style={{ minWidth: "48px", height: "48px", display: "flex", alignItems: "center", justifyContent: "center" }}
                     >
                       <Text variant="headingLg" as="span">💰</Text>
                     </Box>
-                    <BlockStack gap="050">
+                    <BlockStack gap="100">
                       <Text variant="heading2xl" as="p" fontWeight="bold">
                         {credits.toLocaleString("en-US")}
                       </Text>
@@ -376,17 +376,17 @@ export default function Dashboard() {
             </Box>
             <Box minWidth="0" flexGrow={1}>
               <Card>
-                <BlockStack gap="200">
-                  <InlineStack gap="200" align="start" blockAlign="center">
+                <BlockStack gap="300">
+                  <InlineStack gap="300" align="start" blockAlign="center">
                     <Box
-                      padding="200"
+                      padding="300"
                       background="bg-surface-secondary"
                       borderRadius="200"
                       style={{ minWidth: "48px", height: "48px", display: "flex", alignItems: "center", justifyContent: "center" }}
                     >
                       <Text variant="headingLg" as="span">📊</Text>
                     </Box>
-                    <BlockStack gap="050">
+                    <BlockStack gap="100">
                       <Text variant="heading2xl" as="p" fontWeight="bold">
                         {last30DaysTotal.toLocaleString("en-US")}
                       </Text>
@@ -403,17 +403,17 @@ export default function Dashboard() {
             </Box>
             <Box minWidth="0" flexGrow={1}>
               <Card>
-                <BlockStack gap="200">
-                  <InlineStack gap="200" align="start" blockAlign="center">
+                <BlockStack gap="300">
+                  <InlineStack gap="300" align="start" blockAlign="center">
                     <Box
-                      padding="200"
+                      padding="300"
                       background="bg-surface-secondary"
                       borderRadius="200"
                       style={{ minWidth: "48px", height: "48px", display: "flex", alignItems: "center", justifyContent: "center" }}
                     >
                       <Text variant="headingLg" as="span">🛒</Text>
                     </Box>
-                    <BlockStack gap="050">
+                    <BlockStack gap="100">
                       <Text variant="heading2xl" as="p" fontWeight="bold">
                         {totalAtc.toLocaleString("en-US")}
                       </Text>
@@ -427,17 +427,17 @@ export default function Dashboard() {
             </Box>
             <Box minWidth="0" flexGrow={1}>
               <Card>
-                <BlockStack gap="200">
-                  <InlineStack gap="200" align="start" blockAlign="center">
+                <BlockStack gap="300">
+                  <InlineStack gap="300" align="start" blockAlign="center">
                     <Box
-                      padding="200"
+                      padding="300"
                       background="bg-surface-secondary"
                       borderRadius="200"
                       style={{ minWidth: "48px", height: "48px", display: "flex", alignItems: "center", justifyContent: "center" }}
                     >
                       <Text variant="headingLg" as="span">📈</Text>
                     </Box>
-                    <BlockStack gap="050">
+                    <BlockStack gap="100">
                       <Text variant="heading2xl" as="p" fontWeight="bold">
                         {conversionRate}%
                       </Text>
@@ -471,15 +471,15 @@ export default function Dashboard() {
                     </InlineStack>
                     <Divider />
                     {dailyStats.length > 0 ? (
-                      <Box minHeight="200px" padding="300">
-                        <InlineStack gap="200" align="stretch" blockAlign="end">
+                      <Box minHeight="200px" padding="400">
+                        <InlineStack gap="300" align="stretch" blockAlign="end">
                           {dailyStats.slice(-7).map((stat: any, index: number) => {
                             const maxCount = Math.max(...dailyStats.map((s: any) => s.count));
                             const percentage = maxCount > 0 ? (stat.count / maxCount) * 100 : 0;
                             const date = new Date(stat.date);
                             return (
                               <Box key={index} minWidth="0" flexGrow={1}>
-                                <BlockStack gap="100" align="center">
+                                <BlockStack gap="200" align="center">
                                   <Text variant="bodySm" fontWeight="semibold" as="p">
                                     {stat.count}
                                   </Text>
@@ -522,7 +522,7 @@ export default function Dashboard() {
                         </Text>
                         <Divider />
                         {topProducts.length > 0 ? (
-                          <BlockStack gap="300">
+                          <BlockStack gap="400">
                             {topProducts.map((product: any, index: number) => (
                               <InlineStack key={product.product_id || index} align="space-between" blockAlign="center">
                                 <Text variant="bodyMd" as="span" truncate>
@@ -535,7 +535,7 @@ export default function Dashboard() {
                             ))}
                           </BlockStack>
                         ) : (
-                          <Box padding="400" textAlign="center">
+                          <Box padding="500" textAlign="center">
                             <Text variant="bodyMd" tone="subdued" as="p">
                               Aucun essai pour le moment. Commencez à utiliser le widget sur vos produits !
                             </Text>
@@ -558,7 +558,7 @@ export default function Dashboard() {
                         </InlineStack>
                         <Divider />
                         {recentLogs.length > 0 ? (
-                          <BlockStack gap="300">
+                          <BlockStack gap="400">
                             {recentLogs.slice(0, 5).map((log: any, index: number) => (
                               <InlineStack key={log.id || index} align="space-between" blockAlign="center">
                                 <BlockStack gap="100">
@@ -581,7 +581,7 @@ export default function Dashboard() {
                             ))}
                           </BlockStack>
                         ) : (
-                          <Box padding="400" textAlign="center">
+                          <Box padding="500" textAlign="center">
                             <Text variant="bodyMd" tone="subdued" as="p">
                               Aucune activité récente. Les essais apparaîtront ici une fois que les clients commenceront à utiliser le widget.
                             </Text>
