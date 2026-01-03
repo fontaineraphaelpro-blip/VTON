@@ -344,9 +344,9 @@ export default function Dashboard() {
           </Layout.Section>
         )}
 
-        {/* Section 1: 4 Statistiques en une ligne horizontale */}
+        {/* Section 1: 4 Statistiques en une ligne horizontale - Full Width */}
         <Layout.Section>
-          <InlineStack gap="400" align="stretch" blockAlign="stretch">
+          <div className="dashboard-stats-row">
             <Box minWidth="0" flexGrow={1}>
               <Card>
                 <BlockStack gap="300">
@@ -449,14 +449,14 @@ export default function Dashboard() {
                 </BlockStack>
               </Card>
             </Box>
-          </InlineStack>
+          </div>
         </Layout.Section>
 
-        {/* Section 2: Layout principal - Graphique + Top Produits/Activité | Réglages */}
+        {/* Section 2: Layout principal - Graphique + Top Produits/Activité | Réglages - Full Width */}
         <Layout.Section>
-          <Layout>
-            {/* Colonne principale : Graphique + Top Produits + Activité */}
-            <Layout.Section variant="twoThirds">
+          <div className="dashboard-main-layout">
+            {/* Colonne principale : Graphique + Top Produits + Activité (75%) */}
+            <div>
               <BlockStack gap="300">
                 {/* Graphique des générations */}
                 <Card>
@@ -471,7 +471,7 @@ export default function Dashboard() {
                     </InlineStack>
                     <Divider />
                     {dailyStats.length > 0 ? (
-                      <Box minHeight="200px" padding="400">
+                      <Box className="graph-container-large">
                         <InlineStack gap="300" align="stretch" blockAlign="end">
                           {dailyStats.slice(-7).map((stat: any, index: number) => {
                             const maxCount = Math.max(...dailyStats.map((s: any) => s.count));
@@ -500,8 +500,8 @@ export default function Dashboard() {
                         </InlineStack>
                       </Box>
                     ) : (
-                      <Box padding="400" textAlign="center">
-                        <Text variant="bodyMd" tone="subdued" as="p">
+                      <Box className="empty-state-large" textAlign="center">
+                        <Text variant="bodyLg" tone="subdued" as="p">
                           Aucune donnée disponible pour les 30 derniers jours
                         </Text>
                       </Box>
@@ -535,8 +535,8 @@ export default function Dashboard() {
                             ))}
                           </BlockStack>
                         ) : (
-                          <Box padding="500" textAlign="center">
-                            <Text variant="bodyMd" tone="subdued" as="p">
+                          <Box className="empty-state-large" textAlign="center">
+                            <Text variant="bodyLg" tone="subdued" as="p">
                               Aucun essai pour le moment. Commencez à utiliser le widget sur vos produits !
                             </Text>
                           </Box>
@@ -581,8 +581,8 @@ export default function Dashboard() {
                             ))}
                           </BlockStack>
                         ) : (
-                          <Box padding="500" textAlign="center">
-                            <Text variant="bodyMd" tone="subdued" as="p">
+                          <Box className="empty-state-large" textAlign="center">
+                            <Text variant="bodyLg" tone="subdued" as="p">
                               Aucune activité récente. Les essais apparaîtront ici une fois que les clients commenceront à utiliser le widget.
                             </Text>
                           </Box>
@@ -592,10 +592,10 @@ export default function Dashboard() {
                   </Layout.Section>
                 </Layout>
               </BlockStack>
-            </Layout.Section>
+            </div>
 
-            {/* Colonne latérale droite : Réglages */}
-            <Layout.Section variant="oneThird">
+            {/* Colonne latérale droite : Réglages (25%) */}
+            <div>
               <Card>
                 <BlockStack gap="400">
                   <Text as="h2" variant="headingLg" fontWeight="semibold">
@@ -641,8 +641,8 @@ export default function Dashboard() {
                   </form>
                 </BlockStack>
               </Card>
-            </Layout.Section>
-          </Layout>
+            </div>
+          </div>
         </Layout.Section>
       </Layout>
     </Page>

@@ -1710,3 +1710,81 @@ body {
   transform: translateY(-1px);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08) !important;
 }
+
+/* ============================================
+   Full Width Layout Overrides
+   ============================================ */
+
+/* Force full width layout - remove Polaris default max-width constraints */
+.Polaris-Page {
+  max-width: 100% !important;
+  width: 100% !important;
+}
+
+.Polaris-Page__Content {
+  max-width: 100% !important;
+  width: 100% !important;
+  padding-left: 24px !important;
+  padding-right: 24px !important;
+}
+
+.Polaris-Layout {
+  max-width: 100% !important;
+  width: 100% !important;
+}
+
+.Polaris-Layout__Section {
+  max-width: 100% !important;
+  width: 100% !important;
+}
+
+/* Full width for dashboard stats row */
+.dashboard-stats-row {
+  display: grid !important;
+  grid-template-columns: repeat(4, 1fr) !important;
+  gap: 24px !important;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+/* Full width for credits balance card */
+.credits-balance-full {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+/* Full width for credit packs */
+.credits-packs-row {
+  display: grid !important;
+  grid-template-columns: 1fr 1.3fr 1fr !important;
+  gap: 24px !important;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+/* Dashboard main content - 75% left, 25% right */
+.dashboard-main-layout {
+  display: grid !important;
+  grid-template-columns: 75% 25% !important;
+  gap: 24px !important;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+/* Full width for history section */
+.history-section-full {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+/* Larger empty states */
+.empty-state-large {
+  padding: 80px 40px !important;
+  min-height: 200px !important;
+}
+
+/* Larger graph container */
+.graph-container-large {
+  min-height: 300px !important;
+  padding: 40px !important;
+}

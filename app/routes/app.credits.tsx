@@ -886,11 +886,9 @@ export default function Credits() {
           </Layout.Section>
         )}
 
-        {/* Section 1: Solde actuel en haut à gauche */}
+        {/* Section 1: Solde actuel en pleine largeur */}
         <Layout.Section>
-          <Layout>
-            <Layout.Section variant="oneThird">
-              <Card>
+          <Card className="credits-balance-full">
                 <BlockStack gap="300">
                   <Box textAlign="center" paddingBlockStart="200">
                     <Text variant="heading2xl" as="p" fontWeight="bold">
@@ -910,14 +908,12 @@ export default function Credits() {
                   </Box>
                 </BlockStack>
               </Card>
-            </Layout.Section>
-          </Layout>
         </Layout.Section>
 
-        {/* Section 2: 3 offres alignées horizontalement avec Pro dominant */}
+        {/* Section 2: 3 offres alignées horizontalement avec Pro dominant - Full Width */}
         <Layout.Section>
           <BlockStack gap="400">
-            <InlineStack gap="400" align="stretch" blockAlign="stretch">
+            <div className="credits-packs-row">
               {/* Pack Découverte */}
               {CREDIT_PACKS.filter(p => p.id === "decouverte").map((pack) => (
                 <Box key={pack.id} minWidth="0" flexGrow={1}>
@@ -1064,7 +1060,7 @@ export default function Credits() {
                   </Card>
                 </Box>
               ))}
-            </InlineStack>
+            </div>
 
             {/* Mentions de confiance avec icônes */}
             <Box padding="400">
@@ -1096,9 +1092,9 @@ export default function Credits() {
           </BlockStack>
         </Layout.Section>
 
-        {/* Section 3: Historique des recharges sous les offres */}
+        {/* Section 3: Historique des recharges sous les offres - Full Width */}
         <Layout.Section>
-          <Card>
+          <Card className="history-section-full">
             <BlockStack gap="400">
               <InlineStack align="space-between" blockAlign="center">
                 <Text as="h2" variant="headingLg" fontWeight="semibold">
@@ -1109,8 +1105,8 @@ export default function Credits() {
                 </Button>
               </InlineStack>
               <Divider />
-              <Box padding="500" textAlign="center">
-                <Text variant="bodyMd" tone="subdued" as="p">
+              <Box className="empty-state-large" textAlign="center">
+                <Text variant="bodyLg" tone="subdued" as="p">
                   Aucun historique disponible pour le moment
                 </Text>
               </Box>
