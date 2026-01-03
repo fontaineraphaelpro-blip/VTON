@@ -1720,11 +1720,28 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 })();
   `;
 
-  return new Response(widgetCode, {
+  // Add version/timestamp to force cache busting
+  const widgetVersion = process.env.WIDGET_VERSION || Date.now();
+  // Inject version into widget code
+  const widgetCodeWithVersion = widgetCode
+    .replace(
+      /console\.log\('\[VTON Widget V2\] Script loaded'/,
+      `console.log('[VTON Widget V2] Script loaded - Version: ${widgetVersion}')`
+    )
+    .replace(
+      /const CONFIG = \{/,
+      `const CONFIG = {
+        version: '${widgetVersion}',`
+    );
+
+  return new Response(widgetCodeWithVersion, {
     headers: {
       "Content-Type": "application/javascript",
-      "Cache-Control": "public, max-age=3600",
+      "Cache-Control": process.env.NODE_ENV === "production" 
+        ? "public, max-age=3600, must-revalidate" 
+        : "no-cache, no-store, must-revalidate",
       "Access-Control-Allow-Origin": "*",
+      "X-Widget-Version": String(widgetVersion),
     },
   });
 };

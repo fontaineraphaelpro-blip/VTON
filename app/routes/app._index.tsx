@@ -39,9 +39,11 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:37',message:'Script tag installation attempt started',data:{shop},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
       // #endregion
       // Construire l'URL du script - utiliser l'URL de la boutique + proxy path
+      // Ajouter un paramètre de version pour forcer le rechargement après déploiement
       const url = new URL(request.url);
       const baseUrl = url.origin;
-      const scriptTagUrl = `${baseUrl}/apps/tryon/widget-v2.js`;
+      const widgetVersion = process.env.WIDGET_VERSION || Date.now();
+      const scriptTagUrl = `${baseUrl}/apps/tryon/widget-v2.js?v=${widgetVersion}`;
       
       // Vérifier si le script tag existe déjà
       const scriptTagsQuery = `#graphql
@@ -193,10 +195,51 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             }
           }
           
-          // Vérifier si le nouveau script tag existe déjà
-          const scriptExists = existingScripts.some((edge: any) => 
-            edge.node.src.includes('/apps/tryon/widget-v2.js')
-          );
+          // Vérifier si le nouveau script tag existe déjà (avec la bonne version)
+          const widgetVersion = process.env.WIDGET_VERSION || Date.now();
+          const scriptExists = existingScripts.some((edge: any) => {
+            const src = edge.node.src || '';
+            return src.includes('/apps/tryon/widget-v2.js') && src.includes(`?v=${widgetVersion}`);
+          });
+          
+          // Supprimer les anciens script tags avec ancienne version
+          const oldVersionScripts = existingScripts.filter((edge: any) => {
+            const src = edge.node.src || '';
+            return src.includes('/apps/tryon/widget-v2.js') && 
+                   (src.includes('?v=') && !src.includes(`?v=${widgetVersion}`) || !src.includes('?v='));
+          });
+          
+          // Supprimer les anciens script tags avec version
+          for (const oldScript of oldVersionScripts) {
+            try {
+              const deleteScriptTagMutation = `#graphql
+                mutation scriptTagDelete($id: ID!) {
+                  scriptTagDelete(id: $id) {
+                    deletedScriptTagId
+                    userErrors {
+                      field
+                      message
+                    }
+                  }
+                }
+              `;
+              
+              const deleteResult = await admin.graphql(deleteScriptTagMutation, {
+                variables: {
+                  id: oldScript.node.id
+                }
+              });
+              
+              if (deleteResult.ok) {
+                const deleteData = await deleteResult.json().catch(() => null);
+                if (deleteData?.data?.scriptTagDelete?.deletedScriptTagId) {
+                  console.log("Old version script tag deleted:", oldScript.node.src);
+                }
+              }
+            } catch (deleteError) {
+              console.warn("Error deleting old version script tag:", deleteError);
+            }
+          }
 
           if (!scriptExists) {
             // Créer le script tag automatiquement
