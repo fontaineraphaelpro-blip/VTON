@@ -2243,37 +2243,254 @@ body {
   }
 }
 
+/* ============================================
+   VTON Magic - Modern Black & White Dashboard CSS
+   ============================================ */
+
+/* ============================================
+   Containers
+   ============================================ */
+.vton-page-container {
+  min-height: 100vh;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: var(--spacing-lg);
+  position: relative;
+}
+
+.vton-page-content {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--spacing-lg);
+}
+
+/* ============================================
+   Header
+   ============================================ */
+.vton-header-simple {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-md) var(--spacing-xl);
+  background: var(--white);
+  border-bottom: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--spacing-lg);
+}
+
+.vton-header-logo {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.vton-logo-icon {
+  width: 40px;
+  height: 40px;
+  background: var(--black);
+  color: var(--white);
+  font-weight: 700;
+  font-size: 1.25rem;
+  border-radius: var(--radius-md);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: all var(--transition-base);
+}
+
+.vton-logo-icon:hover {
+  box-shadow: var(--shadow-lg);
+}
+
+.vton-header-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--black);
+}
+
+/* ============================================
+   Status Badge
+   ============================================ */
+.vton-status-badge {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  background: var(--bg-tertiary);
+  color: var(--black);
+  padding: var(--spacing-sm) var(--spacing-lg);
+  border-radius: var(--radius-full);
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.vton-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--black);
+}
+
+/* ============================================
+   Dashboard Grid
+   ============================================ */
+.dashboard-stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--spacing-lg);
+  width: 100%;
+}
+
+.dashboard-stats-row > div {
+  display: flex;
+  flex-direction: column;
+  background: var(--white);
+  border-radius: var(--radius-xl);
+  border: 1px solid rgba(0,0,0,0.05);
+  box-shadow: var(--shadow-md);
+  padding: var(--spacing-lg);
+  transition: all var(--transition-base);
+}
+
+.dashboard-stats-row > div:hover {
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-2px);
+}
+
+.dashboard-stats-value {
+  font-size: 2.75rem;
+  font-weight: 900;
+  color: var(--black);
+}
+
+.dashboard-stats-label {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+/* ============================================
+   Pricing Cards
+   ============================================ */
+.vton-pricing-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--spacing-xl);
+  border-radius: var(--radius-xl);
+  border: 2px solid rgba(255,255,255,0.3);
+  background: var(--white);
+  box-shadow: var(--shadow-lg);
+  min-height: 420px;
+  transition: all var(--transition-base);
+}
+
+.vton-pricing-card:hover {
+  box-shadow: var(--shadow-2xl);
+  border-color: var(--black);
+  background: rgba(255,255,255,0.85);
+  transform: translateY(-4px);
+}
+
+.vton-plan-button {
+  padding: var(--spacing-md) var(--spacing-xl);
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  font-size: 0.9375rem;
+  border: 2px solid var(--border);
+  background: var(--white);
+  color: var(--text);
+  cursor: pointer;
+  transition: all var(--transition-base);
+}
+
+.vton-plan-button:hover {
+  border-color: var(--black);
+  color: var(--black);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.vton-plan-button-primary {
+  background: var(--black);
+  border: none;
+  color: var(--white);
+  font-weight: 700;
+  box-shadow: none;
+}
+
+.vton-plan-button-primary:hover {
+  box-shadow: var(--shadow-lg);
+}
+
+/* ============================================
+   Inputs
+   ============================================ */
+.vton-custom-input {
+  padding: var(--spacing-md);
+  border-radius: var(--radius-lg);
+  border: 2px solid var(--border);
+  text-align: center;
+  font-weight: 700;
+  color: var(--text);
+  font-size: 0.9375rem;
+  transition: all var(--transition-base);
+  background: var(--white);
+}
+
+.vton-custom-input:focus {
+  outline: none;
+  border-color: var(--black);
+  box-shadow: 0 0 0 3px rgba(0,0,0,0.1);
+}
+
+/* ============================================
+   Dashboard Responsive
+   ============================================ */
+@media (max-width: 1200px) {
+  .dashboard-stats-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard-stats-row {
+    grid-template-columns: 1fr;
+  }
+
+  .vton-pricing-card {
+    min-height: 380px;
+    padding: var(--spacing-lg);
+  }
+}
+
 /* =============================
    PREMIUM SHOPIFY APP UI – CLEAN VERSION
    Focus: Credits / Billing page
    Compatible with Polaris
    ============================= */
 
-/* ---------- ROOT VARIABLES ---------- */
+/* ---------- ROOT VARIABLES (Credits Page) ---------- */
 :root {
-  /* Colors */
-  --bg: #ffffff;
+  /* Colors for Credits Page */
   --bg-soft: #f7f7f8;
   --text-primary: #0a0a0a;
-  --text-secondary: #555555;
-  --border: #e5e7eb;
+  --text-secondary-credits: #555555;
+  --border-credits: #e5e7eb;
 
-  /* Brand */
-  --primary: #000000;
-  --primary-hover: #1a1a1a;
+  /* Radius for Credits Page */
+  --radius-sm-credits: 6px;
+  --radius-md-credits: 10px;
+  --radius-lg-credits: 14px;
 
-  /* Radius */
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
+  /* Shadows for Credits Page */
+  --shadow-sm-credits: 0 1px 2px rgba(0,0,0,0.06);
+  --shadow-md-credits: 0 6px 18px rgba(0,0,0,0.08);
+  --shadow-lg-credits: 0 12px 30px rgba(0,0,0,0.12);
 
-  /* Shadows */
-  --shadow-sm: 0 1px 2px rgba(0,0,0,0.06);
-  --shadow-md: 0 6px 18px rgba(0,0,0,0.08);
-  --shadow-lg: 0 12px 30px rgba(0,0,0,0.12);
-
-  /* Motion */
-  --ease: cubic-bezier(.4,0,.2,1);
+  /* Motion for Credits Page */
+  --ease-credits: cubic-bezier(.4,0,.2,1);
 }
 
 /* ---------- PAGE LAYOUT ---------- */
@@ -2307,8 +2524,8 @@ body {
   justify-content: space-between;
   align-items: center;
   background: var(--bg-soft);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-credits);
+  border-radius: var(--radius-lg-credits);
   padding: 24px 28px;
   margin-bottom: 32px;
 }
@@ -2324,7 +2541,7 @@ body {
 .credits-label {
   margin-top: 8px;
   font-size: 14px;
-  color: var(--text-secondary);
+  color: var(--text-secondary-credits);
 }
 
 /* ---------- PRICING GRID ---------- */
@@ -2338,23 +2555,23 @@ body {
 .plan-card {
   position: relative;
   background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-credits);
+  border-radius: var(--radius-lg-credits);
   padding: 28px;
-  transition: all 0.2s var(--ease);
+  transition: all 0.2s var(--ease-credits);
   display: flex;
   flex-direction: column;
 }
 
 .plan-card:hover {
   border-color: var(--primary);
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--shadow-md-credits);
   transform: translateY(-2px);
 }
 
 .plan-card.featured {
   border: 2px solid var(--primary);
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--shadow-lg-credits);
 }
 
 .plan-badge {
@@ -2366,7 +2583,7 @@ body {
   font-size: 12px;
   font-weight: 600;
   padding: 4px 12px;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-sm-credits);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -2389,7 +2606,7 @@ body {
 .plan-price span {
   font-size: 16px;
   font-weight: 400;
-  color: var(--text-secondary);
+  color: var(--text-secondary-credits);
 }
 
 .plan-features {
@@ -2400,7 +2617,7 @@ body {
 
 .plan-feature {
   font-size: 14px;
-  color: var(--text-secondary);
+  color: var(--text-secondary-credits);
   margin-bottom: 8px;
   padding-left: 8px;
 }
@@ -2414,18 +2631,18 @@ body {
   background: var(--primary);
   color: white;
   border: none;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-md-credits);
   padding: 14px 24px;
   font-size: 15px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s var(--ease);
+  transition: all 0.2s var(--ease-credits);
 }
 
 .plan-button:hover:not(:disabled) {
   background: var(--primary-hover);
   transform: translateY(-1px);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-sm-credits);
 }
 
 .plan-button:disabled {
@@ -2435,7 +2652,7 @@ body {
 
 .plan-card.featured .plan-button {
   background: var(--primary);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-sm-credits);
 }
 
 /* ---------- RESPONSIVE ---------- */
