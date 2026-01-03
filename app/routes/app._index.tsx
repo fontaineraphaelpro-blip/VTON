@@ -632,11 +632,16 @@ export default function Dashboard() {
             <div className="settings-grid">
               <div className="setting-card">
                 <label>Activer l'app sur le store</label>
-                <Checkbox
-                  checked={isEnabled}
-                  onChange={setIsEnabled}
-                  label=""
-                />
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <Checkbox
+                    checked={isEnabled}
+                    onChange={setIsEnabled}
+                    label=""
+                  />
+                  <span style={{ fontSize: "14px", color: "var(--text-secondary)" }}>
+                    {isEnabled ? "Oui" : "Non"}
+                  </span>
+                </div>
                 <input type="hidden" name="isEnabled" value={isEnabled ? "true" : "false"} />
               </div>
               <div className="setting-card">
