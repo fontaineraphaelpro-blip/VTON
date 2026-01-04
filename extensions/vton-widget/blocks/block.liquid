@@ -439,7 +439,7 @@
               <div class="vton-modal">
                 <button class="vton-modal-close" onclick="window.vtonWidget?.closeModal()">&times;</button>
                 <div class="vton-modal-content">
-                  <div id="vton-upload-area" class="vton-upload-area" onclick="document.getElementById('vton-file-input')?.click()">
+                  <div id="vton-upload-area" class="vton-upload-area" onclick="window.vtonWidget?.triggerFileInput()">
                     <input type="file" id="vton-file-input" accept="image/*" style="display: none;" />
                     <p>Cliquez pour télécharger votre photo</p>
                   </div>
