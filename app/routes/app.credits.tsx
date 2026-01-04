@@ -602,7 +602,7 @@ export default function Credits() {
                 {plan.price === 0 ? (
                   <span>Free</span>
                 ) : (
-                  <>€{plan.price.toFixed(2)} <span>/ month</span></>
+                  <>${plan.price.toFixed(2)} <span>/ month</span></>
                 )}
               </div>
               <div className="plan-credits">
