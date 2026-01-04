@@ -11,9 +11,9 @@ import {
   BlockStack,
   Card,
   Layout,
-  Box,
   InlineStack,
   Divider,
+  Box,
 } from "@shopify/polaris";
 import { TitleBar } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
@@ -110,101 +110,18 @@ export default function Widget() {
 
   return (
     <Page>
-      <TitleBar title="Widget Configuration - VTON Magic" />
-      <style>{`
-        .vton-widget-preview-container {
-          padding: 20px;
-          border: 1px solid #e1e3e5;
-          border-radius: 8px;
-          background-color: #f6f6f7;
-        }
-        .vton-button {
-          width: 100%;
-          padding: 14px 24px;
-          border: none;
-          border-radius: 4px;
-          font-size: 16px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: opacity 0.2s;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 8px;
-        }
-        .vton-button:hover {
-          opacity: 0.9;
-        }
-        .vton-modal-preview {
-          position: relative;
-          background: white;
-          border-radius: 8px;
-          border: 1px solid #e1e3e5;
-          max-width: 600px;
-          width: 100%;
-          max-height: 90vh;
-          overflow: hidden;
-          margin: 0 auto;
-          box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-        .vton-modal-close {
-          position: absolute;
-          top: 12px;
-          right: 12px;
-          background: none;
-          border: none;
-          font-size: 24px;
-          cursor: pointer;
-          padding: 4px 8px;
-          line-height: 1;
-          color: #666;
-          z-index: 10;
-        }
-        .vton-modal-content {
-          padding: 24px;
-        }
-        .vton-upload-area {
-          border: 2px dashed #ccc;
-          border-radius: 8px;
-          padding: 40px;
-          text-align: center;
-          cursor: pointer;
-          margin-bottom: 16px;
-        }
-        .vton-upload-area:hover {
-          border-color: #999;
-        }
-        .vton-privacy-notice {
-          font-size: 12px;
-          color: #999;
-          text-align: center;
-          margin-top: 0px;
-          margin-bottom: 0px;
-          font-style: italic;
-          line-height: 1.4;
-        }
-        .vton-generate-btn {
-          width: 100%;
-          padding: 14px;
-          border: none;
-          border-radius: 4px;
-          font-size: 16px;
-          font-weight: 600;
-          cursor: pointer;
-          margin-top: 16px;
-        }
-      `}</style>
+      <TitleBar title="Configuration du Widget - VTON Magic" />
       <div className="app-container">
         <header className="app-header">
-          <h1 className="app-title">Widget Configuration</h1>
+          <h1 className="app-title">Configuration du Widget</h1>
           <p className="app-subtitle">
-            Customize the appearance of the Virtual Try-On widget on your store
+            Personnalisez l'apparence du widget Virtual Try-On sur votre boutique
           </p>
         </header>
 
         {error && (
           <div style={{ marginBottom: "var(--spacing-lg)" }}>
-            <Banner tone="critical" title="Error">
+            <Banner tone="critical" title="Erreur">
               {error}
             </Banner>
           </div>
@@ -221,97 +138,37 @@ export default function Widget() {
         {(fetcher.data as any)?.error && (
           <div style={{ marginBottom: "var(--spacing-lg)" }}>
             <Banner tone="critical">
-              Error: {(fetcher.data as any).error}
+              Erreur : {(fetcher.data as any).error}
             </Banner>
           </div>
         )}
 
         <Layout>
-          <Layout.Section variant="twoThirds">
+          <Layout.Section>
             <Card>
-              <BlockStack gap="400">
-                <Text as="h2" variant="headingLg" fontWeight="semibold">
-                  Widget Preview
-                </Text>
-                <Text variant="bodyMd" tone="subdued" as="p">
-                  Les modifications que vous apportez ici sont sauvegardées dans la base de données et chargées directement par le widget sur vos pages produits. Le widget se met à jour automatiquement en utilisant les paramètres enregistrés.
-                </Text>
+              <BlockStack gap="500">
+                <div>
+                  <Text as="h2" variant="headingLg" fontWeight="semibold">
+                    Paramètres du Widget
+                  </Text>
+                  <Text variant="bodyMd" tone="subdued" as="p" style={{ marginTop: "8px" }}>
+                    Les paramètres que vous configurez ici sont sauvegardés directement dans la base de données. Le widget sur vos pages produits charge ces paramètres en temps réel depuis l'endpoint <code>/apps/tryon/status</code>.
+                  </Text>
+                </div>
+
                 <Divider />
-                <Box>
-                  <div className="vton-widget-preview-container">
-                    {/* Widget Button Preview - exact match from block.liquid */}
-                    <Text variant="bodySm" tone="subdued" as="p" style={{ marginBottom: "12px" }}>
-                      Widget button on product page:
-                    </Text>
-                    <div style={{ margin: "16px 0", width: "100%" }}>
-                      <button
-                        className="vton-button"
-                        style={{
-                          backgroundColor: widgetBg,
-                          color: widgetColor,
-                        }}
-                      >
-                        {widgetText}
-                      </button>
-                    </div>
 
-                    <Divider />
-
-                    {/* Modal Preview - exact match from block.liquid */}
-                    <Text variant="bodySm" tone="subdued" as="p" style={{ marginTop: "24px", marginBottom: "12px" }}>
-                      Modal window (opens when button is clicked):
-                    </Text>
-                    <div className="vton-modal-preview">
-                      <button className="vton-modal-close">×</button>
-                      <div className="vton-modal-content">
-                        <div className="vton-upload-area">
-                          <p style={{ margin: 0, color: "#666" }}>Cliquez pour télécharger votre photo</p>
-                        </div>
-                        <p className="vton-privacy-notice">
-                          🔒 Aucune donnée personnelle n'est stockée. Vos photos sont traitées de manière sécurisée et supprimées après génération.
-                        </p>
-                        <button
-                          className="vton-generate-btn"
-                          style={{
-                            backgroundColor: widgetBg,
-                            color: widgetColor,
-                          }}
-                          disabled
-                        >
-                          Générer
-                        </button>
-                      </div>
-                    </div>
-
-                    <Text variant="bodySm" tone="subdued" as="p" alignment="center" style={{ marginTop: "16px" }}>
-                      Note: The actual widget uses Shadow DOM, so styles are isolated. The colors you configure here will be applied to both the button and the "Générer" button in the modal.
-                    </Text>
-                  </div>
-                </Box>
-              </BlockStack>
-            </Card>
-          </Layout.Section>
-
-          <Layout.Section variant="oneThird">
-            <Card>
-              <BlockStack gap="400">
-                <Text as="h2" variant="headingLg" fontWeight="semibold">
-                  Configuration
-                </Text>
-                <Text variant="bodyMd" tone="subdued" as="p">
-                  Personnalisez le texte du widget, la couleur de fond et la couleur du texte. Ces paramètres sont sauvegardés directement dans la base de données et chargés par le widget en temps réel sur vos pages produits.
-                </Text>
-                <Divider />
                 <form onSubmit={handleSave}>
-                  <BlockStack gap="400">
+                  <BlockStack gap="500">
                     <TextField
-                      label="Texte du widget"
+                      label="Texte du bouton"
                       name="widgetText"
                       value={widgetText}
                       onChange={setWidgetText}
                       autoComplete="off"
-                      helpText="Le texte affiché sur le bouton du widget (visible sur vos pages produits)"
+                      helpText="Le texte affiché sur le bouton du widget"
                     />
+
                     <BlockStack gap="200">
                       <Text as="p" variant="bodyMd" fontWeight="medium">
                         Couleur de fond
@@ -341,6 +198,7 @@ export default function Widget() {
                         </Box>
                       </InlineStack>
                     </BlockStack>
+
                     <BlockStack gap="200">
                       <Text as="p" variant="bodyMd" fontWeight="medium">
                         Couleur du texte
@@ -370,10 +228,14 @@ export default function Widget() {
                         </Box>
                       </InlineStack>
                     </BlockStack>
+
+                    <Divider />
+
                     <Button 
                       submit 
                       variant="primary" 
                       loading={fetcher.state === "submitting"}
+                      size="large"
                     >
                       Enregistrer la configuration
                     </Button>
@@ -384,13 +246,16 @@ export default function Widget() {
 
                 <BlockStack gap="300">
                   <Text as="h3" variant="headingMd" fontWeight="semibold">
-                    How it works
+                    Comment ça fonctionne
                   </Text>
                   <Text variant="bodySm" tone="subdued" as="p">
-                    When you save these settings, they are stored in the database. The widget loads these settings from the `/apps/tryon/status` endpoint when it initializes on product pages.
+                    <strong>Connexion directe :</strong> Les paramètres que vous enregistrez ici sont immédiatement sauvegardés dans la base de données (table <code>shops</code>, colonnes <code>widget_text</code>, <code>widget_bg</code>, <code>widget_color</code>).
                   </Text>
                   <Text variant="bodySm" tone="subdued" as="p">
-                    To see changes on your store, you may need to refresh the product page or clear your browser cache.
+                    <strong>Chargement par le widget :</strong> Le widget client sur vos pages produits charge ces paramètres depuis l'endpoint <code>/apps/tryon/status</code> à chaque initialisation. Les changements apparaîtront dès qu'un visiteur charge ou recharge une page produit.
+                  </Text>
+                  <Text variant="bodySm" tone="subdued" as="p">
+                    <strong>Paramètres synchronisés :</strong> Le texte du bouton, la couleur de fond et la couleur du texte sont appliqués au widget en temps réel. Pour voir les modifications, rafraîchissez une page produit de votre boutique.
                   </Text>
                 </BlockStack>
               </BlockStack>
