@@ -533,52 +533,8 @@
               <img id="vton-result-before" class="vton-result-before" src="${this.userPhoto}" alt="Before" />
               <img id="vton-result-after" class="vton-result-after" src="${this.resultImageUrl}" alt="After" />
               <div id="vton-slider-divider" class="vton-slider-divider"></div>
-              <div style="margin-top: 16px; text-align: center;">
-                <button 
-                  id="vton-add-to-cart-btn" 
-                  class="vton-add-to-cart-btn"
-                  onclick="window.vtonWidget?.handleAddToCart()"
-                  style="
-                    width: 100%;
-                    padding: 14px 24px;
-                    background: ${this.widgetSettings?.widget_bg || '#000000'};
-                    color: ${this.widgetSettings?.widget_color || '#ffffff'};
-                    border: none;
-                    border-radius: 4px;
-                    font-size: 16px;
-                    font-weight: 600;
-                    cursor: pointer;
-                    transition: opacity 0.2s;
-                  "
-                  onmouseover="this.style.opacity='0.9'"
-                  onmouseout="this.style.opacity='1'"
-                >
-                  Ajouter au panier
-                </button>
-              </div>
             </div>
           `;
-        }
-        
-        handleAddToCart() {
-          // Trouver le bouton "Add to Cart" du produit
-          const addToCartSelectors = CONFIG.selectors.addToCartButton;
-          let addToCartButton = null;
-          
-          for (const selector of addToCartSelectors) {
-            addToCartButton = document.querySelector(selector);
-            if (addToCartButton) break;
-          }
-          
-          if (addToCartButton) {
-            // Cliquer sur le bouton Add to Cart
-            addToCartButton.click();
-            
-            // Tracker l'ajout au panier
-            this.trackAddToCart();
-          } else {
-            console.warn('[VTON] Could not find Add to Cart button');
-          }
         }
         
         triggerFileInput() {
@@ -623,8 +579,7 @@
               },
               body: JSON.stringify({
                 user_photo: this.userPhoto,
-                product_id: this.productId,
-                product_image_url: this.productImage || null
+                product_id: this.productId
               })
             });
             
