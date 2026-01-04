@@ -117,7 +117,7 @@
             throw new Error('Missing shop or product ID');
           }
           
-          const url = new URL(`${CONFIG.apiBase}/status`, window.location.origin);
+          const url = new URL(`${CONFIG.apiBase}/status`);
           url.searchParams.set('shop', this.shop);
           url.searchParams.set('product_id', this.productId);
           
@@ -572,7 +572,7 @@
           this.setState(STATE.LOADING);
           
           try {
-            const url = new URL(`${CONFIG.apiBase}/generate`, window.location.origin);
+            const url = new URL(`${CONFIG.apiBase}/generate`);
             url.searchParams.set('shop', this.shop);
             url.searchParams.set('product_id', this.productId);
             
@@ -607,7 +607,7 @@
           }
           
           try {
-            const url = new URL(`${CONFIG.apiBase}/atc`, window.location.origin);
+            const url = new URL(`${CONFIG.apiBase}/atc`);
             url.searchParams.set('shop', this.shop);
             if (this.productId) {
               url.searchParams.set('product_id', this.productId);
