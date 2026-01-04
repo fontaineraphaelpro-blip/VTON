@@ -573,7 +573,8 @@
           this.setState(STATE.LOADING);
           
           try {
-            const url = new URL(`${CONFIG.apiBase}/generate`);
+            const apiBase = window.location.origin + '/apps/tryon';
+            const url = new URL(`${apiBase}/generate`);
             url.searchParams.set('shop', this.shop);
             url.searchParams.set('product_id', this.productId);
             
