@@ -406,9 +406,9 @@ export async function getProductTryonStatus(shop: string, productId: string): Pr
   shopEnabled: boolean;
   productEnabled: boolean;
   widgetSettings: {
-    text: string;
-    backgroundColor: string;
-    textColor: string;
+    widget_text: string;
+    widget_bg: string;
+    widget_color: string;
     maxTriesPerUser: number;
   } | null;
 }> {
@@ -435,10 +435,11 @@ export async function getProductTryonStatus(shop: string, productId: string): Pr
   const enabled = shopEnabled && productEnabled;
   
   // Get widget settings (only if enabled)
+  // Use widget_text, widget_bg, widget_color to match what the client widget expects
   const widgetSettings = enabled ? {
-    text: shopRecord.widget_text || "Try It On Now ✨",
-    backgroundColor: shopRecord.widget_bg || "#000000",
-    textColor: shopRecord.widget_color || "#ffffff",
+    widget_text: shopRecord.widget_text || "Try It On Now ✨",
+    widget_bg: shopRecord.widget_bg || "#000000",
+    widget_color: shopRecord.widget_color || "#ffffff",
     maxTriesPerUser: shopRecord.max_tries_per_user || 5,
   } : null;
   
