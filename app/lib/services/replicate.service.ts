@@ -27,7 +27,8 @@ export async function generateTryOn({ userPhoto, productImageUrl }: GenerateTryO
       contentType: 'image/png',
     });
     
-    userPhotoInput = uploadedFile;
+    // Extraire l'URL depuis l'objet retourné
+    userPhotoInput = uploadedFile.urls.get;
     console.log('[Replicate] User photo uploaded, URL:', userPhotoInput);
   } else if (userPhoto.startsWith('http')) {
     // C'est déjà une URL
