@@ -534,7 +534,13 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                 }
                 .vton-result-actions {
                     display: flex;
+                    flex-direction: column;
                     gap: 12px;
+                }
+                @media (min-width: 640px) {
+                    .vton-result-actions {
+                        flex-direction: row;
+                    }
                 }
                 .vton-btn {
                     flex: 1;
@@ -778,6 +784,12 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                 generateBtn.addEventListener('click', () => widget.generateTryOn());
             }
             
+            // Add to Cart button
+            const addToCartBtn = overlay.querySelector('#vton-add-to-cart-btn');
+            if (addToCartBtn) {
+                addToCartBtn.addEventListener('click', () => widget.handleAddToCart());
+            }
+            
             // Download button
             const downloadBtn = overlay.querySelector('#vton-download-btn');
             if (downloadBtn) {
@@ -910,6 +922,66 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                 errorMsgEl.textContent = message;
             }
             this.setState(STATE.ERROR);
+        }
+        
+        async handleAddToCart() {
+            try {
+                // 1. Track the add to cart event
+                const shop = window.Shopify?.shop || this.extractShopFromUrl() || '';
+                if (shop && this.productId) {
+                    try {
+                        const atcUrl = new URL(\`\${CONFIG.apiBase}/atc\`, window.location.origin);
+                        atcUrl.searchParams.set('shop', shop);
+                        await fetch(atcUrl.toString(), {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ product_id: this.productId })
+                        });
+                    } catch (trackError) {
+                        // Ignore tracking errors, continue with add to cart
+                    }
+                }
+                
+                // 2. Find the real Add to Cart button on the page
+                const cartSelectors = CONFIG.selectors.addToCartButton.split(', ');
+                let realAddToCartBtn = null;
+                
+                for (const selector of cartSelectors) {
+                    const trimmedSelector = selector.trim();
+                    if (!trimmedSelector) continue;
+                    realAddToCartBtn = document.querySelector(trimmedSelector);
+                    if (realAddToCartBtn) break;
+                }
+                
+                // 3. If not found, try to find in product form
+                if (!realAddToCartBtn) {
+                    const productForm = document.querySelector('form[action*="/cart/add"]');
+                    if (productForm) {
+                        realAddToCartBtn = productForm.querySelector('button[type="submit"]') || 
+                                          productForm.querySelector('button') ||
+                                          productForm.querySelector('[type="submit"]');
+                    }
+                }
+                
+                // 4. Click the real Add to Cart button
+                if (realAddToCartBtn) {
+                    // Close the modal first
+                    this.closeModal();
+                    
+                    // Wait a bit for modal to close, then click
+                    setTimeout(() => {
+                        if (realAddToCartBtn instanceof HTMLElement) {
+                            realAddToCartBtn.click();
+                        }
+                    }, 300);
+                } else {
+                    // If button not found, show error
+                    this.showError('Bouton "Ajouter au panier" non trouvé sur la page');
+                }
+            } catch (error) {
+                console.error('[VTON] Error in handleAddToCart:', error);
+                this.showError('Erreur lors de l\\'ajout au panier');
+            }
         }
         
         downloadResult() {
