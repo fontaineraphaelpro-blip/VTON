@@ -199,28 +199,17 @@
         shadowRoot.innerHTML = `
           <style>
             .vton-widget-container {
-              margin: 24px 0;
+              margin: 20px 0;
               width: 100%;
             }
             .vton-button {
               width: 100%;
-              padding: 16px 32px;
+              padding: 14px 24px;
               border: none;
-              border-radius: 8px;
+              border-radius: 4px;
               font-size: 16px;
               font-weight: 600;
               cursor: pointer;
-              transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-              box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-              letter-spacing: 0.3px;
-            }
-            .vton-button:hover {
-              transform: translateY(-2px);
-              box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-            }
-            .vton-button:active {
-              transform: translateY(0);
-              box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
             }
             .vton-modal-overlay {
               position: fixed;
@@ -228,220 +217,127 @@
               left: 0;
               right: 0;
               bottom: 0;
-              background: rgba(0, 0, 0, 0.75);
-              backdrop-filter: blur(4px);
+              background: rgba(0, 0, 0, 0.7);
               display: none;
               align-items: center;
               justify-content: center;
               z-index: 99999;
               padding: 20px;
-              animation: fadeIn 0.2s ease-out;
             }
             .vton-modal-overlay.active {
               display: flex;
             }
-            @keyframes fadeIn {
-              from { opacity: 0; }
-              to { opacity: 1; }
-            }
             .vton-modal {
               background: white;
-              border-radius: 16px;
-              max-width: 650px;
+              border-radius: 8px;
+              max-width: 600px;
               width: 100%;
               max-height: 90vh;
               overflow-y: auto;
               position: relative;
-              box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-              animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            }
-            @keyframes slideUp {
-              from {
-                opacity: 0;
-                transform: translateY(20px);
-              }
-              to {
-                opacity: 1;
-                transform: translateY(0);
-              }
             }
             .vton-modal-close {
               position: absolute;
-              top: 16px;
-              right: 16px;
-              background: rgba(0, 0, 0, 0.05);
+              top: 12px;
+              right: 12px;
+              background: none;
               border: none;
-              font-size: 24px;
+              font-size: 28px;
               cursor: pointer;
-              padding: 8px 12px;
+              padding: 4px 12px;
               line-height: 1;
               color: #666;
-              border-radius: 8px;
-              transition: all 0.2s ease;
-              z-index: 10;
-            }
-            .vton-modal-close:hover {
-              background: rgba(0, 0, 0, 0.1);
-              color: #333;
-              transform: rotate(90deg);
             }
             .vton-modal-content {
-              padding: 32px;
+              padding: 24px;
             }
             .vton-upload-area {
-              border: 2px dashed #d1d5db;
-              border-radius: 12px;
-              padding: 48px 24px;
+              border: 2px dashed #ccc;
+              border-radius: 8px;
+              padding: 40px;
               text-align: center;
               cursor: pointer;
-              margin-bottom: 20px;
-              background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
-              transition: all 0.3s ease;
-              position: relative;
-              overflow: hidden;
-            }
-            .vton-upload-area::before {
-              content: '';
-              position: absolute;
-              top: 0;
-              left: -100%;
-              width: 100%;
-              height: 100%;
-              background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
-              transition: left 0.5s;
-            }
-            .vton-upload-area:hover {
-              border-color: #9ca3af;
-              background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
-              transform: translateY(-2px);
-              box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            }
-            .vton-upload-area:hover::before {
-              left: 100%;
+              margin-bottom: 16px;
             }
             .vton-upload-area p {
               margin: 0;
-              font-size: 15px;
-              color: #4b5563;
-              font-weight: 500;
+              font-size: 14px;
+              color: #666;
             }
             .vton-upload-area.has-image {
               border: none;
               padding: 0;
-              background: transparent;
-            }
-            .vton-upload-area.has-image::before {
-              display: none;
             }
             .vton-upload-area img {
               max-width: 100%;
-              border-radius: 12px;
-              box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+              border-radius: 8px;
             }
             .vton-privacy-notice {
               font-size: 12px;
-              color: #6b7280;
+              color: #999;
               text-align: center;
-              margin: 16px 0;
+              margin: 12px 0;
               font-style: italic;
-              line-height: 1.5;
-              padding: 12px;
-              background: #f9fafb;
-              border-radius: 8px;
             }
             .vton-generate-btn {
               width: 100%;
-              padding: 16px 24px;
+              padding: 14px;
               border: none;
-              border-radius: 10px;
+              border-radius: 4px;
               font-size: 16px;
               font-weight: 600;
               cursor: pointer;
-              margin-top: 20px;
-              transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-              box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-              letter-spacing: 0.3px;
-            }
-            .vton-generate-btn:hover:not(:disabled) {
-              transform: translateY(-2px);
-              box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
-            }
-            .vton-generate-btn:active:not(:disabled) {
-              transform: translateY(0);
-              box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+              margin-top: 16px;
             }
             .vton-generate-btn:disabled {
-              opacity: 0.5;
+              opacity: 0.6;
               cursor: not-allowed;
-              transform: none;
             }
             .vton-loading {
               text-align: center;
-              padding: 48px 24px;
+              padding: 40px;
               display: none;
             }
             .vton-loading.active {
               display: block;
-              animation: fadeIn 0.3s ease-out;
             }
             .vton-spinner {
-              border: 4px solid #f3f4f6;
-              border-top: 4px solid ${buttonBg};
+              border: 3px solid #f3f3f3;
+              border-top: 3px solid ${buttonBg};
               border-radius: 50%;
-              width: 48px;
-              height: 48px;
-              animation: spin 0.8s linear infinite;
-              margin: 0 auto 24px;
+              width: 40px;
+              height: 40px;
+              animation: spin 1s linear infinite;
+              margin: 0 auto 16px;
             }
             .vton-loading-text {
               margin-top: 16px;
-              font-size: 15px;
-              color: #4b5563;
-              font-weight: 500;
-              line-height: 1.6;
+              font-size: 14px;
+              color: #666;
             }
             @keyframes spin {
               0% { transform: rotate(0deg); }
               100% { transform: rotate(360deg); }
             }
             .vton-result {
-              margin-top: 24px;
+              margin-top: 16px;
               display: none;
             }
             .vton-result.active {
               display: block;
-              animation: fadeIn 0.5s ease-out;
             }
             .vton-result img {
               width: 100%;
-              border-radius: 12px;
-              box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+              border-radius: 8px;
             }
             .vton-error {
-              color: #dc2626;
+              color: #d32f2f;
               text-align: center;
-              padding: 20px;
+              padding: 16px;
               display: none;
-              background: #fef2f2;
-              border-radius: 12px;
-              border: 1px solid #fecaca;
-              font-weight: 500;
             }
             .vton-error.active {
               display: block;
-              animation: fadeIn 0.3s ease-out;
-            }
-            @media (max-width: 640px) {
-              .vton-modal-content {
-                padding: 24px 20px;
-              }
-              .vton-upload-area {
-                padding: 36px 20px;
-              }
-              .vton-button {
-                padding: 14px 24px;
-                font-size: 15px;
-              }
             }
           </style>
           <div class="vton-widget-container">
