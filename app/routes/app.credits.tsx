@@ -302,10 +302,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
               {
                 plan: {
                   appRecurringPricingDetails: {
-                    price: {
+          price: {
                       amount: pack.price,
-                      currencyCode: "EUR"
-                    },
+            currencyCode: "EUR"
+          },
                     interval: "EVERY_30_DAYS"
                   }
                 }
@@ -362,22 +362,22 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           `#graphql
             mutation appSubscriptionCreate($name: String!, $lineItems: [AppSubscriptionLineItemInput!]!, $returnUrl: URL!, $test: Boolean) {
               appSubscriptionCreate(
-                name: $name
+              name: $name
                 lineItems: $lineItems
-                returnUrl: $returnUrl
-                test: $test
-              ) {
+              returnUrl: $returnUrl
+              test: $test
+            ) {
                 appSubscription {
                   id
                   status
                 }
-                confirmationUrl
-                userErrors {
-                  field
-                  message
-                }
+              confirmationUrl
+              userErrors {
+                field
+                message
               }
             }
+          }
           `,
           {
             variables: {
@@ -386,17 +386,17 @@ export const action = async ({ request }: ActionFunctionArgs) => {
                 {
                   plan: {
                     appRecurringPricingDetails: {
-                      price: {
+          price: {
                         amount: calculatedPrice,
-                        currencyCode: "EUR"
-                      },
+            currencyCode: "EUR"
+          },
                       interval: "EVERY_30_DAYS"
                     }
                   }
                 }
               ],
               returnUrl: returnUrl,
-              test: process.env.NODE_ENV !== "production"
+          test: process.env.NODE_ENV !== "production"
             }
           }
         );
@@ -426,18 +426,18 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         return redirect(confirmationUrl);
       } catch (error) {
         console.error("[Credits] Error creating custom subscription:", error);
-        return json({ 
-          success: false, 
+            return json({ 
+              success: false, 
           error: error instanceof Error ? error.message : "Error creating subscription" 
         });
       }
-    } else {
+      } else {
       return json({ success: false, error: "Minimum 301 try-ons required for Custom Flexible plan" });
     }
   }
 
   return json({ success: false, error: "Invalid intent" });
-} catch (error) {
+  } catch (error) {
     // Gérer toutes les erreurs, y compris les Responses de redirection
     console.error("[Credits] Error in action:", error);
     
@@ -487,6 +487,8 @@ export default function Credits() {
   const currentCredits = shop?.credits || 0;
   const [customAmount, setCustomAmount] = useState("301");
   const [submittingPackId, setSubmittingPackId] = useState<string | null>(null);
+  const [showSuccessBanner, setShowSuccessBanner] = useState(true);
+  const [showErrorBanner, setShowErrorBanner] = useState(true);
   
   // Utiliser useRef pour stocker une référence stable à revalidator
   const revalidatorRef = useRef(revalidator);
@@ -523,6 +525,28 @@ export default function Credits() {
       }, 500);
     }
   }, [fetcher.data?.success, revalidator]);
+
+  // Auto-dismiss success banner after 5 seconds
+  useEffect(() => {
+    if ((purchaseSuccess || fetcher.data?.success) && (planActivated || (fetcher.data as any)?.planActivated)) {
+      setShowSuccessBanner(true);
+      const timer = setTimeout(() => {
+        setShowSuccessBanner(false);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [purchaseSuccess, fetcher.data?.success, planActivated]);
+
+  // Auto-dismiss error banner after 8 seconds
+  useEffect(() => {
+    if ((fetcher.data as any)?.error) {
+      setShowErrorBanner(true);
+      const timer = setTimeout(() => {
+        setShowErrorBanner(false);
+      }, 8000);
+      return () => clearTimeout(timer);
+    }
+  }, [(fetcher.data as any)?.error]);
 
   // Reset submittingPackId when fetcher completes
   useEffect(() => {
@@ -575,9 +599,9 @@ export default function Credits() {
           </div>
         )}
 
-        {(purchaseSuccess || fetcher.data?.success) && (planActivated || (fetcher.data as any)?.planActivated) && (
+        {(purchaseSuccess || fetcher.data?.success) && (planActivated || (fetcher.data as any)?.planActivated) && showSuccessBanner && (
           <div style={{ marginBottom: "var(--spacing-lg)" }}>
-            <Banner tone="success" title="Abonnement activé !" onDismiss={() => {}}>
+            <Banner tone="success" title="Subscription Activated!" onDismiss={() => setShowSuccessBanner(false)}>
               {(fetcher.data as any)?.message || `Your subscription has been activated successfully! Monthly quota: ${(fetcher.data as any)?.monthlyQuota || monthlyQuota || shop?.monthly_quota || 0} try-ons/month.`}
             </Banner>
           </div>
