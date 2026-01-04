@@ -130,9 +130,9 @@ The admin dashboard provides:
 ### Subscription Plans
 
 - **Free Discovery**: 4 free try-ons/month with watermark (for testing)
-- **Starter**: 40 try-ons/month - $29/month (Perfect for launches)
-- **Pro**: 160 try-ons/month - $99/month (For active stores)
-- **Enterprise**: 800 try-ons/month - $399/month (Designed for high volume)
+- **Starter**: 50 try-ons/month - $29/month (Perfect for launches)
+- **Pro**: 200 try-ons/month - $99/month (For active merchants)
+- **Enterprise**: 1000 try-ons/month - $399/month (Designed for high volume)
 
 All plans include:
 - Monthly quota with automatic reset
