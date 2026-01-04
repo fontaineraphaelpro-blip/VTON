@@ -369,7 +369,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         });
       }
       
-      return json({ success: false, error: "Impossible de récupérer les script tags" });
+      return json({ success: false, error: "Unable to retrieve script tags" });
     } catch (error) {
       console.error("Error cleaning up script tags:", error);
       return json({ 
