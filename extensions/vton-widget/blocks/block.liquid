@@ -341,6 +341,14 @@
               .vton-upload-area:hover {
                 border-color: #999;
               }
+              .vton-privacy-notice {
+                font-size: 12px;
+                color: #999;
+                text-align: center;
+                margin-top: 12px;
+                font-style: italic;
+                line-height: 1.4;
+              }
               .vton-upload-area.has-image {
                 border: none;
                 padding: 0;
@@ -435,6 +443,7 @@
                     <input type="file" id="vton-file-input" accept="image/*" style="display: none;" />
                     <p>Cliquez pour télécharger votre photo</p>
                   </div>
+                  <p class="vton-privacy-notice">🔒 Aucune donnée personnelle n'est stockée. Vos photos sont traitées de manière sécurisée et supprimées après génération.</p>
                   <button id="vton-generate-btn" class="vton-generate-btn" onclick="window.vtonWidget?.generate()" disabled>
                     Générer
                   </button>
