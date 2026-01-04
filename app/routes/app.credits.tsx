@@ -271,7 +271,20 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         });
       }
       
-      // Create recurring subscription for paid plans
+      // FOR TESTING: Since this is a Managed Pricing App, we activate plans directly in database
+      // In production, Shopify handles billing automatically via App Store listing
+      // For testing purposes, we activate the plan directly
+      if (process.env.NODE_ENV !== "production" || process.env.ENABLE_DIRECT_PLAN_ACTIVATION === "true") {
+        await upsertShop(shop, { monthlyQuota: monthlyQuota });
+        return json({ 
+          success: true, 
+          message: `Plan ${pack.name} activated successfully! Monthly quota: ${monthlyQuota} try-ons/month. (Test mode - direct activation)`,
+          planActivated: packId,
+          monthlyQuota: monthlyQuota,
+        });
+      }
+      
+      // Create recurring subscription for paid plans (only if not Managed Pricing App)
       const returnUrl = new URL(request.url).origin + `/app/credits?pack=${packId}&monthlyQuota=${monthlyQuota}`;
       
       const response = await admin.graphql(
@@ -373,6 +386,19 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const customCredits = parseInt(formData.get("customCredits") as string);
     if (customCredits && customCredits >= 301) {
       try {
+        // FOR TESTING: Since this is a Managed Pricing App, we activate plans directly in database
+        // In production, Shopify handles billing automatically via App Store listing
+        // For testing purposes, we activate the plan directly
+        if (process.env.NODE_ENV !== "production" || process.env.ENABLE_DIRECT_PLAN_ACTIVATION === "true") {
+          await upsertShop(shop, { monthlyQuota: customCredits });
+          return json({ 
+            success: true, 
+            message: `Custom Flexible Plan activated successfully! Monthly quota: ${customCredits} try-ons/month. (Test mode - direct activation)`,
+            planActivated: "custom-flexible",
+            monthlyQuota: customCredits,
+          });
+        }
+        
         // Calculate price for custom plan (at least x2 margin)
         const calculatedPrice = customCredits * MIN_CUSTOM_PRICE_PER_CREDIT;
         const returnUrl = new URL(request.url).origin + `/app/credits?purchase=success&pack=custom-flexible&monthlyQuota=${customCredits}`;
