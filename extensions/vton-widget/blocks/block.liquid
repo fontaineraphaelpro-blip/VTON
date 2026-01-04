@@ -214,6 +214,14 @@
             return;
           }
           
+          const addToCartBtn = this.findAddToCartButton();
+          if (!addToCartBtn) {
+            console.log('[VTON] Add to Cart button not found, retrying...');
+            this.retryCount++;
+            setTimeout(() => this.injectWidget(), CONFIG.retryDelay);
+            return;
+          }
+          
           if (document.getElementById(CONFIG.shadowRootId)) {
             console.log('[VTON] Widget already exists');
             return;
@@ -221,59 +229,16 @@
           
           this.productImage = this.getProductImage();
           
-          // Chercher une section appropriée dans la fiche produit
-          const productSection = this.findProductSection();
-          if (!productSection) {
-            console.log('[VTON] Product section not found, retrying...');
-            this.retryCount++;
-            setTimeout(() => this.injectWidget(), CONFIG.retryDelay);
-            return;
-          }
-          
           const container = document.createElement('div');
           container.id = CONFIG.shadowRootId;
           container.setAttribute('data-vton-widget', 'true');
           
-          // Insérer le widget dans la section trouvée
-          productSection.appendChild(container);
+          this.insertAfterButton(addToCartBtn, container);
           
           this.shadowRoot = container.attachShadow({ mode: 'closed' });
           this.renderWidget();
           
-          console.log('[VTON] Widget injected successfully in product section');
-        }
-        
-        findProductSection() {
-          // Chercher différentes sections possibles dans la fiche produit
-          const selectors = [
-            '.product__description',
-            '.product-single__description',
-            '.product__content',
-            '.product-single__content',
-            '[data-product-description]',
-            '.product-form__info',
-            '.product-form',
-            'main .product',
-            '.product-details',
-            'form[action*="/cart/add"]'
-          ];
-          
-          for (const selector of selectors) {
-            const element = document.querySelector(selector);
-            if (element) {
-              console.log('[VTON] Found product section:', selector);
-              return element;
-            }
-          }
-          
-          // Fallback: chercher le formulaire produit et utiliser son parent
-          const productForm = document.querySelector('form[action*="/cart/add"]');
-          if (productForm && productForm.parentElement) {
-            console.log('[VTON] Using product form parent as section');
-            return productForm.parentElement;
-          }
-          
-          return null;
+          console.log('[VTON] Widget injected successfully');
         }
         
         insertAfterButton(button, element) {
@@ -485,8 +450,7 @@
                   <div id="vton-loading" class="vton-loading" style="display: none;">
                     <div class="vton-spinner"></div>
                     <p class="vton-loading-text">Génération en cours...</p>
-                    <p class="vton-loading-text">La génération prend environ 30 à 40 secondes. Veuillez patienter.</p>
-                    <p class="vton-loading-text">Nous créons votre image personnalisée avec précision...</p>
+                    <p class="vton-loading-text">La génération prend environ 30 secondes. Veuillez patienter.</p>
                     <p class="vton-loading-info">Aucune donnée personnelle n'est stockée. Vos photos sont traitées de manière sécurisée et supprimées après génération.</p>
                   </div>
                   <div id="vton-result" class="vton-result-wrapper" style="display: none;"></div>
@@ -570,14 +534,6 @@
               <div id="vton-slider-divider" class="vton-slider-divider"></div>
             </div>
           `;
-        }
-        
-        triggerFileInput() {
-          if (!this.shadowRoot) return;
-          const fileInput = this.shadowRoot.getElementById('vton-file-input');
-          if (fileInput) {
-            fileInput.click();
-          }
         }
         
         openModal() {
