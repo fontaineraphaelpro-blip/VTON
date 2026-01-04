@@ -513,25 +513,34 @@
             product_image_url: state.productImageUrl
           })
         }).then(function(response) {
+          console.log('[VTON] Response status:', response.status, response.statusText);
           if (!response.ok) {
-            throw new Error('Generation failed: ' + response.status);
+            return response.text().then(function(text) {
+              console.error('[VTON] Error response:', text);
+              throw new Error('Generation failed: ' + response.status + ' - ' + text);
+            });
           }
           return response.json();
         }).then(function(data) {
-          console.log('[VTON] Generation response data:', data);
+          console.log('[VTON] Generation response data:', JSON.stringify(data, null, 2));
           state.resultImageUrl = data.result_url || data.image_url || data.output;
           console.log('[VTON] Extracted result URL:', state.resultImageUrl);
+          console.log('[VTON] Result element:', result);
           if (loading) loading.classList.remove('active');
           if (result && state.resultImageUrl) {
             result.classList.add('active');
-            result.innerHTML = '<img src="' + state.resultImageUrl + '" alt="Result" />';
-            console.log('[VTON] Result displayed successfully');
+            result.innerHTML = '<img src="' + state.resultImageUrl + '" alt="Result" style="width: 100%; border-radius: 8px;" />';
+            console.log('[VTON] Result displayed successfully, HTML:', result.innerHTML);
           } else {
-            console.warn('[VTON] No result URL found or result element missing', {
+            console.error('[VTON] Cannot display result:', {
               hasResult: !!result,
               resultImageUrl: state.resultImageUrl,
               data: data
             });
+            if (error) {
+              error.classList.add('active');
+              error.textContent = 'Le résultat a été généré mais n\'a pas pu être affiché. URL: ' + (state.resultImageUrl || 'non disponible');
+            }
           }
           if (generateBtn) generateBtn.disabled = false;
         }).catch(function(error) {
