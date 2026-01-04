@@ -232,6 +232,17 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const packId = formData.get("packId") as string;
     const pack = PRICING_PLANS.find((p) => p.id === packId);
 
+    // Le plan Free est gratuit, pas besoin de paiement
+    if (pack.price === 0) {
+      // Pour le plan gratuit, on peut directement créditer les try-ons
+      // ou simplement informer que c'est déjà actif
+      return json({ 
+        success: true, 
+        message: "Le plan Free est déjà actif. Vous avez 2 try-ons par mois avec watermark.",
+        freePlan: true
+      });
+    }
+
     if (pack) {
       // Create a Shopify one-time charge using REST API (RecurringApplicationCharge)
       try {
@@ -240,7 +251,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         const returnUrl = new URL("/app/credits", baseUrl);
         returnUrl.searchParams.set("purchase", "success");
         returnUrl.searchParams.set("pack", pack.id);
-        returnUrl.searchParams.set("credits", String(pack.credits));
+        returnUrl.searchParams.set("credits", String((pack as any).monthlyQuota || pack.credits));
 
         console.log("[Credits Action] Creating one-time charge using REST API for pack", {
           packId: pack.id,
@@ -269,7 +280,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         `;
 
         const variables = {
-          name: `${pack.name} Pack - ${pack.credits} Credits`,
+          name: `${pack.name} Plan - ${(pack as any).monthlyQuota || pack.credits} try-ons/mois`,
           price: {
             amount: pack.price.toFixed(2),
             currencyCode: "EUR"
@@ -341,7 +352,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           redirect: true,
           checkoutUrl: purchaseData.confirmationUrl,
           pack: pack.name, 
-          credits: pack.credits,
+          credits: (pack as any).monthlyQuota || pack.credits,
           price: pack.price,
         });
       } catch (error) {
@@ -810,25 +821,35 @@ export default function Credits() {
               )}
               <div className="plan-name">{plan.name}</div>
               <div className="plan-price">
-                €{plan.price.toFixed(2)} <span>/ one-time</span>
+                {plan.price === 0 ? (
+                  <span>Gratuit</span>
+                ) : (
+                  <>€{plan.price.toFixed(2)} <span>/ mois</span></>
+                )}
               </div>
               <div className="plan-credits">
-                <div className="plan-credits-amount">{plan.credits}</div>
-                <div className="plan-credits-label">try-ons</div>
+                <div className="plan-credits-amount">{(plan as any).monthlyQuota || plan.credits}</div>
+                <div className="plan-credits-label">try-ons/mois</div>
               </div>
               <div className="plan-features">
-                <div className="plan-feature">✓ {plan.credits} try-ons inclus</div>
-                <div className="plan-feature">✓ Pas d'expiration</div>
+                <div className="plan-feature">✓ {(plan as any).monthlyQuota || plan.credits} try-ons par mois</div>
+                <div className="plan-feature">✓ Quota mensuel avec reset automatique</div>
+                {(plan as any).hasWatermark && (
+                  <div className="plan-feature">✓ Avec watermark</div>
+                )}
+                {!(plan as any).hasWatermark && (
+                  <div className="plan-feature">✓ Sans watermark</div>
+                )}
                 <div className="plan-feature">✓ {plan.description}</div>
-                <div className="plan-feature">✓ Try-ons supplémentaires: €{PAY_PER_USE_PRICE.toFixed(2)}/unité</div>
+                <div className="plan-feature">✓ Hard cap pour éviter les dépassements</div>
               </div>
               <div className="plan-cta">
                 <button 
                   className="plan-button"
                   onClick={() => handlePurchase(plan.id)}
-                  disabled={isSubmitting || submittingPackId !== null}
+                  disabled={isSubmitting || submittingPackId !== null || plan.price === 0}
                 >
-                  {isSubmitting && submittingPackId === plan.id ? "Traitement..." : "Acheter"}
+                  {plan.price === 0 ? "Actif" : (isSubmitting && submittingPackId === plan.id ? "Traitement..." : "Acheter")}
                 </button>
               </div>
             </div>
