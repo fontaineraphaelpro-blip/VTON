@@ -128,10 +128,21 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     }
 
     // 4. Ensure database tables exist
-    await ensureTables();
+    try {
+      await ensureTables();
+    } catch (error) {
+      console.error("[Status] Error ensuring tables:", error);
+      // Continue anyway, tables might already exist
+    }
 
     // 5. Get comprehensive try-on status (shop + product level)
+    console.log("[Status] Getting try-on status for:", { shop, productId });
     const status = await getProductTryonStatus(shop, productId);
+    console.log("[Status] Try-on status result:", { 
+      enabled: status.enabled, 
+      shopEnabled: status.shopEnabled,
+      productEnabled: status.productEnabled 
+    });
 
     // 6. Return status
     return json({
@@ -143,7 +154,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       widget_settings: status.widgetSettings, // Only set if enabled, null otherwise
     });
   } catch (error) {
-    console.error("Error in /apps/tryon/status:", error);
+    console.error("[Status] Error in /apps/tryon/status:", error);
+    console.error("[Status] Error stack:", error instanceof Error ? error.stack : "No stack");
     return json(
       {
         error: "Failed to check try-on status",
