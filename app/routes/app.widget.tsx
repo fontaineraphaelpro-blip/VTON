@@ -234,7 +234,7 @@ export default function Widget() {
                   Widget Preview
                 </Text>
                 <Text variant="bodyMd" tone="subdued" as="p">
-                  This preview shows how the widget will appear on your product pages. The widget uses Shadow DOM for CSS isolation, so it may look slightly different in the actual theme context.
+                  Les modifications que vous apportez ici sont sauvegardées dans la base de données et chargées directement par le widget sur vos pages produits. Le widget se met à jour automatiquement en utilisant les paramètres enregistrés.
                 </Text>
                 <Divider />
                 <Box>
