@@ -325,8 +325,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     }
   }
 
-    return json({ success: false, error: "Invalid purchase" });
-  } catch (error) {
+  return json({ success: false, error: "Intent invalide" });
+} catch (error) {
     // Gérer toutes les erreurs, y compris les Responses de redirection
     console.error("[Credits] Error in action:", error);
     
