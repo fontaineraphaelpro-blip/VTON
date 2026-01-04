@@ -1,7 +1,8 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useLoaderData, useFetcher, useRevalidator } from "@remix-run/react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
+import * as React from "react";
 import {
   Page,
   Text,
@@ -123,19 +124,27 @@ export default function Widget() {
 
   // Update local state immediately when save is successful (from action response)
   // This ensures the UI reflects the saved values right away
+  const previousSuccessRef = useRef(false);
   useEffect(() => {
-    if (fetcher.data?.success && fetcher.data?.savedValues) {
+    if (fetcher.data?.success && fetcher.data?.savedValues && !previousSuccessRef.current) {
       // Update state immediately from the saved values
       setWidgetText(fetcher.data.savedValues.widget_text || "Try It On Now ✨");
       setWidgetBg(fetcher.data.savedValues.widget_bg || "#000000");
       setWidgetColor(fetcher.data.savedValues.widget_color || "#ffffff");
+      
+      previousSuccessRef.current = true;
       
       // Silently revalidate in the background without affecting the UI
       setTimeout(() => {
         revalidator.revalidate();
       }, 200);
     }
-  }, [fetcher.data?.success, fetcher.data?.savedValues, revalidator]);
+    
+    // Reset the ref when fetcher is idle and no success data (ready for new submission)
+    if (fetcher.state === "idle" && !fetcher.data?.success) {
+      previousSuccessRef.current = false;
+    }
+  }, [fetcher.data?.success, fetcher.data?.savedValues, fetcher.state, revalidator]);
 
   const handleSave = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -168,9 +177,18 @@ export default function Widget() {
           </div>
         )}
 
-        {fetcher.data?.success && (
+        {fetcher.data?.success && fetcher.state === "idle" && (
           <div style={{ marginBottom: "var(--spacing-lg)" }}>
-            <Banner tone="success">
+            <Banner 
+              tone="success"
+              onDismiss={() => {
+                // Clear the fetcher data to allow new saves
+                if (typeof window !== "undefined") {
+                  // Force a re-render by clearing the success state
+                  window.location.hash = "";
+                }
+              }}
+            >
               Configuration saved successfully! Changes are now in the database and will be automatically loaded by the widget on your product pages. Refresh a product page to see the changes.
               {fetcher.data?.savedValues && (
                 <div style={{ marginTop: "8px", fontSize: "12px" }}>
