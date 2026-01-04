@@ -302,10 +302,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
               {
                 plan: {
                   appRecurringPricingDetails: {
-          price: {
+                    price: {
                       amount: pack.price,
-            currencyCode: "EUR"
-          },
+                      currencyCode: "EUR"
+                    },
                     interval: "EVERY_30_DAYS"
                   }
                 }
@@ -316,6 +316,26 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           }
         }
       );
+
+      // Check if response is OK
+      if (!response.ok) {
+        if (response.status === 401) {
+          const reauthUrl = response.headers.get('x-shopify-api-request-failure-reauthorize-url');
+          console.error("[Credits] Authentication required (401) for subscription creation");
+          return json({ 
+            success: false, 
+            error: "Your session has expired. Please refresh the page to re-authenticate.",
+            requiresAuth: true,
+            reauthUrl: reauthUrl || null,
+          });
+        }
+        const errorText = await response.text().catch(() => `HTTP ${response.status} ${response.statusText}`);
+        console.error("[Credits] GraphQL request failed:", response.status, errorText);
+        return json({ 
+          success: false, 
+          error: `Shopify API error (${response.status}): ${errorText.substring(0, 200)}` 
+        });
+      }
 
       const responseData = await response.json();
       
@@ -362,22 +382,22 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           `#graphql
             mutation appSubscriptionCreate($name: String!, $lineItems: [AppSubscriptionLineItemInput!]!, $returnUrl: URL!, $test: Boolean) {
               appSubscriptionCreate(
-              name: $name
+                name: $name
                 lineItems: $lineItems
-              returnUrl: $returnUrl
-              test: $test
-            ) {
+                returnUrl: $returnUrl
+                test: $test
+              ) {
                 appSubscription {
                   id
                   status
                 }
-              confirmationUrl
-              userErrors {
-                field
-                message
+                confirmationUrl
+                userErrors {
+                  field
+                  message
+                }
               }
             }
-          }
           `,
           {
             variables: {
@@ -386,20 +406,40 @@ export const action = async ({ request }: ActionFunctionArgs) => {
                 {
                   plan: {
                     appRecurringPricingDetails: {
-          price: {
+                      price: {
                         amount: calculatedPrice,
-            currencyCode: "EUR"
-          },
+                        currencyCode: "EUR"
+                      },
                       interval: "EVERY_30_DAYS"
                     }
                   }
                 }
               ],
               returnUrl: returnUrl,
-          test: process.env.NODE_ENV !== "production"
+              test: process.env.NODE_ENV !== "production"
             }
           }
         );
+
+        // Check if response is OK
+        if (!response.ok) {
+          if (response.status === 401) {
+            const reauthUrl = response.headers.get('x-shopify-api-request-failure-reauthorize-url');
+            console.error("[Credits] Authentication required (401) for custom subscription creation");
+            return json({ 
+              success: false, 
+              error: "Your session has expired. Please refresh the page to re-authenticate.",
+              requiresAuth: true,
+              reauthUrl: reauthUrl || null,
+            });
+          }
+          const errorText = await response.text().catch(() => `HTTP ${response.status} ${response.statusText}`);
+          console.error("[Credits] GraphQL request failed:", response.status, errorText);
+          return json({ 
+            success: false, 
+            error: `Shopify API error (${response.status}): ${errorText.substring(0, 200)}` 
+          });
+        }
 
         const responseData = await response.json();
         
