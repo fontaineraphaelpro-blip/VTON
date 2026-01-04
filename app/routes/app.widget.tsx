@@ -247,6 +247,19 @@ export default function Widget() {
                           <p style={{ margin: 0, color: "#666" }}>Cliquez pour télécharger votre photo</p>
                         </div>
 
+                        {/* Privacy notice - exact match from block.liquid */}
+                        <p style={{
+                          fontSize: "12px",
+                          color: "#999",
+                          textAlign: "center",
+                          marginTop: "0px",
+                          marginBottom: "0px",
+                          fontStyle: "italic",
+                          lineHeight: 1.4,
+                        }}>
+                          🔒 Aucune donnée personnelle n'est stockée. Vos photos sont traitées de manière sécurisée et supprimées après génération.
+                        </p>
+
                         {/* Generate button - exact match from block.liquid */}
                         <button
                           style={{
