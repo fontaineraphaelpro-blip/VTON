@@ -94,3 +94,4 @@ Si vous rencontrez des problèmes :
 3. Vérifiez que l'app a les permissions nécessaires
 4. Contactez le support si le problème persiste
 
+

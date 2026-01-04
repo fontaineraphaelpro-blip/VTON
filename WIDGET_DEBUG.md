@@ -159,3 +159,4 @@ window.vtonWidget?.injectWidget()
 4. **Vérifiez la console** pour les logs
 5. **Partagez les logs** si le problème persiste
 
+

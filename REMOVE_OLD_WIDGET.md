@@ -74,3 +74,4 @@ Le code a été mis à jour pour:
 
 Le nettoyage automatique se fait via le bouton dans le Dashboard.
 
+

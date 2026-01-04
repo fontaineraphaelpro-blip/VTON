@@ -125,3 +125,4 @@ shopify app logs
 4. ✅ **Supprimer les Script Tags** (optionnel, via Dashboard)
 5. ✅ **Vérifier** que tout fonctionne
 
+

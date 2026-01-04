@@ -123,3 +123,4 @@ Si l'extension ne peut pas être supprimée via l'interface :
 2. Ou utilisez l'API GraphQL pour la supprimer programmatiquement
 3. Vérifiez que vous avez les permissions nécessaires
 
+

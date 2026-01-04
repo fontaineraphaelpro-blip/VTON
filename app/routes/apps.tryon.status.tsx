@@ -21,80 +21,39 @@ import { ensureTables } from "../lib/db-init.server";
 const SHOPIFY_API_SECRET = process.env.SHOPIFY_API_SECRET || "";
 
 /**
- * Verifies that the request comes from Shopify App Proxy or from a Shopify storefront.
+ * Verifies that the request comes from Shopify App Proxy.
+ * Same verification logic as the generate endpoint.
  */
-function verifyProxySignature(queryParams: URLSearchParams, request: Request): boolean {
+function verifyProxySignature(queryParams: URLSearchParams): boolean {
   const signature = queryParams.get("signature");
-  
-  // If signature is present, verify it (App Proxy request)
-  if (signature && SHOPIFY_API_SECRET) {
-    // Create a copy without signature
-    const paramsToVerify: Record<string, string> = {};
-    queryParams.forEach((value, key) => {
-      if (key !== "signature") {
-        paramsToVerify[key] = value;
-      }
-    });
-
-    // Sort and build query string
-    // IMPORTANT: For App Proxy, Shopify concatenates params WITHOUT & delimiter
-    // See: https://shopify.dev/docs/apps/build/online-store/app-proxies/authenticate-app-proxies
-    const sortedParams = Object.keys(paramsToVerify)
-      .sort()
-      .map((key) => `${key}=${paramsToVerify[key]}`)
-      .join(""); // No delimiter for App Proxy!
-
-    // Calculate HMAC
-    const computedSignature = crypto
-      .createHmac("sha256", SHOPIFY_API_SECRET)
-      .update(sortedParams)
-      .digest("hex");
-
-    return crypto.timingSafeEqual(
-      Buffer.from(signature),
-      Buffer.from(computedSignature)
-    );
+  if (!signature || !SHOPIFY_API_SECRET) {
+    return false;
   }
-  
-  // If no signature, check if request comes from a Shopify storefront
-  const referer = request.headers.get("referer") || "";
-  const origin = request.headers.get("origin") || "";
-  const shop = queryParams.get("shop") || "";
-  
-  // Verify that request comes from a valid Shopify storefront
-  const isShopifyStorefront = 
-    (referer.includes(".myshopify.com") || origin.includes(".myshopify.com")) &&
-    shop && 
-    shop.includes(".myshopify.com");
-  
-  // Additional security: verify that the shop domain matches the referer/origin
-  if (isShopifyStorefront) {
-    const shopDomain = shop.replace(".myshopify.com", "");
-    const refererMatches = referer.includes(shopDomain) || referer.includes(shop);
-    const originMatches = origin.includes(shopDomain) || origin.includes(shop);
-    
-    // Allow if shop parameter matches the referer/origin domain
-    if (refererMatches || originMatches) {
-      console.log("[Status] Allowing request without signature from verified Shopify storefront:", { 
-        referer, 
-        origin, 
-        shop,
-        shopDomain,
-        refererMatches,
-        originMatches
-      });
-      return true;
+
+  // Create a copy without signature
+  const paramsToVerify: Record<string, string> = {};
+  queryParams.forEach((value, key) => {
+    if (key !== "signature") {
+      paramsToVerify[key] = value;
     }
-  }
-  
-  // Reject if no valid signature and not from verified storefront
-  console.warn("[Status] Request rejected - no valid signature and not from verified storefront:", { 
-    referer, 
-    origin, 
-    shop,
-    hasSignature: !!signature
   });
-  return false;
+
+  // Sort and build query string
+  const sortedParams = Object.keys(paramsToVerify)
+    .sort()
+    .map((key) => `${key}=${paramsToVerify[key]}`)
+    .join("&");
+
+  // Calculate HMAC
+  const computedSignature = crypto
+    .createHmac("sha256", SHOPIFY_API_SECRET)
+    .update(sortedParams)
+    .digest("hex");
+
+  return crypto.timingSafeEqual(
+    Buffer.from(signature),
+    Buffer.from(computedSignature)
+  );
 }
 
 /**
@@ -126,19 +85,34 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     const url = new URL(request.url);
     const queryParams = url.searchParams;
 
-    // 1. Verify Shopify signature or storefront origin
-    if (!verifyProxySignature(queryParams, request)) {
-      console.error("[Status] Request verification failed:", {
-        hasSignature: !!queryParams.get("signature"),
-        referer: request.headers.get("referer"),
-        origin: request.headers.get("origin"),
-        shop: queryParams.get("shop"),
-        url: request.url
+    // 1. Verify Shopify signature OR check if request comes from storefront
+    const hasValidSignature = verifyProxySignature(queryParams);
+    
+    // If no signature, check if request comes from a Shopify storefront
+    if (!hasValidSignature) {
+      const referer = request.headers.get("referer") || "";
+      const origin = request.headers.get("origin") || "";
+      const shopParam = queryParams.get("shop");
+      
+      // Check if request comes from a Shopify storefront (.myshopify.com)
+      const isFromShopifyStorefront = 
+        (referer.includes(".myshopify.com") || origin.includes(".myshopify.com")) &&
+        shopParam &&
+        shopParam.includes(".myshopify.com");
+      
+      if (!isFromShopifyStorefront) {
+        return json(
+          { error: "Invalid signature - request not from Shopify" },
+          { status: 403 }
+        );
+      }
+      
+      // Log that we're allowing request without signature from storefront
+      console.log("[Status] Allowing request from storefront without signature:", {
+        referer,
+        origin,
+        shop: shopParam
       });
-      return json(
-        { error: "Invalid signature - request not from Shopify" },
-        { status: 403 }
-      );
     }
 
     // 2. Extract shop
@@ -159,24 +133,15 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     // 5. Get comprehensive try-on status (shop + product level)
     const status = await getProductTryonStatus(shop, productId);
 
-    // 6. Return status with CORS headers
-    return json(
-      {
-        enabled: status.enabled,
-        shop_enabled: status.shopEnabled,
-        product_enabled: status.productEnabled,
-        product_id: productId,
-        shop: shop,
-        widget_settings: status.widgetSettings, // Only set if enabled, null otherwise
-      },
-      {
-        headers: {
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Methods": "GET, OPTIONS",
-          "Access-Control-Allow-Headers": "Content-Type",
-        },
-      }
-    );
+    // 6. Return status
+    return json({
+      enabled: status.enabled,
+      shop_enabled: status.shopEnabled,
+      product_enabled: status.productEnabled,
+      product_id: productId,
+      shop: shop,
+      widget_settings: status.widgetSettings, // Only set if enabled, null otherwise
+    });
   } catch (error) {
     console.error("Error in /apps/tryon/status:", error);
     return json(
@@ -184,14 +149,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         error: "Failed to check try-on status",
         message: error instanceof Error ? error.message : "Unknown error",
       },
-      {
-        status: 500,
-        headers: {
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Methods": "GET, OPTIONS",
-          "Access-Control-Allow-Headers": "Content-Type",
-        },
-      }
+      { status: 500 }
     );
   }
 };
