@@ -130,7 +130,7 @@ export default function Widget() {
         {fetcher.data?.success && (
           <div style={{ marginBottom: "var(--spacing-lg)" }}>
             <Banner tone="success">
-              Widget configuration saved successfully
+              Widget configuration saved successfully. Changes will appear on your store after the widget reloads.
             </Banner>
           </div>
         )}
@@ -151,7 +151,7 @@ export default function Widget() {
                   Widget Preview
                 </Text>
                 <Text variant="bodyMd" tone="subdued" as="p">
-                  This is how the widget will appear on your product pages, next to the "Add to Cart" button.
+                  This preview shows how the widget will appear on your product pages. The widget uses Shadow DOM for CSS isolation, so it may look slightly different in the actual theme context.
                 </Text>
                 <Divider />
                 <Box>
@@ -159,13 +159,12 @@ export default function Widget() {
                     padding: "20px", 
                     border: "1px solid #e1e3e5", 
                     borderRadius: "8px",
-                    backgroundColor: "#ffffff"
+                    backgroundColor: "#f6f6f7"
                   }}>
-                    <Text variant="bodySm" tone="subdued" as="p" style={{ marginBottom: "16px" }}>
-                      Widget button as it appears on product pages:
+                    {/* Widget Button Preview - matches block.liquid exactly */}
+                    <Text variant="bodySm" tone="subdued" as="p" style={{ marginBottom: "12px" }}>
+                      Widget button on product page:
                     </Text>
-                    
-                    {/* Exact replica of widget button from block.liquid */}
                     <div style={{
                       margin: "16px 0",
                       width: "100%",
@@ -196,11 +195,10 @@ export default function Widget() {
 
                     <Divider />
 
-                    <Text variant="bodySm" tone="subdued" as="p" style={{ marginTop: "24px", marginBottom: "16px" }}>
-                      Modal that opens when button is clicked:
+                    {/* Modal Preview - matches block.liquid exactly */}
+                    <Text variant="bodySm" tone="subdued" as="p" style={{ marginTop: "24px", marginBottom: "12px" }}>
+                      Modal window (opens when button is clicked):
                     </Text>
-
-                    {/* Exact replica of widget modal from block.liquid */}
                     <div style={{
                       position: "relative",
                       backgroundColor: "white",
@@ -211,6 +209,7 @@ export default function Widget() {
                       maxHeight: "90vh",
                       overflow: "hidden",
                       margin: "0 auto",
+                      boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
                     }}>
                       {/* Close button */}
                       <button
@@ -268,6 +267,10 @@ export default function Widget() {
                         </button>
                       </div>
                     </div>
+
+                    <Text variant="bodySm" tone="subdued" as="p" alignment="center" style={{ marginTop: "16px" }}>
+                      Note: The actual widget uses Shadow DOM, so styles are isolated. The colors you configure here will be applied to both the button and the "Générer" button in the modal.
+                    </Text>
                   </div>
                 </Box>
               </BlockStack>
@@ -281,7 +284,7 @@ export default function Widget() {
                   Configuration
                 </Text>
                 <Text variant="bodyMd" tone="subdued" as="p">
-                  Customize the widget text, background color, and text color.
+                  Customize the widget text, background color, and text color. These settings are stored in the database and loaded by the widget when it initializes.
                 </Text>
                 <Divider />
                 <form onSubmit={handleSave}>
@@ -319,6 +322,20 @@ export default function Widget() {
                     </Button>
                   </BlockStack>
                 </form>
+
+                <Divider />
+
+                <BlockStack gap="300">
+                  <Text as="h3" variant="headingMd" fontWeight="semibold">
+                    How it works
+                  </Text>
+                  <Text variant="bodySm" tone="subdued" as="p">
+                    When you save these settings, they are stored in the database. The widget loads these settings from the `/apps/tryon/status` endpoint when it initializes on product pages.
+                  </Text>
+                  <Text variant="bodySm" tone="subdued" as="p">
+                    To see changes on your store, you may need to refresh the product page or clear your browser cache.
+                  </Text>
+                </BlockStack>
               </BlockStack>
             </Card>
           </Layout.Section>
