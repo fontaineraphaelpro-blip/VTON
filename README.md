@@ -82,7 +82,6 @@ npx prisma studio         # Interface graphique pour la DB
 
 ## 📚 Documentation
 
-- [Guide de setup détaillé](./README_SETUP.md)
 - [Remix Docs](https://remix.run/docs)
 - [Shopify App Remix](https://shopify.dev/docs/apps/tools/cli/templates)
 - [Polaris Components](https://polaris.shopify.com/components)

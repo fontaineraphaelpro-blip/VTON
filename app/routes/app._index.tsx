@@ -35,9 +35,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
     // Installer automatiquement le script tag si pas déjà installé
     try {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:37',message:'Script tag installation attempt started',data:{shop},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
       // Construire l'URL du script - utiliser l'URL de l'app directement (pas le store)
       // Ajouter un paramètre de version pour forcer le rechargement après déploiement
       const url = new URL(request.url);
@@ -60,55 +57,28 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         }
       `;
       
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:57',message:'Before scriptTags query GraphQL call',data:{query:scriptTagsQuery},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
       let scriptTagsResponse;
       try {
         scriptTagsResponse = await admin.graphql(scriptTagsQuery);
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:64',message:'After scriptTags query GraphQL call - success',data:{ok:scriptTagsResponse.ok,status:scriptTagsResponse.status,statusText:scriptTagsResponse.statusText},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'A'})}).catch(()=>{});
-        // #endregion
       } catch (graphqlError: any) {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:68',message:'GraphQL error caught in try-catch',data:{errorType:graphqlError?.constructor?.name,errorMessage:graphqlError?.message,hasResponse:!!graphqlError?.response,responseStatus:graphqlError?.response?.status,responseStatusText:graphqlError?.response?.statusText},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'B'})}).catch(()=>{});
-        // #endregion
         // Check if it's a GraphQL error about access denied
         if (graphqlError?.message?.includes('Access denied') || graphqlError?.message?.includes('scriptTags')) {
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:72',message:'Access denied error detected - missing write_script_tags scope',data:{errorMessage:graphqlError.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'A'})}).catch(()=>{});
-          // #endregion
           console.warn("Script tags access denied - app may not have write_script_tags scope. Skipping auto-install.");
           // Skip script tag installation - app doesn't have required permissions
           scriptTagsResponse = null;
         } else {
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:77',message:'Other GraphQL error',data:{errorMessage:graphqlError?.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'C'})}).catch(()=>{});
-          // #endregion
           throw graphqlError; // Re-throw if it's not an access denied error
         }
       }
       
       if (!scriptTagsResponse) {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:84',message:'scriptTagsResponse is null - skipping script tag installation',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'A'})}).catch(()=>{});
-        // #endregion
         // Skip script tag installation if response is null (access denied)
         // Continue without installing script tag
       } else if (!scriptTagsResponse.ok) {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:88',message:'scriptTagsResponse not OK',data:{status:scriptTagsResponse.status,statusText:scriptTagsResponse.statusText,is302:scriptTagsResponse.status===302,is401:scriptTagsResponse.status===401},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'A'})}).catch(()=>{});
-        // #endregion
         if (scriptTagsResponse.status === 302 || scriptTagsResponse.status === 401) {
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:92',message:'Auth required detected, skipping',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'A'})}).catch(()=>{});
-          // #endregion
           console.warn("Authentication required for script tag check, skipping auto-install");
           // Skip script tag installation if auth is required
         } else {
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:96',message:'Other error status, logging',data:{status:scriptTagsResponse.status},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'A'})}).catch(()=>{});
-          // #endregion
           const errorText = await scriptTagsResponse.text().catch(() => "Unknown error");
           console.error("Error checking script tags:", scriptTagsResponse.status, errorText);
         }
@@ -117,15 +87,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         let scriptTagsData: any;
         try {
           scriptTagsData = await scriptTagsResponse.json() as any;
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:98',message:'scriptTagsData parsed successfully',data:{hasData:!!scriptTagsData,hasErrors:!!scriptTagsData?.errors,errors:scriptTagsData?.errors,hasScriptTags:!!scriptTagsData?.data?.scriptTags},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'A'})}).catch(()=>{});
-          // #endregion
           // Check for GraphQL errors in the response body
           if (scriptTagsData?.errors) {
             const errorMessages = scriptTagsData.errors.map((e: any) => e.message || String(e)).join(", ");
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:103',message:'GraphQL errors in response body',data:{errorMessages,errors:scriptTagsData.errors},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'B'})}).catch(()=>{});
-            // #endregion
             if (errorMessages.includes('Access denied') || errorMessages.includes('scriptTags')) {
               console.warn("Script tags access denied in response - app may not have write_script_tags scope. Skipping auto-install.");
               scriptTagsData = null; // Set to null to skip installation
@@ -135,21 +99,12 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             }
           }
         } catch (jsonError) {
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:111',message:'Failed to parse script tags response',data:{jsonError:jsonError instanceof Error ? jsonError.message : String(jsonError)},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'C'})}).catch(()=>{});
-          // #endregion
           console.error("Failed to parse script tags response:", jsonError);
           // Continue without installing script tag
           scriptTagsData = null;
         }
         
         if (scriptTagsData && scriptTagsData.data?.scriptTags) {
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:120',message:'Processing script tags data',data:{hasScriptTags:!!scriptTagsData.data?.scriptTags,edgesCount:scriptTagsData.data?.scriptTags?.edges?.length || 0},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'A'})}).catch(()=>{});
-          // #endregion
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:120',message:'Processing script tags data',data:{hasScriptTags:!!scriptTagsData.data?.scriptTags,edgesCount:scriptTagsData.data?.scriptTags?.edges?.length || 0},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'A'})}).catch(()=>{});
-          // #endregion
           const existingScripts = scriptTagsData.data?.scriptTags?.edges || [];
           
           // Supprimer les anciens script tags qui pourraient interférer
@@ -263,9 +218,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
               }
             `;
 
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:101',message:'Before createScriptTag mutation GraphQL call',data:{scriptTagUrl},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-            // #endregion
             const result = await admin.graphql(createScriptTagMutation, {
               variables: {
                 input: {
@@ -274,24 +226,12 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                 }
               }
             });
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:109',message:'After createScriptTag mutation GraphQL call',data:{ok:result.ok,status:result.status,statusText:result.statusText},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-            // #endregion
             
             // Check if response is OK
             if (!result.ok) {
-              // #region agent log
-              fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:112',message:'result not OK',data:{status:result.status,statusText:result.statusText,is302:result.status===302,is401:result.status===401},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-              // #endregion
               if (result.status === 302 || result.status === 401) {
-                // #region agent log
-                fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:113',message:'Auth required for creation, skipping',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-                // #endregion
                 console.warn("Authentication required for script tag creation, skipping");
               } else {
-                // #region agent log
-                fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:116',message:'Other error status for creation, logging',data:{status:result.status},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-                // #endregion
                 const errorText = await result.text().catch(() => "Unknown error");
                 console.error("Error creating script tag:", result.status, errorText);
               }
@@ -322,19 +262,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         }
       }
     } catch (scriptError: any) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:145',message:'Catch block - scriptError caught',data:{errorType:scriptError?.constructor?.name,isResponse:scriptError instanceof Response,hasStatus:!!(scriptError as any)?.status,status:(scriptError as any)?.status,message:scriptError instanceof Error ? scriptError.message : String(scriptError)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-      // #endregion
       // Ne pas loguer l'objet Response directement - extraire seulement les infos nécessaires
       if (scriptError instanceof Response) {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:148',message:'scriptError is Response object',data:{status:scriptError.status,statusText:scriptError.statusText,url:scriptError.url},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-        // #endregion
         console.warn(`Script tag installation skipped: ${scriptError.status} ${scriptError.statusText}`);
       } else {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:152',message:'scriptError is not Response, logging normally',data:{message:scriptError instanceof Error ? scriptError.message : String(scriptError)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-        // #endregion
         console.error("Error installing script tag:", scriptError);
       }
       // Ne pas bloquer le chargement si l'installation du script échoue

@@ -10,8 +10,11 @@ api_version = "2025-01"
 
   [[webhooks.subscriptions]]
   topics = [ "products/update", "app/uninstalled" ]
-  uri = "https://stylelab-vtonn.onrender.com/webhooks/gdpr"
+  uri = "https://vton-production-890a.up.railway.app/webhooks"
+
+  [[webhooks.subscriptions]]
   compliance_topics = [ "customers/data_request", "customers/redact", "shop/redact" ]
+  uri = "https://vton-production-890a.up.railway.app/webhooks/gdpr"
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes

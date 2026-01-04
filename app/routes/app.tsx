@@ -32,6 +32,8 @@ export default function App() {
               <Link to="/app/widget">Widget</Link>
               <Link to="/app/history">History</Link>
               <Link to="/app/credits">Credits</Link>
+              <Link to="/app/privacy">Privacy Policy</Link>
+              <Link to="/app/terms">Terms of Service</Link>
             </NavMenu>
       <Outlet />
     </AppProvider>

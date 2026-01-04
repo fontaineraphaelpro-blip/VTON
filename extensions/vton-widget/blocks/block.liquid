@@ -8,10 +8,6 @@
     (function() {
       'use strict';
       
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'block.liquid:script-init',message:'block.liquid script executing',data:{readyState:document.readyState,url:window.location.href,origin:window.location.origin},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(function(){});
-      // #endregion
-      
       // Wait for DOM to be ready
       if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', initWidget);
@@ -69,16 +65,8 @@
       }
       
       function checkStatus(shop, productId) {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'block.liquid:checkStatus:entry',message:'checkStatus called',data:{shop:shop,productId:productId,origin:window.location.origin,href:window.location.href,pathname:window.location.pathname},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(function(){});
-        // #endregion
-        
         // Construct absolute URL for app proxy
         const url = window.location.origin + '/apps/tryon/status?shop=' + encodeURIComponent(shop) + '&product_id=' + encodeURIComponent(productId);
-        
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'block.liquid:checkStatus:before-fetch',message:'URL constructed',data:{constructedUrl:url,origin:window.location.origin},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(function(){});
-        // #endregion
         
         return fetch(url, {
           method: 'GET',
@@ -86,18 +74,11 @@
             'Content-Type': 'application/json'
           }
         }).then(function(response) {
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'block.liquid:checkStatus:response',message:'Fetch response received',data:{ok:response.ok,status:response.status,statusText:response.statusText,url:response.url},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(function(){});
-          // #endregion
-          
           if (!response.ok) {
             throw new Error('Status check failed: ' + response.status);
           }
           return response.json();
         }).catch(function(error) {
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'block.liquid:checkStatus:error',message:'Fetch error',data:{error:error.message,stack:error.stack},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(function(){});
-          // #endregion
           throw error;
         });
       }
