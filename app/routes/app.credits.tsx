@@ -77,8 +77,9 @@ const PRICING_PLANS = [
   },
 ];
 
-// Prix pay-per-use pour les try-ons supplémentaires
-const PAY_PER_USE_PRICE = 0.50; // Prix par try-on supplémentaire
+// Custom Flexible Plan - Prix calculé automatiquement pour garantir au moins x2 de marge
+// Prix minimum par try-on pour le plan custom (basé sur le prix du plan Studio)
+const MIN_CUSTOM_PRICE_PER_CREDIT = 0.33; // Prix minimum par try-on (garantit x2 marge)
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
@@ -408,15 +409,16 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     }
   } else if (intent === "custom-pack") {
     const customCredits = parseInt(formData.get("customCredits") as string);
-    if (customCredits && customCredits >= 1) {
-      const totalPrice = customCredits * PAY_PER_USE_PRICE;
+    if (customCredits && customCredits >= 301) {
+      // Prix calculé automatiquement pour garantir au moins x2 de marge
+      const totalPrice = customCredits * MIN_CUSTOM_PRICE_PER_CREDIT;
 
       try {
         // Build return URL - redirect back to credits page after payment
         const baseUrl = new URL(request.url).origin;
         const returnUrl = new URL("/app/credits", baseUrl);
         returnUrl.searchParams.set("purchase", "success");
-        returnUrl.searchParams.set("pack", "pay-per-use");
+        returnUrl.searchParams.set("pack", "custom-flexible");
         returnUrl.searchParams.set("credits", String(customCredits));
 
         console.log("[Credits] Creating custom one-time charge using REST API", { customCredits, totalPrice });
@@ -623,7 +625,7 @@ export default function Credits() {
   const fetcher = useFetcher<typeof action>();
   const revalidator = useRevalidator();
   const currentCredits = shop?.credits || 0;
-  const [customAmount, setCustomAmount] = useState("500");
+  const [customAmount, setCustomAmount] = useState("301");
   const [submittingPackId, setSubmittingPackId] = useState<string | null>(null);
   
   // Utiliser useRef pour stocker une référence stable à revalidator
@@ -727,8 +729,8 @@ export default function Credits() {
     const formData = new FormData(event.currentTarget);
     const credits = parseInt(formData.get("customCredits") as string);
     
-    if (!credits || credits < 1) {
-      alert("Minimum 1 try-on requis.");
+    if (!credits || credits < 301) {
+      alert("Minimum 301 try-ons requis pour le plan Custom Flexible.");
       return;
     }
     
