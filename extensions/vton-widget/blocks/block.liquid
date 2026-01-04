@@ -533,11 +533,17 @@
           // Masquer le loading
           if (loading) loading.classList.remove('active');
           
-          // Afficher le résultat
+          // Afficher le résultat avec bouton "Ajouter au panier"
           if (result && state.resultImageUrl && typeof state.resultImageUrl === 'string') {
             result.classList.add('active');
-            result.innerHTML = '<img src="' + state.resultImageUrl + '" alt="Résultat" style="width: 100%; border-radius: 8px; display: block;" />';
-            console.log('[VTON] Result displayed successfully');
+            const buttonBg = state.widgetSettings.widget_bg || '#000000';
+            const buttonColor = state.widgetSettings.widget_color || '#ffffff';
+            result.innerHTML = 
+              '<img src="' + state.resultImageUrl + '" alt="Résultat" style="width: 100%; border-radius: 8px; display: block; margin-bottom: 16px;" />' +
+              '<button class="vton-add-to-cart-btn" style="width: 100%; padding: 14px; border: none; border-radius: 4px; font-size: 16px; font-weight: 600; cursor: pointer; background: ' + buttonBg + '; color: ' + buttonColor + ';" onclick="window.vtonWidgetInstance.handleAddToCart()">' +
+              'Ajouter au panier' +
+              '</button>';
+            console.log('[VTON] Result displayed successfully with Add to Cart button');
             console.log('[VTON] Image src:', state.resultImageUrl);
           } else {
             console.error('[VTON] Cannot display result:', {
