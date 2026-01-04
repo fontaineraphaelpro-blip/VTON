@@ -111,6 +111,89 @@ export default function Widget() {
   return (
     <Page>
       <TitleBar title="Widget Configuration - VTON Magic" />
+      <style>{`
+        .vton-widget-preview-container {
+          padding: 20px;
+          border: 1px solid #e1e3e5;
+          border-radius: 8px;
+          background-color: #f6f6f7;
+        }
+        .vton-button {
+          width: 100%;
+          padding: 14px 24px;
+          border: none;
+          border-radius: 4px;
+          font-size: 16px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: opacity 0.2s;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+        }
+        .vton-button:hover {
+          opacity: 0.9;
+        }
+        .vton-modal-preview {
+          position: relative;
+          background: white;
+          border-radius: 8px;
+          border: 1px solid #e1e3e5;
+          max-width: 600px;
+          width: 100%;
+          max-height: 90vh;
+          overflow: hidden;
+          margin: 0 auto;
+          box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .vton-modal-close {
+          position: absolute;
+          top: 12px;
+          right: 12px;
+          background: none;
+          border: none;
+          font-size: 24px;
+          cursor: pointer;
+          padding: 4px 8px;
+          line-height: 1;
+          color: #666;
+          z-index: 10;
+        }
+        .vton-modal-content {
+          padding: 24px;
+        }
+        .vton-upload-area {
+          border: 2px dashed #ccc;
+          border-radius: 8px;
+          padding: 40px;
+          text-align: center;
+          cursor: pointer;
+          margin-bottom: 16px;
+        }
+        .vton-upload-area:hover {
+          border-color: #999;
+        }
+        .vton-privacy-notice {
+          font-size: 12px;
+          color: #999;
+          text-align: center;
+          margin-top: 0px;
+          margin-bottom: 0px;
+          font-style: italic;
+          line-height: 1.4;
+        }
+        .vton-generate-btn {
+          width: 100%;
+          padding: 14px;
+          border: none;
+          border-radius: 4px;
+          font-size: 16px;
+          font-weight: 600;
+          cursor: pointer;
+          margin-top: 16px;
+        }
+      `}</style>
       <div className="app-container">
         <header className="app-header">
           <h1 className="app-title">Widget Configuration</h1>
@@ -155,39 +238,18 @@ export default function Widget() {
                 </Text>
                 <Divider />
                 <Box>
-                  <div style={{ 
-                    padding: "20px", 
-                    border: "1px solid #e1e3e5", 
-                    borderRadius: "8px",
-                    backgroundColor: "#f6f6f7"
-                  }}>
-                    {/* Widget Button Preview - matches block.liquid exactly */}
+                  <div className="vton-widget-preview-container">
+                    {/* Widget Button Preview - exact match from block.liquid */}
                     <Text variant="bodySm" tone="subdued" as="p" style={{ marginBottom: "12px" }}>
                       Widget button on product page:
                     </Text>
-                    <div style={{
-                      margin: "16px 0",
-                      width: "100%",
-                    }}>
+                    <div style={{ margin: "16px 0", width: "100%" }}>
                       <button
+                        className="vton-button"
                         style={{
-                          width: "100%",
-                          padding: "14px 24px",
-                          border: "none",
-                          borderRadius: "4px",
-                          fontSize: "16px",
-                          fontWeight: 600,
-                          cursor: "pointer",
-                          transition: "opacity 0.2s",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          gap: "8px",
                           backgroundColor: widgetBg,
                           color: widgetColor,
                         }}
-                        onMouseEnter={(e) => e.currentTarget.style.opacity = "0.9"}
-                        onMouseLeave={(e) => e.currentTarget.style.opacity = "1"}
                       >
                         {widgetText}
                       </button>
@@ -195,84 +257,24 @@ export default function Widget() {
 
                     <Divider />
 
-                    {/* Modal Preview - matches block.liquid exactly */}
+                    {/* Modal Preview - exact match from block.liquid */}
                     <Text variant="bodySm" tone="subdued" as="p" style={{ marginTop: "24px", marginBottom: "12px" }}>
                       Modal window (opens when button is clicked):
                     </Text>
-                    <div style={{
-                      position: "relative",
-                      backgroundColor: "white",
-                      borderRadius: "8px",
-                      border: "1px solid #e1e3e5",
-                      maxWidth: "600px",
-                      width: "100%",
-                      maxHeight: "90vh",
-                      overflow: "hidden",
-                      margin: "0 auto",
-                      boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
-                    }}>
-                      {/* Close button */}
-                      <button
-                        style={{
-                          position: "absolute",
-                          top: "12px",
-                          right: "12px",
-                          background: "none",
-                          border: "none",
-                          fontSize: "24px",
-                          cursor: "pointer",
-                          padding: "4px 8px",
-                          lineHeight: 1,
-                          color: "#666",
-                          zIndex: 10,
-                        }}
-                      >
-                        ×
-                      </button>
-
-                      {/* Modal content */}
-                      <div style={{ padding: "24px" }}>
-                        {/* Upload area - exact match from block.liquid */}
-                        <div style={{
-                          border: "2px dashed #ccc",
-                          borderRadius: "8px",
-                          padding: "40px",
-                          textAlign: "center",
-                          cursor: "pointer",
-                          marginBottom: "16px",
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.borderColor = "#999"}
-                        onMouseLeave={(e) => e.currentTarget.style.borderColor = "#ccc"}
-                        >
+                    <div className="vton-modal-preview">
+                      <button className="vton-modal-close">×</button>
+                      <div className="vton-modal-content">
+                        <div className="vton-upload-area">
                           <p style={{ margin: 0, color: "#666" }}>Cliquez pour télécharger votre photo</p>
                         </div>
-
-                        {/* Privacy notice - exact match from block.liquid */}
-                        <p style={{
-                          fontSize: "12px",
-                          color: "#999",
-                          textAlign: "center",
-                          marginTop: "0px",
-                          marginBottom: "0px",
-                          fontStyle: "italic",
-                          lineHeight: 1.4,
-                        }}>
+                        <p className="vton-privacy-notice">
                           🔒 Aucune donnée personnelle n'est stockée. Vos photos sont traitées de manière sécurisée et supprimées après génération.
                         </p>
-
-                        {/* Generate button - exact match from block.liquid */}
                         <button
+                          className="vton-generate-btn"
                           style={{
-                            width: "100%",
-                            padding: "14px",
                             backgroundColor: widgetBg,
                             color: widgetColor,
-                            border: "none",
-                            borderRadius: "4px",
-                            fontSize: "16px",
-                            fontWeight: 600,
-                            cursor: "pointer",
-                            marginTop: "16px",
                           }}
                           disabled
                         >
