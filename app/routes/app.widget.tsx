@@ -292,46 +292,11 @@ export default function Widget() {
                             fontWeight: 600,
                             cursor: "default",
                             transition: "opacity 0.2s",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            gap: "8px",
                             backgroundColor: widgetBg || "#000000",
                             color: widgetColor || "#ffffff",
-                            boxShadow: "0 1px 3px rgba(0, 0, 0, 0.12)",
                           }}
                         >
-                          <svg
-                            width="20"
-                            height="20"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            xmlns="http://www.w3.org/2000/svg"
-                            style={{ flexShrink: 0 }}
-                          >
-                            <path
-                              d="M12 2L2 7L12 12L22 7L12 2Z"
-                              stroke={widgetColor || "#ffffff"}
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                            <path
-                              d="M2 17L12 22L22 17"
-                              stroke={widgetColor || "#ffffff"}
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                            <path
-                              d="M2 12L12 17L22 12"
-                              stroke={widgetColor || "#ffffff"}
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                          </svg>
-                          <span>{widgetText || "Try It On Now ✨"}</span>
+                          {widgetText || "Try It On Now ✨"}
                         </button>
                       </div>
                     </div>
