@@ -714,7 +714,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                                 </div>
                             </div>
                             <div class="vton-result-actions">
-                                <button class="vton-btn vton-btn-primary" id="vton-download-btn">Télécharger</button>
+                                <button class="vton-btn vton-btn-primary" id="vton-add-to-cart-btn">Ajouter au panier</button>
+                                <button class="vton-btn vton-btn-secondary" id="vton-download-btn">Télécharger</button>
                                 <button class="vton-btn vton-btn-secondary" id="vton-new-try-btn">Nouvel essai</button>
                             </div>
                         </div>
