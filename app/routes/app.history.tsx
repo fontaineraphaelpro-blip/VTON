@@ -63,21 +63,21 @@ export default function History() {
 
   const formatLatency = (ms: number | null) => {
     if (!ms) return "-";
-    if (ms < 1000) return `${ms}ms`;
-    return `${(ms / 1000).toFixed(1)}s`;
+    // Always display in seconds
+    return `${(ms / 1000).toFixed(1)} sec`;
   };
 
   const totalLogs = logs.length;
   const successfulLogs = logs.filter((log: any) => log.success).length;
   const successRate = totalLogs > 0 ? ((successfulLogs / totalLogs) * 100).toFixed(1) : "0.0";
   const avgLatency = totalLogs > 0
-    ? (logs.reduce((sum: number, log: any) => sum + (log.latency_ms || 0), 0) / totalLogs).toFixed(0)
-    : "0";
+    ? (logs.reduce((sum: number, log: any) => sum + (log.latency_ms || 0), 0) / totalLogs / 1000).toFixed(1)
+    : "0.0";
 
   const stats = [
     { label: "Total Attempts", value: totalLogs.toLocaleString("en-US"), icon: "" },
     { label: "Success Rate", value: `${successRate}%`, icon: "" },
-    { label: "Average Latency", value: `${avgLatency}ms`, icon: "" },
+    { label: "Average Latency", value: `${avgLatency} sec`, icon: "" },
   ];
 
   const rows = logs.map((log: any) => [

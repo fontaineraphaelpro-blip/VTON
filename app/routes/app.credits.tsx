@@ -266,7 +266,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
             currencyCode: "EUR"
           },
           returnUrl: returnUrl.toString(),
-          test: process.env.NODE_ENV !== "production"
+          test: true // Enable draft/test mode for credit purchases
         };
 
         console.log("[Credits Action] Creating one-time charge using GraphQL", {
@@ -438,7 +438,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
             currencyCode: "EUR"
           },
           returnUrl: returnUrl.toString(),
-          test: process.env.NODE_ENV !== "production"
+          test: true // Enable draft/test mode for credit purchases
         };
 
         console.log("[Credits] Creating custom one-time charge using GraphQL", { customCredits, totalPrice, variables });
