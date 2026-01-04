@@ -536,6 +536,14 @@
           `;
         }
         
+        triggerFileInput() {
+          if (!this.shadowRoot) return;
+          const fileInput = this.shadowRoot.getElementById('vton-file-input');
+          if (fileInput) {
+            fileInput.click();
+          }
+        }
+        
         openModal() {
           const modal = this.shadowRoot ? this.shadowRoot.getElementById('vton-modal-overlay') : null;
           if (modal) {
