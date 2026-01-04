@@ -12,7 +12,7 @@ This app provides a seamless virtual try-on experience for Shopify stores. Custo
 - **Automatic Widget Installation**: Widget automatically installs on product pages
 - **Product-Level Control**: Enable/disable try-on for individual products
 - **Usage Analytics**: Track try-on usage, conversion rates, and popular products
-- **Subscription Plans**: Flexible monthly plans with quotas (Free, Starter, Pro, Studio, Custom)
+- **Subscription Plans**: Flexible monthly plans with quotas (Free Discovery, Starter, Pro, Enterprise)
 - **GDPR Compliant**: Full GDPR compliance with data request and deletion webhooks
 - **Secure**: HMAC signature verification for all public endpoints
 - **Privacy-First**: Customer photos are processed securely and deleted immediately after generation
