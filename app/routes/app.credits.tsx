@@ -610,7 +610,7 @@ export default function Credits() {
                 <div className="plan-credits-label">try-ons/month</div>
               </div>
               <div className="plan-features">
-                <div className="plan-feature">✓ {(plan as any).monthlyQuota || plan.credits} try-ons per month</div>
+                <div className="plan-feature">✓ {plan.description}</div>
                 <div className="plan-feature">✓ Monthly quota with automatic reset</div>
                 {(plan as any).hasWatermark && (
                   <div className="plan-feature">✓ With watermark</div>
@@ -618,7 +618,6 @@ export default function Credits() {
                 {!(plan as any).hasWatermark && (
                   <div className="plan-feature">✓ No watermark</div>
                 )}
-                <div className="plan-feature">✓ {plan.description}</div>
                 <div className="plan-feature">✓ Hard cap to prevent overages</div>
               </div>
               <div className="plan-cta">
