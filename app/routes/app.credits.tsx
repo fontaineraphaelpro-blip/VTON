@@ -24,48 +24,56 @@ import { ensureTables } from "../lib/db-init.server";
 // Plans tarifaires optimisés pour Virtual Try-On
 const PRICING_PLANS = [
   {
-    id: "micro",
-    name: "Micro",
-    credits: 50,
-    price: 20.00,
-    pricePerCredit: 0.40,
-    description: "Ultra-accessible pour tester l'app",
+    id: "free",
+    name: "Free",
+    credits: 2,
+    price: 0.00,
+    pricePerCredit: 0.00,
+    description: "Tester 2 try-ons par mois avec watermark pour découvrir l'outil",
     highlight: false,
     popular: false,
     badge: "Essai",
+    monthlyQuota: 2,
+    hasWatermark: true,
   },
   {
     id: "starter",
     name: "Starter",
-    credits: 100,
-    price: 45.00,
-    pricePerCredit: 0.45,
-    description: "Usage entry-level pour démarrer",
+    credits: 60,
+    price: 19.00,
+    pricePerCredit: 0.317,
+    description: "60 try-ons par mois - Parfait pour démarrer",
     highlight: false,
     popular: true,
     badge: "Populaire",
+    monthlyQuota: 60,
+    hasWatermark: false,
   },
   {
     id: "pro",
     name: "Pro",
-    credits: 500,
-    price: 188.00,
-    pricePerCredit: 0.376,
-    description: "Pour les boutiques sérieuses avec marge solide",
+    credits: 150,
+    price: 49.00,
+    pricePerCredit: 0.327,
+    description: "150 try-ons par mois - Pour les boutiques actives",
     highlight: true,
     popular: false,
     badge: "Recommandé",
+    monthlyQuota: 150,
+    hasWatermark: false,
   },
   {
-    id: "enterprise",
-    name: "Enterprise",
-    credits: 1000,
-    price: 300.00,
-    pricePerCredit: 0.30,
-    description: "Pour les grosses marques avec rendu parfait et marge garantie",
+    id: "studio",
+    name: "Studio",
+    credits: 300,
+    price: 99.00,
+    pricePerCredit: 0.33,
+    description: "300 try-ons par mois - Pour les boutiques très actives",
     highlight: false,
     popular: false,
     badge: "Premium",
+    monthlyQuota: 300,
+    hasWatermark: false,
   },
 ];
 
@@ -432,7 +440,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         `;
 
         const variables = {
-          name: `${customCredits} Try-on${customCredits > 1 ? 's' : ''} supplémentaire${customCredits > 1 ? 's' : ''} (Pay-per-use)`,
+          name: `Custom Flexible Plan - ${customCredits} try-ons/mois`,
           price: {
             amount: totalPrice.toFixed(2),
             currencyCode: "EUR"
@@ -563,7 +571,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         });
       }
       } else {
-      return json({ success: false, error: "Minimum 1 try-on requis" });
+      return json({ success: false, error: "Minimum 301 try-ons requis pour le plan Custom Flexible" });
     }
   }
 
@@ -828,40 +836,40 @@ export default function Credits() {
         <Card>
           <BlockStack gap="400">
             <Text as="h2" variant="headingLg" fontWeight="semibold">
-              Try-ons supplémentaires (Pay-per-use)
+              Custom Flexible Plan
             </Text>
             <Text variant="bodyMd" tone="subdued" as="p">
-              Achetez des try-ons supplémentaires à l'unité pour compléter votre plan.
+              Choisissez plus de 300 try-ons par mois. Le prix est calculé automatiquement pour garantir au moins x2 de marge.
             </Text>
             <Divider />
             <BlockStack gap="300">
               <Text variant="bodyMd" as="p">
-                <strong>Prix:</strong> €{PAY_PER_USE_PRICE.toFixed(2)} par try-on
+                <strong>Minimum:</strong> 301 try-ons par mois
               </Text>
               <Text variant="bodySm" tone="subdued" as="p">
-                Les try-ons supplémentaires sont ajoutés à votre solde de crédits et n'expirent pas.
+                Le prix est calculé automatiquement pour garantir au moins x2 de marge. Le quota mensuel est fixe avec reset automatique chaque mois.
               </Text>
               <form onSubmit={handleCustomPurchase}>
                 <InlineStack gap="300" align="end">
                   <Box minWidth="200px">
                     <TextField
-                      label="Nombre de try-ons"
+                      label="Nombre de try-ons/mois"
                       type="number"
                       name="customCredits"
                       value={customAmount}
                       onChange={setCustomAmount}
-                      min={1}
+                      min={301}
                       autoComplete="off"
-                      helpText={`Total: €${((parseFloat(customAmount) || 0) * PAY_PER_USE_PRICE).toFixed(2)}`}
+                      helpText={`Minimum 301 try-ons. Prix calculé: €${((parseFloat(customAmount) || 301) * MIN_CUSTOM_PRICE_PER_CREDIT).toFixed(2)}/mois`}
                     />
                   </Box>
                   <Button 
                     variant="primary" 
                     submit
                     loading={isSubmitting}
-                    disabled={!customAmount || parseInt(customAmount) < 1}
+                    disabled={!customAmount || parseInt(customAmount) < 301}
                   >
-                    Acheter {customAmount || '0'} try-on{(parseInt(customAmount) || 0) > 1 ? 's' : ''}
+                    Acheter {customAmount || '301'} try-ons/mois
                   </Button>
                 </InlineStack>
               </form>
