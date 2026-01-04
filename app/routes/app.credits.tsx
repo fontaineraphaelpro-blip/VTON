@@ -110,7 +110,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     const url = new URL(request.url);
     const purchaseSuccess = url.searchParams.get("purchase");
     const packId = url.searchParams.get("pack");
-    const creditsParam = url.searchParams.get("credits");
+    const monthlyQuotaParam = url.searchParams.get("monthlyQuota");
 
     if (purchaseSuccess === "success" && packId) {
       // Find the pack that was purchased
@@ -136,9 +136,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
           planActivated: packId,
           monthlyQuota: monthlyQuota,
         });
-      } else if (packId === "custom-flexible" && creditsParam) {
+      } else if (packId === "custom-flexible" && monthlyQuotaParam) {
         // Handle custom flexible plan
-        const customQuota = parseInt(creditsParam);
+        const customQuota = parseInt(monthlyQuotaParam);
         if (customQuota >= 301) {
           await upsertShop(shop, { monthlyQuota: customQuota });
           
