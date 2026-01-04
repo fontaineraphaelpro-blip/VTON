@@ -129,7 +129,7 @@ The admin dashboard provides:
 
 ### Subscription Plans
 
-- **Free**: 2 try-ons/month with watermark (for testing)
+- **Free**: 4 try-ons/month with watermark (for testing)
 - **Starter**: 60 try-ons/month - €19/month
 - **Pro**: 150 try-ons/month - €49/month
 - **Studio**: 300 try-ons/month - €99/month
