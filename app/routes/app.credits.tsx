@@ -615,8 +615,20 @@ export default function Credits() {
 
         <div className="credits-balance">
           <div>
-            <div className="credits-amount">{currentCredits.toLocaleString("en-US")}</div>
-            <div className="credits-label">Credits available</div>
+            <div className="credits-amount">
+              {activePlanId === "custom-flexible" 
+                ? `Custom (${currentMonthlyQuota} try-ons/month)`
+                : PRICING_PLANS.find(p => p.id === activePlanId)?.name || "Free"
+              }
+            </div>
+            <div className="credits-label">
+              Current Subscription Plan
+            </div>
+            {currentMonthlyQuota > 0 && (
+              <div style={{ marginTop: "8px", fontSize: "14px", color: "#6B7280" }}>
+                {currentMonthlyQuota} try-ons/month
+              </div>
+            )}
           </div>
         </div>
 
