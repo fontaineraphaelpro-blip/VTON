@@ -58,7 +58,7 @@ export async function generateTryOn({ userPhoto, productImageUrl }: GenerateTryO
   console.log('[Replicate] Input payload:', JSON.stringify({
     ...inputPayload,
     image_input: [
-      userPhotoInput.startsWith('data:') ? `data:image/... (${userPhotoInput.length} chars)` : userPhotoInput,
+      userPhotoInput,
       productImageUrl
     ]
   }, null, 2));
