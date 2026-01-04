@@ -63,7 +63,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       } catch (graphqlError: any) {
         // Check if it's a GraphQL error about access denied
         if (graphqlError?.message?.includes('Access denied') || graphqlError?.message?.includes('scriptTags')) {
-          console.warn("Script tags access denied - app may not have write_script_tags scope. Skipping auto-install.");
           // Skip script tag installation - app doesn't have required permissions
           scriptTagsResponse = null;
         } else {
@@ -76,11 +75,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         // Continue without installing script tag
       } else if (!scriptTagsResponse.ok) {
         if (scriptTagsResponse.status === 302 || scriptTagsResponse.status === 401) {
-          console.warn("Authentication required for script tag check, skipping auto-install");
           // Skip script tag installation if auth is required
         } else {
-          const errorText = await scriptTagsResponse.text().catch(() => "Unknown error");
-          console.error("Error checking script tags:", scriptTagsResponse.status, errorText);
+          // Error logged silently - script tag installation is non-critical
+          await scriptTagsResponse.text().catch(() => null);
         }
         // Continue without installing script tag
       } else {
@@ -91,15 +89,20 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
           if (scriptTagsData?.errors) {
             const errorMessages = scriptTagsData.errors.map((e: any) => e.message || String(e)).join(", ");
             if (errorMessages.includes('Access denied') || errorMessages.includes('scriptTags')) {
-              console.warn("Script tags access denied in response - app may not have write_script_tags scope. Skipping auto-install.");
               scriptTagsData = null; // Set to null to skip installation
             } else {
-              console.error("GraphQL errors in script tags query:", errorMessages);
+              // GraphQL error - log only in development
+              if (process.env.NODE_ENV !== "production") {
+                console.error("GraphQL errors in script tags query:", errorMessages);
+              }
               scriptTagsData = null; // Set to null to skip installation
             }
           }
         } catch (jsonError) {
-          console.error("Failed to parse script tags response:", jsonError);
+          // Log only in development
+          if (process.env.NODE_ENV !== "production") {
+            console.error("Failed to parse script tags response:", jsonError);
+          }
           // Continue without installing script tag
           scriptTagsData = null;
         }
@@ -142,12 +145,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
               
               if (deleteResult.ok) {
                 const deleteData = await deleteResult.json().catch(() => null);
-                if (deleteData?.data?.scriptTagDelete?.deletedScriptTagId) {
-                  console.log("Old script tag deleted:", oldScript.node.src);
-                }
+                // Script tag deleted successfully (silent in production)
               }
             } catch (deleteError) {
-              console.warn("Error deleting old script tag:", deleteError);
+              // Error deleting old script tag - non-critical, continue silently
             }
           }
           
@@ -192,12 +193,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
               
               if (deleteResult.ok) {
                 const deleteData = await deleteResult.json().catch(() => null);
-                if (deleteData?.data?.scriptTagDelete?.deletedScriptTagId) {
-                  console.log("Old version script tag deleted:", oldScript.node.src);
-                }
+                // Script tag deleted successfully (silent in production)
               }
             } catch (deleteError) {
-              console.warn("Error deleting old version script tag:", deleteError);
+              // Error deleting old version script tag - non-critical, continue silently
             }
           }
 
@@ -230,45 +229,58 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             // Check if response is OK
             if (!result.ok) {
               if (result.status === 302 || result.status === 401) {
-                console.warn("Authentication required for script tag creation, skipping");
+                // Authentication required - skip silently
               } else {
-                const errorText = await result.text().catch(() => "Unknown error");
-                console.error("Error creating script tag:", result.status, errorText);
+                // Log only in development
+                if (process.env.NODE_ENV !== "production") {
+                  const errorText = await result.text().catch(() => "Unknown error");
+                  console.error("Error creating script tag:", result.status, errorText);
+                }
               }
             } else {
               let resultData;
               try {
                 resultData = await result.json();
               } catch (jsonError) {
-                console.error("Failed to parse script tag creation response:", jsonError);
+                // Log only in development
+                if (process.env.NODE_ENV !== "production") {
+                  console.error("Failed to parse script tag creation response:", jsonError);
+                }
               }
               
               if (resultData) {
                 // Check for GraphQL errors
                 if ((resultData as any).errors) {
-                  const errorMessages = (resultData as any).errors.map((e: any) => e.message || String(e)).join(", ");
-                  console.error("GraphQL errors creating script tag:", errorMessages);
+                  // Log only in development
+                  if (process.env.NODE_ENV !== "production") {
+                    const errorMessages = (resultData as any).errors.map((e: any) => e.message || String(e)).join(", ");
+                    console.error("GraphQL errors creating script tag:", errorMessages);
+                  }
                 }
                 
                 // Check for user errors
                 if (resultData.data?.scriptTagCreate?.userErrors?.length > 0) {
-                  console.error("Script tag user errors:", resultData.data.scriptTagCreate.userErrors);
-                } else if (resultData.data?.scriptTagCreate?.scriptTag) {
-                  console.log("Script tag installed successfully:", resultData.data.scriptTagCreate.scriptTag.src);
+                  // Log only in development
+                  if (process.env.NODE_ENV !== "production") {
+                    console.error("Script tag user errors:", resultData.data.scriptTagCreate.userErrors);
+                  }
                 }
+                // Success - script tag installed (silent in production)
               }
             }
           }
         }
       }
     } catch (scriptError: any) {
-      // Ne pas loguer l'objet Response directement - extraire seulement les infos nécessaires
-      if (scriptError instanceof Response) {
-        console.warn(`Script tag installation skipped: ${scriptError.status} ${scriptError.statusText}`);
-      } else {
-        console.error("Error installing script tag:", scriptError);
+      // Log only in development - script tag installation is non-critical
+      if (process.env.NODE_ENV !== "production") {
+        if (scriptError instanceof Response) {
+          console.warn(`Script tag installation skipped: ${scriptError.status} ${scriptError.statusText}`);
+        } else {
+          console.error("Error installing script tag:", scriptError);
+        }
       }
-      // Ne pas bloquer le chargement si l'installation du script échoue
+      // Don't block page load if script tag installation fails
     }
 
     return json({
@@ -279,7 +291,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       monthlyUsage: monthlyUsage || 0, // ADDED: Monthly usage count
     });
   } catch (error) {
-    console.error("Dashboard loader error:", error);
+    // Log error only in development
+    if (process.env.NODE_ENV !== "production") {
+      console.error("Dashboard loader error:", error);
+    }
     return json({
       shop: null,
       recentLogs: [],
@@ -358,7 +373,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
               }
             }
           } catch (deleteError) {
-            console.warn("Error deleting script tag:", deleteError);
+            // Error deleting script tag - non-critical, continue
           }
         }
         
@@ -371,7 +386,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       
       return json({ success: false, error: "Unable to retrieve script tags" });
     } catch (error) {
-      console.error("Error cleaning up script tags:", error);
+      // Log error only in development
+      if (process.env.NODE_ENV !== "production") {
+        console.error("Error cleaning up script tags:", error);
+      }
       return json({ 
         success: false, 
         error: error instanceof Error ? error.message : "Unknown error" 
@@ -393,17 +411,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const monthlyQuota = monthlyQuotaStr && monthlyQuotaStr.trim() !== "" ? parseInt(monthlyQuotaStr) : null;
   const qualityMode = (formData.get("qualityMode") as string) || "balanced";
 
-  console.log("[Dashboard Action] Saving configuration:", {
-    shop,
-    isEnabled,
-    dailyLimit,
-    maxTriesPerUser,
-    widgetText,
-    widgetBg,
-    widgetColor,
-    monthlyQuota, // ADDED
-    qualityMode, // ADDED
-  });
+    // Configuration saved (logged in database)
 
   try {
     await upsertShop(shop, {
@@ -417,10 +425,12 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       qualityMode, // ADDED
     });
 
-    console.log("[Dashboard Action] Configuration saved successfully");
     return json({ success: true });
   } catch (error) {
-    console.error("[Dashboard Action] Error saving configuration:", error);
+    // Log error only in development
+    if (process.env.NODE_ENV !== "production") {
+      console.error("[Dashboard Action] Error saving configuration:", error);
+    }
     return json({ 
       success: false, 
       error: error instanceof Error ? error.message : "Error saving configuration" 

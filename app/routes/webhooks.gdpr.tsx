@@ -15,7 +15,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   try {
     const { shop, topic } = await authenticate.webhook(request);
 
-    console.log(`[GDPR] Received ${topic} webhook for ${shop}`);
+    // GDPR webhook received (log only in development)
+    if (process.env.NODE_ENV !== "production") {
+      console.log(`[GDPR] Received ${topic} webhook for ${shop}`);
+    }
 
     await ensureTables();
 
@@ -26,7 +29,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       const customerEmail = body.customer?.email;
 
       if (!customerId && !customerEmail) {
-        console.warn("[GDPR] No customer ID or email provided in data_request");
+        // No customer data provided - return empty response
         return new Response(JSON.stringify({}), { status: 200 });
       }
 
@@ -59,7 +62,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         request_date: new Date().toISOString(),
       };
 
-      console.log(`[GDPR] Data request processed for customer ${customerId || customerEmail} in shop ${shop}`);
+      // Data request processed (log only in development)
+      if (process.env.NODE_ENV !== "production") {
+        console.log(`[GDPR] Data request processed for customer ${customerId || customerEmail} in shop ${shop}`);
+      }
       
       // Return the data (Shopify will handle delivery)
       return new Response(JSON.stringify(customerData), {
@@ -75,7 +81,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       const customerEmail = body.customer?.email;
 
       if (!customerId && !customerEmail) {
-        console.warn("[GDPR] No customer ID or email provided in customers/redact");
+        // No customer data provided - return empty response
         return new Response(JSON.stringify({}), { status: 200 });
       }
 
@@ -91,7 +97,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       // Note: rate_limits uses customer_ip, not customer_id, so we might not have data to delete
       // But we'll try to clean up if customer_id was stored
 
-      console.log(`[GDPR] Customer data redacted for customer ${customerId || customerEmail} in shop ${shop}`);
+      // Customer data redacted (log only in development)
+      if (process.env.NODE_ENV !== "production") {
+        console.log(`[GDPR] Customer data redacted for customer ${customerId || customerEmail} in shop ${shop}`);
+      }
 
       return new Response(JSON.stringify({}), { status: 200 });
     }
@@ -113,16 +122,21 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       // Delete shop record
       await query("DELETE FROM shops WHERE domain = $1", [shop]);
 
-      console.log(`[GDPR] Shop data redacted for ${shop}`);
+      // Shop data redacted (log only in development)
+      if (process.env.NODE_ENV !== "production") {
+        console.log(`[GDPR] Shop data redacted for ${shop}`);
+      }
 
       return new Response(JSON.stringify({}), { status: 200 });
     }
 
-    // Unknown topic
-    console.warn(`[GDPR] Unknown topic: ${topic}`);
+    // Unknown topic - return 200 to acknowledge receipt
     return new Response(JSON.stringify({}), { status: 200 });
   } catch (error) {
-    console.error("[GDPR] Error processing webhook:", error);
+    // Log error only in development
+    if (process.env.NODE_ENV !== "production") {
+      console.error("[GDPR] Error processing webhook:", error);
+    }
     // Always return 200 to acknowledge receipt
     // Shopify will retry if needed
     return new Response(JSON.stringify({}), { status: 200 });

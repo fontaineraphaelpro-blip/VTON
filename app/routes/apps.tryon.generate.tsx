@@ -27,13 +27,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const body = await request.json();
     const { user_photo, product_id, product_image_url } = body;
 
-    console.log('[Generate] Received request body:', {
-      has_user_photo: !!user_photo,
-      has_product_id: !!product_id,
-      has_product_image_url: !!product_image_url,
-      product_image_url: product_image_url
-    });
-
     if (!user_photo || !product_id) {
       return json({ error: "Missing user_photo or product_id" }, { status: 400 });
     }
@@ -80,7 +73,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       return json({ error: "Invalid product_image_url format. Must be a valid HTTP/HTTPS URL." }, { status: 400 });
     }
 
-    console.log(`[Generate] Starting generation for shop ${shop}, product ${product_id}`);
+    // Generation started (logged in database via createTryonLog)
 
     const startTime = Date.now();
 
@@ -112,8 +105,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         resultImageUrl: resultUrl,
       });
 
-      // Logger le résultat
-      console.log(`[Generate] Generation successful for shop ${shop}, product ${product_id}, result: ${resultUrl}, latency: ${latencyMs}ms`);
+      // Success logged in database via createTryonLog
 
       return json({
         result_url: resultUrl,
@@ -141,7 +133,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       throw genError;
     }
   } catch (error) {
-    console.error("[Generate] Error:", error);
+    // Log error only in development
+    if (process.env.NODE_ENV !== "production") {
+      console.error("[Generate] Error:", error);
+    }
     return json(
       {
         error: error instanceof Error ? error.message : "Generation failed",

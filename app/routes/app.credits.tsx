@@ -85,16 +85,11 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
     const { admin, session } = await authenticate.admin(request);
     
-    // Logs de diagnostic CRITIQUES
-    console.log("[Credits Loader] Session check:", {
-      shop: session?.shop || "NULL",
-      hasAccessToken: !!session?.accessToken,
-      isOnline: session?.isOnline,
-      userId: (session as any)?.userId,
-    });
-    
     if (!session || !session.shop) {
-      console.error("[Credits Loader] ❌ Invalid session - shop is null!");
+      // Log only in development
+      if (process.env.NODE_ENV !== "production") {
+        console.error("[Credits Loader] Invalid session - shop is null!");
+      }
       return json({
         shop: null,
         error: "Invalid session. Please refresh the page.",
@@ -122,11 +117,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         
         await upsertShop(shop, { monthlyQuota: monthlyQuota });
         
-        console.log(`[Credits] Activated plan ${packId} with monthly quota ${monthlyQuota}`, {
-          shop,
-          packId,
-          monthlyQuota,
-        });
+        // Plan activated (log only in development)
+        if (process.env.NODE_ENV !== "production") {
+          console.log(`[Credits] Activated plan ${packId} with monthly quota ${monthlyQuota}`);
+        }
 
         // Reload shop data after updating plan
         const updatedShopData = await getShop(shop);
@@ -157,7 +151,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       shop: shopData || null,
     });
   } catch (error) {
-    console.error("[Credits Loader] ❌ Error:", error);
+    // Log only in development
+    if (process.env.NODE_ENV !== "production") {
+      console.error("[Credits Loader] Error:", error);
+    }
     // Si c'est une Response (redirection d'auth), la propager
     if (error instanceof Response) {
       throw error;
@@ -177,26 +174,19 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       admin = authResult.admin;
       session = authResult.session;
       
-      // Logs de diagnostic CRITIQUES
-      console.log("[Credits Action] ✅ Authentication successful:", {
-        shop: session?.shop || "NULL",
-        hasAccessToken: !!session?.accessToken,
-        isOnline: session?.isOnline,
-        userId: (session as any)?.userId,
-        hasAdmin: !!admin,
-      });
-      
     } catch (authError) {
       // Si authenticate.admin lance une Response (redirection), la gérer
       if (authError instanceof Response) {
         if (authError.status === 401 || authError.status === 302) {
           const reauthUrl = authError.headers.get('x-shopify-api-request-failure-reauthorize-url') || 
                            authError.headers.get('location');
-          console.error("[Credits Action] ❌ Authentication required (401/302):", { 
-            status: authError.status, 
-            reauthUrl,
-            headers: Object.fromEntries(authError.headers.entries()),
-          });
+          // Log only in development
+          if (process.env.NODE_ENV !== "production") {
+            console.error("[Credits Action] Authentication required (401/302):", { 
+              status: authError.status, 
+              reauthUrl,
+            });
+          }
           return json({ 
             success: false, 
             error: "Your session has expired. Please refresh the page to re-authenticate.",
@@ -205,7 +195,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           });
         }
         // Pour toute autre Response, retourner une erreur JSON
-        console.error("[Credits Action] ❌ Authentication error:", authError.status);
+        if (process.env.NODE_ENV !== "production") {
+          console.error("[Credits Action] Authentication error:", authError.status);
+        }
         return json({ 
           success: false, 
             error: `Authentication error (${authError.status}). Please refresh the page.`,
@@ -213,26 +205,28 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         });
       }
       // Pour les autres erreurs, les propager
-      console.error("[Credits Action] ❌ Authentication error (non-Response):", authError);
+      if (process.env.NODE_ENV !== "production") {
+        console.error("[Credits Action] Authentication error (non-Response):", authError);
+      }
       throw authError;
     }
     
     // Vérifier que la session est valide
     if (!session || !session.shop) {
-      console.error("[Credits Action] ❌ Invalid session - shop is null!", {
-        hasSession: !!session,
-        shop: session?.shop,
-        accessToken: session?.accessToken ? "EXISTS" : "MISSING",
-      });
+      if (process.env.NODE_ENV !== "production") {
+        console.error("[Credits Action] Invalid session - shop is null!");
+      }
       return json({ 
         success: false, 
-        error: "Session invalide. Veuillez rafraîchir la page.",
+        error: "Invalid session. Please refresh the page.",
         requiresAuth: true,
       });
     }
     
     if (!admin) {
-      console.error("[Credits Action] ❌ Admin client is missing!");
+      if (process.env.NODE_ENV !== "production") {
+        console.error("[Credits Action] Admin client is missing!");
+      }
       return json({ 
         success: false, 
             error: "GraphQL client not available. Please refresh the page.",
@@ -243,8 +237,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const shop = session.shop;
     const formData = await request.formData();
     const intent = formData.get("intent");
-    
-    console.log("[Credits] Action called", { intent, shop });
 
   if (intent === "purchase-credits") {
     const packId = formData.get("packId") as string;
@@ -335,7 +327,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       if (!response.ok) {
         if (response.status === 401) {
           const reauthUrl = response.headers.get('x-shopify-api-request-failure-reauthorize-url');
-          console.error("[Credits] Authentication required (401) for subscription creation");
+          // Log only in development
+          if (process.env.NODE_ENV !== "production") {
+            console.error("[Credits] Authentication required (401) for subscription creation");
+          }
           return json({ 
             success: false, 
             error: "Your session has expired. Please refresh the page to re-authenticate.",
@@ -344,7 +339,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           });
         }
         const errorText = await response.text().catch(() => `HTTP ${response.status} ${response.statusText}`);
-        console.error("[Credits] GraphQL request failed:", response.status, errorText);
+        // Log only in development
+        if (process.env.NODE_ENV !== "production") {
+          console.error("[Credits] GraphQL request failed:", response.status, errorText);
+        }
         return json({ 
           success: false, 
           error: `Shopify API error (${response.status}): ${errorText.substring(0, 200)}` 
@@ -356,7 +354,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       if (responseData.data?.appSubscriptionCreate?.userErrors?.length > 0) {
         const errors = responseData.data.appSubscriptionCreate.userErrors;
         const errorMessages = errors.map((e: any) => e.message).join(", ");
-        console.error("[Credits] GraphQL errors:", errors);
+        // Log only in development
+        if (process.env.NODE_ENV !== "production") {
+          console.error("[Credits] GraphQL errors:", errors);
+        }
         
         // If error is about Managed Pricing, this is expected for Managed Pricing Apps
         // In production, Shopify handles billing automatically via App Store listing
@@ -390,7 +391,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       const confirmationUrl = responseData.data?.appSubscriptionCreate?.confirmationUrl;
       
       if (!confirmationUrl) {
-        console.error("[Credits] No confirmation URL returned:", responseData);
+        // Log only in development
+        if (process.env.NODE_ENV !== "production") {
+          console.error("[Credits] No confirmation URL returned:", responseData);
+        }
         return json({ 
           success: false, 
           error: "Failed to create subscription. Please try again." 
@@ -400,7 +404,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       // Redirect to Shopify subscription confirmation page
       return redirect(confirmationUrl);
     } catch (error) {
-      console.error("[Credits] Error creating subscription:", error);
+      // Log only in development
+      if (process.env.NODE_ENV !== "production") {
+        console.error("[Credits] Error creating subscription:", error);
+      }
       return json({ 
         success: false, 
         error: error instanceof Error ? error.message : "Error creating subscription" 
@@ -478,7 +485,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         if (!response.ok) {
           if (response.status === 401) {
             const reauthUrl = response.headers.get('x-shopify-api-request-failure-reauthorize-url');
-            console.error("[Credits] Authentication required (401) for custom subscription creation");
+            // Log only in development
+            if (process.env.NODE_ENV !== "production") {
+              console.error("[Credits] Authentication required (401) for custom subscription creation");
+            }
             return json({ 
               success: false, 
               error: "Your session has expired. Please refresh the page to re-authenticate.",
@@ -487,7 +497,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
             });
           }
           const errorText = await response.text().catch(() => `HTTP ${response.status} ${response.statusText}`);
-          console.error("[Credits] GraphQL request failed:", response.status, errorText);
+          // Log only in development
+          if (process.env.NODE_ENV !== "production") {
+            console.error("[Credits] GraphQL request failed:", response.status, errorText);
+          }
           return json({ 
             success: false, 
             error: `Shopify API error (${response.status}): ${errorText.substring(0, 200)}` 
@@ -499,7 +512,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         if (responseData.data?.appSubscriptionCreate?.userErrors?.length > 0) {
           const errors = responseData.data.appSubscriptionCreate.userErrors;
           const errorMessages = errors.map((e: any) => e.message).join(", ");
-          console.error("[Credits] GraphQL errors:", errors);
+          // Log only in development
+          if (process.env.NODE_ENV !== "production") {
+            console.error("[Credits] GraphQL errors:", errors);
+          }
           
           // If error is about Managed Pricing, this is expected for Managed Pricing Apps
           // In production, Shopify handles billing automatically via App Store listing
@@ -507,7 +523,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           if (errorMessages.includes("tarification gérée") || errorMessages.includes("Managed Pricing") || errorMessages.includes("Billing API")) {
             if (process.env.NODE_ENV !== "production") {
               // Only allow direct activation in development for testing
-              console.log("[Credits] Managed Pricing detected for custom plan in development, activating directly for testing");
+              // Log only in development
+              if (process.env.NODE_ENV !== "production") {
+                console.log("[Credits] Managed Pricing detected for custom plan in development, activating directly for testing");
+              }
               await upsertShop(shop, { monthlyQuota: customCredits });
               return json({ 
                 success: true, 
@@ -533,7 +552,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         const confirmationUrl = responseData.data?.appSubscriptionCreate?.confirmationUrl;
         
         if (!confirmationUrl) {
-          console.error("[Credits] No confirmation URL returned:", responseData);
+          // Log only in development
+          if (process.env.NODE_ENV !== "production") {
+            console.error("[Credits] No confirmation URL returned:", responseData);
+          }
           return json({ 
             success: false, 
             error: "Failed to create subscription. Please try again." 
@@ -541,10 +563,13 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         }
 
         // Redirect to Shopify subscription confirmation page
-        return redirect(confirmationUrl);
-      } catch (error) {
+      return redirect(confirmationUrl);
+    } catch (error) {
+      // Log only in development
+      if (process.env.NODE_ENV !== "production") {
         console.error("[Credits] Error creating custom subscription:", error);
-            return json({ 
+      }
+      return json({
               success: false, 
           error: error instanceof Error ? error.message : "Error creating subscription" 
         });
@@ -557,14 +582,20 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   return json({ success: false, error: "Invalid intent" });
   } catch (error) {
     // Gérer toutes les erreurs, y compris les Responses de redirection
-    console.error("[Credits] Error in action:", error);
+    // Log only in development
+    if (process.env.NODE_ENV !== "production") {
+      console.error("[Credits] Error in action:", error);
+    }
     
     // Si c'est une Response de redirection (auth requise)
     if (error instanceof Response) {
       if (error.status === 401 || error.status === 302) {
         const reauthUrl = error.headers.get('x-shopify-api-request-failure-reauthorize-url') || 
                          error.headers.get('location');
-        console.error("[Credits] Authentication required (Response)", { status: error.status, reauthUrl });
+        // Log only in development
+        if (process.env.NODE_ENV !== "production") {
+          console.error("[Credits] Authentication required (Response)", { status: error.status, reauthUrl });
+        }
         return json({ 
           success: false, 
             error: "Your session has expired. Please refresh the page to re-authenticate.",
@@ -590,15 +621,12 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 };
 
 export default function Credits() {
-  console.log("[Credits] Component rendering");
-  
   const loaderData = useLoaderData<typeof loader>();
   const shop = (loaderData as any)?.shop || null;
   const error = (loaderData as any)?.error || null;
   const purchaseSuccess = (loaderData as any)?.purchaseSuccess || false;
   const planActivated = (loaderData as any)?.planActivated || null;
   const monthlyQuota = (loaderData as any)?.monthlyQuota || null;
-  console.log("[Credits] Loader data:", { hasShop: !!shop, hasError: !!error, credits: shop?.credits, shopMonthlyQuota: shop?.monthly_quota, purchaseSuccess, planActivated, loaderMonthlyQuota: monthlyQuota });
   
   const fetcher = useFetcher<typeof action>();
   const revalidator = useRevalidator();
@@ -613,12 +641,6 @@ export default function Credits() {
   revalidatorRef.current = revalidator;
 
   const isSubmitting = fetcher.state === "submitting";
-  console.log("[Credits] Component state initialized", { 
-    isSubmitting, 
-    fetcherState: fetcher.state,
-    fetcherData: fetcher.data,
-    submittingPackId 
-  });
 
   // Determine which plan is currently active based on monthly_quota
   const currentMonthlyQuota = shop?.monthly_quota || 0;
@@ -674,11 +696,8 @@ export default function Credits() {
   }, [fetcher.state, submittingPackId]);
 
   const handlePurchase = (packId: string) => {
-    console.log("[Credits] handlePurchase called", { packId, isSubmitting, submittingPackId, fetcherState: fetcher.state });
-    
     if (isSubmitting || submittingPackId !== null) {
-      console.warn("[Credits] Purchase already in progress, ignoring click");
-      return;
+      return; // Purchase already in progress
     }
     
     setSubmittingPackId(packId);
@@ -687,7 +706,6 @@ export default function Credits() {
     formData.append("intent", "purchase-credits");
     formData.append("packId", packId);
     
-    console.log("[Credits] Submitting purchase request", { packId });
     fetcher.submit(formData, { method: "post" });
   };
 

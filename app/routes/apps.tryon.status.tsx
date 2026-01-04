@@ -107,12 +107,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         );
       }
       
-      // Log that we're allowing request without signature from storefront
-      console.log("[Status] Allowing request from storefront without signature:", {
-        referer,
-        origin,
-        shop: shopParam
-      });
+      // Note: We allow requests from Shopify storefronts without HMAC signature
+      // This is necessary because App Proxy may not always include the signature
+      // We verify the request comes from a .myshopify.com domain as additional security
     }
 
     // 2. Extract shop
@@ -131,18 +128,12 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     try {
       await ensureTables();
     } catch (error) {
-      console.error("[Status] Error ensuring tables:", error);
       // Continue anyway, tables might already exist
+      // Error is logged by database service if needed
     }
 
     // 5. Get comprehensive try-on status (shop + product level)
-    console.log("[Status] Getting try-on status for:", { shop, productId });
     const status = await getProductTryonStatus(shop, productId);
-    console.log("[Status] Try-on status result:", { 
-      enabled: status.enabled, 
-      shopEnabled: status.shopEnabled,
-      productEnabled: status.productEnabled 
-    });
 
     // 6. Return status
     return json({
@@ -154,8 +145,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       widget_settings: status.widgetSettings, // Only set if enabled, null otherwise
     });
   } catch (error) {
-    console.error("[Status] Error in /apps/tryon/status:", error);
-    console.error("[Status] Error stack:", error instanceof Error ? error.stack : "No stack");
+    // Log error for debugging (only in development)
+    if (process.env.NODE_ENV !== "production") {
+      console.error("[Status] Error in /apps/tryon/status:", error);
+    }
     return json(
       {
         error: "Failed to check try-on status",

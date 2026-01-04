@@ -7,7 +7,10 @@ import { ensureTables } from "../lib/db-init.server";
 export const action = async ({ request }: ActionFunctionArgs) => {
   const { shop, session, topic } = await authenticate.webhook(request);
 
-  console.log(`Received ${topic} webhook for ${shop}`);
+  // Webhook received (log only in development)
+  if (process.env.NODE_ENV !== "production") {
+    console.log(`Received ${topic} webhook for ${shop}`);
+  }
 
   try {
     // Ensure database tables exist before cleanup
@@ -53,17 +56,21 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       
       // We can't use admin.graphql here because the session might be deleted
       // Script tags will be cleaned up by Shopify automatically
-      console.log(`[Uninstall] Business data deleted for ${shop}. Script tags will be cleaned up by Shopify.`);
     } catch (scriptTagError) {
       // Ignore script tag cleanup errors - Shopify will handle it
-      console.log(`[Uninstall] Script tag cleanup skipped (expected after uninstall). Shopify will clean them up.`);
     }
 
-    console.log(`[Uninstall] Successfully cleaned up all data for ${shop}`);
+    // Cleanup completed successfully (log only in development)
+    if (process.env.NODE_ENV !== "production") {
+      console.log(`[Uninstall] Successfully cleaned up all data for ${shop}`);
+    }
   } catch (error) {
     // Log error but don't fail the webhook
     // Shopify expects a 200 response even if cleanup fails
-    console.error(`[Uninstall] Error cleaning up data for ${shop}:`, error);
+    // Log only in development to avoid exposing errors in production
+    if (process.env.NODE_ENV !== "production") {
+      console.error(`[Uninstall] Error cleaning up data for ${shop}:`, error);
+    }
   }
 
   return new Response();

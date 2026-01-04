@@ -61,7 +61,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       // Handle 401 Unauthorized - authentication required
       if (response.status === 401) {
         const reauthUrl = response.headers.get('x-shopify-api-request-failure-reauthorize-url');
-        console.error("Authentication required (401) for products query");
+        // Authentication required - log only in development
+        if (process.env.NODE_ENV !== "production") {
+          console.error("Authentication required (401) for products query");
+        }
         return json({ 
           products: [], 
           shop: session.shop, 
@@ -72,7 +75,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       }
       
       const errorText = await response.text().catch(() => `HTTP ${response.status} ${response.statusText}`);
-      console.error("GraphQL request failed:", response.status, errorText);
+      // Log only in development
+      if (process.env.NODE_ENV !== "production") {
+        console.error("GraphQL request failed:", response.status, errorText);
+      }
       return json({ 
         products: [], 
         shop: session.shop, 
@@ -84,7 +90,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     try {
       responseJson = await response.json();
     } catch (jsonError) {
-      console.error("Failed to parse JSON response:", jsonError);
+      // Log only in development
+      if (process.env.NODE_ENV !== "production") {
+        console.error("Failed to parse JSON response:", jsonError);
+      }
       const errorText = await response.text().catch(() => "Unable to read response");
       return json({ 
         products: [], 
@@ -97,7 +106,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     const responseData = responseJson as any;
     if (responseData.errors) {
       const errorMessages = responseData.errors.map((e: any) => e.message || String(e)).join(", ");
-      console.error("GraphQL errors:", errorMessages);
+      // Log only in development
+      if (process.env.NODE_ENV !== "production") {
+        console.error("GraphQL errors:", errorMessages);
+      }
       return json({ 
         products: [], 
         shop: session.shop, 
@@ -108,7 +120,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     const products =
       responseJson.data?.products?.edges?.map((edge: any) => edge.node) || [];
 
-    console.log(`Loaded ${products.length} products for shop ${session.shop}`);
+    // Products loaded (log only in development)
     
     const shop = session.shop;
     let tryonCounts: Record<string, number> = {};
@@ -131,7 +143,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         productSettings[product.id] = setting !== false;
       }
     } catch (dbError) {
-      console.error("Error loading product settings:", dbError);
+      // Log only in development
+      if (process.env.NODE_ENV !== "production") {
+        console.error("Error loading product settings:", dbError);
+      }
       // Continue even if database queries fail
     }
     
@@ -142,7 +157,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       productSettings: productSettings || {},
     });
   } catch (error) {
-    console.error("Error in products loader:", error);
+    // Log only in development
+    if (process.env.NODE_ENV !== "production") {
+      console.error("Error in products loader:", error);
+    }
     
     // If authenticate.admin throws a Response (redirect), propagate it
     if (error instanceof Response) {
@@ -185,7 +203,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       await setProductTryonSetting(shop, productId, enabled);
       return json({ success: true, productId, enabled });
     } catch (error) {
-      console.error("Error toggling product try-on:", error);
+      // Log only in development
+      if (process.env.NODE_ENV !== "production") {
+        console.error("Error toggling product try-on:", error);
+      }
       return json({ 
         success: false, 
         error: error instanceof Error ? error.message : "Failed to update product setting" 

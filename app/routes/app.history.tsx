@@ -38,7 +38,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       shop,
     });
   } catch (error) {
-    console.error("History loader error:", error);
+    // Log only in development
+    if (process.env.NODE_ENV !== "production") {
+      console.error("History loader error:", error);
+    }
     return json({
       logs: [],
       shop,

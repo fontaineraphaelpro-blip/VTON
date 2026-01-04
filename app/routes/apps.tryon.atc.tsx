@@ -120,7 +120,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     // 5. Return success
     return json({ success: true });
   } catch (error) {
-    console.error("Error in /apps/tryon/atc:", error);
+    // Log error only in development
+    if (process.env.NODE_ENV !== "production") {
+      console.error("Error in /apps/tryon/atc:", error);
+    }
     return json(
       {
         error: "Failed to track add to cart",
