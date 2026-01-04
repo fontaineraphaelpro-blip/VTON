@@ -648,8 +648,9 @@ export default function Credits() {
   const shop = (loaderData as any)?.shop || null;
   const error = (loaderData as any)?.error || null;
   const purchaseSuccess = (loaderData as any)?.purchaseSuccess || false;
-  const creditsAdded = (loaderData as any)?.creditsAdded || 0;
-  console.log("[Credits] Loader data:", { hasShop: !!shop, hasError: !!error, credits: shop?.credits, purchaseSuccess, creditsAdded });
+  const planActivated = (loaderData as any)?.planActivated || null;
+  const monthlyQuota = (loaderData as any)?.monthlyQuota || null;
+  console.log("[Credits] Loader data:", { hasShop: !!shop, hasError: !!error, credits: shop?.credits, monthlyQuota: shop?.monthly_quota, purchaseSuccess, planActivated, monthlyQuota });
   
   const fetcher = useFetcher<typeof action>();
   const revalidator = useRevalidator();
