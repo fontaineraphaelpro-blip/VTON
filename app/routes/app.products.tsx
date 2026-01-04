@@ -111,30 +111,26 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
     console.log(`Loaded ${products.length} products for shop ${session.shop}`);
     
-    // ADDED: Load product settings and try-on counts
-    await ensureTables();
     const shop = session.shop;
+    let tryonCounts: Record<string, number> = {};
+    let productSettings: Record<string, boolean> = {};
     
-    // Get product IDs
-    const productIds = products.map((p: any) => p.id);
-    
-    // Get try-on counts for all products
-    const tryonCounts = await getProductTryonCounts(shop, productIds).catch(() => ({}));
-    
-    // Get product settings (try-on enabled/disabled)
-    const productSettings: Record<string, boolean> = {};
-    for (const product of products) {
-      const setting = await getProductTryonSetting(shop, product.id).catch(() => null);
-      // Default to true if not set
-      productSettings[product.id] = setting !== false;
-    }
-    
-    return json({ 
-      products, 
-      shop, 
-      tryonCounts: tryonCounts || {},
-      productSettings: productSettings || {},
-    });
+    // ADDED: Load product settings and try-on counts
+    try {
+      await ensureTables();
+      
+      // Get product IDs
+      const productIds = products.map((p: any) => p.id);
+      
+      // Get try-on counts for all products
+      tryonCounts = await getProductTryonCounts(shop, productIds).catch(() => ({}));
+      
+      // Get product settings (try-on enabled/disabled)
+      for (const product of products) {
+        const setting = await getProductTryonSetting(shop, product.id).catch(() => null);
+        // Default to true if not set
+        productSettings[product.id] = setting !== false;
+      }
     } catch (dbError) {
       console.error("Error loading product settings:", dbError);
       // Continue even if database queries fail
@@ -146,6 +142,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       tryonCounts: tryonCounts || {},
       productSettings: productSettings || {},
     });
+    }
   } catch (error) {
     console.error("Error in products loader:", error);
     
