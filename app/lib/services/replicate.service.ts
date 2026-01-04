@@ -14,12 +14,21 @@ export async function generateTryOn({ userPhoto, productImageUrl }: GenerateTryO
     throw new Error("REPLICATE_API_TOKEN is not configured");
   }
 
-  // Replicate accepte directement les data URIs (base64) dans les paramètres d'entrée
+  // Uploader l'image base64 à Replicate pour obtenir une URL
   let userPhotoInput: string;
   
   if (userPhoto.startsWith('data:image')) {
-    // Utiliser directement le data URI (Replicate l'accepte)
-    userPhotoInput = userPhoto;
+    // Convertir le data URI en Buffer et uploader à Replicate
+    const base64Data = userPhoto.split(',')[1];
+    const buffer = Buffer.from(base64Data, 'base64');
+    
+    console.log('[Replicate] Uploading user photo to Replicate files...');
+    const uploadedFile = await replicate.files.create(buffer, {
+      contentType: 'image/png',
+    });
+    
+    userPhotoInput = uploadedFile;
+    console.log('[Replicate] User photo uploaded, URL:', userPhotoInput);
   } else if (userPhoto.startsWith('http')) {
     // C'est déjà une URL
     userPhotoInput = userPhoto;
