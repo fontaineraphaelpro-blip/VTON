@@ -29,7 +29,7 @@ const PRICING_PLANS = [
     credits: 2,
     price: 0.00,
     pricePerCredit: 0.00,
-    description: "Tester 2 try-ons par mois avec watermark pour découvrir l'outil",
+    description: "Test 2 try-ons per month with watermark to discover the tool",
     highlight: false,
     popular: false,
     badge: "Essai",
@@ -42,7 +42,7 @@ const PRICING_PLANS = [
     credits: 60,
     price: 19.00,
     pricePerCredit: 0.317,
-    description: "60 try-ons par mois - Parfait pour démarrer",
+    description: "60 try-ons per month - Perfect to get started",
     highlight: false,
     popular: true,
     badge: "Populaire",
@@ -55,7 +55,7 @@ const PRICING_PLANS = [
     credits: 150,
     price: 49.00,
     pricePerCredit: 0.327,
-    description: "150 try-ons par mois - Pour les boutiques actives",
+    description: "150 try-ons per month - For active stores",
     highlight: true,
     popular: false,
     badge: "Recommandé",
@@ -68,7 +68,7 @@ const PRICING_PLANS = [
     credits: 300,
     price: 99.00,
     pricePerCredit: 0.33,
-    description: "300 try-ons par mois - Pour les boutiques très actives",
+    description: "300 try-ons per month - For very active stores",
     highlight: false,
     popular: false,
     badge: "Premium",
@@ -199,7 +199,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           });
           return json({ 
             success: false, 
-            error: "Votre session a expiré. Veuillez rafraîchir la page pour vous ré-authentifier.",
+            error: "Your session has expired. Please refresh the page to re-authenticate.",
             requiresAuth: true,
             reauthUrl: reauthUrl || null,
           });
@@ -208,7 +208,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         console.error("[Credits Action] ❌ Authentication error:", authError.status);
         return json({ 
           success: false, 
-          error: `Erreur d'authentification (${authError.status}). Veuillez rafraîchir la page.`,
+            error: `Authentication error (${authError.status}). Please refresh the page.`,
           requiresAuth: true,
         });
       }
@@ -235,7 +235,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       console.error("[Credits Action] ❌ Admin client is missing!");
       return json({ 
         success: false, 
-        error: "Client GraphQL non disponible. Veuillez rafraîchir la page.",
+            error: "GraphQL client not available. Please refresh the page.",
         requiresAuth: true,
       });
     }
@@ -253,7 +253,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     if (!pack) {
       return json({ 
         success: false, 
-        error: "Plan introuvable" 
+        error: "Plan not found" 
       });
     }
 
@@ -277,7 +277,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
       return json({ 
         success: true, 
-        message: `Plan ${pack.name} activé avec succès ! Quota mensuel : ${monthlyQuota} try-ons/mois.`,
+        message: `Plan ${pack.name} activated successfully! Monthly quota: ${monthlyQuota} try-ons/month.`,
         planActivated: packId,
         monthlyQuota: monthlyQuota,
       });
@@ -285,7 +285,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       console.error("[Credits] Error activating plan:", error);
       return json({ 
         success: false, 
-        error: error instanceof Error ? error.message : "Erreur lors de l'activation du plan" 
+        error: error instanceof Error ? error.message : "Error activating plan" 
       });
     }
   }
@@ -309,7 +309,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
         return json({ 
           success: true, 
-          message: `Plan Custom Flexible activé avec succès ! Quota mensuel : ${customCredits} try-ons/mois.`,
+          message: `Custom Flexible Plan activated successfully! Monthly quota: ${customCredits} try-ons/month.`,
           planActivated: "custom-flexible",
           monthlyQuota: customCredits,
         });
@@ -317,15 +317,15 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         console.error("[Credits] Error activating custom plan:", error);
         return json({ 
           success: false, 
-          error: error instanceof Error ? error.message : "Erreur lors de l'activation du plan custom" 
+          error: error instanceof Error ? error.message : "Error activating custom plan" 
         });
       }
     } else {
-      return json({ success: false, error: "Minimum 301 try-ons requis pour le plan Custom Flexible" });
+      return json({ success: false, error: "Minimum 301 try-ons required for Custom Flexible plan" });
     }
   }
 
-  return json({ success: false, error: "Intent invalide" });
+  return json({ success: false, error: "Invalid intent" });
 } catch (error) {
     // Gérer toutes les erreurs, y compris les Responses de redirection
     console.error("[Credits] Error in action:", error);
@@ -338,7 +338,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         console.error("[Credits] Authentication required (Response)", { status: error.status, reauthUrl });
         return json({ 
           success: false, 
-          error: "Votre session a expiré. Veuillez rafraîchir la page pour vous ré-authentifier.",
+            error: "Your session has expired. Please refresh the page to re-authenticate.",
           requiresAuth: true,
           reauthUrl: reauthUrl || null,
         });
@@ -346,7 +346,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       // Pour toute autre Response, retourner une erreur JSON
       return json({ 
         success: false, 
-        error: `Erreur serveur (${error.status}). Veuillez réessayer.`,
+            error: `Server error (${error.status}). Please try again.`,
         requiresAuth: error.status === 401 || error.status === 302,
       });
     }
@@ -354,7 +354,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     // Pour les autres erreurs
     return json({ 
       success: false, 
-      error: error instanceof Error ? error.message : "Une erreur est survenue. Veuillez réessayer.",
+            error: error instanceof Error ? error.message : "An error occurred. Please try again.",
       requiresAuth: false,
     });
   }
@@ -430,7 +430,7 @@ export default function Credits() {
     const credits = parseInt(formData.get("customCredits") as string);
     
     if (!credits || credits < 301) {
-      alert("Minimum 301 try-ons requis pour le plan Custom Flexible.");
+      alert("Minimum 301 try-ons required for Custom Flexible plan.");
       return;
     }
     
@@ -453,7 +453,7 @@ export default function Credits() {
         {(purchaseSuccess || fetcher.data?.success) && (planActivated || (fetcher.data as any)?.planActivated) && (
           <div style={{ marginBottom: "var(--spacing-lg)" }}>
             <Banner tone="success" title="Abonnement activé !" onDismiss={() => {}}>
-              {(fetcher.data as any)?.message || `Votre abonnement a été activé avec succès ! Quota mensuel : ${(fetcher.data as any)?.monthlyQuota || monthlyQuota || shop?.monthly_quota || 0} try-ons/mois.`}
+              {(fetcher.data as any)?.message || `Your subscription has been activated successfully! Monthly quota: ${(fetcher.data as any)?.monthlyQuota || monthlyQuota || shop?.monthly_quota || 0} try-ons/month.`}
             </Banner>
           </div>
         )}
@@ -463,10 +463,10 @@ export default function Credits() {
           <div style={{ marginBottom: "var(--spacing-lg)" }}>
             <Banner 
               tone="critical" 
-              title={(fetcher.data as any)?.requiresAuth ? "Authentification requise" : "Erreur"}
+              title={(fetcher.data as any)?.requiresAuth ? "Authentication Required" : "Error"}
               onDismiss={() => {}}
               action={(fetcher.data as any)?.requiresAuth ? {
-                content: (fetcher.data as any)?.reauthUrl ? "Ré-authentifier" : "Rafraîchir la page",
+                content: (fetcher.data as any)?.reauthUrl ? "Re-authenticate" : "Refresh page",
                 onAction: () => {
                   if ((fetcher.data as any)?.reauthUrl) {
                     window.location.href = (fetcher.data as any).reauthUrl;
@@ -504,26 +504,26 @@ export default function Credits() {
               <div className="plan-name">{plan.name}</div>
               <div className="plan-price">
                 {plan.price === 0 ? (
-                  <span>Gratuit</span>
+                  <span>Free</span>
                 ) : (
-                  <>€{plan.price.toFixed(2)} <span>/ mois</span></>
+                  <>€{plan.price.toFixed(2)} <span>/ month</span></>
                 )}
               </div>
               <div className="plan-credits">
                 <div className="plan-credits-amount">{(plan as any).monthlyQuota || plan.credits}</div>
-                <div className="plan-credits-label">try-ons/mois</div>
+                <div className="plan-credits-label">try-ons/month</div>
               </div>
               <div className="plan-features">
-                <div className="plan-feature">✓ {(plan as any).monthlyQuota || plan.credits} try-ons par mois</div>
-                <div className="plan-feature">✓ Quota mensuel avec reset automatique</div>
+                <div className="plan-feature">✓ {(plan as any).monthlyQuota || plan.credits} try-ons per month</div>
+                <div className="plan-feature">✓ Monthly quota with automatic reset</div>
                 {(plan as any).hasWatermark && (
-                  <div className="plan-feature">✓ Avec watermark</div>
+                  <div className="plan-feature">✓ With watermark</div>
                 )}
                 {!(plan as any).hasWatermark && (
-                  <div className="plan-feature">✓ Sans watermark</div>
+                  <div className="plan-feature">✓ No watermark</div>
                 )}
                 <div className="plan-feature">✓ {plan.description}</div>
-                <div className="plan-feature">✓ Hard cap pour éviter les dépassements</div>
+                <div className="plan-feature">✓ Hard cap to prevent overages</div>
               </div>
               <div className="plan-cta">
                 <button 
@@ -531,7 +531,7 @@ export default function Credits() {
                   onClick={() => handlePurchase(plan.id)}
                   disabled={isSubmitting || submittingPackId !== null || plan.price === 0}
                 >
-                  {plan.price === 0 ? "Actif" : (isSubmitting && submittingPackId === plan.id ? "Traitement..." : "Acheter")}
+                  {plan.price === 0 ? "Active" : (isSubmitting && submittingPackId === plan.id ? "Processing..." : "Purchase")}
                 </button>
               </div>
             </div>
@@ -544,28 +544,28 @@ export default function Credits() {
               Custom Flexible Plan
             </Text>
             <Text variant="bodyMd" tone="subdued" as="p">
-              Choisissez plus de 300 try-ons par mois. Le prix est calculé automatiquement pour garantir au moins x2 de marge.
+              Choose more than 300 try-ons per month. Price is calculated automatically to ensure at least x2 margin.
             </Text>
             <Divider />
             <BlockStack gap="300">
               <Text variant="bodyMd" as="p">
-                <strong>Minimum:</strong> 301 try-ons par mois
+                <strong>Minimum:</strong> 301 try-ons per month
               </Text>
               <Text variant="bodySm" tone="subdued" as="p">
-                Le prix est calculé automatiquement pour garantir au moins x2 de marge. Le quota mensuel est fixe avec reset automatique chaque mois.
+                Price is calculated automatically to ensure at least x2 margin. Monthly quota is fixed with automatic reset each month.
               </Text>
               <form onSubmit={handleCustomPurchase}>
                 <InlineStack gap="300" align="end">
                   <Box minWidth="200px">
                     <TextField
-                      label="Nombre de try-ons/mois"
+                      label="Number of try-ons/month"
                       type="number"
                       name="customCredits"
                       value={customAmount}
                       onChange={setCustomAmount}
                       min={301}
                       autoComplete="off"
-                      helpText={`Minimum 301 try-ons. Prix calculé: €${((parseFloat(customAmount) || 301) * MIN_CUSTOM_PRICE_PER_CREDIT).toFixed(2)}/mois`}
+                      helpText={`Minimum 301 try-ons. Calculated price: €${((parseFloat(customAmount) || 301) * MIN_CUSTOM_PRICE_PER_CREDIT).toFixed(2)}/month`}
                     />
                   </Box>
                   <Button 
@@ -574,7 +574,7 @@ export default function Credits() {
                     loading={isSubmitting}
                     disabled={!customAmount || parseInt(customAmount) < 301}
                   >
-                    Acheter {customAmount || '301'} try-ons/mois
+                    Purchase {customAmount || '301'} try-ons/month
                   </Button>
                 </InlineStack>
               </form>

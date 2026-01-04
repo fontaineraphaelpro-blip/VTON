@@ -424,17 +424,17 @@
               <div class="vton-modal-content">
                 <div id="vton-upload-area" class="vton-upload-area" onclick="window.vtonWidgetInstance.triggerFileInput()">
                   <input type="file" id="vton-file-input" accept="image/*" style="display: none;" onchange="window.vtonWidgetInstance.handleFileChange(event)" />
-                  <p>Cliquez pour télécharger votre photo</p>
+                  <p>Click to upload your photo</p>
                 </div>
-                <p class="vton-privacy-notice">🔒 Aucune donnée personnelle n'est stockée. Vos photos sont traitées de manière sécurisée et supprimées après génération.</p>
+                <p class="vton-privacy-notice">🔒 No personal data is stored. Your photos are processed securely and deleted after generation.</p>
                 <button id="vton-generate-btn" class="vton-generate-btn" style="background: ${buttonBg}; color: ${buttonColor};" onclick="window.vtonWidgetInstance.generate()" disabled>
-                  Générer
+                  Generate
                 </button>
                 <div id="vton-loading" class="vton-loading">
                   <div class="vton-spinner"></div>
-                  <p class="vton-loading-text">Génération en cours...</p>
-                  <p class="vton-loading-text">La génération prend environ 30 à 40 secondes. Veuillez patienter.</p>
-                  <p class="vton-privacy-notice">Aucune donnée personnelle n'est stockée.</p>
+                  <p class="vton-loading-text">Generation in progress...</p>
+                  <p class="vton-loading-text">Generation takes approximately 30 to 40 seconds. Please wait.</p>
+                  <p class="vton-privacy-notice">No personal data is stored.</p>
                 </div>
                 <div id="vton-result" class="vton-result"></div>
                 <div id="vton-error" class="vton-error"></div>
@@ -569,9 +569,9 @@
             const buttonBg = state.widgetSettings.widget_bg || '#000000';
             const buttonColor = state.widgetSettings.widget_color || '#ffffff';
             result.innerHTML = 
-              '<img src="' + state.resultImageUrl + '" alt="Résultat" style="width: 100%; border-radius: 8px; display: block; margin-bottom: 16px;" />' +
+              '<img src="' + state.resultImageUrl + '" alt="Result" style="width: 100%; border-radius: 8px; display: block; margin-bottom: 16px;" />' +
               '<button class="vton-add-to-cart-btn" style="width: 100%; padding: 14px; border: none; border-radius: 4px; font-size: 16px; font-weight: 600; cursor: pointer; background: ' + buttonBg + '; color: ' + buttonColor + ';" onclick="window.vtonWidgetInstance.handleAddToCart()">' +
-              'Ajouter au panier' +
+              'Add to Cart' +
               '</button>';
             console.log('[VTON] Result displayed successfully with Add to Cart button');
             console.log('[VTON] Image src:', state.resultImageUrl);
@@ -584,7 +584,7 @@
             });
             if (error) {
               error.classList.add('active');
-              error.textContent = 'Erreur: Impossible d\'afficher le résultat. Veuillez réessayer.';
+              error.textContent = 'Error: Unable to display the result. Please try again.';
             }
           }
           
@@ -594,7 +594,7 @@
           if (loading) loading.classList.remove('active');
           if (error) {
             error.classList.add('active');
-            error.textContent = 'Une erreur est survenue. Veuillez réessayer.';
+            error.textContent = 'An error occurred. Please try again.';
           }
           if (generateBtn) generateBtn.disabled = false;
         });

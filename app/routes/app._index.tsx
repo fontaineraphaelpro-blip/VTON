@@ -604,7 +604,7 @@ export default function Dashboard() {
         <header className="app-header">
           <h1 className="app-title">Dashboard</h1>
           <p className="app-subtitle">
-            Vue d'ensemble de votre activité et statistiques
+            Overview of your activity and statistics
           </p>
         </header>
 
@@ -619,17 +619,17 @@ export default function Dashboard() {
               )}
               {fetcher.data?.success && (fetcher.data as any).deletedCount !== undefined && (
                 <Banner tone="success">
-                  {(fetcher.data as any).message || `Supprimé ${(fetcher.data as any).deletedCount} ancien(s) script tag(s)`}
+                  {(fetcher.data as any).message || `Deleted ${(fetcher.data as any).deletedCount} old script tag(s)`}
                 </Banner>
               )}
               {fetcher.data?.success && !(fetcher.data as any).deletedCount && (
                 <Banner tone="success">
-                  Configuration sauvegardée avec succès
+                  Configuration saved successfully
                 </Banner>
               )}
               {(fetcher.data as any)?.error && (
                 <Banner tone="critical">
-                  Erreur : {(fetcher.data as any).error}
+                  Error: {(fetcher.data as any).error}
                 </Banner>
               )}
               {credits < 50 && (
@@ -671,7 +671,7 @@ export default function Dashboard() {
               </svg>
             </div>
             <div className="stat-value">{credits.toLocaleString("en-US")}</div>
-            <div className="stat-label">Jetons restants</div>
+            <div className="stat-label">Remaining Credits</div>
           </div>
           <div className="stat-card">
             <div className="stat-icon-wrapper">
@@ -681,7 +681,7 @@ export default function Dashboard() {
               </svg>
             </div>
             <div className="stat-value">{last30DaysTotal.toLocaleString("en-US")}</div>
-            <div className="stat-label">Total Try-ons (30j)</div>
+            <div className="stat-label">Total Try-ons (30d)</div>
           </div>
           <div className="stat-card">
             <div className="stat-icon-wrapper">
@@ -702,13 +702,13 @@ export default function Dashboard() {
               </svg>
             </div>
             <div className="stat-value">{conversionRate}%</div>
-            <div className="stat-label">Taux de conversion</div>
+            <div className="stat-label">Conversion Rate</div>
           </div>
         </div>
 
         {/* Générations */}
         <div className="dashboard-section">
-          <h2>Générations par jour (7 derniers jours)</h2>
+          <h2>Daily Generations (Last 7 Days)</h2>
           {dailyStats.length > 0 ? (
             <div className="graph-container-large">
               <div className="graph-bars">
@@ -724,7 +724,7 @@ export default function Dashboard() {
                         style={{ height: `${Math.max(percentage, 5)}%` }}
                       />
                       <div className="graph-bar-label">
-                        {date.toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
+                        {date.toLocaleDateString("en-US", { day: "numeric", month: "short" })}
                       </div>
                     </div>
                   );
@@ -733,7 +733,7 @@ export default function Dashboard() {
             </div>
           ) : (
             <div className="dashboard-placeholder">
-              Aucune donnée disponible pour les 30 derniers jours
+              No data available for the last 30 days
             </div>
           )}
         </div>
@@ -742,40 +742,40 @@ export default function Dashboard() {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--spacing-lg)", marginBottom: "var(--spacing-lg)" }}>
           {/* Produits */}
           <div className="dashboard-section">
-            <h2>Produits les plus essayés</h2>
+            <h2>Most Tried Products</h2>
             {topProducts.length > 0 ? (
               <div className="products-list">
                 {topProducts.map((product: any, index: number) => (
                   <div key={product.product_id || index} className="product-item">
                     <span className="product-name">
-                      {product.product_title || product.product_id || "Produit inconnu"}
+                      {product.product_title || product.product_id || "Unknown Product"}
                     </span>
                     <Badge tone="info">
-                      {`${product.tryons || product.count} essai${(product.tryons || product.count) > 1 ? "s" : ""}`}
+                      {`${product.tryons || product.count} try-on${(product.tryons || product.count) > 1 ? "s" : ""}`}
                     </Badge>
                   </div>
                 ))}
               </div>
             ) : (
               <div className="dashboard-placeholder">
-                Aucun essai pour le moment. Commencez à utiliser le widget sur vos produits !
+                No try-ons yet. Start using the widget on your products!
               </div>
             )}
           </div>
 
           {/* Activité */}
           <div className="dashboard-section">
-            <h2>Activité récente</h2>
+            <h2>Recent Activity</h2>
             {recentLogs.length > 0 ? (
               <div className="activity-list">
                 {recentLogs.slice(0, 5).map((log: any, index: number) => (
                   <div key={log.id || index} className="activity-item">
                     <div className="activity-info">
                       <p className="activity-title">
-                        {log.product_title || log.product_id || "Produit inconnu"}
+                        {log.product_title || log.product_id || "Unknown Product"}
                       </p>
                       <p className="activity-date">
-                        {new Date(log.created_at).toLocaleDateString("fr-FR", { 
+                        {new Date(log.created_at).toLocaleDateString("en-US", { 
                           month: "short", 
                           day: "numeric",
                           hour: "2-digit",
@@ -784,14 +784,14 @@ export default function Dashboard() {
                       </p>
                     </div>
                     <Badge tone={log.success ? "success" : "critical"}>
-                      {log.success ? "✓ Réussi" : "✗ Échec"}
+                      {log.success ? "✓ Success" : "✗ Failed"}
                     </Badge>
                   </div>
                 ))}
               </div>
             ) : (
               <div className="dashboard-placeholder">
-                Aucune activité récente. Les essais apparaîtront ici une fois que les clients commenceront à utiliser le widget.
+                No recent activity. Try-ons will appear here once customers start using the widget.
               </div>
             )}
           </div>

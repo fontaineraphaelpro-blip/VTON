@@ -83,7 +83,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     console.error("[Widget Action] Error saving widget configuration:", error);
     return json({ 
       success: false, 
-      error: error instanceof Error ? error.message : "Erreur lors de la sauvegarde" 
+        error: error instanceof Error ? error.message : "Error saving configuration"
     });
   }
 };
@@ -124,18 +124,18 @@ export default function Widget() {
 
   return (
     <Page>
-      <TitleBar title="Configuration du Widget - VTON Magic" />
+      <TitleBar title="Widget Configuration - VTON Magic" />
       <div className="app-container">
         <header className="app-header">
-          <h1 className="app-title">Configuration du Widget</h1>
+          <h1 className="app-title">Widget Configuration</h1>
           <p className="app-subtitle">
-            Personnalisez l'apparence du widget Virtual Try-On sur votre boutique
+            Customize the appearance of the Virtual Try-On widget on your store
           </p>
         </header>
 
         {error && (
           <div style={{ marginBottom: "var(--spacing-lg)" }}>
-            <Banner tone="critical" title="Erreur">
+            <Banner tone="critical" title="Error">
               {error}
             </Banner>
           </div>
@@ -144,10 +144,10 @@ export default function Widget() {
         {fetcher.data?.success && (
           <div style={{ marginBottom: "var(--spacing-lg)" }}>
             <Banner tone="success">
-              Configuration enregistrée avec succès ! Les modifications sont maintenant dans la base de données et seront chargées automatiquement par le widget sur vos pages produits. Rafraîchissez une page produit pour voir les changements.
+              Configuration saved successfully! Changes are now in the database and will be automatically loaded by the widget on your product pages. Refresh a product page to see the changes.
               {fetcher.data?.savedValues && (
                 <div style={{ marginTop: "8px", fontSize: "12px" }}>
-                  Valeurs sauvegardées: texte="{fetcher.data.savedValues.widget_text}", bg="{fetcher.data.savedValues.widget_bg}", color="{fetcher.data.savedValues.widget_color}"
+                  Saved values: text="{fetcher.data.savedValues.widget_text}", bg="{fetcher.data.savedValues.widget_bg}", color="{fetcher.data.savedValues.widget_color}"
                 </div>
               )}
             </Banner>
@@ -157,7 +157,7 @@ export default function Widget() {
         {(fetcher.data as any)?.error && (
           <div style={{ marginBottom: "var(--spacing-lg)" }}>
             <Banner tone="critical">
-              Erreur : {(fetcher.data as any).error}
+              Error: {(fetcher.data as any).error}
             </Banner>
           </div>
         )}
@@ -168,10 +168,10 @@ export default function Widget() {
               <BlockStack gap="500">
                 <div>
                   <Text as="h2" variant="headingLg" fontWeight="semibold">
-                    Paramètres du Widget
+                    Widget Settings
                   </Text>
                   <Text variant="bodyMd" tone="subdued" as="p" style={{ marginTop: "8px" }}>
-                    Les paramètres que vous configurez ici sont sauvegardés directement dans la base de données. Le widget sur vos pages produits charge ces paramètres en temps réel depuis l'endpoint <code>/apps/tryon/status</code>.
+                    The settings you configure here are saved directly to the database. The widget on your product pages loads these settings in real-time from the <code>/apps/tryon/status</code> endpoint.
                   </Text>
                 </div>
 
@@ -180,17 +180,17 @@ export default function Widget() {
                 <form onSubmit={handleSave}>
                   <BlockStack gap="500">
                     <TextField
-                      label="Texte du bouton"
+                      label="Button Text"
                       name="widgetText"
                       value={widgetText}
                       onChange={setWidgetText}
                       autoComplete="off"
-                      helpText="Le texte affiché sur le bouton du widget"
+                      helpText="The text displayed on the widget button"
                     />
 
                     <BlockStack gap="200">
                       <Text as="p" variant="bodyMd" fontWeight="medium">
-                        Couleur de fond
+                        Background Color
                       </Text>
                       <InlineStack gap="300" align="start">
                         <input
@@ -220,7 +220,7 @@ export default function Widget() {
 
                     <BlockStack gap="200">
                       <Text as="p" variant="bodyMd" fontWeight="medium">
-                        Couleur du texte
+                        Text Color
                       </Text>
                       <InlineStack gap="300" align="start">
                         <input
@@ -256,7 +256,7 @@ export default function Widget() {
                       loading={fetcher.state === "submitting"}
                       size="large"
                     >
-                      Enregistrer la configuration
+                      Save Configuration
                     </Button>
                   </BlockStack>
                 </form>
@@ -265,10 +265,10 @@ export default function Widget() {
 
                 <BlockStack gap="300">
                   <Text as="h3" variant="headingMd" fontWeight="semibold">
-                    Aperçu en temps réel
+                    Real-time Preview
                   </Text>
                   <Text variant="bodySm" tone="subdued" as="p">
-                    Voici un aperçu de votre widget tel qu'il apparaîtra sur vos pages produits. Les modifications sont appliquées en temps réel.
+                    Here is a preview of your widget as it will appear on your product pages. Changes are applied in real-time.
                   </Text>
                   <Card>
                     <div style={{ padding: "16px" }}>
@@ -307,16 +307,16 @@ export default function Widget() {
 
                 <BlockStack gap="300">
                   <Text as="h3" variant="headingMd" fontWeight="semibold">
-                    Valeurs actuelles dans la base de données
+                    Current Values in Database
                   </Text>
                   <Text variant="bodySm" tone="subdued" as="p">
-                    <strong>Texte :</strong> {shop?.widget_text || "Non défini"}
+                    <strong>Text:</strong> {shop?.widget_text || "Not defined"}
                   </Text>
                   <Text variant="bodySm" tone="subdued" as="p">
-                    <strong>Couleur de fond :</strong> {shop?.widget_bg || "Non défini"}
+                    <strong>Background Color:</strong> {shop?.widget_bg || "Not defined"}
                   </Text>
                   <Text variant="bodySm" tone="subdued" as="p">
-                    <strong>Couleur du texte :</strong> {shop?.widget_color || "Non défini"}
+                    <strong>Text Color:</strong> {shop?.widget_color || "Not defined"}
                   </Text>
                 </BlockStack>
 
