@@ -161,26 +161,115 @@ export default function Widget() {
                     borderRadius: "8px",
                     backgroundColor: "#f6f6f7"
                   }}>
+                    {/* Widget Button Preview */}
                     <div style={{
-                      marginBottom: "16px",
-                      padding: "14px 24px",
-                      backgroundColor: widgetBg,
-                      color: widgetColor,
-                      borderRadius: "4px",
-                      fontSize: "16px",
-                      fontWeight: 600,
-                      textAlign: "center",
-                      cursor: "pointer",
-                      transition: "opacity 0.2s",
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.opacity = "0.9"}
-                    onMouseLeave={(e) => e.currentTarget.style.opacity = "1"}
-                    >
-                      {widgetText}
+                      marginBottom: "24px",
+                    }}>
+                      <div style={{
+                        width: "100%",
+                        padding: "14px 24px",
+                        backgroundColor: widgetBg,
+                        color: widgetColor,
+                        borderRadius: "4px",
+                        fontSize: "16px",
+                        fontWeight: 600,
+                        textAlign: "center",
+                        cursor: "pointer",
+                        transition: "opacity 0.2s",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "8px",
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.opacity = "0.9"}
+                      onMouseLeave={(e) => e.currentTarget.style.opacity = "1"}
+                      >
+                        {widgetText}
+                      </div>
+                      <Text variant="bodySm" tone="subdued" as="p" alignment="center" style={{ marginTop: "8px" }}>
+                        Widget button on product page
+                      </Text>
                     </div>
-                    <Text variant="bodySm" tone="subdued" as="p" alignment="center">
-                      Preview: Widget button as it appears on product pages
-                    </Text>
+
+                    <Divider />
+
+                    {/* Modal Preview */}
+                    <div style={{ marginTop: "24px" }}>
+                      <Text variant="bodyMd" fontWeight="medium" as="p" style={{ marginBottom: "16px" }}>
+                        Modal Preview (when button is clicked):
+                      </Text>
+                      <div style={{
+                        position: "relative",
+                        backgroundColor: "white",
+                        borderRadius: "8px",
+                        border: "1px solid #e1e3e5",
+                        padding: "24px",
+                        maxWidth: "600px",
+                        margin: "0 auto",
+                      }}>
+                        {/* Close button */}
+                        <div style={{
+                          position: "absolute",
+                          top: "12px",
+                          right: "12px",
+                          width: "24px",
+                          height: "24px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          cursor: "pointer",
+                          fontSize: "24px",
+                          color: "#666",
+                        }}>
+                          ×
+                        </div>
+
+                        {/* Upload Area */}
+                        <div style={{
+                          border: "2px dashed #ccc",
+                          borderRadius: "8px",
+                          padding: "40px",
+                          textAlign: "center",
+                          cursor: "pointer",
+                          marginBottom: "16px",
+                          backgroundColor: "#fafafa",
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.borderColor = "#999";
+                          e.currentTarget.style.backgroundColor = "#f5f5f5";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.borderColor = "#ccc";
+                          e.currentTarget.style.backgroundColor = "#fafafa";
+                        }}
+                        >
+                          <p style={{ margin: 0, color: "#666" }}>Cliquez pour télécharger votre photo</p>
+                        </div>
+
+                        {/* Generate Button */}
+                        <button
+                          style={{
+                            width: "100%",
+                            padding: "14px",
+                            backgroundColor: widgetBg,
+                            color: widgetColor,
+                            border: "none",
+                            borderRadius: "4px",
+                            fontSize: "16px",
+                            fontWeight: 600,
+                            cursor: "pointer",
+                            marginTop: "16px",
+                          }}
+                          disabled
+                        >
+                          Générer
+                        </button>
+
+                        <Text variant="bodySm" tone="subdued" as="p" alignment="center" style={{ marginTop: "16px" }}>
+                          The generate button uses the same colors as the widget button
+                        </Text>
+                      </div>
+                    </div>
                   </div>
                 </Box>
               </BlockStack>
