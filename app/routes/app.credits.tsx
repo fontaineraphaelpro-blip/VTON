@@ -94,10 +94,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     });
     
     if (!session || !session.shop) {
-      console.error("[Credits Loader] ❌ Session invalide - shop is null!");
+      console.error("[Credits Loader] ❌ Invalid session - shop is null!");
       return json({
         shop: null,
-        error: "Session invalide. Veuillez rafraîchir la page.",
+        error: "Invalid session. Please refresh the page.",
       });
     }
     
