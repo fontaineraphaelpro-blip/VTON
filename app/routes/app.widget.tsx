@@ -159,72 +159,81 @@ export default function Widget() {
                     padding: "20px", 
                     border: "1px solid #e1e3e5", 
                     borderRadius: "8px",
-                    backgroundColor: "#f6f6f7"
+                    backgroundColor: "#ffffff"
                   }}>
-                    {/* Widget Button Preview */}
+                    <Text variant="bodySm" tone="subdued" as="p" style={{ marginBottom: "16px" }}>
+                      Widget button as it appears on product pages:
+                    </Text>
+                    
+                    {/* Exact replica of widget button from block.liquid */}
                     <div style={{
-                      marginBottom: "24px",
+                      margin: "16px 0",
+                      width: "100%",
                     }}>
-                      <div style={{
-                        width: "100%",
-                        padding: "14px 24px",
-                        backgroundColor: widgetBg,
-                        color: widgetColor,
-                        borderRadius: "4px",
-                        fontSize: "16px",
-                        fontWeight: 600,
-                        textAlign: "center",
-                        cursor: "pointer",
-                        transition: "opacity 0.2s",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        gap: "8px",
-                      }}
-                      onMouseEnter={(e) => e.currentTarget.style.opacity = "0.9"}
-                      onMouseLeave={(e) => e.currentTarget.style.opacity = "1"}
+                      <button
+                        style={{
+                          width: "100%",
+                          padding: "14px 24px",
+                          border: "none",
+                          borderRadius: "4px",
+                          fontSize: "16px",
+                          fontWeight: 600,
+                          cursor: "pointer",
+                          transition: "opacity 0.2s",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: "8px",
+                          backgroundColor: widgetBg,
+                          color: widgetColor,
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.opacity = "0.9"}
+                        onMouseLeave={(e) => e.currentTarget.style.opacity = "1"}
                       >
                         {widgetText}
-                      </div>
-                      <Text variant="bodySm" tone="subdued" as="p" alignment="center" style={{ marginTop: "8px" }}>
-                        Widget button on product page
-                      </Text>
+                      </button>
                     </div>
 
                     <Divider />
 
-                    {/* Modal Preview */}
-                    <div style={{ marginTop: "24px" }}>
-                      <Text variant="bodyMd" fontWeight="medium" as="p" style={{ marginBottom: "16px" }}>
-                        Modal Preview (when button is clicked):
-                      </Text>
-                      <div style={{
-                        position: "relative",
-                        backgroundColor: "white",
-                        borderRadius: "8px",
-                        border: "1px solid #e1e3e5",
-                        padding: "24px",
-                        maxWidth: "600px",
-                        margin: "0 auto",
-                      }}>
-                        {/* Close button */}
-                        <div style={{
+                    <Text variant="bodySm" tone="subdued" as="p" style={{ marginTop: "24px", marginBottom: "16px" }}>
+                      Modal that opens when button is clicked:
+                    </Text>
+
+                    {/* Exact replica of widget modal from block.liquid */}
+                    <div style={{
+                      position: "relative",
+                      backgroundColor: "white",
+                      borderRadius: "8px",
+                      border: "1px solid #e1e3e5",
+                      maxWidth: "600px",
+                      width: "100%",
+                      maxHeight: "90vh",
+                      overflow: "hidden",
+                      margin: "0 auto",
+                    }}>
+                      {/* Close button */}
+                      <button
+                        style={{
                           position: "absolute",
                           top: "12px",
                           right: "12px",
-                          width: "24px",
-                          height: "24px",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          cursor: "pointer",
+                          background: "none",
+                          border: "none",
                           fontSize: "24px",
+                          cursor: "pointer",
+                          padding: "4px 8px",
+                          lineHeight: 1,
                           color: "#666",
-                        }}>
-                          ×
-                        </div>
+                          zIndex: 10,
+                        }}
+                      >
+                        ×
+                      </button>
 
-                        {/* Upload Area */}
+                      {/* Modal content */}
+                      <div style={{ padding: "24px" }}>
+                        {/* Upload area - exact match from block.liquid */}
                         <div style={{
                           border: "2px dashed #ccc",
                           borderRadius: "8px",
@@ -232,21 +241,14 @@ export default function Widget() {
                           textAlign: "center",
                           cursor: "pointer",
                           marginBottom: "16px",
-                          backgroundColor: "#fafafa",
                         }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.borderColor = "#999";
-                          e.currentTarget.style.backgroundColor = "#f5f5f5";
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.borderColor = "#ccc";
-                          e.currentTarget.style.backgroundColor = "#fafafa";
-                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.borderColor = "#999"}
+                        onMouseLeave={(e) => e.currentTarget.style.borderColor = "#ccc"}
                         >
                           <p style={{ margin: 0, color: "#666" }}>Cliquez pour télécharger votre photo</p>
                         </div>
 
-                        {/* Generate Button */}
+                        {/* Generate button - exact match from block.liquid */}
                         <button
                           style={{
                             width: "100%",
@@ -264,10 +266,6 @@ export default function Widget() {
                         >
                           Générer
                         </button>
-
-                        <Text variant="bodySm" tone="subdued" as="p" alignment="center" style={{ marginTop: "16px" }}>
-                          The generate button uses the same colors as the widget button
-                        </Text>
                       </div>
                     </div>
                   </div>
