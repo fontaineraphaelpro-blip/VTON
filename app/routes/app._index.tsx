@@ -365,7 +365,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         return json({ 
           success: true, 
           deletedCount,
-          message: `Supprimé ${deletedCount} ancien(s) script tag(s)` 
+          message: `Deleted ${deletedCount} old script tag(s)` 
         });
       }
       
@@ -374,7 +374,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       console.error("Error cleaning up script tags:", error);
       return json({ 
         success: false, 
-        error: error instanceof Error ? error.message : "Erreur inconnue" 
+        error: error instanceof Error ? error.message : "Unknown error" 
       });
     }
   }
@@ -423,7 +423,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     console.error("[Dashboard Action] Error saving configuration:", error);
     return json({ 
       success: false, 
-      error: error instanceof Error ? error.message : "Erreur lors de la sauvegarde" 
+      error: error instanceof Error ? error.message : "Error saving configuration" 
     });
   }
 };
@@ -728,9 +728,9 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Réglages & Sécurité */}
+        {/* Settings & Security */}
         <div className="dashboard-section">
-          <h2>Réglages & Sécurité</h2>
+          <h2>Settings & Security</h2>
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -740,7 +740,7 @@ export default function Dashboard() {
           >
             <div className="settings-grid">
               <div className="setting-card">
-                <label>Activer l'app sur le store</label>
+                <label>Enable app on store</label>
                 <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                   <Checkbox
                     checked={isEnabled}
@@ -748,23 +748,23 @@ export default function Dashboard() {
                     label=""
                   />
                   <span style={{ fontSize: "14px", color: "var(--text-secondary)" }}>
-                    {isEnabled ? "Oui" : "Non"}
+                    {isEnabled ? "Yes" : "No"}
                   </span>
                 </div>
                 <input type="hidden" name="isEnabled" value={isEnabled ? "true" : "false"} />
               </div>
               <div className="setting-card">
-                <label>Plafond journalier</label>
+                <label>Daily Limit</label>
                 <input
                   type="number"
                   name="dailyLimit"
                   defaultValue={String(shop?.daily_limit || 100)}
-                  placeholder="Limite d'essais par jour"
+                  placeholder="Daily try-on limit"
                   className="vton-input"
                 />
               </div>
               <div className="setting-card">
-                <label>Max try-ons par utilisateur/jour</label>
+                <label>Max try-ons per user/day</label>
                 <input
                   type="number"
                   name="maxTriesPerUser"
@@ -814,7 +814,7 @@ export default function Dashboard() {
                 </p>
               </div>
               <div className="setting-card">
-                <label>Nettoyage</label>
+                <label>Cleanup</label>
                 <Button
                   onClick={() => {
                     const formData = new FormData();
@@ -824,13 +824,13 @@ export default function Dashboard() {
                   disabled={fetcher.state === "submitting"}
                   loading={fetcher.state === "submitting"}
                 >
-                  {fetcher.state === "submitting" ? "Traitement..." : "Supprimer les anciens widgets et scripts"}
+                  {fetcher.state === "submitting" ? "Processing..." : "Delete old widgets and scripts"}
                 </Button>
               </div>
             </div>
             <div style={{ marginTop: "20px" }}>
               <Button submit variant="primary" loading={fetcher.state === "submitting"}>
-                Enregistrer
+                Save
               </Button>
             </div>
           </form>
