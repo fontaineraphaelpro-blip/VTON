@@ -60,15 +60,17 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       }, { status: 403 });
     }
 
-    // Récupérer l'URL de l'image produit depuis le body ou construire depuis le shop
-    let productImageUrl = product_image_url;
+    // Récupérer l'URL de l'image produit depuis le body (doit être fournie par le widget)
+    // L'URL de l'image produit doit être accessible publiquement (URL CDN Shopify)
+    const productImageUrl = product_image_url;
     
     if (!productImageUrl) {
-      // Fallback: essayer de récupérer depuis le service Shopify
-      productImageUrl = await getProductImageUrl(shop, product_id);
-      if (!productImageUrl) {
-        return json({ error: "Could not retrieve product image" }, { status: 404 });
-      }
+      return json({ error: "Missing product_image_url parameter. The widget must provide the product image URL." }, { status: 400 });
+    }
+    
+    // Vérifier que l'URL est valide et accessible
+    if (!productImageUrl.startsWith('http')) {
+      return json({ error: "Invalid product_image_url format. Must be a valid HTTP/HTTPS URL." }, { status: 400 });
     }
 
     console.log(`[Generate] Starting generation for shop ${shop}, product ${product_id}`);

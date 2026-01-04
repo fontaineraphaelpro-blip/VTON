@@ -513,7 +513,8 @@
           },
           body: JSON.stringify({
             user_photo: state.userPhoto,
-            product_id: state.productId
+            product_id: state.productId,
+            product_image_url: state.productImageUrl
           })
         }).then(function(response) {
           if (!response.ok) {
