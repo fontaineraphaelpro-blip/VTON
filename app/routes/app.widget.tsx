@@ -170,9 +170,6 @@ export default function Widget() {
                   <Text as="h2" variant="headingLg" fontWeight="semibold">
                     Widget Settings
                   </Text>
-                  <Text variant="bodyMd" tone="subdued" as="p" style={{ marginTop: "8px" }}>
-                    The settings you configure here are saved directly to the database. The widget on your product pages loads these settings in real-time from the <code>/apps/tryon/status</code> endpoint.
-                  </Text>
                 </div>
 
                 <Divider />
