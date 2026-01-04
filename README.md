@@ -133,7 +133,6 @@ The admin dashboard provides:
 - **Starter**: 60 try-ons/month - €19/month
 - **Pro**: 150 try-ons/month - €49/month
 - **Studio**: 300 try-ons/month - €99/month
-- **Custom**: Flexible plans for 301+ try-ons/month
 
 All plans include:
 - Monthly quota with automatic reset
