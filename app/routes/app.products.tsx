@@ -35,7 +35,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       });
     }
 
-    try {
     const response = await admin.graphql(
       `#graphql
         query getProducts {
@@ -142,7 +141,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       tryonCounts: tryonCounts || {},
       productSettings: productSettings || {},
     });
-    }
   } catch (error) {
     console.error("Error in products loader:", error);
     

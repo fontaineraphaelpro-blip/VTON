@@ -520,7 +520,7 @@ export default function Credits() {
   const purchaseSuccess = (loaderData as any)?.purchaseSuccess || false;
   const planActivated = (loaderData as any)?.planActivated || null;
   const monthlyQuota = (loaderData as any)?.monthlyQuota || null;
-  console.log("[Credits] Loader data:", { hasShop: !!shop, hasError: !!error, credits: shop?.credits, monthlyQuota: shop?.monthly_quota, purchaseSuccess, planActivated, monthlyQuota });
+  console.log("[Credits] Loader data:", { hasShop: !!shop, hasError: !!error, credits: shop?.credits, shopMonthlyQuota: shop?.monthly_quota, purchaseSuccess, planActivated, loaderMonthlyQuota: monthlyQuota });
   
   const fetcher = useFetcher<typeof action>();
   const revalidator = useRevalidator();
