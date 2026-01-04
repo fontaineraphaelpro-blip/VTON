@@ -518,11 +518,20 @@
           }
           return response.json();
         }).then(function(data) {
-          state.resultImageUrl = data.result_url || data.image_url;
+          console.log('[VTON] Generation response data:', data);
+          state.resultImageUrl = data.result_url || data.image_url || data.output;
+          console.log('[VTON] Extracted result URL:', state.resultImageUrl);
           if (loading) loading.classList.remove('active');
           if (result && state.resultImageUrl) {
             result.classList.add('active');
             result.innerHTML = '<img src="' + state.resultImageUrl + '" alt="Result" />';
+            console.log('[VTON] Result displayed successfully');
+          } else {
+            console.warn('[VTON] No result URL found or result element missing', {
+              hasResult: !!result,
+              resultImageUrl: state.resultImageUrl,
+              data: data
+            });
           }
           if (generateBtn) generateBtn.disabled = false;
         }).catch(function(error) {
