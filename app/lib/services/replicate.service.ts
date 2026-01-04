@@ -2,6 +2,7 @@ import Replicate from "replicate";
 
 const replicate = new Replicate({
   auth: process.env.REPLICATE_API_TOKEN,
+  useFileOutput: false, // Désactive FileOutput pour retourner des URLs directement
 });
 
 export interface GenerateTryOnParams {
