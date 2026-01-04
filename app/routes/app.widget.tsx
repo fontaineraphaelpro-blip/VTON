@@ -2,7 +2,6 @@ import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useLoaderData, useFetcher, useRevalidator } from "@remix-run/react";
 import { useEffect, useState, useRef } from "react";
-import * as React from "react";
 import {
   Page,
   Text,
@@ -124,25 +123,31 @@ export default function Widget() {
 
   // Update local state immediately when save is successful (from action response)
   // This ensures the UI reflects the saved values right away
-  const previousSuccessRef = useRef(false);
+  const previousSuccessRef = useRef<string | null>(null);
   useEffect(() => {
-    if (fetcher.data?.success && fetcher.data?.savedValues && !previousSuccessRef.current) {
-      // Update state immediately from the saved values
-      setWidgetText(fetcher.data.savedValues.widget_text || "Try It On Now ✨");
-      setWidgetBg(fetcher.data.savedValues.widget_bg || "#000000");
-      setWidgetColor(fetcher.data.savedValues.widget_color || "#ffffff");
+    if (fetcher.data?.success && fetcher.data?.savedValues) {
+      // Create a unique key for this save operation
+      const saveKey = `${fetcher.data.savedValues.widget_text}-${fetcher.data.savedValues.widget_bg}-${fetcher.data.savedValues.widget_color}`;
       
-      previousSuccessRef.current = true;
-      
-      // Silently revalidate in the background without affecting the UI
-      setTimeout(() => {
-        revalidator.revalidate();
-      }, 200);
+      // Only update if this is a new save (different from previous)
+      if (previousSuccessRef.current !== saveKey) {
+        // Update state immediately from the saved values
+        setWidgetText(fetcher.data.savedValues.widget_text || "Try It On Now ✨");
+        setWidgetBg(fetcher.data.savedValues.widget_bg || "#000000");
+        setWidgetColor(fetcher.data.savedValues.widget_color || "#ffffff");
+        
+        previousSuccessRef.current = saveKey;
+        
+        // Silently revalidate in the background without affecting the UI
+        setTimeout(() => {
+          revalidator.revalidate();
+        }, 200);
+      }
     }
     
-    // Reset the ref when fetcher is idle and no success data (ready for new submission)
-    if (fetcher.state === "idle" && !fetcher.data?.success) {
-      previousSuccessRef.current = false;
+    // Reset the ref when starting a new submission
+    if (fetcher.state === "submitting") {
+      previousSuccessRef.current = null;
     }
   }, [fetcher.data?.success, fetcher.data?.savedValues, fetcher.state, revalidator]);
 
