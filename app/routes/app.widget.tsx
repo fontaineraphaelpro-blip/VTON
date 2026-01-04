@@ -263,6 +263,25 @@ export default function Widget() {
 
                 <Divider />
 
+                <Divider />
+
+                <BlockStack gap="300">
+                  <Text as="h3" variant="headingMd" fontWeight="semibold">
+                    Valeurs actuelles dans la base de données
+                  </Text>
+                  <Text variant="bodySm" tone="subdued" as="p">
+                    <strong>Texte :</strong> {shop?.widget_text || "Non défini"}
+                  </Text>
+                  <Text variant="bodySm" tone="subdued" as="p">
+                    <strong>Couleur de fond :</strong> {shop?.widget_bg || "Non défini"}
+                  </Text>
+                  <Text variant="bodySm" tone="subdued" as="p">
+                    <strong>Couleur du texte :</strong> {shop?.widget_color || "Non défini"}
+                  </Text>
+                </BlockStack>
+
+                <Divider />
+
                 <BlockStack gap="300">
                   <Text as="h3" variant="headingMd" fontWeight="semibold">
                     Comment ça fonctionne
@@ -274,7 +293,7 @@ export default function Widget() {
                     <strong>Chargement par le widget :</strong> Le widget client sur vos pages produits charge ces paramètres depuis l'endpoint <code>/apps/tryon/status</code> à chaque initialisation. Les changements apparaîtront dès qu'un visiteur charge ou recharge une page produit.
                   </Text>
                   <Text variant="bodySm" tone="subdued" as="p">
-                    <strong>Paramètres synchronisés :</strong> Le texte du bouton, la couleur de fond et la couleur du texte sont appliqués au widget en temps réel. Pour voir les modifications, rafraîchissez une page produit de votre boutique.
+                    <strong>Important :</strong> Après avoir sauvegardé les modifications, vous devez <strong>recharger complètement la page produit</strong> (F5 ou Ctrl+R) pour voir les changements. Le widget se recharge à chaque chargement de page.
                   </Text>
                 </BlockStack>
               </BlockStack>
