@@ -299,41 +299,41 @@ export default function Widget() {
                   Configuration
                 </Text>
                 <Text variant="bodyMd" tone="subdued" as="p">
-                  Customize the widget text, background color, and text color. These settings are stored in the database and loaded by the widget when it initializes.
+                  Personnalisez le texte du widget, la couleur de fond et la couleur du texte. Ces paramètres sont sauvegardés directement dans la base de données et chargés par le widget en temps réel sur vos pages produits.
                 </Text>
                 <Divider />
                 <form onSubmit={handleSave}>
                   <BlockStack gap="400">
                     <TextField
-                      label="Widget Text"
+                      label="Texte du widget"
                       name="widgetText"
                       value={widgetText}
                       onChange={setWidgetText}
                       autoComplete="off"
-                      helpText="The text displayed on the widget button"
+                      helpText="Le texte affiché sur le bouton du widget (visible sur vos pages produits)"
                     />
                     <TextField
-                      label="Background Color"
+                      label="Couleur de fond"
                       name="widgetBg"
                       value={widgetBg}
                       onChange={setWidgetBg}
                       autoComplete="off"
-                      helpText="Hex color code (e.g., #000000)"
+                      helpText="Code couleur hexadécimal (ex: #000000 pour noir)"
                     />
                     <TextField
-                      label="Text Color"
+                      label="Couleur du texte"
                       name="widgetColor"
                       value={widgetColor}
                       onChange={setWidgetColor}
                       autoComplete="off"
-                      helpText="Hex color code (e.g., #ffffff)"
+                      helpText="Code couleur hexadécimal (ex: #ffffff pour blanc)"
                     />
                     <Button 
                       submit 
                       variant="primary" 
                       loading={fetcher.state === "submitting"}
                     >
-                      Save Configuration
+                      Enregistrer la configuration
                     </Button>
                   </BlockStack>
                 </form>
