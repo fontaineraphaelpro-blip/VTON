@@ -293,7 +293,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
                   appRecurringPricingDetails: {
                     price: {
                       amount: pack.price,
-                      currencyCode: "EUR"
+                        currencyCode: "USD"
                     },
                     interval: "EVERY_30_DAYS"
                   }
