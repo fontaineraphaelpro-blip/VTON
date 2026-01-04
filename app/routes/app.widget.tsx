@@ -282,6 +282,7 @@ export default function Widget() {
                         <button
                           type="button"
                           className="vton-button-preview"
+                          disabled
                           style={{
                             width: "100%",
                             padding: "14px 24px",
@@ -289,7 +290,7 @@ export default function Widget() {
                             borderRadius: "4px",
                             fontSize: "16px",
                             fontWeight: 600,
-                            cursor: "pointer",
+                            cursor: "default",
                             transition: "opacity 0.2s",
                             display: "flex",
                             alignItems: "center",
@@ -297,12 +298,7 @@ export default function Widget() {
                             gap: "8px",
                             backgroundColor: widgetBg || "#000000",
                             color: widgetColor || "#ffffff",
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.opacity = "0.9";
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.opacity = "1";
+                            boxShadow: "0 1px 3px rgba(0, 0, 0, 0.12)",
                           }}
                         >
                           <svg
