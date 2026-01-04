@@ -161,7 +161,7 @@ export default function Terms() {
                 </Text>
                 <Text as="p" variant="bodyMd">
                   <strong>Email:</strong>{" "}
-                  <a href="mailto:support@stylelab.com">support@stylelab.com</a>
+                  <a href="mailto:fontaineraphaelpro@gmail.com">fontaineraphaelpro@gmail.com</a>
                 </Text>
               </BlockStack>
             </BlockStack>

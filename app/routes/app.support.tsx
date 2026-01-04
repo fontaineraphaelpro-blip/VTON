@@ -36,7 +36,7 @@ export default function Support() {
                 </Text>
                 <Text as="p" variant="bodyMd">
                   <strong>Email:</strong>{" "}
-                  <a href="mailto:support@stylelab.com">support@stylelab.com</a>
+                  <a href="mailto:fontaineraphaelpro@gmail.com">fontaineraphaelpro@gmail.com</a>
                 </Text>
                 <Text as="p" variant="bodyMd">
                   We typically respond within 24-48 hours during business days.
@@ -84,7 +84,7 @@ export default function Support() {
                 </Text>
                 <Text as="p" variant="bodyMd">
                   If you encounter a bug or technical issue, please email us at{" "}
-                  <a href="mailto:support@stylelab.com">support@stylelab.com</a> with:
+                  <a href="mailto:fontaineraphaelpro@gmail.com">fontaineraphaelpro@gmail.com</a> with:
                 </Text>
                 <ul>
                   <li>

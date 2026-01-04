@@ -144,7 +144,7 @@ export default function Privacy() {
                 </ul>
                 <Text as="p" variant="bodyMd">
                   To exercise these rights, please contact us at{" "}
-                  <a href="mailto:support@stylelab.com">support@stylelab.com</a>
+                  <a href="mailto:fontaineraphaelpro@gmail.com">fontaineraphaelpro@gmail.com</a>
                 </Text>
               </BlockStack>
 
@@ -166,7 +166,7 @@ export default function Privacy() {
                 </Text>
                 <Text as="p" variant="bodyMd">
                   <strong>Email:</strong>{" "}
-                  <a href="mailto:support@stylelab.com">support@stylelab.com</a>
+                  <a href="mailto:fontaineraphaelpro@gmail.com">fontaineraphaelpro@gmail.com</a>
                 </Text>
               </BlockStack>
             </BlockStack>
