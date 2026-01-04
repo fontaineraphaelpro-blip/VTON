@@ -77,9 +77,6 @@ const PRICING_PLANS = [
   },
 ];
 
-// Custom Flexible Plan - Prix calculé automatiquement pour garantir au moins x2 de marge
-// Prix minimum par try-on pour le plan custom (basé sur le prix du plan Studio)
-const MIN_CUSTOM_PRICE_PER_CREDIT = 0.33; // Prix minimum par try-on (garantit x2 marge)
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
@@ -130,20 +127,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
           planActivated: packId,
           monthlyQuota: monthlyQuota,
         });
-      } else if (packId === "custom-flexible" && monthlyQuotaParam) {
-        // Handle custom flexible plan
-        const customQuota = parseInt(monthlyQuotaParam);
-        if (customQuota >= 301) {
-          await upsertShop(shop, { monthlyQuota: customQuota });
-          
-          const updatedShopData = await getShop(shop);
-          return json({
-            shop: updatedShopData || null,
-            purchaseSuccess: true,
-            planActivated: "custom-flexible",
-            monthlyQuota: customQuota,
-          });
-        }
       }
     }
 
@@ -413,166 +396,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       });
     }
   }
-  
-  if (intent === "custom-pack") {
-    const customCredits = parseInt(formData.get("customCredits") as string);
-    if (customCredits && customCredits >= 301) {
-      try {
-        // FOR TESTING ONLY: Direct plan activation bypasses Shopify billing
-        // SECURITY: This code ONLY runs in development (NODE_ENV !== "production")
-        // In production, billing MUST go through Shopify Billing API
-        // ENABLE_DIRECT_PLAN_ACTIVATION is ignored in production for security
-        if (process.env.NODE_ENV !== "production") {
-          await upsertShop(shop, { monthlyQuota: customCredits });
-          return json({ 
-            success: true, 
-            message: `Custom Flexible Plan activated successfully! Monthly quota: ${customCredits} try-ons/month. (Test mode - direct activation)`,
-            planActivated: "custom-flexible",
-            monthlyQuota: customCredits,
-          });
-        }
-        
-        // Calculate price for custom plan (at least x2 margin)
-        const calculatedPrice = customCredits * MIN_CUSTOM_PRICE_PER_CREDIT;
-        const returnUrl = new URL(request.url).origin + `/app/credits?purchase=success&pack=custom-flexible&monthlyQuota=${customCredits}`;
-        
-        // Create recurring subscription for custom plan
-        const response = await admin.graphql(
-          `#graphql
-            mutation appSubscriptionCreate($name: String!, $lineItems: [AppSubscriptionLineItemInput!]!, $returnUrl: URL!, $test: Boolean) {
-              appSubscriptionCreate(
-                name: $name
-                lineItems: $lineItems
-                returnUrl: $returnUrl
-                test: $test
-              ) {
-                appSubscription {
-                  id
-                  status
-                }
-                confirmationUrl
-                userErrors {
-                  field
-                  message
-                }
-              }
-            }
-          `,
-          {
-            variables: {
-              name: `Custom Flexible Plan - ${customCredits} try-ons/month`,
-              lineItems: [
-                {
-                  plan: {
-                    appRecurringPricingDetails: {
-                      price: {
-                        amount: calculatedPrice,
-                        currencyCode: "EUR"
-                      },
-                      interval: "EVERY_30_DAYS"
-                    }
-                  }
-                }
-              ],
-              returnUrl: returnUrl,
-              test: process.env.NODE_ENV !== "production"
-            }
-          }
-        );
-
-        // Check if response is OK
-        if (!response.ok) {
-          if (response.status === 401) {
-            const reauthUrl = response.headers.get('x-shopify-api-request-failure-reauthorize-url');
-            // Log only in development
-            if (process.env.NODE_ENV !== "production") {
-              console.error("[Credits] Authentication required (401) for custom subscription creation");
-            }
-            return json({ 
-              success: false, 
-              error: "Your session has expired. Please refresh the page to re-authenticate.",
-              requiresAuth: true,
-              reauthUrl: reauthUrl || null,
-            });
-          }
-          const errorText = await response.text().catch(() => `HTTP ${response.status} ${response.statusText}`);
-          // Log only in development
-          if (process.env.NODE_ENV !== "production") {
-            console.error("[Credits] GraphQL request failed:", response.status, errorText);
-          }
-          return json({ 
-            success: false, 
-            error: `Shopify API error (${response.status}): ${errorText.substring(0, 200)}` 
-          });
-        }
-
-        const responseData = await response.json();
-        
-        if (responseData.data?.appSubscriptionCreate?.userErrors?.length > 0) {
-          const errors = responseData.data.appSubscriptionCreate.userErrors;
-          const errorMessages = errors.map((e: any) => e.message).join(", ");
-          // Log only in development
-          if (process.env.NODE_ENV !== "production") {
-            console.error("[Credits] GraphQL errors:", errors);
-          }
-          
-          // If error is about Managed Pricing, this typically means:
-          // 1. The app is a Managed Pricing App (billing handled by Shopify App Store)
-          // 2. OR it's a test/development store where billing doesn't work
-          // For test stores and reviewers, we allow direct activation
-          // For production stores with Managed Pricing, billing is handled automatically by Shopify
-          if (errorMessages.includes("tarification gérée") || errorMessages.includes("Managed Pricing") || errorMessages.includes("Billing API")) {
-            // Always allow direct activation when Managed Pricing error occurs
-            // This covers both test stores (where billing doesn't work) and allows reviewers to test
-            // In production, if it's a real store, Shopify will handle billing automatically via App Store
-            // But we still allow direct activation here to support testing and review scenarios
-            if (process.env.NODE_ENV !== "production") {
-              console.log("[Credits] Managed Pricing detected for custom plan, activating directly for testing");
-            }
-            await upsertShop(shop, { monthlyQuota: customCredits });
-            return json({ 
-              success: true, 
-              message: `Custom Flexible Plan activated successfully! Monthly quota: ${customCredits} try-ons/month.`,
-              planActivated: "custom-flexible",
-              monthlyQuota: customCredits,
-            });
-          }
-          
-          return json({ 
-            success: false, 
-            error: errorMessages
-          });
-        }
-
-        const confirmationUrl = responseData.data?.appSubscriptionCreate?.confirmationUrl;
-        
-        if (!confirmationUrl) {
-          // Log only in development
-          if (process.env.NODE_ENV !== "production") {
-            console.error("[Credits] No confirmation URL returned:", responseData);
-          }
-          return json({ 
-            success: false, 
-            error: "Failed to create subscription. Please try again." 
-          });
-        }
-
-        // Redirect to Shopify subscription confirmation page
-      return redirect(confirmationUrl);
-    } catch (error) {
-      // Log only in development
-      if (process.env.NODE_ENV !== "production") {
-        console.error("[Credits] Error creating custom subscription:", error);
-      }
-      return json({
-              success: false, 
-          error: error instanceof Error ? error.message : "Error creating subscription" 
-        });
-      }
-      } else {
-      return json({ success: false, error: "Minimum 301 try-ons required for Custom Flexible plan" });
-    }
-  }
 
   return json({ success: false, error: "Invalid intent" });
   } catch (error) {
@@ -626,7 +449,6 @@ export default function Credits() {
   const fetcher = useFetcher<typeof action>();
   const revalidator = useRevalidator();
   const currentCredits = shop?.credits || 0;
-  const [customAmount, setCustomAmount] = useState("301");
   const [submittingPackId, setSubmittingPackId] = useState<string | null>(null);
   const [showSuccessBanner, setShowSuccessBanner] = useState(true);
   const [showErrorBanner, setShowErrorBanner] = useState(true);
@@ -644,8 +466,6 @@ export default function Credits() {
     // Find the plan that matches the current monthly quota
     const matchingPlan = PRICING_PLANS.find(plan => (plan as any).monthlyQuota === currentMonthlyQuota);
     if (matchingPlan) return matchingPlan.id;
-    // If quota is >= 301, it's a custom flexible plan
-    if (currentMonthlyQuota >= 301) return "custom-flexible";
     // Default to free
     return "free";
   };
@@ -704,19 +524,6 @@ export default function Credits() {
     fetcher.submit(formData, { method: "post" });
   };
 
-  const handleCustomPurchase = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const formData = new FormData(event.currentTarget);
-    const credits = parseInt(formData.get("customCredits") as string);
-    
-    if (!credits || credits < 301) {
-      alert("Minimum 301 try-ons required for Custom Flexible plan.");
-      return;
-    }
-    
-    formData.append("intent", "custom-pack");
-    fetcher.submit(formData, { method: "post" });
-  };
 
   return (
     <Page>
@@ -771,10 +578,7 @@ export default function Credits() {
         <div className="credits-balance">
           <div>
             <div className="credits-amount">
-              {activePlanId === "custom-flexible" 
-                ? `Custom (${currentMonthlyQuota} try-ons/month)`
-                : PRICING_PLANS.find(p => p.id === activePlanId)?.name || "Free"
-              }
+              {PRICING_PLANS.find(p => p.id === activePlanId)?.name || "Free"}
             </div>
             <div className="credits-label">
               Current Subscription Plan
@@ -829,50 +633,6 @@ export default function Credits() {
             </div>
           ))}
         </div>
-        
-        <Card>
-          <BlockStack gap="400">
-            <Text as="h2" variant="headingLg" fontWeight="semibold">
-              Custom Flexible Plan
-            </Text>
-            <Text variant="bodyMd" tone="subdued" as="p">
-              Choose more than 300 try-ons per month.
-            </Text>
-            <Divider />
-            <BlockStack gap="300">
-              <Text variant="bodyMd" as="p">
-                <strong>Minimum:</strong> 301 try-ons per month
-              </Text>
-              <Text variant="bodySm" tone="subdued" as="p">
-                Monthly quota is fixed with automatic reset each month.
-              </Text>
-              <form onSubmit={handleCustomPurchase}>
-                <InlineStack gap="300" align="end">
-                  <Box minWidth="200px">
-                    <TextField
-                      label="Number of try-ons/month"
-                      type="number"
-                      name="customCredits"
-                      value={customAmount}
-                      onChange={setCustomAmount}
-                      min={301}
-                      autoComplete="off"
-                      helpText={`Minimum 301 try-ons. Calculated price: €${((parseFloat(customAmount) || 301) * MIN_CUSTOM_PRICE_PER_CREDIT).toFixed(2)}/month`}
-                    />
-                  </Box>
-                  <Button 
-                    variant="primary" 
-                    submit
-                    loading={isSubmitting}
-                    disabled={!customAmount || parseInt(customAmount) < 301}
-                  >
-                    Purchase {customAmount || '301'} try-ons/month
-                  </Button>
-                </InlineStack>
-              </form>
-            </BlockStack>
-          </BlockStack>
-        </Card>
       </div>
     </Page>
   );
