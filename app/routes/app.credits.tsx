@@ -387,64 +387,15 @@ export default function Credits() {
     submittingPackId 
   });
 
-  // Rediriger vers le checkout Shopify après création de la commande
+  // Recharger les données après activation d'un plan
   useEffect(() => {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:559',message:'useEffect entry',data:{hasFetcherData:!!fetcher.data,success:fetcher.data?.success,redirect:(fetcher.data as any)?.redirect,hasCheckoutUrl:!!(fetcher.data as any)?.checkoutUrl,requiresAuth:(fetcher.data as any)?.requiresAuth,hasReauthUrl:!!(fetcher.data as any)?.reauthUrl},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'F'})}).catch(()=>{});
-    // #endregion
-    
-    let timeoutId: NodeJS.Timeout | null = null;
-    let isMounted = true;
-    
-    // Gérer la ré-authentification automatique
-    if ((fetcher.data as any)?.requiresAuth && (fetcher.data as any)?.reauthUrl) {
-      console.log("[Credits] Redirecting to reauth URL:", (fetcher.data as any).reauthUrl);
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:567',message:'Redirecting to reauth URL',data:{reauthUrl:(fetcher.data as any).reauthUrl},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'F'})}).catch(()=>{});
-      // #endregion
-      // Rediriger automatiquement vers la ré-authentification
-      if (isMounted) {
-        window.location.href = (fetcher.data as any).reauthUrl;
-      }
-      return;
-    }
-    
-    if (fetcher.data?.success && (fetcher.data as any)?.redirect && (fetcher.data as any)?.checkoutUrl) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:577',message:'Before window.location.href redirect to checkout',data:{checkoutUrl:(fetcher.data as any).checkoutUrl},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'B'})}).catch(()=>{});
-      // #endregion
-      // Rediriger vers le checkout Shopify
-      if (isMounted) {
-        window.location.href = (fetcher.data as any).checkoutUrl;
-      }
-    } else if (fetcher.data?.success && !(fetcher.data as any)?.redirect) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:585',message:'Before setTimeout for revalidate',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'C'})}).catch(()=>{});
-      // #endregion
-      // Si pas de redirection, recharger les données (ancien comportement)
-      timeoutId = setTimeout(() => {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:590',message:'setTimeout callback executing',data:{isMounted},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'C'})}).catch(()=>{});
-        // #endregion
-        if (isMounted) {
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:593',message:'Calling revalidator.revalidate via ref',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'C'})}).catch(()=>{});
-          // #endregion
-          revalidatorRef.current.revalidate();
-        }
+    if (fetcher.data?.success) {
+      // Recharger les données après activation réussie
+      setTimeout(() => {
+        revalidator.revalidate();
       }, 500);
     }
-    
-    return () => {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:601',message:'useEffect cleanup - component unmounting',data:{hasTimeout:!!timeoutId},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'F'})}).catch(()=>{});
-      // #endregion
-      isMounted = false;
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
-    };
-  }, [fetcher.data]); // Retirer revalidator des dépendances pour éviter les re-renders infinis
+  }, [fetcher.data?.success, revalidator]);
 
   // Reset submittingPackId when fetcher completes
   useEffect(() => {
