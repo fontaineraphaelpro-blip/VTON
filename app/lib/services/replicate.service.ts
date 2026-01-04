@@ -14,24 +14,15 @@ export async function generateTryOn({ userPhoto, productImageUrl }: GenerateTryO
     throw new Error("REPLICATE_API_TOKEN is not configured");
   }
 
-  // Convertir la photo utilisateur (base64) en URL Replicate
-  // Si c'est déjà une data URL, on doit l'uploader à Replicate
-  let userPhotoUrl: string;
+  // Replicate accepte directement les data URIs (base64) dans les paramètres d'entrée
+  let userPhotoInput: string;
   
   if (userPhoto.startsWith('data:image')) {
-    // Uploader l'image base64 à Replicate
-    const base64Data = userPhoto.split(',')[1];
-    const buffer = Buffer.from(base64Data, 'base64');
-    
-    // Uploader le fichier à Replicate
-    const file = await replicate.files.upload(buffer, {
-      contentType: 'image/png',
-    });
-    
-    userPhotoUrl = file;
+    // Utiliser directement le data URI (Replicate l'accepte)
+    userPhotoInput = userPhoto;
   } else if (userPhoto.startsWith('http')) {
     // C'est déjà une URL
-    userPhotoUrl = userPhoto;
+    userPhotoInput = userPhoto;
   } else {
     throw new Error('Invalid user photo format');
   }
@@ -42,7 +33,7 @@ export async function generateTryOn({ userPhoto, productImageUrl }: GenerateTryO
   }
 
   console.log('[Replicate] Starting generation with nano-banana-pro model');
-  console.log('[Replicate] User photo URL:', userPhotoUrl);
+  console.log('[Replicate] User photo input:', userPhotoInput.substring(0, 50) + '...');
   console.log('[Replicate] Product image URL:', productImageUrl);
 
   // Appeler le modèle google/nano-banana-pro
@@ -51,7 +42,7 @@ export async function generateTryOn({ userPhoto, productImageUrl }: GenerateTryO
     {
       input: {
         image_input: [
-          userPhotoUrl, // Photo de la personne
+          userPhotoInput, // Photo de la personne (data URI ou URL)
           productImageUrl, // Image du vêtement
         ],
         prompt: "This is NOT a redesign task. It is a garment transfer task. Use the clothing from the second image exactly as-is with zero creative interpretation. The output must look like the REAL clothing item was physically worn by the person. No invented graphics, no color changes, no simplification.",
