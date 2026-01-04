@@ -214,31 +214,44 @@
             return;
           }
           
-          const addToCartBtn = this.findAddToCartButton();
-          if (!addToCartBtn) {
-            console.log('[VTON] Add to Cart button not found, retrying...');
-            this.retryCount++;
-            setTimeout(() => this.injectWidget(), CONFIG.retryDelay);
-            return;
-          }
-          
           if (document.getElementById(CONFIG.shadowRootId)) {
             console.log('[VTON] Widget already exists');
             return;
           }
           
-          this.productImage = this.getProductImage();
+          // Méthode recommandée Shopify: Chercher le formulaire produit (standard sur toutes les pages produit)
+          const productForm = document.querySelector('form[action*="/cart/add"]');
+          if (productForm && productForm.parentNode) {
+            this.productImage = this.getProductImage();
+            const container = document.createElement('div');
+            container.id = CONFIG.shadowRootId;
+            container.setAttribute('data-vton-widget', 'true');
+            // Insérer après le formulaire produit (sous le bouton Add to Cart)
+            productForm.parentNode.insertBefore(container, productForm.nextSibling);
+            this.shadowRoot = container.attachShadow({ mode: 'closed' });
+            this.renderWidget();
+            console.log('[VTON] Widget injected after product form (Shopify standard)');
+            return;
+          }
           
-          const container = document.createElement('div');
-          container.id = CONFIG.shadowRootId;
-          container.setAttribute('data-vton-widget', 'true');
+          // Fallback: Chercher le bouton Add to Cart directement
+          const addToCartBtn = this.findAddToCartButton();
+          if (addToCartBtn) {
+            this.productImage = this.getProductImage();
+            const container = document.createElement('div');
+            container.id = CONFIG.shadowRootId;
+            container.setAttribute('data-vton-widget', 'true');
+            this.insertAfterButton(addToCartBtn, container);
+            this.shadowRoot = container.attachShadow({ mode: 'closed' });
+            this.renderWidget();
+            console.log('[VTON] Widget injected after Add to Cart button (fallback)');
+            return;
+          }
           
-          this.insertAfterButton(addToCartBtn, container);
-          
-          this.shadowRoot = container.attachShadow({ mode: 'closed' });
-          this.renderWidget();
-          
-          console.log('[VTON] Widget injected successfully');
+          // Retry si rien n'est trouvé
+          console.log('[VTON] Product form/button not found, retrying...');
+          this.retryCount++;
+          setTimeout(() => this.injectWidget(), CONFIG.retryDelay);
         }
         
         insertAfterButton(button, element) {
