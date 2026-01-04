@@ -312,22 +312,64 @@ export default function Widget() {
                       autoComplete="off"
                       helpText="Le texte affiché sur le bouton du widget (visible sur vos pages produits)"
                     />
-                    <TextField
-                      label="Couleur de fond"
-                      name="widgetBg"
-                      value={widgetBg}
-                      onChange={setWidgetBg}
-                      autoComplete="off"
-                      helpText="Code couleur hexadécimal (ex: #000000 pour noir)"
-                    />
-                    <TextField
-                      label="Couleur du texte"
-                      name="widgetColor"
-                      value={widgetColor}
-                      onChange={setWidgetColor}
-                      autoComplete="off"
-                      helpText="Code couleur hexadécimal (ex: #ffffff pour blanc)"
-                    />
+                    <BlockStack gap="200">
+                      <Text as="p" variant="bodyMd" fontWeight="medium">
+                        Couleur de fond
+                      </Text>
+                      <InlineStack gap="300" align="start">
+                        <input
+                          type="color"
+                          value={widgetBg}
+                          onChange={(e) => setWidgetBg(e.target.value)}
+                          style={{
+                            width: "60px",
+                            height: "40px",
+                            border: "1px solid #e1e3e5",
+                            borderRadius: "4px",
+                            cursor: "pointer",
+                          }}
+                        />
+                        <Box minWidth="200px" style={{ flex: 1 }}>
+                          <TextField
+                            label=""
+                            name="widgetBg"
+                            value={widgetBg}
+                            onChange={setWidgetBg}
+                            autoComplete="off"
+                            helpText="Code couleur hexadécimal"
+                          />
+                        </Box>
+                      </InlineStack>
+                    </BlockStack>
+                    <BlockStack gap="200">
+                      <Text as="p" variant="bodyMd" fontWeight="medium">
+                        Couleur du texte
+                      </Text>
+                      <InlineStack gap="300" align="start">
+                        <input
+                          type="color"
+                          value={widgetColor}
+                          onChange={(e) => setWidgetColor(e.target.value)}
+                          style={{
+                            width: "60px",
+                            height: "40px",
+                            border: "1px solid #e1e3e5",
+                            borderRadius: "4px",
+                            cursor: "pointer",
+                          }}
+                        />
+                        <Box minWidth="200px" style={{ flex: 1 }}>
+                          <TextField
+                            label=""
+                            name="widgetColor"
+                            value={widgetColor}
+                            onChange={setWidgetColor}
+                            autoComplete="off"
+                            helpText="Code couleur hexadécimal"
+                          />
+                        </Box>
+                      </InlineStack>
+                    </BlockStack>
                     <Button 
                       submit 
                       variant="primary" 
