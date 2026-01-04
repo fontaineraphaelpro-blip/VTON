@@ -65,8 +65,8 @@
       }
       
       function checkStatus(shop, productId) {
-        // Construct URL for app proxy - use absolute path
-        const url = '/apps/tryon/status?shop=' + encodeURIComponent(shop) + '&product_id=' + encodeURIComponent(productId);
+        // Construct absolute URL for app proxy
+        const url = window.location.origin + '/apps/tryon/status?shop=' + encodeURIComponent(shop) + '&product_id=' + encodeURIComponent(productId);
         
         return fetch(url, {
           method: 'GET',
@@ -380,8 +380,8 @@
           error.textContent = '';
         }
         
-        // Construct URL for app proxy
-        const url = '/apps/tryon/generate?shop=' + encodeURIComponent(state.shop) + '&product_id=' + encodeURIComponent(state.productId);
+        // Construct absolute URL for app proxy
+        const url = window.location.origin + '/apps/tryon/generate?shop=' + encodeURIComponent(state.shop) + '&product_id=' + encodeURIComponent(state.productId);
         
         fetch(url, {
           method: 'POST',
