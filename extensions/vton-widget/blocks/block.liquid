@@ -339,6 +339,76 @@
             .vton-error.active {
               display: block;
             }
+            @media (max-width: 640px) {
+              .vton-widget-container {
+                margin: 16px 0;
+              }
+              .vton-button {
+                padding: 12px 20px;
+                font-size: 15px;
+              }
+              .vton-modal-overlay {
+                padding: 10px;
+              }
+              .vton-modal {
+                max-width: 100%;
+                max-height: 95vh;
+                border-radius: 8px 8px 0 0;
+              }
+              .vton-modal-content {
+                padding: 20px 16px;
+              }
+              .vton-upload-area {
+                padding: 32px 20px;
+              }
+              .vton-upload-area p {
+                font-size: 13px;
+              }
+              .vton-generate-btn {
+                padding: 12px;
+                font-size: 15px;
+              }
+              .vton-modal-close {
+                top: 8px;
+                right: 8px;
+                font-size: 32px;
+                padding: 8px;
+              }
+              .vton-loading {
+                padding: 32px 20px;
+              }
+              .vton-loading-text {
+                font-size: 13px;
+              }
+              .vton-privacy-notice {
+                font-size: 11px;
+                padding: 8px;
+                margin: 8px 0;
+              }
+              .vton-error {
+                padding: 12px;
+                font-size: 14px;
+              }
+            }
+            @media (max-width: 480px) {
+              .vton-button {
+                padding: 11px 16px;
+                font-size: 14px;
+              }
+              .vton-modal-content {
+                padding: 16px 12px;
+              }
+              .vton-upload-area {
+                padding: 28px 16px;
+              }
+              .vton-generate-btn {
+                padding: 11px;
+                font-size: 14px;
+              }
+              .vton-loading {
+                padding: 28px 16px;
+              }
+            }
           </style>
           <div class="vton-widget-container">
             <button class="vton-button" style="background: ${buttonBg}; color: ${buttonColor};" onclick="window.vtonWidgetInstance.openModal()">
