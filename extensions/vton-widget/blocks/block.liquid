@@ -117,8 +117,8 @@
             throw new Error('Missing shop or product ID');
           }
           
-          const apiBase = window.location.origin + '/apps/tryon';
-          const url = new URL(`${apiBase}/status`);
+          // Use relative URL for Shopify App Proxy
+          const url = new URL('/apps/tryon/status', window.location.origin);
           url.searchParams.set('shop', this.shop);
           url.searchParams.set('product_id', this.productId);
           
@@ -573,8 +573,8 @@
           this.setState(STATE.LOADING);
           
           try {
-            const apiBase = window.location.origin + '/apps/tryon';
-            const url = new URL(`${apiBase}/generate`);
+            // Use relative URL for Shopify App Proxy
+            const url = new URL('/apps/tryon/generate', window.location.origin);
             url.searchParams.set('shop', this.shop);
             url.searchParams.set('product_id', this.productId);
             
@@ -609,8 +609,8 @@
           }
           
           try {
-            const apiBase = window.location.origin + '/apps/tryon';
-            const url = new URL(`${apiBase}/atc`);
+            // Use relative URL for Shopify App Proxy
+            const url = new URL('/apps/tryon/atc', window.location.origin);
             url.searchParams.set('shop', this.shop);
             if (this.productId) {
               url.searchParams.set('product_id', this.productId);
