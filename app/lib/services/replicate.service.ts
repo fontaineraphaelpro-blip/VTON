@@ -69,9 +69,24 @@ export async function generateTryOn({ userPhoto, productImageUrl }: GenerateTryO
     {
       input: inputPayload,
     }
-  ) as string;
+  );
 
+  console.log('[Replicate] Generation completed, output type:', typeof output);
   console.log('[Replicate] Generation completed, output:', output);
 
-  return output;
+  // Replicate peut retourner une string (URL) ou un tableau d'URLs
+  let resultUrl: string;
+  if (typeof output === 'string') {
+    resultUrl = output;
+  } else if (Array.isArray(output) && output.length > 0) {
+    resultUrl = output[0];
+  } else if (output && typeof output === 'object' && 'url' in output) {
+    resultUrl = (output as any).url;
+  } else {
+    throw new Error('Unexpected output format from Replicate: ' + JSON.stringify(output));
+  }
+
+  console.log('[Replicate] Final result URL:', resultUrl);
+
+  return resultUrl;
 }

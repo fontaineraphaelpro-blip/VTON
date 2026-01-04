@@ -523,25 +523,35 @@
           return response.json();
         }).then(function(data) {
           console.log('[VTON] Generation response data:', JSON.stringify(data, null, 2));
-          state.resultImageUrl = data.result_url || data.image_url || data.output;
+          
+          // Extraire l'URL du résultat (plusieurs formats possibles)
+          state.resultImageUrl = data.result_url || data.image_url || data.output || (data.result && data.result.url) || (Array.isArray(data.result) && data.result[0]);
+          
           console.log('[VTON] Extracted result URL:', state.resultImageUrl);
-          console.log('[VTON] Result element:', result);
+          console.log('[VTON] Result element exists:', !!result);
+          
+          // Masquer le loading
           if (loading) loading.classList.remove('active');
-          if (result && state.resultImageUrl) {
+          
+          // Afficher le résultat
+          if (result && state.resultImageUrl && typeof state.resultImageUrl === 'string') {
             result.classList.add('active');
-            result.innerHTML = '<img src="' + state.resultImageUrl + '" alt="Result" style="width: 100%; border-radius: 8px;" />';
-            console.log('[VTON] Result displayed successfully, HTML:', result.innerHTML);
+            result.innerHTML = '<img src="' + state.resultImageUrl + '" alt="Résultat" style="width: 100%; border-radius: 8px; display: block;" />';
+            console.log('[VTON] Result displayed successfully');
+            console.log('[VTON] Image src:', state.resultImageUrl);
           } else {
             console.error('[VTON] Cannot display result:', {
               hasResult: !!result,
               resultImageUrl: state.resultImageUrl,
+              resultImageUrlType: typeof state.resultImageUrl,
               data: data
             });
             if (error) {
               error.classList.add('active');
-              error.textContent = 'Le résultat a été généré mais n\'a pas pu être affiché. URL: ' + (state.resultImageUrl || 'non disponible');
+              error.textContent = 'Erreur: Impossible d\'afficher le résultat. Veuillez réessayer.';
             }
           }
+          
           if (generateBtn) generateBtn.disabled = false;
         }).catch(function(error) {
           console.error('[VTON] Generation error:', error);
