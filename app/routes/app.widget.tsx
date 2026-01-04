@@ -63,8 +63,22 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       widgetColor,
     });
 
-    console.log("[Widget Action] Widget configuration saved successfully");
-    return json({ success: true });
+    // Verify the save by reading back from database
+    const verifyShop = await getShop(shop);
+    console.log("[Widget Action] Widget configuration saved and verified:", {
+      widget_text: verifyShop?.widget_text,
+      widget_bg: verifyShop?.widget_bg,
+      widget_color: verifyShop?.widget_color,
+    });
+
+    return json({ 
+      success: true,
+      savedValues: {
+        widget_text: verifyShop?.widget_text,
+        widget_bg: verifyShop?.widget_bg,
+        widget_color: verifyShop?.widget_color,
+      }
+    });
   } catch (error) {
     console.error("[Widget Action] Error saving widget configuration:", error);
     return json({ 
@@ -131,6 +145,11 @@ export default function Widget() {
           <div style={{ marginBottom: "var(--spacing-lg)" }}>
             <Banner tone="success">
               Configuration enregistrée avec succès ! Les modifications sont maintenant dans la base de données et seront chargées automatiquement par le widget sur vos pages produits. Rafraîchissez une page produit pour voir les changements.
+              {fetcher.data?.savedValues && (
+                <div style={{ marginTop: "8px", fontSize: "12px" }}>
+                  Valeurs sauvegardées: texte="{fetcher.data.savedValues.widget_text}", bg="{fetcher.data.savedValues.widget_bg}", color="{fetcher.data.savedValues.widget_color}"
+                </div>
+              )}
             </Banner>
           </div>
         )}
