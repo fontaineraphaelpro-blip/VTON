@@ -456,13 +456,6 @@ export default function Credits() {
           </div>
         )}
 
-        {fetcher.data?.success && (fetcher.data as any)?.redirect && (
-          <div style={{ marginBottom: "var(--spacing-lg)" }}>
-            <Banner tone="info" title="Redirection vers le paiement..." onDismiss={() => {}}>
-              Redirection vers le checkout Shopify...
-            </Banner>
-          </div>
-        )}
 
         {(fetcher.data as any)?.error && (
           <div style={{ marginBottom: "var(--spacing-lg)" }}>
