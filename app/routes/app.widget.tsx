@@ -213,7 +213,7 @@ export default function Widget() {
         {fetcher.data?.success && (
           <div style={{ marginBottom: "var(--spacing-lg)" }}>
             <Banner tone="success">
-              Widget configuration saved successfully. Changes will appear on your store after the widget reloads.
+              Configuration enregistrée avec succès ! Les modifications sont maintenant dans la base de données et seront chargées automatiquement par le widget sur vos pages produits. Rafraîchissez une page produit pour voir les changements.
             </Banner>
           </div>
         )}
