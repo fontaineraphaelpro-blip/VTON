@@ -608,12 +608,12 @@ export default function Credits() {
         )}
 
 
-        {(fetcher.data as any)?.error && (
+        {(fetcher.data as any)?.error && showErrorBanner && (
           <div style={{ marginBottom: "var(--spacing-lg)" }}>
             <Banner 
               tone="critical" 
               title={(fetcher.data as any)?.requiresAuth ? "Authentication Required" : "Error"}
-              onDismiss={() => {}}
+              onDismiss={() => setShowErrorBanner(false)}
               action={(fetcher.data as any)?.requiresAuth ? {
                 content: (fetcher.data as any)?.reauthUrl ? "Re-authenticate" : "Refresh page",
                 onAction: () => {
