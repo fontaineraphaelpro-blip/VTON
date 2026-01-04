@@ -27,6 +27,13 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const body = await request.json();
     const { user_photo, product_id, product_image_url } = body;
 
+    console.log('[Generate] Received request body:', {
+      has_user_photo: !!user_photo,
+      has_product_id: !!product_id,
+      has_product_image_url: !!product_image_url,
+      product_image_url: product_image_url
+    });
+
     if (!user_photo || !product_id) {
       return json({ error: "Missing user_photo or product_id" }, { status: 400 });
     }
