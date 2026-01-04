@@ -73,20 +73,51 @@ export async function generateTryOn({ userPhoto, productImageUrl }: GenerateTryO
 
   console.log('[Replicate] Generation completed, output type:', typeof output);
   console.log('[Replicate] Generation completed, output:', output);
+  console.log('[Replicate] Output constructor:', output?.constructor?.name);
 
-  // Replicate peut retourner une string (URL) ou un tableau d'URLs
+  // Le SDK Replicate devrait retourner directement une string URL
+  // Mais gérer différents formats au cas où
   let resultUrl: string;
+  
   if (typeof output === 'string') {
+    // Format attendu : string URL
     resultUrl = output;
   } else if (Array.isArray(output) && output.length > 0) {
-    resultUrl = output[0];
-  } else if (output && typeof output === 'object' && 'url' in output) {
-    resultUrl = (output as any).url;
+    // Format array : prendre la première URL
+    resultUrl = typeof output[0] === 'string' ? output[0] : String(output[0]);
+  } else if (output && typeof output === 'object') {
+    const outputAny = output as any;
+    
+    // Si c'est un ReadableStream (ne devrait pas arriver), lancer une erreur explicite
+    if (outputAny instanceof ReadableStream || (outputAny.constructor && outputAny.constructor.name === 'ReadableStream')) {
+      throw new Error('Replicate returned a ReadableStream instead of URL string. This should not happen with replicate.run(). The SDK may have changed. Please check the Replicate SDK documentation.');
+    }
+    
+    // Vérifier différentes propriétés possibles
+    if (typeof outputAny.url === 'string') {
+      resultUrl = outputAny.url;
+    } else if (typeof outputAny.output === 'string') {
+      resultUrl = outputAny.output;
+    } else if (Array.isArray(outputAny.output) && outputAny.output.length > 0) {
+      resultUrl = typeof outputAny.output[0] === 'string' ? outputAny.output[0] : String(outputAny.output[0]);
+    } else {
+      // Essayer de convertir en string et vérifier si c'est une URL
+      const str = String(output);
+      if (str.startsWith('http')) {
+        resultUrl = str;
+      } else {
+        throw new Error('Unexpected output format from Replicate. Output type: ' + typeof output + ', Constructor: ' + (output?.constructor?.name || 'unknown') + ', Output: ' + JSON.stringify(output, Object.getOwnPropertyNames(output), 2));
+      }
+    }
   } else {
-    throw new Error('Unexpected output format from Replicate: ' + JSON.stringify(output));
+    throw new Error('Unexpected output format from Replicate. Type: ' + typeof output);
   }
 
   console.log('[Replicate] Final result URL:', resultUrl);
+
+  if (!resultUrl || typeof resultUrl !== 'string' || !resultUrl.startsWith('http')) {
+    throw new Error('Invalid result URL from Replicate: ' + resultUrl + ' (type: ' + typeof resultUrl + ')');
+  }
 
   return resultUrl;
 }
