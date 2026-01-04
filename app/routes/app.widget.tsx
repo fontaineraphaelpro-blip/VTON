@@ -104,20 +104,25 @@ export default function Widget() {
   const shop = (loaderData as any).shop || null;
   const error = (loaderData as any).error || null;
 
-  const [widgetText, setWidgetText] = useState(shop?.widget_text || "Try It On Now ✨");
-  const [widgetBg, setWidgetBg] = useState(shop?.widget_bg || "#000000");
-  const [widgetColor, setWidgetColor] = useState(shop?.widget_color || "#ffffff");
+  // Initialize state from shop data on mount
+  const [widgetText, setWidgetText] = useState(() => shop?.widget_text || "Try It On Now ✨");
+  const [widgetBg, setWidgetBg] = useState(() => shop?.widget_bg || "#000000");
+  const [widgetColor, setWidgetColor] = useState(() => shop?.widget_color || "#ffffff");
 
-  // Update local state when shop data changes (from loader)
+  // Only update from shop data on initial load, not after saves
+  // This prevents the loader from overwriting user edits
+  const [isInitialized, setIsInitialized] = useState(false);
   useEffect(() => {
-    if (shop) {
+    if (shop && !isInitialized) {
       setWidgetText(shop.widget_text || "Try It On Now ✨");
       setWidgetBg(shop.widget_bg || "#000000");
       setWidgetColor(shop.widget_color || "#ffffff");
+      setIsInitialized(true);
     }
-  }, [shop]);
+  }, [shop, isInitialized]);
 
   // Update local state immediately when save is successful (from action response)
+  // This ensures the UI reflects the saved values right away
   useEffect(() => {
     if (fetcher.data?.success && fetcher.data?.savedValues) {
       // Update state immediately from the saved values
@@ -125,12 +130,10 @@ export default function Widget() {
       setWidgetBg(fetcher.data.savedValues.widget_bg || "#000000");
       setWidgetColor(fetcher.data.savedValues.widget_color || "#ffffff");
       
-      // Revalidate after a short delay to refresh the loader data
-      const timeoutId = setTimeout(() => {
+      // Silently revalidate in the background without affecting the UI
+      setTimeout(() => {
         revalidator.revalidate();
-      }, 300);
-      
-      return () => clearTimeout(timeoutId);
+      }, 200);
     }
   }, [fetcher.data?.success, fetcher.data?.savedValues, revalidator]);
 
@@ -138,7 +141,7 @@ export default function Widget() {
     e.preventDefault();
     
     // Prevent multiple simultaneous submissions
-    if (fetcher.state === "submitting") {
+    if (fetcher.state === "submitting" || fetcher.state === "loading") {
       return;
     }
     
