@@ -10,7 +10,7 @@
       
       // Configuration
       const CONFIG = {
-        apiBase: '{{ shop.url }}/apps/tryon',
+        apiBase: window.location.origin + '/apps/tryon',
         selectors: {
           addToCartButton: [
             'form[action*="/cart/add"] button[type="submit"]',
