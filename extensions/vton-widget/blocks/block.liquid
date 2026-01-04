@@ -8,6 +8,10 @@
     (function() {
       'use strict';
       
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'block.liquid:script-init',message:'block.liquid script executing',data:{readyState:document.readyState,url:window.location.href,origin:window.location.origin},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(function(){});
+      // #endregion
+      
       // Wait for DOM to be ready
       if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', initWidget);
