@@ -282,234 +282,43 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         monthlyQuota: monthlyQuota,
       });
     } catch (error) {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:224',message:'Catch block - error caught',data:{errorType:error?.constructor?.name,isResponse:error instanceof Response,isError:error instanceof Error,hasStatus:!!(error as any)?.status,status:(error as any)?.status,message:error instanceof Error ? error.message : String(error)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-        // #endregion
-        // Ne pas loguer l'objet Response directement - extraire seulement les infos nécessaires
-        if (error instanceof Response) {
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:227',message:'Error is Response object',data:{status:error.status,statusText:error.statusText,url:error.url,is401:error.status===401},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-          // #endregion
-          // Handle 401 Unauthorized in catch block
-          if (error.status === 401) {
-            const reauthUrl = error.headers.get('x-shopify-api-request-failure-reauthorize-url');
-            console.warn(`App purchase creation failed: ${error.status} ${error.statusText} - Authentication required`);
-            return json({ 
-              success: false, 
-              error: "Your session has expired. Please refresh the page to re-authenticate.",
-              requiresAuth: true,
-              reauthUrl: reauthUrl || null,
-            });
-          }
-          console.warn(`App purchase creation failed: ${error.status} ${error.statusText}`);
-          return json({ 
-            success: false, 
-            error: `Shopify API error (${error.status}): ${error.statusText}` 
-          });
-        }
-        // Check if error has Response-like properties (status, statusText)
-        const errorAny = error as any;
-        if (errorAny && typeof errorAny === 'object' && 'status' in errorAny && 'statusText' in errorAny) {
-          // Handle Response-like object
-          if (errorAny.status === 401) {
-            const reauthUrl = errorAny.headers?.get?.('x-shopify-api-request-failure-reauthorize-url') || 
-                             errorAny.headers?.['x-shopify-api-request-failure-reauthorize-url'];
-            console.warn(`Draft order creation failed: ${errorAny.status} ${errorAny.statusText} - Authentication required`);
-            return json({ 
-              success: false, 
-              error: "Your session has expired. Please refresh the page to re-authenticate.",
-              requiresAuth: true,
-              reauthUrl: reauthUrl || null,
-            });
-          }
-          console.warn(`Draft order creation failed: ${errorAny.status} ${errorAny.statusText}`);
-          return json({ 
-            success: false, 
-            error: `Shopify API error (${errorAny.status}): ${errorAny.statusText || 'Unknown error'}` 
-          });
-        }
-        // Log normal errors (not Response objects)
-        console.error("Error creating app purchase:", error instanceof Error ? error.message : String(error));
-        let errorMessage: string;
-        if (error instanceof Error) {
-          errorMessage = error.message;
-        } else if (error && typeof error === 'object' && 'message' in error) {
-          errorMessage = String(error.message);
-        } else {
-          errorMessage = "Unknown error occurred";
-        }
-        return json({ 
-          success: false, 
-          error: `Failed to create payment checkout: ${errorMessage}` 
-        });
-      }
+      console.error("[Credits] Error activating plan:", error);
+      return json({ 
+        success: false, 
+        error: error instanceof Error ? error.message : "Erreur lors de l'activation du plan" 
+      });
     }
   } else if (intent === "custom-pack") {
     const customCredits = parseInt(formData.get("customCredits") as string);
     if (customCredits && customCredits >= 301) {
-      // Prix calculé automatiquement pour garantir au moins x2 de marge
-      const totalPrice = customCredits * MIN_CUSTOM_PRICE_PER_CREDIT;
-
+      // NOTE: Cette app utilise Managed Billing (Managed Pricing App)
+      // Shopify gère la facturation automatiquement via le App Store listing
+      // On active directement le plan dans la base de données
+      // La facturation réelle est gérée par Shopify App Store
+      
       try {
-        // Build return URL - redirect back to credits page after payment
-        const baseUrl = new URL(request.url).origin;
-        const returnUrl = new URL("/app/credits", baseUrl);
-        returnUrl.searchParams.set("purchase", "success");
-        returnUrl.searchParams.set("pack", "custom-flexible");
-        returnUrl.searchParams.set("monthlyQuota", String(customCredits));
-
-        console.log("[Credits] Creating custom one-time charge using REST API", { customCredits, totalPrice });
-
-        // Use Shopify GraphQL API to create a one-time charge for custom pack
-        const mutation = `
-          mutation appPurchaseOneTimeCreate($name: String!, $price: MoneyInput!, $returnUrl: URL!, $test: Boolean) {
-            appPurchaseOneTimeCreate(
-              name: $name
-              price: $price
-              returnUrl: $returnUrl
-              test: $test
-            ) {
-              confirmationUrl
-              userErrors {
-                field
-                message
-              }
-            }
-          }
-        `;
-
-        const variables = {
-          name: `Custom Flexible Plan - ${customCredits} try-ons/mois`,
-          price: {
-            amount: totalPrice.toFixed(2),
-            currencyCode: "EUR"
-          },
-          returnUrl: returnUrl.toString(),
-          test: true // Enable draft/test mode for credit purchases
-        };
-
-        console.log("[Credits] Creating custom one-time charge using GraphQL", { customCredits, totalPrice, variables });
-
-        const customGraphqlResponse = await admin.graphql(mutation, {
-          variables
-        });
-
-        const customGraphqlData = await customGraphqlResponse.json() as any;
-
-        console.log("[Credits] Custom GraphQL response received", {
-          hasData: !!customGraphqlData,
-          hasErrors: !!customGraphqlData.errors,
-          data: customGraphqlData
-        });
-
-        if (customGraphqlData.errors) {
-          console.error("[Credits] Custom GraphQL errors:", customGraphqlData.errors);
-          const errorMessage = customGraphqlData.errors.map((e: any) => e.message).join(", ");
-          return json({ 
-            success: false, 
-            error: `Shopify API error: ${errorMessage}`,
-          });
-        }
-
-        const purchaseData = customGraphqlData.data?.appPurchaseOneTimeCreate;
+        // Activer le plan custom directement dans la base de données
+        await upsertShop(shop, { monthlyQuota: customCredits });
         
-        if (!purchaseData) {
-          console.error("No purchase data returned in response (custom):", customGraphqlData);
-          return json({ 
-            success: false, 
-            error: "Failed to create charge. Please check your Shopify permissions.",
-          });
-        }
+        console.log(`[Credits] Custom flexible plan activated with monthly quota ${customCredits}`, {
+          shop,
+          monthlyQuota: customCredits,
+        });
 
-        if (purchaseData.userErrors && purchaseData.userErrors.length > 0) {
-          const errorMessage = purchaseData.userErrors.map((e: any) => e.message).join(", ");
-          console.error("User errors (custom):", purchaseData.userErrors);
-          return json({ 
-            success: false, 
-            error: `Shopify API error: ${errorMessage}`,
-          });
-        }
-
-        if (!purchaseData.confirmationUrl) {
-          console.error("No confirmation URL returned (custom):", purchaseData);
-          return json({ 
-            success: false, 
-            error: "Charge created but no confirmation URL available. Please try again.",
-          });
-        }
-
-        // Return confirmation URL for redirect to Shopify checkout
         return json({ 
           success: true, 
-          redirect: true,
-          checkoutUrl: purchaseData.confirmationUrl,
-          pack: "Custom", 
-          credits: customCredits,
-          price: totalPrice,
+          message: `Plan Custom Flexible activé avec succès ! Quota mensuel : ${customCredits} try-ons/mois.`,
+          planActivated: "custom-flexible",
+          monthlyQuota: customCredits,
         });
       } catch (error) {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:399',message:'Catch block - custom error caught',data:{errorType:error?.constructor?.name,isResponse:error instanceof Response,isError:error instanceof Error,hasStatus:!!(error as any)?.status,status:(error as any)?.status,message:error instanceof Error ? error.message : String(error)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-        // #endregion
-        // Ne pas loguer l'objet Response directement - extraire seulement les infos nécessaires
-        if (error instanceof Response) {
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:402',message:'Custom error is Response object',data:{status:error.status,statusText:error.statusText,url:error.url,is401:error.status===401},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-          // #endregion
-          // Handle 401 Unauthorized in catch block
-          if (error.status === 401) {
-            const reauthUrl = error.headers.get('x-shopify-api-request-failure-reauthorize-url');
-            console.warn(`[Credits] Custom app purchase creation failed: ${error.status} ${error.statusText} - Authentication required`, { reauthUrl });
-            return json({ 
-              success: false, 
-              error: "Votre session a expiré. Veuillez rafraîchir la page pour vous ré-authentifier.",
-              requiresAuth: true,
-              reauthUrl: reauthUrl || null,
-            });
-          }
-          console.warn(`Custom app purchase creation failed: ${error.status} ${error.statusText}`);
-          return json({ 
-            success: false, 
-            error: `Shopify API error (${error.status}): ${error.statusText}` 
-          });
-        }
-        // Check if error has Response-like properties (status, statusText)
-        const errorAny = error as any;
-        if (errorAny && typeof errorAny === 'object' && 'status' in errorAny && 'statusText' in errorAny) {
-          // Handle Response-like object
-          if (errorAny.status === 401) {
-            const reauthUrl = errorAny.headers?.get?.('x-shopify-api-request-failure-reauthorize-url') || 
-                             errorAny.headers?.['x-shopify-api-request-failure-reauthorize-url'];
-            console.warn(`[Credits] Custom draft order creation failed: ${errorAny.status} ${errorAny.statusText} - Authentication required`, { reauthUrl });
-            return json({ 
-              success: false, 
-              error: "Votre session a expiré. Veuillez rafraîchir la page pour vous ré-authentifier.",
-              requiresAuth: true,
-              reauthUrl: reauthUrl || null,
-            });
-          }
-          console.warn(`Custom draft order creation failed: ${errorAny.status} ${errorAny.statusText}`);
-          return json({ 
-            success: false, 
-            error: `Shopify API error (${errorAny.status}): ${errorAny.statusText || 'Unknown error'}` 
-          });
-        }
-        // Log normal errors (not Response objects)
-        console.error("Error creating custom app purchase:", error instanceof Error ? error.message : String(error));
-        let errorMessage: string;
-        if (error instanceof Error) {
-          errorMessage = error.message;
-        } else if (error && typeof error === 'object' && 'message' in error) {
-          errorMessage = String(error.message);
-        } else {
-          errorMessage = "Unknown error occurred";
-        }
-        return json({
-          success: false,
-          error: `Failed to create payment checkout: ${errorMessage}`
+        console.error("[Credits] Error activating custom plan:", error);
+        return json({ 
+          success: false, 
+          error: error instanceof Error ? error.message : "Erreur lors de l'activation du plan custom" 
         });
       }
-      } else {
+    } else {
       return json({ success: false, error: "Minimum 301 try-ons requis pour le plan Custom Flexible" });
     }
   }
