@@ -112,26 +112,44 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     const packId = url.searchParams.get("pack");
     const creditsParam = url.searchParams.get("credits");
 
-    if (purchaseSuccess === "success" && packId && creditsParam) {
-      const creditsToAdd = parseInt(creditsParam);
-      if (creditsToAdd > 0 && shopData) {
-        // Credit the tokens automatically
-        const newCredits = (shopData.credits || 0) + creditsToAdd;
-        await upsertShop(shop, { credits: newCredits });
+    if (purchaseSuccess === "success" && packId) {
+      // Find the pack that was purchased
+      const pack = PRICING_PLANS.find((p) => p.id === packId);
+      
+      if (pack && shopData) {
+        // For monthly subscription plans, set the monthly quota instead of adding credits
+        const monthlyQuota = (pack as any).monthlyQuota || pack.credits;
         
-        console.log(`[Credits] Auto-credited ${creditsToAdd} credits for pack ${packId}`, {
+        await upsertShop(shop, { monthlyQuota: monthlyQuota });
+        
+        console.log(`[Credits] Activated plan ${packId} with monthly quota ${monthlyQuota}`, {
           shop,
-          oldCredits: shopData.credits,
-          newCredits,
+          packId,
+          monthlyQuota,
         });
 
-        // Reload shop data after crediting
+        // Reload shop data after updating plan
         const updatedShopData = await getShop(shop);
         return json({
           shop: updatedShopData || null,
           purchaseSuccess: true,
-          creditsAdded: creditsToAdd,
+          planActivated: packId,
+          monthlyQuota: monthlyQuota,
         });
+      } else if (packId === "custom-flexible" && creditsParam) {
+        // Handle custom flexible plan
+        const customQuota = parseInt(creditsParam);
+        if (customQuota >= 301) {
+          await upsertShop(shop, { monthlyQuota: customQuota });
+          
+          const updatedShopData = await getShop(shop);
+          return json({
+            shop: updatedShopData || null,
+            purchaseSuccess: true,
+            planActivated: "custom-flexible",
+            monthlyQuota: customQuota,
+          });
+        }
       }
     }
 
