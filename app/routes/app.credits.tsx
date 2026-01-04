@@ -389,6 +389,20 @@ export default function Credits() {
     submittingPackId 
   });
 
+  // Determine which plan is currently active based on monthly_quota
+  const currentMonthlyQuota = shop?.monthly_quota || 0;
+  const getActivePlanId = () => {
+    if (!currentMonthlyQuota) return "free"; // Default to free if no quota
+    // Find the plan that matches the current monthly quota
+    const matchingPlan = PRICING_PLANS.find(plan => (plan as any).monthlyQuota === currentMonthlyQuota);
+    if (matchingPlan) return matchingPlan.id;
+    // If quota is >= 301, it's a custom flexible plan
+    if (currentMonthlyQuota >= 301) return "custom-flexible";
+    // Default to free
+    return "free";
+  };
+  const activePlanId = getActivePlanId();
+
   // Recharger les données après activation d'un plan
   useEffect(() => {
     if (fetcher.data?.success) {
@@ -529,9 +543,9 @@ export default function Credits() {
                 <button 
                   className="plan-button"
                   onClick={() => handlePurchase(plan.id)}
-                  disabled={isSubmitting || submittingPackId !== null || plan.price === 0}
+                  disabled={isSubmitting || submittingPackId !== null || activePlanId === plan.id}
                 >
-                  {plan.price === 0 ? "Active" : (isSubmitting && submittingPackId === plan.id ? "Processing..." : "Purchase")}
+                  {activePlanId === plan.id ? "Active" : (isSubmitting && submittingPackId === plan.id ? "Processing..." : "Purchase")}
                 </button>
               </div>
             </div>
