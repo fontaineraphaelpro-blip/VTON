@@ -23,9 +23,19 @@ import { ensureTables } from "../lib/db-init.server";
 import { getProductTryonCounts, setProductTryonSetting, getProductTryonSetting } from "../lib/services/db.service";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { admin, session } = await authenticate.admin(request);
-
   try {
+    const { admin, session } = await authenticate.admin(request);
+
+    if (!session || !session.shop) {
+      return json({ 
+        products: [], 
+        shop: null,
+        error: "Invalid session. Please refresh the page to re-authenticate.",
+        requiresAuth: true,
+      });
+    }
+
+    try {
     const response = await admin.graphql(
       `#graphql
         query getProducts {
@@ -125,19 +135,38 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       tryonCounts: tryonCounts || {},
       productSettings: productSettings || {},
     });
+    } catch (dbError) {
+      console.error("Error loading product settings:", dbError);
+      // Continue even if database queries fail
+    }
+    
+    return json({ 
+      products, 
+      shop, 
+      tryonCounts: tryonCounts || {},
+      productSettings: productSettings || {},
+    });
   } catch (error) {
-    console.error("Error fetching products:", error);
+    console.error("Error in products loader:", error);
+    
+    // If authenticate.admin throws a Response (redirect), propagate it
+    if (error instanceof Response) {
+      throw error;
+    }
+    
     let errorMessage: string;
     if (error instanceof Error) {
       errorMessage = error.message;
     } else if (error && typeof error === 'object' && 'message' in error) {
       errorMessage = String(error.message);
-    } else if (error && typeof error === 'object' && 'toString' in error) {
-      errorMessage = error.toString();
     } else {
       errorMessage = "Unknown error occurred";
     }
-    return json({ products: [], shop: session.shop, error: errorMessage });
+    return json({ 
+      products: [], 
+      shop: null, 
+      error: errorMessage 
+    });
   }
 };
 
