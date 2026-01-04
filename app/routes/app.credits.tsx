@@ -250,130 +250,38 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const packId = formData.get("packId") as string;
     const pack = PRICING_PLANS.find((p) => p.id === packId);
 
-    // Le plan Free est gratuit, pas besoin de paiement
-    if (pack.price === 0) {
-      // Pour le plan gratuit, on peut directement créditer les try-ons
-      // ou simplement informer que c'est déjà actif
+    if (!pack) {
       return json({ 
-        success: true, 
-        message: "Le plan Free est déjà actif. Vous avez 2 try-ons par mois avec watermark.",
-        freePlan: true
+        success: false, 
+        error: "Plan introuvable" 
       });
     }
 
-    if (pack) {
-      // Create a Shopify one-time charge using REST API (RecurringApplicationCharge)
-      try {
-        // Build return URL - redirect back to credits page after payment
-        const baseUrl = new URL(request.url).origin;
-        const returnUrl = new URL("/app/credits", baseUrl);
-        returnUrl.searchParams.set("purchase", "success");
-        returnUrl.searchParams.set("pack", pack.id);
-        returnUrl.searchParams.set("monthlyQuota", String((pack as any).monthlyQuota || pack.credits));
+    // NOTE: Cette app utilise Managed Billing (Managed Pricing App)
+    // Shopify gère la facturation automatiquement via le App Store listing
+    // On active directement le plan dans la base de données
+    // La facturation réelle est gérée par Shopify App Store
+    
+    try {
+      const monthlyQuota = (pack as any).monthlyQuota || pack.credits;
+      
+      // Activer le plan directement dans la base de données
+      await upsertShop(shop, { monthlyQuota: monthlyQuota });
+      
+      console.log(`[Credits] Plan ${packId} activated with monthly quota ${monthlyQuota}`, {
+        shop,
+        packId,
+        monthlyQuota,
+        price: pack.price,
+      });
 
-        console.log("[Credits Action] Creating one-time charge using REST API for pack", {
-          packId: pack.id,
-          packName: pack.name,
-          price: pack.price,
-          shop,
-          returnUrl: returnUrl.toString(),
-        });
-
-        // Use Shopify GraphQL API to create a one-time charge (recommended method)
-        const mutation = `
-          mutation appPurchaseOneTimeCreate($name: String!, $price: MoneyInput!, $returnUrl: URL!, $test: Boolean) {
-            appPurchaseOneTimeCreate(
-              name: $name
-              price: $price
-              returnUrl: $returnUrl
-              test: $test
-            ) {
-              confirmationUrl
-              userErrors {
-                field
-                message
-              }
-            }
-          }
-        `;
-
-        const variables = {
-          name: `${pack.name} Plan - ${(pack as any).monthlyQuota || pack.credits} try-ons/mois`,
-          price: {
-            amount: pack.price.toFixed(2),
-            currencyCode: "EUR"
-          },
-          returnUrl: returnUrl.toString(),
-          test: true // Enable draft/test mode for credit purchases
-        };
-
-        console.log("[Credits Action] Creating one-time charge using GraphQL", {
-          packId: pack.id,
-          packName: pack.name,
-          price: pack.price,
-          shop,
-          returnUrl: returnUrl.toString(),
-          variables
-        });
-
-        const graphqlResponse = await admin.graphql(mutation, {
-          variables
-        });
-
-        const graphqlData = await graphqlResponse.json() as any;
-
-        console.log("[Credits Action] GraphQL response received", {
-          hasData: !!graphqlData,
-          hasErrors: !!graphqlData.errors,
-          data: graphqlData
-        });
-
-        if (graphqlData.errors) {
-          console.error("[Credits] GraphQL errors:", graphqlData.errors);
-          const errorMessage = graphqlData.errors.map((e: any) => e.message).join(", ");
-          return json({ 
-            success: false, 
-            error: `Shopify API error: ${errorMessage}`,
-          });
-        }
-
-        const purchaseData = graphqlData.data?.appPurchaseOneTimeCreate;
-        
-        if (!purchaseData) {
-          console.error("No purchase data returned in response:", graphqlData);
-          return json({ 
-            success: false, 
-            error: "Failed to create charge. Please check your Shopify permissions.",
-          });
-        }
-
-        if (purchaseData.userErrors && purchaseData.userErrors.length > 0) {
-          const errorMessage = purchaseData.userErrors.map((e: any) => e.message).join(", ");
-          console.error("User errors:", purchaseData.userErrors);
-          return json({ 
-            success: false, 
-            error: `Shopify API error: ${errorMessage}`,
-          });
-        }
-
-        if (!purchaseData.confirmationUrl) {
-          console.error("No confirmation URL returned:", purchaseData);
-          return json({ 
-            success: false, 
-            error: "Charge created but no confirmation URL available. Please try again.",
-          });
-        }
-
-        // Return confirmation URL for redirect to Shopify checkout
-        return json({ 
-          success: true, 
-          redirect: true,
-          checkoutUrl: purchaseData.confirmationUrl,
-          pack: pack.name, 
-          credits: (pack as any).monthlyQuota || pack.credits,
-          price: pack.price,
-        });
-      } catch (error) {
+      return json({ 
+        success: true, 
+        message: `Plan ${pack.name} activé avec succès ! Quota mensuel : ${monthlyQuota} try-ons/mois.`,
+        planActivated: packId,
+        monthlyQuota: monthlyQuota,
+      });
+    } catch (error) {
         // #region agent log
         fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:224',message:'Catch block - error caught',data:{errorType:error?.constructor?.name,isResponse:error instanceof Response,isError:error instanceof Error,hasStatus:!!(error as any)?.status,status:(error as any)?.status,message:error instanceof Error ? error.message : String(error)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
         // #endregion
