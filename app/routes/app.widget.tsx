@@ -320,22 +320,6 @@ export default function Widget() {
                   </Text>
                 </BlockStack>
 
-                <Divider />
-
-                <BlockStack gap="300">
-                  <Text as="h3" variant="headingMd" fontWeight="semibold">
-                    Comment ça fonctionne
-                  </Text>
-                  <Text variant="bodySm" tone="subdued" as="p">
-                    <strong>Connexion directe :</strong> Les paramètres que vous enregistrez ici sont immédiatement sauvegardés dans la base de données (table <code>shops</code>, colonnes <code>widget_text</code>, <code>widget_bg</code>, <code>widget_color</code>).
-                  </Text>
-                  <Text variant="bodySm" tone="subdued" as="p">
-                    <strong>Chargement par le widget :</strong> Le widget client sur vos pages produits charge ces paramètres depuis l'endpoint <code>/apps/tryon/status</code> à chaque initialisation. Les changements apparaîtront dès qu'un visiteur charge ou recharge une page produit.
-                  </Text>
-                  <Text variant="bodySm" tone="subdued" as="p">
-                    <strong>Important :</strong> Après avoir sauvegardé les modifications, vous devez <strong>recharger complètement la page produit</strong> (F5 ou Ctrl+R) pour voir les changements. Le widget se recharge à chaque chargement de page.
-                  </Text>
-                </BlockStack>
               </BlockStack>
             </Card>
           </Layout.Section>

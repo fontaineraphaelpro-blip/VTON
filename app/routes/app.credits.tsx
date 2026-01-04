@@ -450,10 +450,10 @@ export default function Credits() {
           </div>
         )}
 
-        {purchaseSuccess && planActivated && (
+        {(purchaseSuccess || fetcher.data?.success) && (planActivated || (fetcher.data as any)?.planActivated) && (
           <div style={{ marginBottom: "var(--spacing-lg)" }}>
             <Banner tone="success" title="Abonnement activé !" onDismiss={() => {}}>
-              Votre abonnement a été activé avec succès ! Quota mensuel : {monthlyQuota || shop?.monthly_quota || 0} try-ons/mois.
+              {(fetcher.data as any)?.message || `Votre abonnement a été activé avec succès ! Quota mensuel : ${(fetcher.data as any)?.monthlyQuota || monthlyQuota || shop?.monthly_quota || 0} try-ons/mois.`}
             </Banner>
           </div>
         )}
