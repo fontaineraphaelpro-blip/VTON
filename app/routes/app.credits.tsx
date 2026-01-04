@@ -269,7 +269,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         const returnUrl = new URL("/app/credits", baseUrl);
         returnUrl.searchParams.set("purchase", "success");
         returnUrl.searchParams.set("pack", pack.id);
-        returnUrl.searchParams.set("credits", String((pack as any).monthlyQuota || pack.credits));
+        returnUrl.searchParams.set("monthlyQuota", String((pack as any).monthlyQuota || pack.credits));
 
         console.log("[Credits Action] Creating one-time charge using REST API for pack", {
           packId: pack.id,
