@@ -13,8 +13,8 @@
 import type { ActionFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import crypto from "crypto";
-import { upsertShop } from "../../lib/services/db.service";
-import { ensureTables } from "../../lib/db-init.server";
+import { upsertShop } from "../lib/services/db.service";
+import { ensureTables } from "../lib/db-init.server";
 
 const SHOPIFY_API_SECRET = process.env.SHOPIFY_API_SECRET || "";
 
