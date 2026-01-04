@@ -25,7 +25,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     }
 
     const body = await request.json();
-    const { user_photo, product_id } = body;
+    const { user_photo, product_id, product_image_url } = body;
 
     if (!user_photo || !product_id) {
       return json({ error: "Missing user_photo or product_id" }, { status: 400 });
