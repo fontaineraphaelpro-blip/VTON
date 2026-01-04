@@ -53,7 +53,7 @@ export default function Terms() {
                 <ul>
                   <li>
                     <Text as="p" variant="bodyMd">
-                      <strong>Free Plan:</strong> 2 try-ons per month with watermark
+                      <strong>Free Plan:</strong> 4 try-ons per month with watermark
                     </Text>
                   </li>
                   <li>

@@ -26,14 +26,14 @@ const PRICING_PLANS = [
   {
     id: "free",
     name: "Free",
-    credits: 2,
+    credits: 4,
     price: 0.00,
     pricePerCredit: 0.00,
-    description: "Test 2 try-ons per month with watermark to discover the tool",
+    description: "Test 4 try-ons per month with watermark to discover the tool",
     highlight: false,
     popular: false,
     badge: "Trial",
-    monthlyQuota: 2,
+    monthlyQuota: 4,
     hasWatermark: true,
   },
   {
