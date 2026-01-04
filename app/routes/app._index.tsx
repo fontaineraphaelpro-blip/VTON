@@ -33,6 +33,22 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       getMonthlyTryonUsage(shop).catch(() => 0), // ADDED: Get monthly usage
     ]);
 
+    // If shop doesn't exist yet, create it with free plan (4 credits/month)
+    if (!shopData) {
+      await upsertShop(shop, {
+        monthlyQuota: 4, // Initialize with free plan
+      });
+      // Re-fetch shop data after creation
+      const newShopData = await getShop(shop);
+      return json({
+        shop: newShopData,
+        recentLogs: [],
+        topProducts: [],
+        dailyStats: [],
+        monthlyUsage: 0,
+      });
+    }
+
     // Installer automatiquement le script tag si pas déjà installé
     try {
       // Construire l'URL du script - utiliser l'URL de l'app directement (pas le store)

@@ -131,10 +131,10 @@ export async function upsertShop(domain: string, data: {
       params
     );
   } else {
-    // Create new shop
+    // Create new shop - automatically initialize with free plan (4 credits/month)
     await query(
-      `INSERT INTO shops (domain, access_token, credits, widget_text, widget_bg, widget_color, max_tries_per_user)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      `INSERT INTO shops (domain, access_token, credits, widget_text, widget_bg, widget_color, max_tries_per_user, monthly_quota)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
       [
         domain,
         data.accessToken || "",
@@ -143,6 +143,7 @@ export async function upsertShop(domain: string, data: {
         data.widgetBg || "#000000",
         data.widgetColor || "#ffffff",
         data.maxTriesPerUser || 5,
+        data.monthlyQuota !== undefined ? data.monthlyQuota : 4, // Default to 4 (free plan) for new shops
       ]
     );
   }
