@@ -1,5 +1,5 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
-import { json } from "@remix-run/node";
+import { json, redirect } from "@remix-run/node";
 import { useLoaderData, useFetcher, useRevalidator } from "@remix-run/react";
 import { useState, useEffect, useRef } from "react";
 import {
@@ -257,35 +257,94 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       });
     }
 
-    // NOTE: Cette app utilise Managed Billing (Managed Pricing App)
-    // Shopify gère la facturation automatiquement via le App Store listing
-    // On active directement le plan dans la base de données
-    // La facturation réelle est gérée par Shopify App Store
-    
     try {
       const monthlyQuota = (pack as any).monthlyQuota || pack.credits;
       
-      // Activer le plan directement dans la base de données
-      await upsertShop(shop, { monthlyQuota: monthlyQuota });
+      // Skip payment for free plan
+      if (pack.price === 0) {
+        await upsertShop(shop, { monthlyQuota: monthlyQuota });
+        return json({ 
+          success: true, 
+          message: `Plan ${pack.name} activated successfully! Monthly quota: ${monthlyQuota} try-ons/month.`,
+          planActivated: packId,
+          monthlyQuota: monthlyQuota,
+        });
+      }
       
-      console.log(`[Credits] Plan ${packId} activated with monthly quota ${monthlyQuota}`, {
-        shop,
-        packId,
-        monthlyQuota,
-        price: pack.price,
-      });
+      // Create recurring subscription for paid plans
+      const returnUrl = new URL(request.url).origin + `/app/credits?pack=${packId}&monthlyQuota=${monthlyQuota}`;
+      
+      const response = await admin.graphql(
+        `#graphql
+          mutation appSubscriptionCreate($name: String!, $lineItems: [AppSubscriptionLineItemInput!]!, $returnUrl: URL!, $test: Boolean) {
+            appSubscriptionCreate(
+              name: $name
+              lineItems: $lineItems
+              returnUrl: $returnUrl
+              test: $test
+            ) {
+              appSubscription {
+                id
+                status
+              }
+              confirmationUrl
+              userErrors {
+                field
+                message
+              }
+            }
+          }
+        `,
+        {
+          variables: {
+            name: `${pack.name} Plan - ${monthlyQuota} try-ons/month`,
+            lineItems: [
+              {
+                plan: {
+                  appRecurringPricingDetails: {
+                    price: {
+                      amount: pack.price,
+                      currencyCode: "EUR"
+                    },
+                    interval: "EVERY_30_DAYS"
+                  }
+                }
+              }
+            ],
+            returnUrl: returnUrl,
+            test: process.env.NODE_ENV !== "production"
+          }
+        }
+      );
 
-      return json({ 
-        success: true, 
-        message: `Plan ${pack.name} activated successfully! Monthly quota: ${monthlyQuota} try-ons/month.`,
-        planActivated: packId,
-        monthlyQuota: monthlyQuota,
-      });
+      const responseData = await response.json();
+      
+      if (responseData.data?.appSubscriptionCreate?.userErrors?.length > 0) {
+        const errors = responseData.data.appSubscriptionCreate.userErrors;
+        console.error("[Credits] GraphQL errors:", errors);
+        return json({ 
+          success: false, 
+          error: errors.map((e: any) => e.message).join(", ") 
+        });
+      }
+
+      const confirmationUrl = responseData.data?.appSubscriptionCreate?.confirmationUrl;
+      
+      if (!confirmationUrl) {
+        console.error("[Credits] No confirmation URL returned:", responseData);
+        return json({ 
+          success: false, 
+          error: "Failed to create subscription. Please try again." 
+        });
+      }
+
+      // Redirect to Shopify subscription confirmation page
+      return redirect(confirmationUrl);
     } catch (error) {
-      console.error("[Credits] Error activating plan:", error);
+      console.error("[Credits] Error creating subscription:", error);
       return json({ 
         success: false, 
-        error: error instanceof Error ? error.message : "Error activating plan" 
+        error: error instanceof Error ? error.message : "Error creating subscription" 
       });
     }
   }
@@ -293,31 +352,83 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   if (intent === "custom-pack") {
     const customCredits = parseInt(formData.get("customCredits") as string);
     if (customCredits && customCredits >= 301) {
-      // NOTE: Cette app utilise Managed Billing (Managed Pricing App)
-      // Shopify gère la facturation automatiquement via le App Store listing
-      // On active directement le plan dans la base de données
-      // La facturation réelle est gérée par Shopify App Store
-      
       try {
-        // Activer le plan custom directement dans la base de données
-        await upsertShop(shop, { monthlyQuota: customCredits });
+        // Calculate price for custom plan (at least x2 margin)
+        const calculatedPrice = customCredits * MIN_CUSTOM_PRICE_PER_CREDIT;
+        const returnUrl = new URL(request.url).origin + `/app/credits?purchase=success&pack=custom-flexible&monthlyQuota=${customCredits}`;
         
-        console.log(`[Credits] Custom flexible plan activated with monthly quota ${customCredits}`, {
-          shop,
-          monthlyQuota: customCredits,
-        });
+        // Create recurring subscription for custom plan
+        const response = await admin.graphql(
+          `#graphql
+            mutation appSubscriptionCreate($name: String!, $lineItems: [AppSubscriptionLineItemInput!]!, $returnUrl: URL!, $test: Boolean) {
+              appSubscriptionCreate(
+                name: $name
+                lineItems: $lineItems
+                returnUrl: $returnUrl
+                test: $test
+              ) {
+                appSubscription {
+                  id
+                  status
+                }
+                confirmationUrl
+                userErrors {
+                  field
+                  message
+                }
+              }
+            }
+          `,
+          {
+            variables: {
+              name: `Custom Flexible Plan - ${customCredits} try-ons/month`,
+              lineItems: [
+                {
+                  plan: {
+                    appRecurringPricingDetails: {
+                      price: {
+                        amount: calculatedPrice,
+                        currencyCode: "EUR"
+                      },
+                      interval: "EVERY_30_DAYS"
+                    }
+                  }
+                }
+              ],
+              returnUrl: returnUrl,
+              test: process.env.NODE_ENV !== "production"
+            }
+          }
+        );
 
-        return json({ 
-          success: true, 
-          message: `Custom Flexible Plan activated successfully! Monthly quota: ${customCredits} try-ons/month.`,
-          planActivated: "custom-flexible",
-          monthlyQuota: customCredits,
-        });
+        const responseData = await response.json();
+        
+        if (responseData.data?.appSubscriptionCreate?.userErrors?.length > 0) {
+          const errors = responseData.data.appSubscriptionCreate.userErrors;
+          console.error("[Credits] GraphQL errors:", errors);
+          return json({ 
+            success: false, 
+            error: errors.map((e: any) => e.message).join(", ") 
+          });
+        }
+
+        const confirmationUrl = responseData.data?.appSubscriptionCreate?.confirmationUrl;
+        
+        if (!confirmationUrl) {
+          console.error("[Credits] No confirmation URL returned:", responseData);
+          return json({ 
+            success: false, 
+            error: "Failed to create subscription. Please try again." 
+          });
+        }
+
+        // Redirect to Shopify subscription confirmation page
+        return redirect(confirmationUrl);
       } catch (error) {
-        console.error("[Credits] Error activating custom plan:", error);
+        console.error("[Credits] Error creating custom subscription:", error);
         return json({ 
           success: false, 
-          error: error instanceof Error ? error.message : "Error activating custom plan" 
+          error: error instanceof Error ? error.message : "Error creating subscription" 
         });
       }
     } else {
@@ -558,7 +669,7 @@ export default function Credits() {
               Custom Flexible Plan
             </Text>
             <Text variant="bodyMd" tone="subdued" as="p">
-              Choose more than 300 try-ons per month. Price is calculated automatically to ensure at least x2 margin.
+              Choose more than 300 try-ons per month.
             </Text>
             <Divider />
             <BlockStack gap="300">
@@ -566,7 +677,7 @@ export default function Credits() {
                 <strong>Minimum:</strong> 301 try-ons per month
               </Text>
               <Text variant="bodySm" tone="subdued" as="p">
-                Price is calculated automatically to ensure at least x2 margin. Monthly quota is fixed with automatic reset each month.
+                Monthly quota is fixed with automatic reset each month.
               </Text>
               <form onSubmit={handleCustomPurchase}>
                 <InlineStack gap="300" align="end">
