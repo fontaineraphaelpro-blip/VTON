@@ -486,7 +486,11 @@
         
         if (addToCartButton) {
           // Cliquer sur le bouton "Add to Cart"
-          (addToCartButton as HTMLElement).click();
+          if (addToCartButton instanceof HTMLElement) {
+            addToCartButton.click();
+          } else if (addToCartButton.click) {
+            addToCartButton.click();
+          }
           
           // Tracker l'ajout au panier
           const url = window.location.origin + '/apps/tryon/atc?shop=' + encodeURIComponent(state.shop) + '&product_id=' + encodeURIComponent(state.productId);
