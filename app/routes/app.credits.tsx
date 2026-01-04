@@ -288,7 +288,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         error: error instanceof Error ? error.message : "Erreur lors de l'activation du plan" 
       });
     }
-  } else if (intent === "custom-pack") {
+  }
+  
+  if (intent === "custom-pack") {
     const customCredits = parseInt(formData.get("customCredits") as string);
     if (customCredits && customCredits >= 301) {
       // NOTE: Cette app utilise Managed Billing (Managed Pricing App)
