@@ -448,7 +448,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         const returnUrl = new URL("/app/credits", baseUrl);
         returnUrl.searchParams.set("purchase", "success");
         returnUrl.searchParams.set("pack", "custom-flexible");
-        returnUrl.searchParams.set("credits", String(customCredits));
+        returnUrl.searchParams.set("monthlyQuota", String(customCredits));
 
         console.log("[Credits] Creating custom one-time charge using REST API", { customCredits, totalPrice });
 
@@ -780,10 +780,10 @@ export default function Credits() {
           </div>
         )}
 
-        {(purchaseSuccess || (fetcher.data?.success && !(fetcher.data as any)?.redirect)) && (
+        {purchaseSuccess && planActivated && (
           <div style={{ marginBottom: "var(--spacing-lg)" }}>
-            <Banner tone="success" title="Succès !" onDismiss={() => {}}>
-              {creditsAdded || (fetcher.data as any)?.creditsAdded || (fetcher.data as any)?.credits || 0} crédits ajoutés à votre compte.
+            <Banner tone="success" title="Abonnement activé !" onDismiss={() => {}}>
+              Votre abonnement a été activé avec succès ! Quota mensuel : {monthlyQuota || shop?.monthly_quota || 0} try-ons/mois.
             </Banner>
           </div>
         )}
