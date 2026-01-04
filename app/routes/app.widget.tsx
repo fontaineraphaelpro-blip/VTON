@@ -263,6 +263,85 @@ export default function Widget() {
 
                 <Divider />
 
+                <BlockStack gap="300">
+                  <Text as="h3" variant="headingMd" fontWeight="semibold">
+                    Aperçu en temps réel
+                  </Text>
+                  <Text variant="bodySm" tone="subdued" as="p">
+                    Voici un aperçu de votre widget tel qu'il apparaîtra sur vos pages produits. Les modifications sont appliquées en temps réel.
+                  </Text>
+                  <Card>
+                    <div style={{ padding: "16px" }}>
+                      <div 
+                        className="vton-widget-preview"
+                        style={{
+                          width: "100%",
+                          margin: "16px 0",
+                        }}
+                      >
+                        <button
+                          type="button"
+                          className="vton-button-preview"
+                          style={{
+                            width: "100%",
+                            padding: "14px 24px",
+                            border: "none",
+                            borderRadius: "4px",
+                            fontSize: "16px",
+                            fontWeight: 600,
+                            cursor: "pointer",
+                            transition: "opacity 0.2s",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "8px",
+                            backgroundColor: widgetBg || "#000000",
+                            color: widgetColor || "#ffffff",
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.opacity = "0.9";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.opacity = "1";
+                          }}
+                        >
+                          <svg
+                            width="20"
+                            height="20"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            xmlns="http://www.w3.org/2000/svg"
+                            style={{ flexShrink: 0 }}
+                          >
+                            <path
+                              d="M12 2L2 7L12 12L22 7L12 2Z"
+                              stroke={widgetColor || "#ffffff"}
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                            <path
+                              d="M2 17L12 22L22 17"
+                              stroke={widgetColor || "#ffffff"}
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                            <path
+                              d="M2 12L12 17L22 12"
+                              stroke={widgetColor || "#ffffff"}
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                          <span>{widgetText || "Try It On Now ✨"}</span>
+                        </button>
+                      </div>
+                    </div>
+                  </Card>
+                </BlockStack>
+
                 <Divider />
 
                 <BlockStack gap="300">
