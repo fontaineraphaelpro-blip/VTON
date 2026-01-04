@@ -29,8 +29,16 @@ export async function generateTryOn({ userPhoto, productImageUrl }: GenerateTryO
     });
     
     userPhotoUrl = file;
-  } else {
+  } else if (userPhoto.startsWith('http')) {
+    // C'est déjà une URL
     userPhotoUrl = userPhoto;
+  } else {
+    throw new Error('Invalid user photo format');
+  }
+  
+  // Vérifier que productImageUrl est une URL valide
+  if (!productImageUrl || !productImageUrl.startsWith('http')) {
+    throw new Error('Invalid product image URL');
   }
 
   console.log('[Replicate] Starting generation with nano-banana-pro model');
