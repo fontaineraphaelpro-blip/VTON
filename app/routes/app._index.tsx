@@ -36,6 +36,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     // If shop doesn't exist yet, create it with free plan (4 credits/month)
     if (!shopData) {
       await upsertShop(shop, {
+        credits: 4, // Initialize credits for compatibility with old system
         monthlyQuota: 4, // Initialize with free plan
       });
       // Re-fetch shop data after creation
