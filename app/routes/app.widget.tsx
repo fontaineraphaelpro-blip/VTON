@@ -32,7 +32,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       shop: shopData || null,
     });
   } catch (error) {
-    console.error("Widget loader error:", error);
+    if (process.env.NODE_ENV !== "production") {
+      console.error("Widget loader error:", error);
+    }
     return json({
       shop: null,
       error: error instanceof Error ? error.message : "Unknown error",
@@ -49,12 +51,14 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const widgetBg = (formData.get("widgetBg") as string) || "#000000";
   const widgetColor = (formData.get("widgetColor") as string) || "#ffffff";
 
-  console.log("[Widget Action] Saving widget configuration:", {
-    shop,
-    widgetText,
-    widgetBg,
-    widgetColor,
-  });
+  if (process.env.NODE_ENV !== "production") {
+    console.log("[Widget Action] Saving widget configuration:", {
+      shop,
+      widgetText,
+      widgetBg,
+      widgetColor,
+    });
+  }
 
   try {
     await upsertShop(shop, {
@@ -65,11 +69,13 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
     // Verify the save by reading back from database
     const verifyShop = await getShop(shop);
-    console.log("[Widget Action] Widget configuration saved and verified:", {
-      widget_text: verifyShop?.widget_text,
-      widget_bg: verifyShop?.widget_bg,
-      widget_color: verifyShop?.widget_color,
-    });
+    if (process.env.NODE_ENV !== "production") {
+      console.log("[Widget Action] Widget configuration saved and verified:", {
+        widget_text: verifyShop?.widget_text,
+        widget_bg: verifyShop?.widget_bg,
+        widget_color: verifyShop?.widget_color,
+      });
+    }
 
     return json({ 
       success: true,
@@ -80,7 +86,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       }
     });
   } catch (error) {
-    console.error("[Widget Action] Error saving widget configuration:", error);
+    if (process.env.NODE_ENV !== "production") {
+      console.error("[Widget Action] Error saving widget configuration:", error);
+    }
     return json({ 
       success: false, 
         error: error instanceof Error ? error.message : "Error saving configuration"
@@ -100,6 +108,7 @@ export default function Widget() {
   const [widgetBg, setWidgetBg] = useState(shop?.widget_bg || "#000000");
   const [widgetColor, setWidgetColor] = useState(shop?.widget_color || "#ffffff");
 
+  // Update local state when shop data changes (from loader)
   useEffect(() => {
     if (shop) {
       setWidgetText(shop.widget_text || "Try It On Now ✨");
@@ -108,16 +117,31 @@ export default function Widget() {
     }
   }, [shop]);
 
+  // Update local state immediately when save is successful (from action response)
   useEffect(() => {
-    if (fetcher.data?.success) {
-      setTimeout(() => {
+    if (fetcher.data?.success && fetcher.data?.savedValues) {
+      // Update state immediately from the saved values
+      setWidgetText(fetcher.data.savedValues.widget_text || "Try It On Now ✨");
+      setWidgetBg(fetcher.data.savedValues.widget_bg || "#000000");
+      setWidgetColor(fetcher.data.savedValues.widget_color || "#ffffff");
+      
+      // Revalidate after a short delay to refresh the loader data
+      const timeoutId = setTimeout(() => {
         revalidator.revalidate();
-      }, 500);
+      }, 300);
+      
+      return () => clearTimeout(timeoutId);
     }
-  }, [fetcher.data?.success, revalidator]);
+  }, [fetcher.data?.success, fetcher.data?.savedValues, revalidator]);
 
   const handleSave = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    
+    // Prevent multiple simultaneous submissions
+    if (fetcher.state === "submitting") {
+      return;
+    }
+    
     const formData = new FormData(e.currentTarget);
     fetcher.submit(formData, { method: "post" });
   };
