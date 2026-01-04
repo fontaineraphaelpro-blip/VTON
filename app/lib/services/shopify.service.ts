@@ -30,7 +30,10 @@ export async function getProductImageUrl(shop: string, productHandle: string): P
     
     return null; // Retourner null pour forcer l'utilisation d'une méthode alternative
   } catch (error) {
-    console.error(`[Shopify Service] Error getting product image for ${productHandle}:`, error);
+    // Log only in development
+    if (process.env.NODE_ENV !== "production") {
+      console.error(`[Shopify Service] Error getting product image for ${productHandle}:`, error);
+    }
     return null;
   }
 }

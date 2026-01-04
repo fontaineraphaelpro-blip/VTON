@@ -27,7 +27,10 @@ const pool = connectionString
  */
 export async function ensureTables() {
   if (!pool) {
-    console.warn("DATABASE_URL not configured, skipping table creation");
+    // Log only in development
+    if (process.env.NODE_ENV !== "production") {
+      console.warn("DATABASE_URL not configured, skipping table creation");
+    }
     return;
   }
 
@@ -103,9 +106,15 @@ export async function ensureTables() {
       ADD COLUMN IF NOT EXISTS quality_mode TEXT DEFAULT 'balanced'
     `);
 
-    console.log("✅ Business tables initialized");
+    // Log only in development
+    if (process.env.NODE_ENV !== "production") {
+      console.log("✅ Business tables initialized");
+    }
   } catch (error) {
-    console.error("❌ Error initializing business tables:", error);
+    // Log error only in development
+    if (process.env.NODE_ENV !== "production") {
+      console.error("❌ Error initializing business tables:", error);
+    }
     throw error;
   }
 }
