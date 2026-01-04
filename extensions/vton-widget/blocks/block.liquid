@@ -554,7 +554,7 @@
         }).then(function(data) {
           console.log('[VTON] Generation response data:', JSON.stringify(data, null, 2));
           
-          // Extraire l'URL du résultat (plusieurs formats possibles)
+          // Extract result URL (multiple formats possible)
           state.resultImageUrl = data.result_url || data.image_url || data.output || (data.result && data.result.url) || (Array.isArray(data.result) && data.result[0]);
           
           console.log('[VTON] Extracted result URL:', state.resultImageUrl);
@@ -563,7 +563,7 @@
           // Masquer le loading
           if (loading) loading.classList.remove('active');
           
-          // Afficher le résultat avec bouton "Ajouter au panier"
+          // Display result with "Add to Cart" button
           if (result && state.resultImageUrl && typeof state.resultImageUrl === 'string') {
             result.classList.add('active');
             const buttonBg = state.widgetSettings.widget_bg || '#000000';
