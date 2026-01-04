@@ -23,14 +23,20 @@ export async function generateTryOn({ userPhoto, productImageUrl }: GenerateTryO
     const base64Data = userPhoto.split(',')[1];
     const buffer = Buffer.from(base64Data, 'base64');
     
-    console.log('[Replicate] Uploading user photo to Replicate files...');
+    // Log only in development
+    if (process.env.NODE_ENV !== "production") {
+      console.log('[Replicate] Uploading user photo to Replicate files...');
+    }
     const uploadedFile = await replicate.files.create(buffer, {
       contentType: 'image/png',
     });
     
     // Extraire l'URL depuis l'objet retourné
     userPhotoInput = uploadedFile.urls.get;
-    console.log('[Replicate] User photo uploaded, URL:', userPhotoInput);
+    // Log only in development
+    if (process.env.NODE_ENV !== "production") {
+      console.log('[Replicate] User photo uploaded, URL:', userPhotoInput);
+    }
   } else if (userPhoto.startsWith('http')) {
     // C'est déjà une URL
     userPhotoInput = userPhoto;
@@ -55,14 +61,17 @@ export async function generateTryOn({ userPhoto, productImageUrl }: GenerateTryO
     safety_filter_level: "block_only_high",
   };
 
-  console.log('[Replicate] Starting generation with google/nano-banana-pro model');
-  console.log('[Replicate] Input payload:', JSON.stringify({
-    ...inputPayload,
-    image_input: [
-      userPhotoInput,
-      productImageUrl
-    ]
-  }, null, 2));
+  // Log only in development
+  if (process.env.NODE_ENV !== "production") {
+    console.log('[Replicate] Starting generation with google/nano-banana-pro model');
+    console.log('[Replicate] Input payload:', JSON.stringify({
+      ...inputPayload,
+      image_input: [
+        userPhotoInput,
+        productImageUrl
+      ]
+    }, null, 2));
+  }
 
   // Appeler le modèle google/nano-banana-pro
   const output = await replicate.run(
@@ -72,9 +81,12 @@ export async function generateTryOn({ userPhoto, productImageUrl }: GenerateTryO
     }
   );
 
-  console.log('[Replicate] Generation completed, output type:', typeof output);
-  console.log('[Replicate] Generation completed, output:', output);
-  console.log('[Replicate] Output constructor:', output?.constructor?.name);
+  // Log only in development
+  if (process.env.NODE_ENV !== "production") {
+    console.log('[Replicate] Generation completed, output type:', typeof output);
+    console.log('[Replicate] Generation completed, output:', output);
+    console.log('[Replicate] Output constructor:', output?.constructor?.name);
+  }
 
   // Le SDK Replicate devrait retourner directement une string URL
   // Mais gérer différents formats au cas où
@@ -114,7 +126,10 @@ export async function generateTryOn({ userPhoto, productImageUrl }: GenerateTryO
     throw new Error('Unexpected output format from Replicate. Type: ' + typeof output);
   }
 
-  console.log('[Replicate] Final result URL:', resultUrl);
+  // Log only in development
+  if (process.env.NODE_ENV !== "production") {
+    console.log('[Replicate] Final result URL:', resultUrl);
+  }
 
   if (!resultUrl || typeof resultUrl !== 'string' || !resultUrl.startsWith('http')) {
     throw new Error('Invalid result URL from Replicate: ' + resultUrl + ' (type: ' + typeof resultUrl + ')');
