@@ -1,7 +1,7 @@
 import type { ActionFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { generateTryOn } from "../lib/services/replicate.service";
-import { getShop, upsertShop } from "../lib/services/db.service";
+import { getShop, upsertShop, createTryonLog } from "../lib/services/db.service";
 import { getProductImageUrl } from "../lib/services/shopify.service";
 
 /**
@@ -82,24 +82,64 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
     console.log(`[Generate] Starting generation for shop ${shop}, product ${product_id}`);
 
-    // Générer l'image avec Replicate
-    const resultUrl = await generateTryOn({
-      userPhoto: user_photo,
-      productImageUrl: productImageUrl,
-    });
+    const startTime = Date.now();
 
-    // Incrémenter le quota utilisé
-    await upsertShop(shop, { 
-      monthly_quota_used: (monthlyQuotaUsed + 1) 
-    });
+    try {
+      // Générer l'image avec Replicate
+      const resultUrl = await generateTryOn({
+        userPhoto: user_photo,
+        productImageUrl: productImageUrl,
+      });
 
-    // Logger le résultat
-    console.log(`[Generate] Generation successful for shop ${shop}, product ${product_id}, result: ${resultUrl}`);
+      const latencyMs = Date.now() - startTime;
 
-    return json({
-      result_url: resultUrl,
-      success: true,
-    });
+      // Incrémenter le quota utilisé
+      await upsertShop(shop, { 
+        monthly_quota_used: (monthlyQuotaUsed + 1) 
+      });
+
+      // Créer un log de succès
+      const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0] || 
+                       request.headers.get('x-real-ip') || 
+                       null;
+      
+      await createTryonLog({
+        shop: shop,
+        customerIp: clientIp || undefined,
+        productId: product_id,
+        success: true,
+        latencyMs: latencyMs,
+        resultImageUrl: resultUrl,
+      });
+
+      // Logger le résultat
+      console.log(`[Generate] Generation successful for shop ${shop}, product ${product_id}, result: ${resultUrl}, latency: ${latencyMs}ms`);
+
+      return json({
+        result_url: resultUrl,
+        success: true,
+      });
+    } catch (genError) {
+      const latencyMs = Date.now() - startTime;
+      const errorMessage = genError instanceof Error ? genError.message : 'Unknown error';
+      
+      // Créer un log d'erreur
+      const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0] || 
+                       request.headers.get('x-real-ip') || 
+                       null;
+      
+      await createTryonLog({
+        shop: shop,
+        customerIp: clientIp || undefined,
+        productId: product_id,
+        success: false,
+        errorMessage: errorMessage,
+        latencyMs: latencyMs,
+      });
+
+      // Re-throw l'erreur pour qu'elle soit gérée par le catch externe
+      throw genError;
+    }
   } catch (error) {
     console.error("[Generate] Error:", error);
     return json(
