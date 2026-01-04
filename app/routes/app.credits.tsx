@@ -271,10 +271,11 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         });
       }
       
-      // FOR TESTING: Since this is a Managed Pricing App, we activate plans directly in database
-      // In production, Shopify handles billing automatically via App Store listing
-      // For testing purposes, we activate the plan directly
-      if (process.env.NODE_ENV !== "production" || process.env.ENABLE_DIRECT_PLAN_ACTIVATION === "true") {
+      // FOR TESTING ONLY: Direct plan activation bypasses Shopify billing
+      // SECURITY: This code ONLY runs in development (NODE_ENV !== "production")
+      // In production, billing MUST go through Shopify Billing API
+      // ENABLE_DIRECT_PLAN_ACTIVATION is ignored in production for security
+      if (process.env.NODE_ENV !== "production") {
         await upsertShop(shop, { monthlyQuota: monthlyQuota });
         return json({ 
           success: true, 
@@ -357,16 +358,27 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         const errorMessages = errors.map((e: any) => e.message).join(", ");
         console.error("[Credits] GraphQL errors:", errors);
         
-        // If error is about Managed Pricing, activate plan directly for testing
+        // If error is about Managed Pricing, this is expected for Managed Pricing Apps
+        // In production, Shopify handles billing automatically via App Store listing
+        // We should NOT bypass billing in production - return error instead
         if (errorMessages.includes("tarification gérée") || errorMessages.includes("Managed Pricing") || errorMessages.includes("Billing API")) {
-          console.log("[Credits] Managed Pricing detected, activating plan directly for testing");
-          await upsertShop(shop, { monthlyQuota: monthlyQuota });
-          return json({ 
-            success: true, 
-            message: `Plan ${pack.name} activated successfully! Monthly quota: ${monthlyQuota} try-ons/month. (Direct activation - Managed Pricing App)`,
-            planActivated: packId,
-            monthlyQuota: monthlyQuota,
-          });
+          if (process.env.NODE_ENV !== "production") {
+            // Only allow direct activation in development for testing
+            console.log("[Credits] Managed Pricing detected in development, activating plan directly for testing");
+            await upsertShop(shop, { monthlyQuota: monthlyQuota });
+            return json({ 
+              success: true, 
+              message: `Plan ${pack.name} activated successfully! Monthly quota: ${monthlyQuota} try-ons/month. (Direct activation - Managed Pricing App - DEV ONLY)`,
+              planActivated: packId,
+              monthlyQuota: monthlyQuota,
+            });
+          } else {
+            // In production, return error - billing must go through Shopify
+            return json({ 
+              success: false, 
+              error: "This app uses Managed Pricing. Billing is handled automatically by Shopify. Please contact support if you need assistance."
+            });
+          }
         }
         
         return json({ 
@@ -400,10 +412,11 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const customCredits = parseInt(formData.get("customCredits") as string);
     if (customCredits && customCredits >= 301) {
       try {
-        // FOR TESTING: Since this is a Managed Pricing App, we activate plans directly in database
-        // In production, Shopify handles billing automatically via App Store listing
-        // For testing purposes, we activate the plan directly
-        if (process.env.NODE_ENV !== "production" || process.env.ENABLE_DIRECT_PLAN_ACTIVATION === "true") {
+        // FOR TESTING ONLY: Direct plan activation bypasses Shopify billing
+        // SECURITY: This code ONLY runs in development (NODE_ENV !== "production")
+        // In production, billing MUST go through Shopify Billing API
+        // ENABLE_DIRECT_PLAN_ACTIVATION is ignored in production for security
+        if (process.env.NODE_ENV !== "production") {
           await upsertShop(shop, { monthlyQuota: customCredits });
           return json({ 
             success: true, 
@@ -488,16 +501,27 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           const errorMessages = errors.map((e: any) => e.message).join(", ");
           console.error("[Credits] GraphQL errors:", errors);
           
-          // If error is about Managed Pricing, activate plan directly for testing
+          // If error is about Managed Pricing, this is expected for Managed Pricing Apps
+          // In production, Shopify handles billing automatically via App Store listing
+          // We should NOT bypass billing in production - return error instead
           if (errorMessages.includes("tarification gérée") || errorMessages.includes("Managed Pricing") || errorMessages.includes("Billing API")) {
-            console.log("[Credits] Managed Pricing detected for custom plan, activating directly for testing");
-            await upsertShop(shop, { monthlyQuota: customCredits });
-            return json({ 
-              success: true, 
-              message: `Custom Flexible Plan activated successfully! Monthly quota: ${customCredits} try-ons/month. (Direct activation - Managed Pricing App)`,
-              planActivated: "custom-flexible",
-              monthlyQuota: customCredits,
-            });
+            if (process.env.NODE_ENV !== "production") {
+              // Only allow direct activation in development for testing
+              console.log("[Credits] Managed Pricing detected for custom plan in development, activating directly for testing");
+              await upsertShop(shop, { monthlyQuota: customCredits });
+              return json({ 
+                success: true, 
+                message: `Custom Flexible Plan activated successfully! Monthly quota: ${customCredits} try-ons/month. (Direct activation - Managed Pricing App - DEV ONLY)`,
+                planActivated: "custom-flexible",
+                monthlyQuota: customCredits,
+              });
+            } else {
+              // In production, return error - billing must go through Shopify
+              return json({ 
+                success: false, 
+                error: "This app uses Managed Pricing. Billing is handled automatically by Shopify. Please contact support if you need assistance."
+              });
+            }
           }
           
           return json({ 

@@ -25,7 +25,7 @@ Application Shopify pour le Virtual Try-On utilisant Remix et Replicate.
    ```env
    SHOPIFY_API_KEY=votre_api_key_ici
    SHOPIFY_API_SECRET=votre_api_secret_ici
-   SCOPES=read_products,write_products,read_orders,write_orders
+   SCOPES=read_products,write_script_tags
    SHOPIFY_APP_URL=https://votre-app-url.up.railway.app
    DATABASE_URL=postgresql://username:password@host:5432/database
    REPLICATE_API_TOKEN=votre_replicate_token_ici

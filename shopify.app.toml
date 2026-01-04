@@ -18,7 +18,10 @@ api_version = "2025-01"
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = "read_orders,write_orders,read_products,write_products,write_draft_orders,write_script_tags"
+# Scopes utilisés:
+# - read_products: Pour afficher la liste des produits dans l'app
+# - write_script_tags: Pour installer automatiquement le widget sur le storefront
+scopes = "read_products,write_script_tags"
 optional_scopes = [ ]
 use_legacy_install_flow = false
 
