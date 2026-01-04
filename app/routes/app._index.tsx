@@ -468,7 +468,21 @@ export default function Dashboard() {
   const monthlyUsage = typeof (loaderData as any).monthlyUsage === 'number' ? (loaderData as any).monthlyUsage : 0;
   const error = (loaderData as any).error || null;
 
-  const credits = shop?.credits || 0;
+  // ADDED: Monthly quota and usage
+  const monthlyQuota = shop?.monthly_quota || null;
+  const monthlyUsageCount = monthlyUsage || 0;
+  const quotaPercentage = monthlyQuota && monthlyQuota > 0 
+    ? Math.min((monthlyUsageCount / monthlyQuota) * 100, 100).toFixed(1)
+    : null;
+  const quotaExceeded = monthlyQuota && monthlyUsageCount >= monthlyQuota;
+  
+  // For display: use monthly_quota if available, otherwise use credits
+  // Calculate remaining: monthly_quota - monthly_usage (if using quota system)
+  // Otherwise: use credits (old system)
+  const credits = monthlyQuota 
+    ? Math.max(0, monthlyQuota - monthlyUsageCount) // Remaining quota
+    : (shop?.credits || 0); // Fallback to old credits system
+  
   const totalTryons = shop?.total_tryons || 0;
   const totalAtc = shop?.total_atc || 0;
   const conversionRate = totalTryons > 0
@@ -477,14 +491,6 @@ export default function Dashboard() {
   
   // Calculate 30-day total
   const last30DaysTotal = dailyStats.reduce((sum: number, stat: any) => sum + stat.count, 0);
-  
-  // ADDED: Monthly quota and usage
-  const monthlyQuota = shop?.monthly_quota || null;
-  const monthlyUsageCount = monthlyUsage || 0;
-  const quotaPercentage = monthlyQuota && monthlyQuota > 0 
-    ? Math.min((monthlyUsageCount / monthlyQuota) * 100, 100).toFixed(1)
-    : null;
-  const quotaExceeded = monthlyQuota && monthlyUsageCount >= monthlyQuota;
   
   // ADDED: Quality mode
   const qualityMode = shop?.quality_mode || "balanced";
@@ -590,12 +596,12 @@ export default function Dashboard() {
                   Error: {(fetcher.data as any).error}
                 </Banner>
               )}
-              {credits < 50 && (
+              {credits < (monthlyQuota ? Math.max(1, monthlyQuota * 0.1) : 50) && (
                 <Banner tone="warning" title="Low Credits Balance">
                   <p>
-                    You have <strong>{credits}</strong> credit{credits > 1 ? "s" : ""} remaining. 
+                    You have <strong>{credits}</strong> {monthlyQuota ? "try-on" : "credit"}{credits !== 1 ? "s" : ""} remaining{monthlyQuota ? ` (${monthlyUsageCount} / ${monthlyQuota} used this month)` : ""}. 
                     <Link to="/app/credits" style={{ marginLeft: "8px" }}>
-                      Recharge now →
+                      {monthlyQuota ? "Upgrade plan →" : "Recharge now →"}
                     </Link>
                   </p>
                 </Banner>
