@@ -102,6 +102,32 @@
         });
       }
       
+      function getProductImage() {
+        // Try multiple selectors to find product image
+        const selectors = [
+          '.product__media img',
+          '.product-single__media img',
+          '[data-product-image] img',
+          '.product-media img',
+          '.product-photos img',
+          '.product-gallery img',
+          'img[data-product-image]',
+          '.product__photo img',
+          'img.product-featured-image'
+        ];
+        
+        for (const selector of selectors) {
+          const img = document.querySelector(selector);
+          if (img && img.src) {
+            // Get the full-size image URL (remove size parameters)
+            const imageUrl = img.src.split('?')[0].replace(/_small|_medium|_large|_grande/g, '');
+            return imageUrl;
+          }
+        }
+        
+        return null;
+      }
+      
       function initializeWidget(shop, productId, widgetSettings) {
         // Find product form container
         const productForm = document.querySelector('form[action*="/cart/add"]');
@@ -114,6 +140,9 @@
         if (document.getElementById('vton-widget-container')) {
           return;
         }
+        
+        // Get product image URL from the page
+        const productImageUrl = getProductImage();
         
         // Create widget container
         const container = document.createElement('div');
@@ -131,6 +160,7 @@
           shop: shop,
           productId: productId,
           widgetSettings: widgetSettings,
+          productImageUrl: productImageUrl,
           userPhoto: null,
           resultImageUrl: null,
           modalOpen: false
