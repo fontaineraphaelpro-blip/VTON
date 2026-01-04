@@ -924,9 +924,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             this.setState(STATE.ERROR);
         }
         
-        async handleAddToCart() {
+        handleAddToCart() {
             try {
-                // 1. Find the product form first (more reliable than button)
+                // Find the product form
                 const productForm = document.querySelector('form[action*="/cart/add"]');
                 
                 if (!productForm) {
@@ -934,43 +934,32 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                     return;
                 }
                 
-                // 2. Close the modal first
-                this.closeModal();
+                // Submit the form directly
+                if (productForm instanceof HTMLFormElement) {
+                    productForm.submit();
+                } else {
+                    // If not a standard form, try to find and click the submit button
+                    const submitBtn = productForm.querySelector('button[type="submit"]') || 
+                                     productForm.querySelector('button') ||
+                                     productForm.querySelector('[type="submit"]');
+                    if (submitBtn && submitBtn instanceof HTMLElement) {
+                        submitBtn.click();
+                    }
+                }
                 
-                // 3. Wait for modal to close, then submit the form
-                setTimeout(() => {
-                    // Submit the form to actually add product to cart
-                    if (productForm instanceof HTMLFormElement) {
-                        productForm.submit();
-                    } else {
-                        // If form is not a standard form, try to find and click the submit button
-                        const submitBtn = productForm.querySelector('button[type="submit"]') || 
-                                         productForm.querySelector('button') ||
-                                         productForm.querySelector('[type="submit"]');
-                        if (submitBtn && submitBtn instanceof HTMLElement) {
-                            submitBtn.click();
-                        } else {
-                            // Last resort: try to trigger form submission
-                            const submitEvent = new Event('submit', { bubbles: true, cancelable: true });
-                            productForm.dispatchEvent(submitEvent);
-                        }
-                    }
-                    
-                    // 4. Track the add to cart event AFTER submitting (async, don't wait)
-                    const shop = window.Shopify?.shop || this.extractShopFromUrl() || '';
-                    if (shop && this.productId) {
-                        // Track in background, don't block
-                        const atcUrl = new URL(\`\${CONFIG.apiBase}/atc\`, window.location.origin);
-                        atcUrl.searchParams.set('shop', shop);
-                        fetch(atcUrl.toString(), {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ product_id: this.productId })
-                        }).catch(() => {
-                            // Ignore tracking errors
-                        });
-                    }
-                }, 300);
+                // Track the add to cart event in background (don't wait)
+                const shop = window.Shopify?.shop || this.extractShopFromUrl() || '';
+                if (shop && this.productId) {
+                    const atcUrl = new URL(\`\${CONFIG.apiBase}/atc\`, window.location.origin);
+                    atcUrl.searchParams.set('shop', shop);
+                    fetch(atcUrl.toString(), {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ product_id: this.productId })
+                    }).catch(() => {
+                        // Ignore tracking errors
+                    });
+                }
             } catch (error) {
                 console.error('[VTON] Error in handleAddToCart:', error);
                 this.showError('Erreur lors de l\\'ajout au panier');
