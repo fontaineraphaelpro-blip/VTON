@@ -38,7 +38,7 @@ export async function generateTryOn({ userPhoto, productImageUrl }: GenerateTryO
 
   // Appeler le modèle google/nano-banana-pro
   const output = await replicate.run(
-    "google/nano-banana-pro:latest",
+    "google/nano-banana-pro",
     {
       input: {
         image_input: [
