@@ -1235,6 +1235,10 @@
         // Construct absolute URL for app proxy
         const url = window.location.origin + '/apps/tryon/generate?shop=' + encodeURIComponent(state.shop) + '&product_id=' + encodeURIComponent(state.productId);
         
+        // Create AbortController for timeout handling
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 120000); // 120 seconds timeout
+        
         fetch(url, {
           method: 'POST',
           headers: {
@@ -1244,8 +1248,10 @@
             user_photo: state.userPhoto,
             product_id: state.productId,
             product_image_url: state.productImageUrl
-          })
+          }),
+          signal: controller.signal
         }).then(function(response) {
+          clearTimeout(timeoutId);
           // #region agent log
           fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'block.liquid:generateTryOn:response',message:'Received response',data:{status:response.status,statusText:response.statusText,ok:response.ok},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
           // #endregion
@@ -1342,14 +1348,16 @@
               resultImageUrlType: typeof state.resultImageUrl,
               data: data
             });
-            if (error) {
-              error.classList.add('active');
-              error.textContent = 'Error: Unable to display the result. Please try again.';
+            const errorElement = shadowRoot.getElementById('vton-error');
+            if (errorElement) {
+              errorElement.classList.add('active');
+              errorElement.textContent = 'Error: Unable to display the result. Please try again.';
             }
           }
           
           if (generateBtn) generateBtn.disabled = false;
         }).catch(function(err) {
+          clearTimeout(timeoutId);
           console.error('[VTON] Generation error:', err);
           
           // Stop loading messages
@@ -1359,7 +1367,12 @@
           const errorElement = shadowRoot.getElementById('vton-error');
           if (errorElement) {
             errorElement.classList.add('active');
-            errorElement.textContent = 'An error occurred. Please try again.';
+            // Check if it's a timeout error
+            if (err.name === 'AbortError' || err.message?.includes('timeout') || err.message?.includes('504')) {
+              errorElement.textContent = 'Generation is taking longer than expected. Please wait a moment and check back, or try again.';
+            } else {
+              errorElement.textContent = 'An error occurred. Please try again.';
+            }
           }
           if (generateBtn) generateBtn.disabled = false;
         });
