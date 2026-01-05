@@ -108,6 +108,10 @@ export default function Widget() {
   const [widgetText, setWidgetText] = useState(() => shop?.widget_text || "Try It On Now ✨");
   const [widgetBg, setWidgetBg] = useState(() => shop?.widget_bg || "#000000");
   const [widgetColor, setWidgetColor] = useState(() => shop?.widget_color || "#ffffff");
+  
+  // State for controlling notification visibility
+  const [showSuccessBanner, setShowSuccessBanner] = useState(false);
+  const [showErrorBanner, setShowErrorBanner] = useState(false);
 
   // Only update from shop data on initial load, not after saves
   // This prevents the loader from overwriting user edits
@@ -138,16 +142,38 @@ export default function Widget() {
         
         previousSuccessRef.current = saveKey;
         
+        // Show success banner
+        setShowSuccessBanner(true);
+        
+        // Auto-dismiss success banner after 5 seconds
+        const timer = setTimeout(() => {
+          setShowSuccessBanner(false);
+        }, 5000);
+        
         // Silently revalidate in the background without affecting the UI
         setTimeout(() => {
           revalidator.revalidate();
         }, 200);
+        
+        return () => clearTimeout(timer);
       }
+    }
+    
+    // Show error banner if there's an error
+    if ((fetcher.data as any)?.error) {
+      setShowErrorBanner(true);
+      // Auto-dismiss error banner after 7 seconds
+      const timer = setTimeout(() => {
+        setShowErrorBanner(false);
+      }, 7000);
+      return () => clearTimeout(timer);
     }
     
     // Reset the ref when starting a new submission
     if (fetcher.state === "submitting") {
       previousSuccessRef.current = null;
+      setShowSuccessBanner(false);
+      setShowErrorBanner(false);
     }
   }, [fetcher.data?.success, fetcher.data?.savedValues, fetcher.state, revalidator]);
 
@@ -182,16 +208,12 @@ export default function Widget() {
           </div>
         )}
 
-        {fetcher.data?.success && fetcher.state === "idle" && (
+        {fetcher.data?.success && fetcher.state === "idle" && showSuccessBanner && (
           <div style={{ marginBottom: "var(--spacing-lg)" }}>
             <Banner 
               tone="success"
               onDismiss={() => {
-                // Clear the fetcher data to allow new saves
-                if (typeof window !== "undefined") {
-                  // Force a re-render by clearing the success state
-                  window.location.hash = "";
-                }
+                setShowSuccessBanner(false);
               }}
             >
               Configuration saved successfully! Changes are now in the database and will be automatically loaded by the widget on your product pages. Refresh a product page to see the changes.
@@ -204,9 +226,14 @@ export default function Widget() {
           </div>
         )}
 
-        {(fetcher.data as any)?.error && (
+        {(fetcher.data as any)?.error && showErrorBanner && (
           <div style={{ marginBottom: "var(--spacing-lg)" }}>
-            <Banner tone="critical">
+            <Banner 
+              tone="critical"
+              onDismiss={() => {
+                setShowErrorBanner(false);
+              }}
+            >
               Error: {(fetcher.data as any).error}
             </Banner>
           </div>
