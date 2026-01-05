@@ -508,17 +508,13 @@ export async function getProductTryonStatus(shop: string, productId: string): Pr
   // Admin can then explicitly disable products they don't want
   const productEnabled = productSetting !== false; // null or true means enabled, only false means disabled
   
-  // Log for debugging
-  if (process.env.NODE_ENV !== "production") {
-    console.log(`[getProductTryonStatus] shop=${shop}, productId=${productId}, productSetting=${productSetting}, productEnabled=${productEnabled}, shopEnabled=${shopEnabled}`);
-  }
+  // Log for debugging (always log in production too for now to debug)
+  console.log(`[getProductTryonStatus] shop=${shop}, productId=${productId}, productSetting=${productSetting}, productEnabled=${productEnabled}, shopEnabled=${shopEnabled}`);
   
   // Final enabled status: both shop and product must be enabled
   const enabled = shopEnabled && productEnabled;
   
-  if (process.env.NODE_ENV !== "production") {
-    console.log(`[getProductTryonStatus] Final result: enabled=${enabled} (shopEnabled=${shopEnabled} && productEnabled=${productEnabled})`);
-  }
+  console.log(`[getProductTryonStatus] Final result: enabled=${enabled} (shopEnabled=${shopEnabled} && productEnabled=${productEnabled})`);
   
   // Get widget settings (only if enabled)
   // Use widget_text, widget_bg, widget_color to match what the client widget expects

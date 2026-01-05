@@ -57,12 +57,18 @@
             productId: productId,
             enabled: status?.enabled,
             shop_enabled: status?.shop_enabled,
-            product_enabled: status?.product_enabled
+            product_enabled: status?.product_enabled,
+            widget_settings: status?.widget_settings
           });
-          if (status && status.enabled) {
+          if (status && status.enabled === true) {
+            console.log('[VTON] Widget will be displayed - try-on is enabled');
             initializeWidget(shop, productId, status.widget_settings || {});
           } else {
-            console.log('[VTON] Widget not displayed - try-on disabled for this product');
+            console.log('[VTON] Widget NOT displayed - try-on is disabled. Status:', {
+              enabled: status?.enabled,
+              shop_enabled: status?.shop_enabled,
+              product_enabled: status?.product_enabled
+            });
           }
         }).catch(function(error) {
           console.error('[VTON] Failed to check status:', error);
