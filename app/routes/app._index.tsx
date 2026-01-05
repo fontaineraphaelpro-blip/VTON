@@ -33,6 +33,107 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       getMonthlyTryonUsage(shop).catch(() => 0), // ADDED: Get monthly usage
     ]);
     
+    // Fetch product names from Shopify for products that don't have product_title
+    const productIdsToFetch = new Set<string>();
+    
+    // Collect product IDs from topProducts that don't have product_title
+    topProducts.forEach((product: any) => {
+      if (product.product_id && !product.product_title) {
+        // Extract numeric ID from GID if needed
+        const gidMatch = product.product_id.match(/^gid:\/\/shopify\/Product\/(\d+)$/);
+        if (gidMatch) {
+          productIdsToFetch.add(gidMatch[1]);
+        } else if (/^\d+$/.test(product.product_id)) {
+          productIdsToFetch.add(product.product_id);
+        }
+      }
+    });
+    
+    // Collect product IDs from recentLogs that don't have product_title
+    recentLogs.forEach((log: any) => {
+      if (log.product_id && !log.product_title) {
+        const gidMatch = log.product_id.match(/^gid:\/\/shopify\/Product\/(\d+)$/);
+        if (gidMatch) {
+          productIdsToFetch.add(gidMatch[1]);
+        } else if (/^\d+$/.test(log.product_id)) {
+          productIdsToFetch.add(log.product_id);
+        }
+      }
+    });
+    
+    // Fetch product names from Shopify
+    const productNamesMap: Record<string, string> = {};
+    if (productIdsToFetch.size > 0) {
+      try {
+        const productIdsArray = Array.from(productIdsToFetch);
+        // Fetch in batches of 10 (Shopify limit)
+        for (let i = 0; i < productIdsArray.length; i += 10) {
+          const batch = productIdsArray.slice(i, i + 10);
+          const productQuery = `#graphql
+            query getProducts($ids: [ID!]!) {
+              nodes(ids: $ids) {
+                ... on Product {
+                  id
+                  title
+                }
+              }
+            }
+          `;
+          
+          const gids = batch.map(id => `gid://shopify/Product/${id}`);
+          const response = await admin.graphql(productQuery, {
+            variables: { ids: gids }
+          });
+          
+          if (response.ok) {
+            const data = await response.json() as any;
+            if (data.data?.nodes) {
+              data.data.nodes.forEach((node: any) => {
+                if (node && node.id && node.title) {
+                  // Store both GID and numeric ID as keys
+                  productNamesMap[node.id] = node.title;
+                  const numericId = node.id.replace('gid://shopify/Product/', '');
+                  productNamesMap[numericId] = node.title;
+                  productNamesMap[node.id] = node.title; // Also store GID format
+                }
+              });
+            }
+          }
+        }
+      } catch (error) {
+        // Log error but don't block dashboard load
+        if (process.env.NODE_ENV !== "production") {
+          console.error("Error fetching product names:", error);
+        }
+      }
+    }
+    
+    // Enrich topProducts with product titles
+    const enrichedTopProducts = topProducts.map((product: any) => {
+      if (!product.product_title && product.product_id) {
+        const gidMatch = product.product_id.match(/^gid:\/\/shopify\/Product\/(\d+)$/);
+        const numericId = gidMatch ? gidMatch[1] : product.product_id;
+        const title = productNamesMap[product.product_id] || productNamesMap[numericId];
+        if (title) {
+          return { ...product, product_title: title };
+        }
+      }
+      return product;
+    });
+    
+    // Enrich recentLogs with product titles
+    const enrichedRecentLogs = recentLogs.map((log: any) => {
+      if (!log.product_title && log.product_id) {
+        const gidMatch = log.product_id.match(/^gid:\/\/shopify\/Product\/(\d+)$/);
+        const numericId = gidMatch ? gidMatch[1] : log.product_id;
+        const title = productNamesMap[log.product_id] || productNamesMap[numericId];
+        if (title) {
+          return { ...log, product_title: title };
+        }
+      }
+      return log;
+    });
+    
     // Calculate total_tryons from logs if not set in shop record
     let totalTryons = shopData?.total_tryons || 0;
     if ((totalTryons === 0 || totalTryons === null) && shopData) {
@@ -328,8 +429,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
     return json({
       shop: shopData || null,
-      recentLogs: Array.isArray(recentLogs) ? recentLogs.slice(0, 5) : [],
-      topProducts: Array.isArray(topProducts) ? topProducts : [],
+      recentLogs: Array.isArray(enrichedRecentLogs) ? enrichedRecentLogs.slice(0, 5) : [],
+      topProducts: Array.isArray(enrichedTopProducts) ? enrichedTopProducts : [],
       dailyStats: Array.isArray(dailyStats) ? dailyStats : [],
       monthlyUsage: monthlyUsage || 0, // ADDED: Monthly usage count
       totalTryons: totalTryons || 0, // ADDED: Total try-ons (calculated or from shop)
