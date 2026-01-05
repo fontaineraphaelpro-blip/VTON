@@ -744,20 +744,23 @@
                 </button>
                 <div id="vton-loading" class="vton-loading">
                   <div class="vton-spinner"></div>
-                  <p id="vton-loading-message" class="vton-loading-text">Preparing your virtual try-on experience<span class="vton-loading-dots"><span></span><span></span><span></span></span></p>
+                  <p id="vton-loading-message" class="vton-loading-text">✨ Setting up your virtual try-on experience<span class="vton-loading-dots"><span></span><span></span><span></span></span></p>
                   <div class="vton-progress-container">
                     <div id="vton-progress-bar" class="vton-progress-bar"></div>
                   </div>
-                  <p id="vton-progress-text" class="vton-progress-text">0%</p>
+                  <div class="vton-progress-info" style="display: flex; justify-content: space-between; align-items: center; margin: 8px 0;">
+                    <span id="vton-progress-text" class="vton-progress-text">0%</span>
+                    <span id="vton-timer-value" class="vton-timer-value" style="font-size: 13px; color: #666;">0s • ~40s left</span>
+                  </div>
                   <div class="vton-steps">
                     <div id="vton-step-1" class="vton-step active">1. Analyzing</div>
                     <div id="vton-step-2" class="vton-step">2. Processing</div>
                     <div id="vton-step-3" class="vton-step">3. Generating</div>
                     <div id="vton-step-4" class="vton-step">4. Finalizing</div>
                   </div>
-                  <p id="vton-timer" class="vton-timer">Time elapsed: <span id="vton-timer-value">0s</span></p>
-                  <p class="vton-loading-subtext">This usually takes 30-40 seconds</p>
-                  <p class="vton-privacy-notice">No personal data is stored.</p>
+                  <p class="vton-tip" style="font-size: 12px; color: #666; margin: 12px 0 8px 0; font-style: italic; transition: opacity 0.3s ease; min-height: 18px;">💡 Tip: Make sure your photo has good lighting for best results!</p>
+                  <p class="vton-loading-subtext" style="margin: 8px 0;">⏱️ Usually takes 30-40 seconds • Your result will be worth the wait!</p>
+                  <p class="vton-privacy-notice" style="margin: 8px 0;">🔒 No personal data is stored. Your photos are processed securely and deleted after generation.</p>
                 </div>
                 <div id="vton-result" class="vton-result"></div>
                 <div id="vton-error" class="vton-error"></div>
