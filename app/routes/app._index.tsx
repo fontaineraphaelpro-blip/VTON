@@ -37,26 +37,58 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     const productIdsToFetch = new Set<string>();
     
     // Collect product IDs from topProducts (fetch all to ensure we have the latest names)
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:40',message:'Collecting product IDs from topProducts',data:{topProductsCount:topProducts.length,topProducts:topProducts.map((p:any)=>({product_id:p.product_id,tryons:p.tryons}))},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
     topProducts.forEach((product: any) => {
       if (product.product_id) {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:44',message:'Processing topProduct product_id',data:{product_id:product.product_id,product_idType:typeof product.product_id,isGID:/^gid:\/\/shopify\/Product\/(\d+)$/.test(product.product_id),isNumeric:/^\d+$/.test(product.product_id)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+        // #endregion
         // Extract numeric ID from GID if needed
         const gidMatch = product.product_id.match(/^gid:\/\/shopify\/Product\/(\d+)$/);
         if (gidMatch) {
           productIdsToFetch.add(gidMatch[1]);
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:47',message:'Added numeric ID from GID',data:{originalGID:product.product_id,numericId:gidMatch[1]},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+          // #endregion
         } else if (/^\d+$/.test(product.product_id)) {
           productIdsToFetch.add(product.product_id);
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:50',message:'Added numeric ID directly',data:{product_id:product.product_id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+          // #endregion
+        } else {
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:52',message:'Skipped invalid product_id format (likely handle)',data:{product_id:product.product_id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+          // #endregion
         }
       }
     });
     
     // Collect product IDs from recentLogs (fetch all to ensure we have the latest names)
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:56',message:'Collecting product IDs from recentLogs',data:{recentLogsCount:recentLogs.length,recentLogs:recentLogs.map((l:any)=>({product_id:l.product_id,product_title:l.product_title}))},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
     recentLogs.forEach((log: any) => {
       if (log.product_id) {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:59',message:'Processing log product_id',data:{product_id:log.product_id,product_idType:typeof log.product_id,isGID:/^gid:\/\/shopify\/Product\/(\d+)$/.test(log.product_id),isNumeric:/^\d+$/.test(log.product_id)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+        // #endregion
         const gidMatch = log.product_id.match(/^gid:\/\/shopify\/Product\/(\d+)$/);
         if (gidMatch) {
           productIdsToFetch.add(gidMatch[1]);
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:63',message:'Added numeric ID from GID in log',data:{originalGID:log.product_id,numericId:gidMatch[1]},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+          // #endregion
         } else if (/^\d+$/.test(log.product_id)) {
           productIdsToFetch.add(log.product_id);
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:66',message:'Added numeric ID directly from log',data:{product_id:log.product_id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+          // #endregion
+        } else {
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:68',message:'Skipped invalid product_id format in log (likely handle)',data:{product_id:log.product_id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+          // #endregion
         }
       }
     });
@@ -96,9 +128,16 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
           if (response.ok) {
             const data = await response.json() as any;
             
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:97',message:'GraphQL response received',data:{hasErrors:!!data.errors,errors:data.errors,hasData:!!data.data,hasNodes:!!data.data?.nodes,nodesCount:data.data?.nodes?.length,nodes:data.data?.nodes?.map((n:any,i:number)=>({index:i,isNull:n===null,hasId:!!n?.id,hasTitle:!!n?.title,id:n?.id,title:n?.title}))},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+            // #endregion
+            
             // Check for GraphQL errors first
             if (data.errors) {
               console.error(`[Dashboard] GraphQL errors:`, JSON.stringify(data.errors, null, 2));
+              // #region agent log
+              fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:101',message:'GraphQL errors detected',data:{errors:data.errors},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+              // #endregion
             }
             
             if (data.data?.nodes) {
@@ -108,6 +147,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                 const requestedId = batch[index];
                 const requestedGid = gids[index];
                 
+                // #region agent log
+                fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:110',message:'Processing GraphQL node',data:{index,requestedId,requestedGid,nodeIsNull:node===null,nodeHasId:!!node?.id,nodeHasTitle:!!node?.title,nodeId:node?.id,nodeTitle:node?.title},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+                // #endregion
+                
                 if (node && node.id && node.title) {
                   // Store both GID and numeric ID as keys
                   productNamesMap[node.id] = node.title;
@@ -115,12 +158,22 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                   productNamesMap[numericId] = node.title;
                   productNamesMap[node.id] = node.title; // Also store GID format
                   
+                  // #region agent log
+                  fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:118',message:'Stored product name in map',data:{gid:node.id,numericId,title:node.title,mapKeysBefore:Object.keys(productNamesMap).length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+                  // #endregion
+                  
                   console.log(`[Dashboard] ✓ Fetched product name: ${node.id} (numeric: ${numericId}) -> ${node.title}`);
                 } else if (node === null) {
                   console.warn(`[Dashboard] ✗ Product not found (null) for ID: ${requestedId} (GID: ${requestedGid})`);
+                  // #region agent log
+                  fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:123',message:'Product returned null in GraphQL',data:{requestedId,requestedGid},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+                  // #endregion
                   // Product doesn't exist or is not accessible - will fallback to product_id display
                 } else {
                   console.warn(`[Dashboard] ✗ Invalid node in response:`, node, `for ID: ${requestedId} (GID: ${requestedGid})`);
+                  // #region agent log
+                  fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:127',message:'Invalid node structure in GraphQL response',data:{requestedId,requestedGid,node},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+                  // #endregion
                 }
               });
             } else {
@@ -130,10 +183,16 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                 dataKeys: data.data ? Object.keys(data.data) : [],
                 fullData: JSON.stringify(data, null, 2).substring(0, 1000)
               });
+              // #region agent log
+              fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:133',message:'No nodes in GraphQL response',data:{hasData:!!data.data,hasNodes:!!data.data?.nodes,dataKeys:data.data?Object.keys(data.data):[],fullData:JSON.stringify(data,null,2).substring(0,1000)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+              // #endregion
             }
           } else {
             const errorText = await response.text().catch(() => "Unknown error");
             console.error(`[Dashboard] Failed to fetch products batch:`, response.status, errorText);
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:137',message:'GraphQL request failed',data:{status:response.status,errorText:errorText.substring(0,500)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+            // #endregion
           }
         }
         
