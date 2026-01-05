@@ -61,8 +61,35 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       return json({ error: "Shop not found" }, { status: 404 });
     }
 
-    // Vérifier les crédits disponibles (système d'accumulation)
-    const currentCredits = shopRecord.credits || 0;
+    // Vérifier et gérer le renouvellement mensuel des crédits
+    const now = new Date();
+    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const lastResetMonth = shopRecord.last_quota_reset || currentMonth;
+    const monthlyQuota = shopRecord.monthly_quota || 0;
+    
+    let currentCredits = shopRecord.credits || 0;
+    
+    // Si changement de mois et qu'un plan est actif, renouveler les crédits
+    if (lastResetMonth !== currentMonth && monthlyQuota > 0) {
+      // Reset à 0 puis ajouter les crédits du plan
+      currentCredits = monthlyQuota;
+      await upsertShop(shop, { 
+        credits: monthlyQuota, // Reset to plan credits
+        last_quota_reset: currentMonth 
+      });
+      if (process.env.NODE_ENV !== "production") {
+        console.log(`[Generate] Monthly renewal: reset credits to ${monthlyQuota} for plan`);
+      }
+    }
+    
+    // Si pas de plan actif et changement de mois, reset à 0
+    if (lastResetMonth !== currentMonth && monthlyQuota === 0) {
+      currentCredits = 0;
+      await upsertShop(shop, { 
+        credits: 0,
+        last_quota_reset: currentMonth 
+      });
+    }
 
     if (currentCredits <= 0) {
       return json({ 
