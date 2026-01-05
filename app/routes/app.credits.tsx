@@ -619,6 +619,32 @@ export default function Credits() {
           </p>
         </header>
 
+        {/* Subscription Logic Explanation */}
+        <div style={{ 
+          marginBottom: "var(--spacing-lg)", 
+          padding: "var(--spacing-lg)", 
+          background: "#f9fafb", 
+          borderRadius: "8px",
+          border: "1px solid #e5e7eb"
+        }}>
+          <h3 style={{ marginTop: 0, marginBottom: "var(--spacing-md)", fontSize: "16px", fontWeight: 600 }}>
+            How Subscription Works
+          </h3>
+          <div style={{ fontSize: "14px", color: "#4b5563", lineHeight: "1.6" }}>
+            <p style={{ marginBottom: "var(--spacing-sm)" }}>
+              <strong>First Purchase:</strong> When you purchase a plan, the credits are <strong>added to your existing credits</strong>. 
+              For example, if you have 2 credits and buy the Starter plan (50 credits), you'll have 52 credits total.
+            </p>
+            <p style={{ marginBottom: "var(--spacing-sm)" }}>
+              <strong>Monthly Renewal:</strong> At the beginning of each new month, your credits are automatically reset to the amount 
+              included in your active plan. If you have the Starter plan (50 credits/month), you'll receive 50 credits each month.
+            </p>
+            <p style={{ margin: 0 }}>
+              <strong>Note:</strong> Credits accumulate when you purchase a new plan, but renew monthly based on your active subscription plan.
+            </p>
+          </div>
+        </div>
+
         <div className="credits-balance">
           <div>
             <div className="credits-amount">
