@@ -320,39 +320,44 @@ export async function getTryonStatsByDay(shop: string, days: number = 30) {
  * Returns true if enabled, false if disabled, or null if not set (defaults to enabled).
  */
 export async function getProductTryonSetting(shop: string, productId: string): Promise<boolean | null> {
-  // Try exact match first
-  let result = await query(
-    "SELECT tryon_enabled FROM product_settings WHERE shop = $1 AND product_id = $2",
-    [shop, productId]
-  );
+  // Normalize productId - try multiple formats
+  const formatsToTry: string[] = [productId]; // Start with original
   
-  if (result.rows.length > 0) {
-    return result.rows[0].tryon_enabled;
-  }
-  
-  // If productId is numeric, try with GID format
+  // If productId is numeric, add GID format
   if (/^\d+$/.test(productId)) {
-    const gidFormat = `gid://shopify/Product/${productId}`;
-    result = await query(
-      "SELECT tryon_enabled FROM product_settings WHERE shop = $1 AND product_id = $2",
-      [shop, gidFormat]
-    );
-    if (result.rows.length > 0) {
-      return result.rows[0].tryon_enabled;
-    }
+    formatsToTry.push(`gid://shopify/Product/${productId}`);
   }
   
-  // If productId is GID format, also try without the prefix (just the numeric part)
+  // If productId is GID format, extract numeric part
   const gidMatch = productId.match(/^gid:\/\/shopify\/Product\/(\d+)$/);
   if (gidMatch) {
-    const numericId = gidMatch[1];
-    result = await query(
-      "SELECT tryon_enabled FROM product_settings WHERE shop = $1 AND (product_id = $2 OR product_id = $3)",
-      [shop, numericId, productId]
+    formatsToTry.push(gidMatch[1]); // Add numeric ID
+  }
+  
+  // Try all formats
+  for (const format of formatsToTry) {
+    const result = await query(
+      "SELECT tryon_enabled FROM product_settings WHERE shop = $1 AND product_id = $2",
+      [shop, format]
     );
+    
     if (result.rows.length > 0) {
-      return result.rows[0].tryon_enabled;
+      const enabled = result.rows[0].tryon_enabled;
+      if (process.env.NODE_ENV !== "production") {
+        console.log(`[DB] Found product setting: shop=${shop}, searched=${productId}, found=${format}, enabled=${enabled}`);
+      }
+      return enabled;
     }
+  }
+  
+  // Also try a broader search - find all settings for this shop to debug
+  if (process.env.NODE_ENV !== "production") {
+    const allSettings = await query(
+      "SELECT product_id, tryon_enabled FROM product_settings WHERE shop = $1 LIMIT 10",
+      [shop]
+    );
+    console.log(`[DB] No match found. Searched productId=${productId} (tried formats: ${formatsToTry.join(', ')}). Sample stored IDs:`, 
+      allSettings.rows.map((r: any) => `${r.product_id}=${r.tryon_enabled}`));
   }
   
   return null; // Not set, defaults to enabled
@@ -362,13 +367,28 @@ export async function getProductTryonSetting(shop: string, productId: string): P
  * ADDED: Sets product try-on enabled/disabled state.
  */
 export async function setProductTryonSetting(shop: string, productId: string, enabled: boolean) {
-  await query(
+  if (process.env.NODE_ENV !== "production") {
+    console.log(`[DB] Setting product try-on: shop=${shop}, productId=${productId}, enabled=${enabled}`);
+  }
+  
+  const result = await query(
     `INSERT INTO product_settings (shop, product_id, tryon_enabled, updated_at)
      VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
      ON CONFLICT (shop, product_id) 
      DO UPDATE SET tryon_enabled = $3, updated_at = CURRENT_TIMESTAMP`,
     [shop, productId, enabled]
   );
+  
+  // Verify the setting was saved correctly
+  if (process.env.NODE_ENV !== "production") {
+    const verify = await query(
+      "SELECT tryon_enabled FROM product_settings WHERE shop = $1 AND product_id = $2",
+      [shop, productId]
+    );
+    if (verify.rows.length > 0) {
+      console.log(`[DB] Verified saved setting: shop=${shop}, productId=${productId}, saved=${verify.rows[0].tryon_enabled}`);
+    }
+  }
 }
 
 /**

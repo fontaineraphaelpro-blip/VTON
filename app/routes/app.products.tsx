@@ -1,6 +1,7 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useLoaderData, useFetcher } from "@remix-run/react";
+import { useState, useEffect } from "react";
 import {
   Page,
   Layout,
@@ -224,6 +225,34 @@ export default function Products() {
   const tryonCounts = (loaderData as any)?.tryonCounts || {};
   const productSettings = (loaderData as any)?.productSettings || {};
   const fetcher = useFetcher<typeof action>();
+  
+  // State for managing success/error notifications
+  const [showSuccessBanner, setShowSuccessBanner] = useState(false);
+  const [showErrorBanner, setShowErrorBanner] = useState(false);
+  
+  // Show success banner when fetcher.data?.success changes
+  useEffect(() => {
+    if (fetcher.data?.success) {
+      setShowSuccessBanner(true);
+      // Auto-hide after 5 seconds
+      const timer = setTimeout(() => {
+        setShowSuccessBanner(false);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [fetcher.data?.success]);
+  
+  // Show error banner when fetcher.data?.error changes
+  useEffect(() => {
+    if ((fetcher.data as any)?.error) {
+      setShowErrorBanner(true);
+      // Auto-hide after 7 seconds (errors stay a bit longer)
+      const timer = setTimeout(() => {
+        setShowErrorBanner(false);
+      }, 7000);
+      return () => clearTimeout(timer);
+    }
+  }, [(fetcher.data as any)?.error]);
 
   const productRows = products.map((product: any) => {
     if (!product || !product.id) {
@@ -354,13 +383,19 @@ export default function Products() {
                   </EmptyState>
                 ) : (
                   <>
-                    {fetcher.data?.success && (
-                      <Banner tone="success" onDismiss={() => {}}>
+                    {showSuccessBanner && fetcher.data?.success && (
+                      <Banner 
+                        tone="success" 
+                        onDismiss={() => setShowSuccessBanner(false)}
+                      >
                         Product try-on setting updated successfully
                       </Banner>
                     )}
-                    {(fetcher.data as any)?.error && (
-                      <Banner tone="critical" onDismiss={() => {}}>
+                    {showErrorBanner && (fetcher.data as any)?.error && (
+                      <Banner 
+                        tone="critical" 
+                        onDismiss={() => setShowErrorBanner(false)}
+                      >
                         {(fetcher.data as any).error}
                       </Banner>
                     )}
