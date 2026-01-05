@@ -542,7 +542,7 @@ export async function getMonthlyTryonUsage(shop: string): Promise<number> {
  * Returns both shop-level and product-level settings in one call.
  * Used by the public status endpoint for widgets.
  */
-export async function getProductTryonStatus(shop: string, productId: string): Promise<{
+export async function getProductTryonStatus(shop: string, productId: string, productHandle?: string): Promise<{
   enabled: boolean;
   shopEnabled: boolean;
   productEnabled: boolean;
