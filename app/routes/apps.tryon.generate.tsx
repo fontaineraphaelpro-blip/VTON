@@ -99,69 +99,75 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     // Generation started (logged in database via createTryonLog)
 
     const startTime = Date.now();
-    const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0] || 
-                     request.headers.get('x-real-ip') || 
-                     null;
 
-    // Create a pending log entry first to get the job ID
-    const jobId = await createTryonLog({
-      shop: shop,
-      customerIp: clientIp || undefined,
-      productId: product_id,
-      success: false, // Will be updated when complete
-      latencyMs: null,
-    });
+    try {
+      // Générer l'image avec Replicate
+      const resultUrl = await generateTryOn({
+        userPhoto: user_photo,
+        productImageUrl: productImageUrl,
+      });
 
-    // Start generation asynchronously (don't await)
-    (async () => {
-      try {
-        // Générer l'image avec Replicate
-        const resultUrl = await generateTryOn({
-          userPhoto: user_photo,
-          productImageUrl: productImageUrl,
-        });
+      const latencyMs = Date.now() - startTime;
 
-        const latencyMs = Date.now() - startTime;
+      // Incrémenter le quota utilisé et le compteur total de try-ons
+      await upsertShop(shop, { 
+        monthly_quota_used: (monthlyQuotaUsed + 1),
+        incrementTotalTryons: true // Increment total try-ons counter
+      });
 
-        // Incrémenter le quota utilisé et le compteur total de try-ons
-        await upsertShop(shop, { 
-          monthly_quota_used: (monthlyQuotaUsed + 1),
-          incrementTotalTryons: true
-        });
+      // Créer un log de succès
+      const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0] || 
+                       request.headers.get('x-real-ip') || 
+                       null;
+      
+      await createTryonLog({
+        shop: shop,
+        customerIp: clientIp || undefined,
+        productId: product_id,
+        success: true,
+        latencyMs: latencyMs,
+        resultImageUrl: resultUrl,
+      });
 
-        // Update the log with success
-        await query(
-          `UPDATE tryon_logs SET success = true, result_image_url = $1, latency_ms = $2 WHERE id = $3`,
-          [resultUrl, latencyMs, jobId]
-        );
+      // Log response (always log for debugging)
+      console.log("[Generate] Returning success response:", {
+        result_url: resultUrl,
+        success: true,
+        resultUrlType: typeof resultUrl,
+        resultUrlLength: resultUrl?.length
+      });
 
-        console.log("[Generate] Job completed:", { jobId, resultUrl });
-      } catch (genError) {
-        const latencyMs = Date.now() - startTime;
-        const errorMessage = genError instanceof Error ? genError.message : 'Unknown error';
-        
-        // Update the log with error
-        await query(
-          `UPDATE tryon_logs SET success = false, error_message = $1, latency_ms = $2 WHERE id = $3`,
-          [errorMessage, latencyMs, jobId]
-        );
+      return json({
+        result_url: resultUrl,
+        success: true,
+      }, {
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "POST, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type",
+        }
+      });
+    } catch (genError) {
+      const latencyMs = Date.now() - startTime;
+      const errorMessage = genError instanceof Error ? genError.message : 'Unknown error';
+      
+      // Créer un log d'erreur
+      const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0] || 
+                       request.headers.get('x-real-ip') || 
+                       null;
+      
+      await createTryonLog({
+        shop: shop,
+        customerIp: clientIp || undefined,
+        productId: product_id,
+        success: false,
+        errorMessage: errorMessage,
+        latencyMs: latencyMs,
+      });
 
-        console.error("[Generate] Job failed:", { jobId, error: errorMessage });
-      }
-    })();
-
-    // Return immediately with job ID
-    return json({
-      job_id: jobId,
-      status: "pending",
-      message: "Generation started. Please poll /apps/tryon/job/:jobId for status.",
-    }, {
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type",
-      }
-    });
+      // Re-throw l'erreur pour qu'elle soit gérée par le catch externe
+      throw genError;
+    }
   } catch (error) {
     // Log error (always log for debugging)
     const errorMessage = error instanceof Error ? error.message : "Generation failed";

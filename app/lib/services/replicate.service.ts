@@ -81,12 +81,12 @@ export async function generateTryOn({ userPhoto, productImageUrl }: GenerateTryO
     }
   );
 
-  // Log only in development
-  if (process.env.NODE_ENV !== "production") {
-    console.log('[Replicate] Generation completed, output type:', typeof output);
-    console.log('[Replicate] Generation completed, output:', output);
-    console.log('[Replicate] Output constructor:', output?.constructor?.name);
-  }
+  // Log (always log for debugging)
+  console.log('[Replicate] Generation completed, output type:', typeof output);
+  console.log('[Replicate] Generation completed, output:', JSON.stringify(output, null, 2));
+  console.log('[Replicate] Output constructor:', output?.constructor?.name);
+  console.log('[Replicate] Is array:', Array.isArray(output));
+  console.log('[Replicate] Output keys:', output && typeof output === 'object' ? Object.keys(output) : 'N/A');
 
   // Le SDK Replicate devrait retourner directement une string URL
   // Mais gérer différents formats au cas où
@@ -106,20 +106,53 @@ export async function generateTryOn({ userPhoto, productImageUrl }: GenerateTryO
       throw new Error('Replicate returned a ReadableStream instead of URL string. This should not happen with replicate.run(). The SDK may have changed. Please check the Replicate SDK documentation.');
     }
     
-    // Vérifier différentes propriétés possibles
+    // Vérifier différentes propriétés possibles dans l'ordre de probabilité
     if (typeof outputAny.url === 'string') {
       resultUrl = outputAny.url;
+    } else if (typeof outputAny.result === 'string') {
+      resultUrl = outputAny.result;
+    } else if (typeof outputAny.result_url === 'string') {
+      resultUrl = outputAny.result_url;
     } else if (typeof outputAny.output === 'string') {
       resultUrl = outputAny.output;
     } else if (Array.isArray(outputAny.output) && outputAny.output.length > 0) {
       resultUrl = typeof outputAny.output[0] === 'string' ? outputAny.output[0] : String(outputAny.output[0]);
+    } else if (Array.isArray(outputAny.result) && outputAny.result.length > 0) {
+      resultUrl = typeof outputAny.result[0] === 'string' ? outputAny.result[0] : String(outputAny.result[0]);
+    } else if (Array.isArray(outputAny) && outputAny.length > 0) {
+      // Si l'objet lui-même est itérable comme un array
+      resultUrl = typeof outputAny[0] === 'string' ? outputAny[0] : String(outputAny[0]);
     } else {
       // Essayer de convertir en string et vérifier si c'est une URL
       const str = String(output);
       if (str.startsWith('http')) {
         resultUrl = str;
       } else {
-        throw new Error('Unexpected output format from Replicate. Output type: ' + typeof output + ', Constructor: ' + (output?.constructor?.name || 'unknown') + ', Output: ' + JSON.stringify(output, Object.getOwnPropertyNames(output), 2));
+        // Dernière tentative : chercher toutes les valeurs string qui commencent par http
+        const findUrlInObject = (obj: any, depth = 0): string | null => {
+          if (depth > 3) return null; // Limiter la profondeur
+          if (typeof obj === 'string' && obj.startsWith('http')) return obj;
+          if (Array.isArray(obj)) {
+            for (const item of obj) {
+              const found = findUrlInObject(item, depth + 1);
+              if (found) return found;
+            }
+          }
+          if (obj && typeof obj === 'object') {
+            for (const key in obj) {
+              const found = findUrlInObject(obj[key], depth + 1);
+              if (found) return found;
+            }
+          }
+          return null;
+        };
+        
+        const foundUrl = findUrlInObject(output);
+        if (foundUrl) {
+          resultUrl = foundUrl;
+        } else {
+          throw new Error('Unexpected output format from Replicate. Output type: ' + typeof output + ', Constructor: ' + (output?.constructor?.name || 'unknown') + ', Output: ' + JSON.stringify(output, null, 2));
+        }
       }
     }
   } else {

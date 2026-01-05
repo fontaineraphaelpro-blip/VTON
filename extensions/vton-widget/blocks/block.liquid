@@ -1237,12 +1237,12 @@
               return response.json();
             })
             .then(function(statusData) {
-              console.log('[VTON] Job status:', statusData.status);
+              console.log('[VTON] Job status:', statusData.status, statusData);
               
               if (statusData.status === 'completed' && statusData.result_url) {
                 clearInterval(pollInterval);
                 displayResult(shadowRoot, state, statusData.result_url, loading, result, generateBtn);
-              } else if (statusData.status === 'failed') {
+              } else if (statusData.status === 'failed' || statusData.status === 'error') {
                 clearInterval(pollInterval);
                 stopLoadingMessages(shadowRoot);
                 if (loading) loading.classList.remove('active');
@@ -1252,12 +1252,41 @@
                   errorElement.textContent = statusData.error || 'Generation failed. Please try again.';
                 }
                 if (generateBtn) generateBtn.disabled = false;
+              } else if (statusData.status === 'pending') {
+                // Continue polling
+                console.log('[VTON] Job still pending, continuing to poll...');
+              } else {
+                // Status inconnu, arrêter le polling après quelques tentatives
+                console.warn('[VTON] Unknown status:', statusData.status);
+                if (attempts > 10) {
+                  clearInterval(pollInterval);
+                  stopLoadingMessages(shadowRoot);
+                  if (loading) loading.classList.remove('active');
+                  const errorElement = shadowRoot.getElementById('vton-error');
+                  if (errorElement) {
+                    errorElement.classList.add('active');
+                    errorElement.textContent = 'Unexpected status. Please try again.';
+                  }
+                  if (generateBtn) generateBtn.disabled = false;
+                }
               }
-              // If status is 'pending', continue polling
             })
             .catch(function(err) {
               console.error('[VTON] Polling error:', err);
-              // Continue polling on error (might be temporary)
+              // Arrêter le polling après plusieurs erreurs consécutives
+              if (attempts > 5 && attempts % 3 === 0) {
+                console.error('[VTON] Multiple polling errors, stopping...');
+                clearInterval(pollInterval);
+                stopLoadingMessages(shadowRoot);
+                if (loading) loading.classList.remove('active');
+                const errorElement = shadowRoot.getElementById('vton-error');
+                if (errorElement) {
+                  errorElement.classList.add('active');
+                  errorElement.textContent = 'Connection error. Please try again.';
+                }
+                if (generateBtn) generateBtn.disabled = false;
+              }
+              // Sinon, continuer le polling (erreur temporaire possible)
             });
         }, 2000); // Poll every 2 seconds
       }
