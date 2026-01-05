@@ -1,0 +1,105 @@
+[ 8/10] RUN npm run build
+1s
+> build
+> remix vite:build
+vite v6.4.1 building for production...
+transforming...
+✓ 5 modules transformed.
+✗ Build failed in 359ms
+
+[vite:esbuild] Transform failed with 1 error:
+/app/app/routes/app._index.tsx?__remix-build-client-route:187:20: ERROR: "await" can only be used inside an "async" function
+file: /app/app/routes/app._index.tsx?__remix-build-client-route:187:20
+"await" can only be used inside an "async" function
+185|                      const product = new admin.rest.resources.Product({ session });
+186|                      product.id = requestedId;
+187|                      await product.load();
+   |                      ^
+188|                      
+189|                      if (product.title) {
+    at failureErrorWithLog (/app/node_modules/vite/node_modules/esbuild/lib/main.js:1467:15)
+    at /app/node_modules/vite/node_modules/esbuild/lib/main.js:736:50
+    at responseCallbacks.<computed> (/app/node_modules/vite/node_modules/esbuild/lib/main.js:603:9)
+    at handleIncomingPacket (/app/node_modules/vite/node_modules/esbuild/lib/main.js:658:12)
+    at Socket.readFromStdout (/app/node_modules/vite/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:524:28)
+    at addChunk (node:internal/streams/readable:561:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:512:3)
+    at Socket.Readable.push (node:internal/streams/readable:392:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:191:23) {
+  errors: [Getter/Setter],
+  warnings: [Getter/Setter],
+  frame: '\n' +
+    '"await" can only be used inside an "async" function\n' +
+    '185|                      const product = new admin.rest.resources.Product({ session });\n' +
+    '186|                      product.id = requestedId;\n' +
+    '187|                      await product.load();\n' +
+    '   |                      ^\n' +
+    '188|                      \n' +
+    '189|                      if (product.title) {\n',
+  loc: {
+    column: 20,
+    file: '/app/app/routes/app._index.tsx?__remix-build-client-route',
+    length: 5,
+    line: 187,
+    lineText: '                    await product.load();',
+    namespace: '',
+    suggestion: ''
+  },
+  code: 'PLUGIN_ERROR',
+  plugin: 'vite:esbuild',
+  hook: 'transform',
+  id: '/app/app/routes/app._index.tsx?__remix-build-client-route',
+  watchFiles: [
+    '/app/node_modules/@remix-run/dev/dist/config/defaults/entry.client.tsx',
+    '/app/app/root.tsx',
+    '/app/app/routes/webhooks.app.scopes_update.tsx',
+    '/app/app/routes/apps.tryon.job.$jobId.tsx',
+    '/app/app/routes/webhooks.app.uninstalled.tsx',
+    '/app/app/routes/apps.tryon.generate.tsx',
+    '/app/app/routes/apps.tryon.widget-v2.tsx',
+    '/app/app/routes/apps.tryon.status.tsx',
+    '/app/app/routes/apps.tryon.atc.tsx',
+    '/app/app/routes/widget-v2[.]js.tsx',
+    '/app/app/routes/apps.tryon.widget.tsx',
+    '/app/app/routes/auth.callback.tsx',
+    '/app/app/routes/webhooks.gdpr.tsx',
+    '/app/app/routes/auth.login/route.tsx',
+    '/app/app/routes/job.$jobId.tsx',
+    '/app/app/routes/generate.tsx',
+    '/app/app/routes/auth.$.tsx',
+    '/app/app/routes/_index/route.tsx',
+    '/app/app/routes/status.tsx',
+    '/app/app/routes/app.tsx',
+    '/app/app/routes/app.additional.tsx',
+    '/app/app/routes/app.dashboard.tsx',
+    '/app/app/routes/app.products.tsx',
+    '/app/app/routes/app.credits.tsx',
+    '/app/app/routes/app.history.tsx',
+    '/app/app/routes/app.privacy.tsx',
+    '/app/app/routes/app.support.tsx',
+    '/app/app/routes/app.widget.tsx',
+    '/app/app/routes/app.terms.tsx',
+    '/app/app/routes/app._index.tsx',
+    '/app/app/routes/atc.tsx',
+    '/app/node_modules/@remix-run/react/dist/esm/index.js',
+    '/app/node_modules/react-dom/client.js',
+    '/app/node_modules/react/jsx-runtime.js',
+    '/app/node_modules/react/index.js',
+    '/app/node_modules/@remix-run/react/dist/esm/browser.js',
+    '/app/node_modules/@remix-run/react/dist/esm/server.js',
+    '/app/node_modules/@remix-run/react/dist/esm/scroll-restoration.js',
+    '/app/node_modules/@remix-run/react/dist/esm/components.js',
+    '/app/node_modules/@remix-run/server-runtime/dist/esm/index.js',
+    '/app/node_modules/react-router-dom/dist/index.js'
+  ]
+}
+Dockerfile:25
+-------------------
+23 |
+24 |     # Build the application
+25 | >>> RUN npm run build
+26 |
+27 |     # Remove dev dependencies after build to reduce image size
+-------------------
+ERROR: failed to build: failed to solve: process "/bin/sh -c npm run build" did not complete successfully: exit code: 1
