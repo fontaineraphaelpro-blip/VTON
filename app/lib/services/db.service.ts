@@ -65,6 +65,7 @@ export async function upsertShop(domain: string, data: {
   monthlyQuota?: number | null;
   qualityMode?: string;
   monthly_quota_used?: number;
+  last_quota_reset?: string;
 }) {
   const shop = await getShop(domain);
   
@@ -131,6 +132,10 @@ export async function upsertShop(domain: string, data: {
     if (data.qualityMode !== undefined) {
       updates.push(`quality_mode = $${paramIndex++}`);
       params.push(data.qualityMode);
+    }
+    if (data.last_quota_reset !== undefined) {
+      updates.push(`last_quota_reset = $${paramIndex++}`);
+      params.push(data.last_quota_reset);
     }
     
     updates.push(`last_active_at = CURRENT_TIMESTAMP`);
