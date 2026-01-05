@@ -63,9 +63,13 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     
     // Fetch product names from Shopify
     const productNamesMap: Record<string, string> = {};
+    console.log(`[Dashboard] Products to fetch: ${productIdsToFetch.size}`, Array.from(productIdsToFetch));
+    
     if (productIdsToFetch.size > 0) {
       try {
         const productIdsArray = Array.from(productIdsToFetch);
+        console.log(`[Dashboard] Fetching ${productIdsArray.length} product names from Shopify...`);
+        
         // Fetch in batches of 10 (Shopify limit)
         for (let i = 0; i < productIdsArray.length; i += 10) {
           const batch = productIdsArray.slice(i, i + 10);
@@ -81,12 +85,18 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
           `;
           
           const gids = batch.map(id => `gid://shopify/Product/${id}`);
+          console.log(`[Dashboard] Fetching batch ${i / 10 + 1} with IDs:`, gids);
+          
           const response = await admin.graphql(productQuery, {
             variables: { ids: gids }
           });
           
+          console.log(`[Dashboard] GraphQL response status:`, response.ok, response.status);
+          
           if (response.ok) {
             const data = await response.json() as any;
+            console.log(`[Dashboard] GraphQL response data:`, JSON.stringify(data, null, 2));
+            
             if (data.data?.nodes) {
               data.data.nodes.forEach((node: any) => {
                 if (node && node.id && node.title) {
@@ -96,31 +106,28 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                   productNamesMap[numericId] = node.title;
                   productNamesMap[node.id] = node.title; // Also store GID format
                   
-                  // Log for debugging
-                  if (process.env.NODE_ENV !== "production") {
-                    console.log(`[Dashboard] Fetched product name: ${node.id} -> ${node.title}`);
-                  }
+                  console.log(`[Dashboard] Fetched product name: ${node.id} -> ${node.title}`);
                 } else if (node === null) {
-                  // Product not found - log for debugging
-                  if (process.env.NODE_ENV !== "production") {
-                    console.warn(`[Dashboard] Product not found in batch:`, batch);
-                  }
+                  console.warn(`[Dashboard] Product not found in batch:`, batch);
+                } else {
+                  console.warn(`[Dashboard] Invalid node in response:`, node);
                 }
               });
+            } else {
+              console.warn(`[Dashboard] No nodes in GraphQL response`);
             }
           } else {
-            // Log error for debugging
-            if (process.env.NODE_ENV !== "production") {
-              console.error(`[Dashboard] Failed to fetch products batch:`, response.status);
-            }
+            const errorText = await response.text().catch(() => "Unknown error");
+            console.error(`[Dashboard] Failed to fetch products batch:`, response.status, errorText);
           }
         }
+        
+        console.log(`[Dashboard] Product names map:`, productNamesMap);
       } catch (error) {
-        // Log error but don't block dashboard load
-        if (process.env.NODE_ENV !== "production") {
-          console.error("Error fetching product names:", error);
-        }
+        console.error("Error fetching product names:", error);
       }
+    } else {
+      console.log(`[Dashboard] No products to fetch (all have product_title or no product_id)`);
     }
     
     // Enrich topProducts with product titles (always use fetched names if available)
@@ -131,12 +138,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         const title = productNamesMap[product.product_id] || productNamesMap[numericId];
         // Always use fetched title if available, otherwise use existing product_title
         if (title) {
-          if (process.env.NODE_ENV !== "production") {
-            console.log(`[Dashboard] Enriched product: ${product.product_id} -> ${title}`);
-          }
+          console.log(`[Dashboard] Enriched topProduct: ${product.product_id} -> ${title}`);
           return { ...product, product_title: title };
-        } else if (process.env.NODE_ENV !== "production") {
-          console.warn(`[Dashboard] No title found for product: ${product.product_id} (numeric: ${numericId})`);
+        } else {
+          console.warn(`[Dashboard] No title found for topProduct: ${product.product_id} (numeric: ${numericId}), map keys:`, Object.keys(productNamesMap));
         }
       }
       return product;
@@ -150,7 +155,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         const title = productNamesMap[log.product_id] || productNamesMap[numericId];
         // Always use fetched title if available, otherwise use existing product_title
         if (title) {
+          console.log(`[Dashboard] Enriched log: ${log.product_id} -> ${title}`);
           return { ...log, product_title: title };
+        } else {
+          console.warn(`[Dashboard] No title found for log: ${log.product_id} (numeric: ${numericId}), map keys:`, Object.keys(productNamesMap));
         }
       }
       return log;
