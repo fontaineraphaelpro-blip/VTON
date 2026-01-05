@@ -95,10 +95,16 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
           
           if (response.ok) {
             const data = await response.json() as any;
-            console.log(`[Dashboard] GraphQL response data:`, JSON.stringify(data, null, 2));
+            
+            // Check for GraphQL errors first
+            if (data.errors) {
+              console.error(`[Dashboard] GraphQL errors:`, JSON.stringify(data.errors, null, 2));
+            }
             
             if (data.data?.nodes) {
-              data.data.nodes.forEach((node: any) => {
+              console.log(`[Dashboard] Received ${data.data.nodes.length} nodes from GraphQL`);
+              
+              data.data.nodes.forEach((node: any, index: number) => {
                 if (node && node.id && node.title) {
                   // Store both GID and numeric ID as keys
                   productNamesMap[node.id] = node.title;
@@ -106,15 +112,15 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                   productNamesMap[numericId] = node.title;
                   productNamesMap[node.id] = node.title; // Also store GID format
                   
-                  console.log(`[Dashboard] Fetched product name: ${node.id} -> ${node.title}`);
+                  console.log(`[Dashboard] ✓ Fetched product name: ${node.id} -> ${node.title}`);
                 } else if (node === null) {
-                  console.warn(`[Dashboard] Product not found in batch:`, batch);
+                  console.warn(`[Dashboard] ✗ Product not found (null) for ID: ${batch[index]}`);
                 } else {
-                  console.warn(`[Dashboard] Invalid node in response:`, node);
+                  console.warn(`[Dashboard] ✗ Invalid node in response:`, node, `for ID: ${batch[index]}`);
                 }
               });
             } else {
-              console.warn(`[Dashboard] No nodes in GraphQL response`);
+              console.warn(`[Dashboard] No nodes in GraphQL response, data:`, JSON.stringify(data, null, 2));
             }
           } else {
             const errorText = await response.text().catch(() => "Unknown error");
