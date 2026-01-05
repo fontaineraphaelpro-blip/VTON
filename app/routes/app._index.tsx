@@ -1007,12 +1007,12 @@ export default function Dashboard() {
                   Error: {(fetcher.data as any).error}
                 </Banner>
               )}
-              {credits < (monthlyQuota ? Math.max(1, monthlyQuota * 0.1) : 50) && (
+              {credits < 10 && (
                 <Banner tone="warning" title="Low Credits Balance">
                   <p>
-                    You have <strong>{credits}</strong> {monthlyQuota ? "try-on" : "credit"}{credits !== 1 ? "s" : ""} remaining{monthlyQuota ? ` (${monthlyUsageCount} / ${monthlyQuota} used this month)` : ""}. 
+                    You have <strong>{credits}</strong> credit{credits !== 1 ? "s" : ""} remaining. 
                     <Link to="/app/credits" style={{ marginLeft: "8px" }}>
-                      {monthlyQuota ? "Upgrade plan →" : "Recharge now →"}
+                      Purchase credits →
                     </Link>
                   </p>
                 </Banner>
