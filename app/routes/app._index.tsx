@@ -176,39 +176,69 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             // Now match the requested IDs
             productIdsArray.forEach((requestedId) => {
               const requestedGid = `gid://shopify/Product/${requestedId}`;
-              const title = productNamesMap[requestedGid] || productNamesMap[requestedId];
+              let title = productNamesMap[requestedGid] || productNamesMap[requestedId];
               
               // #region agent log
               fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:175',message:'Trying to match requested ID',data:{requestedId,requestedGid,foundInMap:!!title,availableKeys:Object.keys(productNamesMap).slice(0,15)},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'F'})}).catch(()=>{});
               // #endregion
               
-              if (title) {
-                console.log(`[Dashboard] ✓ Matched product: ${requestedId} -> ${title}`);
-              } else {
+              if (!title) {
                 console.warn(`[Dashboard] ✗ Product not found in products list: ${requestedId} (GID: ${requestedGid})`);
                 // #region agent log
                 fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:181',message:'Product not found in products list',data:{requestedId,requestedGid,availableIds:Object.keys(productNamesMap).slice(0,15),allAvailableKeys:Object.keys(productNamesMap)},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'F'})}).catch(()=>{});
                 // #endregion
                 
-                // Fallback: try to find product_title in logs
+                // Fallback 1: try to find product_title in logs with same ID
                 const logWithTitle = recentLogs.find((log: any) => {
                   if (!log.product_id) return false;
                   const logGidMatch = log.product_id.match(/^gid:\/\/shopify\/Product\/(\d+)$/);
                   const logNumericId = logGidMatch ? logGidMatch[1] : log.product_id;
                   return log.product_id === requestedGid || logNumericId === requestedId;
                 });
-                // #region agent log
-                fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:187',message:'Checking logs for fallback title',data:{requestedId,foundLog:!!logWithTitle,logProductId:logWithTitle?.product_id,logProductTitle:logWithTitle?.product_title},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'F'})}).catch(()=>{});
-                // #endregion
-                if (logWithTitle?.product_title) {
-                  // Store the title from log as fallback
-                  productNamesMap[requestedGid] = logWithTitle.product_title;
-                  productNamesMap[requestedId] = logWithTitle.product_title;
-                  console.log(`[Dashboard] Using product_title from log as fallback: ${requestedId} -> ${logWithTitle.product_title}`);
+                
+                // Fallback 2: if no title found, try to find logs with handles that match products
+                // Count how many logs have each handle/product_title
+                if (!logWithTitle?.product_title) {
+                  const handleCounts: Record<string, number> = {};
+                  recentLogs.forEach((log: any) => {
+                    // If log has a handle (not GID, not numeric)
+                    if (log.product_id && !log.product_id.startsWith('gid://') && !/^\d+$/.test(log.product_id)) {
+                      const handle = log.product_id;
+                      if (productNamesMap[handle]) {
+                        handleCounts[handle] = (handleCounts[handle] || 0) + 1;
+                      }
+                    }
+                  });
+                  
+                  // Find the most frequent handle that matches a product
+                  const mostFrequentHandle = Object.keys(handleCounts).sort((a, b) => handleCounts[b] - handleCounts[a])[0];
+                  if (mostFrequentHandle && productNamesMap[mostFrequentHandle]) {
+                    title = productNamesMap[mostFrequentHandle];
+                    console.log(`[Dashboard] Using most frequent handle as fallback: ${requestedId} -> ${title} (handle: ${mostFrequentHandle}, count: ${handleCounts[mostFrequentHandle]})`);
+                    // #region agent log
+                    fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:200',message:'Using most frequent handle as fallback',data:{requestedId,title,handle:mostFrequentHandle,count:handleCounts[mostFrequentHandle]},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'F'})}).catch(()=>{});
+                    // #endregion
+                  }
+                }
+                
+                // Fallback 3: use product_title from log if found
+                if (!title && logWithTitle?.product_title) {
+                  title = logWithTitle.product_title;
+                  console.log(`[Dashboard] Using product_title from log as fallback: ${requestedId} -> ${title}`);
                   // #region agent log
-                  fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:193',message:'Successfully used product_title from log',data:{requestedId,title:logWithTitle.product_title},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'F'})}).catch(()=>{});
+                  fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:210',message:'Successfully used product_title from log',data:{requestedId,title},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'F'})}).catch(()=>{});
                   // #endregion
                 }
+                
+                // Store the title in map for future use
+                if (title) {
+                  productNamesMap[requestedGid] = title;
+                  productNamesMap[requestedId] = title;
+                }
+              }
+              
+              if (title) {
+                console.log(`[Dashboard] ✓ Matched product: ${requestedId} -> ${title}`);
               }
             });
           } else {
