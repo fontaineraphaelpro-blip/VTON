@@ -263,6 +263,16 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       // Create recurring subscription for paid plans (only if not Managed Pricing App)
       const returnUrl = new URL(request.url).origin + `/app/credits?pack=${packId}&monthlyQuota=${monthlyQuota}`;
       
+      // Determine if we're in test mode
+      // Test mode is enabled for:
+      // 1. Development stores (always test mode)
+      // 2. Development environment (NODE_ENV !== "production")
+      // 3. Stores with .myshopify.com domain that are test stores
+      const isTestStore = shop.includes('.myshopify.com') && 
+                         (process.env.NODE_ENV !== "production" || 
+                          shop.includes('test-') || 
+                          shop.includes('dev-'));
+      
       const response = await admin.graphql(
         `#graphql
           mutation appSubscriptionCreate($name: String!, $lineItems: [AppSubscriptionLineItemInput!]!, $returnUrl: URL!, $test: Boolean) {
