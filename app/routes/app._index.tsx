@@ -204,13 +204,28 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       console.log(`[Dashboard] No products to fetch (all have product_title or no product_id)`);
     }
     
-    // Enrich topProducts with product titles (always use fetched names if available)
+    // Enrich topProducts with product titles (use fetched names, fallback to existing product_title from logs)
     const enrichedTopProducts = topProducts.map((product: any) => {
       if (product.product_id) {
         const gidMatch = product.product_id.match(/^gid:\/\/shopify\/Product\/(\d+)$/);
         const numericId = gidMatch ? gidMatch[1] : product.product_id;
-        const title = productNamesMap[product.product_id] || productNamesMap[numericId];
-        // Always use fetched title if available, otherwise use existing product_title
+        // Try to get title from fetched map first
+        let title = productNamesMap[product.product_id] || productNamesMap[numericId];
+        
+        // If not found in map, try to find it in recentLogs (they might have product_title)
+        if (!title) {
+          const logWithTitle = recentLogs.find((log: any) => {
+            if (!log.product_id) return false;
+            const logGidMatch = log.product_id.match(/^gid:\/\/shopify\/Product\/(\d+)$/);
+            const logNumericId = logGidMatch ? logGidMatch[1] : log.product_id;
+            return log.product_id === product.product_id || logNumericId === numericId;
+          });
+          if (logWithTitle?.product_title) {
+            title = logWithTitle.product_title;
+            console.log(`[Dashboard] Using product_title from log for topProduct: ${product.product_id} -> ${title}`);
+          }
+        }
+        
         if (title) {
           console.log(`[Dashboard] Enriched topProduct: ${product.product_id} -> ${title}`);
           return { ...product, product_title: title };
@@ -221,13 +236,20 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       return product;
     });
     
-    // Enrich recentLogs with product titles (always use fetched names if available)
+    // Enrich recentLogs with product titles (use fetched names, keep existing product_title as fallback)
     const enrichedRecentLogs = recentLogs.map((log: any) => {
       if (log.product_id) {
         const gidMatch = log.product_id.match(/^gid:\/\/shopify\/Product\/(\d+)$/);
         const numericId = gidMatch ? gidMatch[1] : log.product_id;
-        const title = productNamesMap[log.product_id] || productNamesMap[numericId];
-        // Always use fetched title if available, otherwise use existing product_title
+        // Try to get title from fetched map first
+        let title = productNamesMap[log.product_id] || productNamesMap[numericId];
+        
+        // If not found in map, use existing product_title from log (if available)
+        if (!title && log.product_title) {
+          title = log.product_title;
+          console.log(`[Dashboard] Using existing product_title from log: ${log.product_id} -> ${title}`);
+        }
+        
         if (title) {
           console.log(`[Dashboard] Enriched log: ${log.product_id} -> ${title}`);
           return { ...log, product_title: title };
