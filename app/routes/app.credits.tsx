@@ -493,6 +493,15 @@ export default function Credits() {
   const fetcher = useFetcher<typeof action>();
   const revalidator = useRevalidator();
   const currentCredits = shop?.credits || 0;
+  
+  // Debug log to verify credits value
+  if (process.env.NODE_ENV !== "production") {
+    console.log(`[Credits Page] Credits display: shop?.credits=${shop?.credits}, currentCredits=${currentCredits}, shop object:`, {
+      credits: shop?.credits,
+      monthly_quota: shop?.monthly_quota,
+      monthly_quota_used: shop?.monthly_quota_used
+    });
+  }
   const [submittingPackId, setSubmittingPackId] = useState<string | null>(null);
   const [showSuccessBanner, setShowSuccessBanner] = useState(true);
   const [showErrorBanner, setShowErrorBanner] = useState(true);
