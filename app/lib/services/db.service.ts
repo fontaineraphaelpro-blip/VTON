@@ -378,13 +378,48 @@ export async function getProductTryonSetting(shop: string, productId: string): P
     }
   }
   
-  // Also try a broader search - find all settings for this shop to debug
-  const allSettings = await query(
-    "SELECT product_id, tryon_enabled FROM product_settings WHERE shop = $1 LIMIT 10",
-    [shop]
-  );
-  console.log(`[DB] No match found. Searched productId=${productId} (tried formats: ${formatsToTry.join(', ')}). Sample stored IDs:`, 
-    allSettings.rows.map((r: any) => `${r.product_id}=${r.tryon_enabled}`));
+  // Also try to find by extracting numeric IDs and matching them
+  // Sometimes Shopify uses different GID formats for the same product
+  const numericIdFromSearched = productId.match(/\d+/)?.[0];
+  if (numericIdFromSearched) {
+    // Try to find any setting with the same numeric ID (even if GID format differs)
+    const allSettings = await query(
+      "SELECT product_id, tryon_enabled FROM product_settings WHERE shop = $1",
+      [shop]
+    );
+    
+    for (const row of allSettings.rows) {
+      const storedProductId = row.product_id;
+      const numericIdFromStored = storedProductId.match(/\d+/)?.[0];
+      
+      // If numeric IDs match, it's the same product (even if GID format differs)
+      if (numericIdFromStored === numericIdFromSearched) {
+        const enabled = row.tryon_enabled;
+        const enabledBool = enabled === true || enabled === 'true' || enabled === 1;
+        const disabledBool = enabled === false || enabled === 'false' || enabled === 0;
+        
+        if (disabledBool) {
+          console.log(`[DB] Found product setting by numeric ID match: shop=${shop}, searched=${productId} (numeric: ${numericIdFromSearched}), found=${storedProductId} (numeric: ${numericIdFromStored}), enabled=false (DISABLED)`);
+          return false;
+        } else if (enabledBool) {
+          console.log(`[DB] Found product setting by numeric ID match: shop=${shop}, searched=${productId} (numeric: ${numericIdFromSearched}), found=${storedProductId} (numeric: ${numericIdFromStored}), enabled=true (ENABLED)`);
+          return true;
+        }
+      }
+    }
+    
+    // Debug: show all settings if no match
+    console.log(`[DB] No match found by numeric ID. Searched productId=${productId} (numeric: ${numericIdFromSearched}, tried formats: ${formatsToTry.join(', ')}). All stored IDs:`, 
+      allSettings.rows.map((r: any) => `${r.product_id} (numeric: ${r.product_id.match(/\d+/)?.[0]})=${r.tryon_enabled}`));
+  } else {
+    // Debug: show all settings if no numeric ID found
+    const allSettings = await query(
+      "SELECT product_id, tryon_enabled FROM product_settings WHERE shop = $1 LIMIT 10",
+      [shop]
+    );
+    console.log(`[DB] No match found. Searched productId=${productId} (tried formats: ${formatsToTry.join(', ')}). Sample stored IDs:`, 
+      allSettings.rows.map((r: any) => `${r.product_id}=${r.tryon_enabled}`));
+  }
   
   return null; // Not set - defaults to enabled (all products enabled by default, admin can disable individually)
 }
