@@ -119,10 +119,16 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     }
 
     // 3. Get product_id from query params
-    const productId = queryParams.get("product_id");
+    let productId = queryParams.get("product_id");
     if (!productId) {
       return json({ error: "product_id parameter required" }, { status: 400 });
     }
+
+    // 4. Normalize product ID: if it's a handle (not GID and not numeric), 
+    // we need to try to find it in the database with different formats
+    // The widget should send GID format, but we handle handles as fallback
+    // Note: We can't convert handle to GID here without Admin API access,
+    // but getProductTryonStatus will try multiple formats
 
     // 4. Ensure database tables exist
     try {
@@ -133,6 +139,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     }
 
     // 5. Get comprehensive try-on status (shop + product level)
+    // getProductTryonStatus will try to match with different ID formats
     const status = await getProductTryonStatus(shop, productId);
 
     // 6. Return status

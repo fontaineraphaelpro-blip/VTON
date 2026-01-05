@@ -61,8 +61,10 @@ export async function upsertShop(domain: string, data: {
   dailyLimit?: number;
   incrementTotalTryons?: boolean;
   incrementTotalAtc?: boolean;
+  total_tryons?: number;
   monthlyQuota?: number | null;
   qualityMode?: string;
+  monthly_quota_used?: number;
 }) {
   const shop = await getShop(domain);
   
@@ -114,9 +116,17 @@ export async function upsertShop(domain: string, data: {
     if (data.incrementTotalAtc) {
       updates.push(`total_atc = total_atc + 1`);
     }
+    if (data.total_tryons !== undefined) {
+      updates.push(`total_tryons = $${paramIndex++}`);
+      params.push(data.total_tryons);
+    }
     if (data.monthlyQuota !== undefined) {
       updates.push(`monthly_quota = $${paramIndex++}`);
       params.push(data.monthlyQuota);
+    }
+    if (data.monthly_quota_used !== undefined) {
+      updates.push(`monthly_quota_used = $${paramIndex++}`);
+      params.push(data.monthly_quota_used);
     }
     if (data.qualityMode !== undefined) {
       updates.push(`quality_mode = $${paramIndex++}`);
@@ -310,16 +320,42 @@ export async function getTryonStatsByDay(shop: string, days: number = 30) {
  * Returns true if enabled, false if disabled, or null if not set (defaults to enabled).
  */
 export async function getProductTryonSetting(shop: string, productId: string): Promise<boolean | null> {
-  const result = await query(
+  // Try exact match first
+  let result = await query(
     "SELECT tryon_enabled FROM product_settings WHERE shop = $1 AND product_id = $2",
     [shop, productId]
   );
   
-  if (result.rows.length === 0) {
-    return null; // Not set, defaults to enabled
+  if (result.rows.length > 0) {
+    return result.rows[0].tryon_enabled;
   }
   
-  return result.rows[0].tryon_enabled;
+  // If productId is numeric, try with GID format
+  if (/^\d+$/.test(productId)) {
+    const gidFormat = `gid://shopify/Product/${productId}`;
+    result = await query(
+      "SELECT tryon_enabled FROM product_settings WHERE shop = $1 AND product_id = $2",
+      [shop, gidFormat]
+    );
+    if (result.rows.length > 0) {
+      return result.rows[0].tryon_enabled;
+    }
+  }
+  
+  // If productId is GID format, also try without the prefix (just the numeric part)
+  const gidMatch = productId.match(/^gid:\/\/shopify\/Product\/(\d+)$/);
+  if (gidMatch) {
+    const numericId = gidMatch[1];
+    result = await query(
+      "SELECT tryon_enabled FROM product_settings WHERE shop = $1 AND (product_id = $2 OR product_id = $3)",
+      [shop, numericId, productId]
+    );
+    if (result.rows.length > 0) {
+      return result.rows[0].tryon_enabled;
+    }
+  }
+  
+  return null; // Not set, defaults to enabled
 }
 
 /**

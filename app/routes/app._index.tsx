@@ -15,7 +15,7 @@ import {
 } from "@shopify/polaris";
 import { TitleBar } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
-import { getShop, upsertShop, getTryonLogs, getTopProducts, getTryonStatsByDay, getMonthlyTryonUsage } from "../lib/services/db.service";
+import { getShop, upsertShop, getTryonLogs, getTopProducts, getTryonStatsByDay, getMonthlyTryonUsage, query } from "../lib/services/db.service";
 import { ensureTables } from "../lib/db-init.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -32,6 +32,31 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       getTryonStatsByDay(shop, 30).catch(() => []),
       getMonthlyTryonUsage(shop).catch(() => 0), // ADDED: Get monthly usage
     ]);
+    
+    // Calculate total_tryons from logs if not set in shop record
+    let totalTryons = shopData?.total_tryons || 0;
+    if ((totalTryons === 0 || totalTryons === null) && shopData) {
+      try {
+        const tryonsResult = await query(
+          `SELECT COUNT(*) as count FROM tryon_logs WHERE shop = $1 AND success = true`,
+          [shop]
+        );
+        const calculatedTotal = parseInt(tryonsResult.rows[0]?.count || '0', 10);
+        if (calculatedTotal > 0) {
+          totalTryons = calculatedTotal;
+          // Update shop record with calculated value (async, don't block)
+          query(
+            `UPDATE shops SET total_tryons = $1 WHERE domain = $2`,
+            [calculatedTotal, shop]
+          ).catch(() => {
+            // Ignore update errors
+          });
+        }
+      } catch (error) {
+        // If calculation fails, use shop value
+        totalTryons = shopData?.total_tryons || 0;
+      }
+    }
 
     // If shop doesn't exist yet, create it with free plan (4 credits/month)
     if (!shopData) {
@@ -47,6 +72,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         topProducts: [],
         dailyStats: [],
         monthlyUsage: 0,
+        totalTryons: 0,
       });
     }
 
@@ -306,6 +332,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       topProducts: Array.isArray(topProducts) ? topProducts : [],
       dailyStats: Array.isArray(dailyStats) ? dailyStats : [],
       monthlyUsage: monthlyUsage || 0, // ADDED: Monthly usage count
+      totalTryons: totalTryons || 0, // ADDED: Total try-ons (calculated or from shop)
     });
   } catch (error) {
     // Log error only in development
@@ -483,9 +510,13 @@ export default function Dashboard() {
     ? Math.max(0, monthlyQuota - monthlyUsageCount) // Remaining quota
     : (shop?.credits || 0); // Fallback to old credits system
   
-  const totalTryons = shop?.total_tryons || 0;
+  // Get total try-ons from loader data (calculated in loader) or fallback to shop value
+  const totalTryons = typeof (loaderData as any).totalTryons === 'number' 
+    ? (loaderData as any).totalTryons 
+    : (shop?.total_tryons || 0);
+  
   const totalAtc = shop?.total_atc || 0;
-  const conversionRate = totalTryons > 0
+  const conversionRate = totalTryons > 0 && totalAtc >= 0
     ? ((totalAtc / totalTryons) * 100).toFixed(1)
     : "0.0";
   

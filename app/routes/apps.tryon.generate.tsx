@@ -109,9 +109,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
       const latencyMs = Date.now() - startTime;
 
-      // Incrémenter le quota utilisé
+      // Incrémenter le quota utilisé et le compteur total de try-ons
       await upsertShop(shop, { 
-        monthly_quota_used: (monthlyQuotaUsed + 1) 
+        monthly_quota_used: (monthlyQuotaUsed + 1),
+        incrementTotalTryons: true // Increment total try-ons counter
       });
 
       // Créer un log de succès

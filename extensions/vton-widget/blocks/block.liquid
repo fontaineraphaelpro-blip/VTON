@@ -50,17 +50,65 @@
       }
       
       function extractProductId() {
-        // Try from URL
+        // Try to get Shopify product ID (GID) from various sources
+        // 1. Try from data attribute on product form
+        const productForm = document.querySelector('form[action*="/cart/add"]');
+        if (productForm) {
+          const productId = productForm.getAttribute('data-product-id') || 
+                           productForm.querySelector('[name="id"]')?.getAttribute('value');
+          if (productId) {
+            // Convert numeric ID to GID format if needed
+            if (/^\d+$/.test(productId)) {
+              return 'gid://shopify/Product/' + productId;
+            }
+            // Already in GID format
+            if (productId.startsWith('gid://shopify/Product/')) {
+              return productId;
+            }
+          }
+        }
+        
+        // 2. Try from meta tag with product ID
+        const productIdMeta = document.querySelector('meta[property="product:retailer_item_id"]') ||
+                              document.querySelector('meta[name="product-id"]') ||
+                              document.querySelector('[data-product-id]');
+        if (productIdMeta) {
+          const productId = productIdMeta.getAttribute('content') || 
+                           productIdMeta.getAttribute('data-product-id');
+          if (productId) {
+            if (/^\d+$/.test(productId)) {
+              return 'gid://shopify/Product/' + productId;
+            }
+            if (productId.startsWith('gid://shopify/Product/')) {
+              return productId;
+            }
+          }
+        }
+        
+        // 3. Try from Shopify global object
+        if (window.Shopify && window.Shopify.product && window.Shopify.product.id) {
+          const productId = window.Shopify.product.id;
+          if (/^\d+$/.test(String(productId))) {
+            return 'gid://shopify/Product/' + productId;
+          }
+          if (String(productId).startsWith('gid://shopify/Product/')) {
+            return String(productId);
+          }
+        }
+        
+        // 4. Fallback: Try from URL (handle) - will need conversion in backend
         const urlMatch = window.location.pathname.match(/\/products\/([^\/\?]+)/);
         if (urlMatch) {
-          return urlMatch[1];
+          return urlMatch[1]; // Return handle as fallback
         }
-        // Try from meta tag
+        
+        // 5. Try from meta tag
         const meta = document.querySelector('meta[property="og:url"]');
         if (meta) {
           const match = meta.content.match(/\/products\/([^\/\?]+)/);
           if (match) return match[1];
         }
+        
         return null;
       }
       
