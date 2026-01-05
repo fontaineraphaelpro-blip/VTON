@@ -140,8 +140,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       // Get product settings (try-on enabled/disabled)
       for (const product of products) {
         const setting = await getProductTryonSetting(shop, product.id).catch(() => null);
-        // Only explicitly true means enabled (null or false means disabled)
-        productSettings[product.id] = setting === true;
+        // Default to enabled if not set (null = enabled by default, admin can disable explicitly)
+        // true = explicitly enabled, false = explicitly disabled, null = enabled by default
+        productSettings[product.id] = setting !== false; // null or true means enabled, only false means disabled
       }
     } catch (dbError) {
       // Log only in development
@@ -271,7 +272,7 @@ export default function Products() {
     }
     
     const productId = product.id.replace("gid://shopify/Product/", "");
-    const tryonEnabled = productSettings[product.id] === true; // Only explicitly true means enabled
+    const tryonEnabled = productSettings[product.id] !== false; // null or true means enabled, only false means disabled
     const tryonCount = tryonCounts[product.id] || 0;
     
     // ADDED: Handle toggle

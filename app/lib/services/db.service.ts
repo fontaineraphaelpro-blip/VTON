@@ -318,7 +318,8 @@ export async function getTryonStatsByDay(shop: string, days: number = 30) {
 /**
  * ADDED: Gets product try-on setting (enabled/disabled).
  * Returns true if enabled, false if disabled, or null if not set.
- * Note: null means not explicitly set - will default to disabled for security.
+ * Note: null means not explicitly set - defaults to ENABLED (all products enabled by default at installation).
+ * Admin can then explicitly enable/disable individual products.
  */
 export async function getProductTryonSetting(shop: string, productId: string): Promise<boolean | null> {
   // Normalize productId - try multiple formats
@@ -373,7 +374,7 @@ export async function getProductTryonSetting(shop: string, productId: string): P
   console.log(`[DB] No match found. Searched productId=${productId} (tried formats: ${formatsToTry.join(', ')}). Sample stored IDs:`, 
     allSettings.rows.map((r: any) => `${r.product_id}=${r.tryon_enabled}`));
   
-  return null; // Not set - will be treated as disabled by default
+  return null; // Not set - defaults to enabled (all products enabled by default, admin can disable individually)
 }
 
 /**
@@ -503,8 +504,9 @@ export async function getProductTryonStatus(shop: string, productId: string): Pr
   // IMPORTANT: 
   // - If productSetting is explicitly true, product is enabled
   // - If productSetting is explicitly false, product is disabled
-  // - If productSetting is null (not set), default to DISABLED for security (user must explicitly enable)
-  const productEnabled = productSetting === true; // Only explicitly true means enabled
+  // - If productSetting is null (not set), default to ENABLED (all products enabled by default at installation)
+  // Admin can then explicitly disable products they don't want
+  const productEnabled = productSetting !== false; // null or true means enabled, only false means disabled
   
   // Log for debugging
   if (process.env.NODE_ENV !== "production") {
