@@ -95,8 +95,23 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                   const numericId = node.id.replace('gid://shopify/Product/', '');
                   productNamesMap[numericId] = node.title;
                   productNamesMap[node.id] = node.title; // Also store GID format
+                  
+                  // Log for debugging
+                  if (process.env.NODE_ENV !== "production") {
+                    console.log(`[Dashboard] Fetched product name: ${node.id} -> ${node.title}`);
+                  }
+                } else if (node === null) {
+                  // Product not found - log for debugging
+                  if (process.env.NODE_ENV !== "production") {
+                    console.warn(`[Dashboard] Product not found in batch:`, batch);
+                  }
                 }
               });
+            }
+          } else {
+            // Log error for debugging
+            if (process.env.NODE_ENV !== "production") {
+              console.error(`[Dashboard] Failed to fetch products batch:`, response.status);
             }
           }
         }
@@ -116,7 +131,12 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         const title = productNamesMap[product.product_id] || productNamesMap[numericId];
         // Always use fetched title if available, otherwise use existing product_title
         if (title) {
+          if (process.env.NODE_ENV !== "production") {
+            console.log(`[Dashboard] Enriched product: ${product.product_id} -> ${title}`);
+          }
           return { ...product, product_title: title };
+        } else if (process.env.NODE_ENV !== "production") {
+          console.warn(`[Dashboard] No title found for product: ${product.product_id} (numeric: ${numericId})`);
         }
       }
       return product;
