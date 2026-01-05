@@ -170,6 +170,12 @@
           },
           handleAddToCart: function() {
             handleAddToCart(shadowRoot, state);
+          },
+          startLoadingMessages: function() {
+            startLoadingMessages(shadowRoot);
+          },
+          stopLoadingMessages: function() {
+            stopLoadingMessages();
           }
         };
       }
@@ -298,6 +304,18 @@
               margin-top: 16px;
               font-size: 14px;
               color: #666;
+              font-weight: 500;
+              min-height: 20px;
+              transition: opacity 0.3s ease-in-out;
+            }
+            .vton-loading-text.fade-out {
+              opacity: 0;
+            }
+            .vton-loading-subtext {
+              margin-top: 8px;
+              font-size: 12px;
+              color: #999;
+              font-style: italic;
             }
             @keyframes spin {
               0% { transform: rotate(0deg); }
@@ -413,8 +431,8 @@
                 </button>
                 <div id="vton-loading" class="vton-loading">
                   <div class="vton-spinner"></div>
-                  <p class="vton-loading-text">Generation in progress...</p>
-                  <p class="vton-loading-text">Generation takes approximately 30 to 40 seconds. Please wait.</p>
+                  <p id="vton-loading-message" class="vton-loading-text">Preparing your virtual try-on experience...</p>
+                  <p class="vton-loading-subtext">This usually takes 30-40 seconds</p>
                   <p class="vton-privacy-notice">No personal data is stored.</p>
                 </div>
                 <div id="vton-result" class="vton-result"></div>
@@ -462,29 +480,204 @@
       }
       
       function handleAddToCart(shadowRoot, state) {
-        // Trouver le bouton "Add to Cart" sur la page produit
-        const addToCartButton = document.querySelector('form[action*="/cart/add"] button[type="submit"], form[action*="/cart/add"] input[type="submit"], button[name="add"], .product-form__cart-submit, [data-add-to-cart]');
+        // Find the add to cart form
+        const addToCartForm = document.querySelector('form[action*="/cart/add"]');
         
-        if (addToCartButton) {
-          // Cliquer sur le bouton "Add to Cart"
-          if (addToCartButton instanceof HTMLElement) {
+        if (!addToCartForm) {
+          console.warn('[VTON] Add to Cart form not found');
+          // Fallback: try to find and click the button
+          const addToCartButton = document.querySelector('button[type="submit"][name="add"], input[type="submit"][name="add"], .product-form__cart-submit, [data-add-to-cart]');
+          if (addToCartButton) {
             addToCartButton.click();
-          } else if (addToCartButton.click) {
-            addToCartButton.click();
+            trackAddToCart(state);
+          }
+          return;
+        }
+        
+        // Get the button in the result to show loading state
+        const atcButton = shadowRoot.querySelector('.vton-add-to-cart-btn');
+        const originalButtonText = atcButton ? atcButton.textContent : 'Add to Cart';
+        
+        // Disable button and show loading
+        if (atcButton) {
+          atcButton.disabled = true;
+          atcButton.textContent = 'Adding to cart...';
+          atcButton.style.opacity = '0.7';
+          atcButton.style.cursor = 'not-allowed';
+        }
+        
+        // Collect form data
+        const formData = new FormData(addToCartForm);
+        
+        // Get quantity (default to 1 if not specified)
+        let quantity = formData.get('quantity') || '1';
+        if (!quantity || quantity === '') {
+          quantity = '1';
+        }
+        
+        // Get variant ID (required)
+        const variantId = formData.get('id') || formData.get('variant_id');
+        if (!variantId) {
+          console.error('[VTON] Variant ID not found in form');
+          if (atcButton) {
+            atcButton.disabled = false;
+            atcButton.textContent = originalButtonText;
+            atcButton.style.opacity = '1';
+            atcButton.style.cursor = 'pointer';
+          }
+          alert('Please select a product variant before adding to cart.');
+          return;
+        }
+        
+        // Prepare cart add data
+        const cartData = {
+          id: variantId,
+          quantity: parseInt(quantity, 10) || 1
+        };
+        
+        // Add any additional properties (for custom products)
+        formData.forEach((value, key) => {
+          if (key.startsWith('properties[')) {
+            if (!cartData.properties) {
+              cartData.properties = {};
+            }
+            const propKey = key.replace('properties[', '').replace(']', '');
+            cartData.properties[propKey] = value;
+          }
+        });
+        
+        // Submit to Shopify cart
+        fetch('/cart/add.js', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify(cartData)
+        })
+        .then(function(response) {
+          return response.json().then(function(data) {
+            if (!response.ok) {
+              throw new Error(data.description || data.message || 'Failed to add to cart');
+            }
+            return data;
+          });
+        })
+        .then(function(data) {
+          console.log('[VTON] Product added to cart successfully:', data);
+          
+          // Update button to show success
+          if (atcButton) {
+            atcButton.textContent = '✓ Added to Cart!';
+            atcButton.style.background = '#28a745';
+            
+            // Reset button after 2 seconds
+            setTimeout(function() {
+              if (atcButton) {
+                atcButton.textContent = originalButtonText;
+                atcButton.style.background = state.widgetSettings.widget_bg || '#000000';
+                atcButton.disabled = false;
+                atcButton.style.opacity = '1';
+                atcButton.style.cursor = 'pointer';
+              }
+            }, 2000);
           }
           
-          // Tracker l'ajout au panier
-          const url = window.location.origin + '/apps/tryon/atc?shop=' + encodeURIComponent(state.shop) + '&product_id=' + encodeURIComponent(state.productId);
-          fetch(url, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            }
-          }).catch(function(err) {
-            console.error('[VTON] Failed to track Add to Cart:', err);
-          });
-        } else {
-          console.warn('[VTON] Add to Cart button not found on page');
+          // Track the add to cart event
+          trackAddToCart(state);
+          
+          // Optionally trigger cart drawer/notification if theme supports it
+          // Many Shopify themes listen for custom events
+          const cartUpdatedEvent = new CustomEvent('cart:updated', { detail: data });
+          document.dispatchEvent(cartUpdatedEvent);
+          
+          // Also try to open cart drawer if theme uses this pattern
+          const cartDrawerButton = document.querySelector('[data-cart-drawer-toggle], .cart-drawer-toggle, [aria-controls*="cart"]');
+          if (cartDrawerButton) {
+            setTimeout(function() {
+              cartDrawerButton.click();
+            }, 500);
+          }
+        })
+        .catch(function(error) {
+          console.error('[VTON] Error adding to cart:', error);
+          
+          // Show error on button
+          if (atcButton) {
+            atcButton.textContent = 'Error - Try Again';
+            atcButton.style.background = '#dc3545';
+            atcButton.disabled = false;
+            atcButton.style.opacity = '1';
+            atcButton.style.cursor = 'pointer';
+            
+            // Reset after 3 seconds
+            setTimeout(function() {
+              if (atcButton) {
+                atcButton.textContent = originalButtonText;
+                atcButton.style.background = state.widgetSettings.widget_bg || '#000000';
+              }
+            }, 3000);
+          }
+          
+          // Show alert for user feedback
+          alert('Unable to add product to cart. Please try again or use the regular Add to Cart button.');
+        });
+      }
+      
+      function trackAddToCart(state) {
+        // Track the add to cart event for analytics
+        const url = window.location.origin + '/apps/tryon/atc?shop=' + encodeURIComponent(state.shop) + '&product_id=' + encodeURIComponent(state.productId);
+        fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }).catch(function(err) {
+          console.error('[VTON] Failed to track Add to Cart:', err);
+        });
+      }
+      
+      // Loading messages that rotate during generation
+      let loadingMessageInterval = null;
+      const loadingMessages = [
+        'Preparing your virtual try-on experience...',
+        'Analyzing your photo and product details...',
+        'Processing your image with AI technology...',
+        'Creating your personalized try-on result...',
+        'Almost there! Finalizing your image...',
+        'Applying advanced AI algorithms...',
+        'Optimizing colors and fit for you...',
+        'Generating your perfect match...',
+        'Just a few more seconds...',
+        'Fine-tuning every detail...'
+      ];
+      
+      function startLoadingMessages(shadowRoot) {
+        let messageIndex = 0;
+        const messageElement = shadowRoot.getElementById('vton-loading-message');
+        
+        if (!messageElement) return;
+        
+        // Change message every 4 seconds with fade effect
+        loadingMessageInterval = setInterval(function() {
+          messageIndex = (messageIndex + 1) % loadingMessages.length;
+          if (messageElement) {
+            // Fade out
+            messageElement.classList.add('fade-out');
+            
+            // Change text and fade in after short delay
+            setTimeout(function() {
+              messageElement.textContent = loadingMessages[messageIndex];
+              messageElement.classList.remove('fade-out');
+            }, 300);
+          }
+        }, 4000);
+      }
+      
+      function stopLoadingMessages() {
+        if (loadingMessageInterval) {
+          clearInterval(loadingMessageInterval);
+          loadingMessageInterval = null;
         }
       }
       
@@ -509,6 +702,9 @@
           error.classList.remove('active');
           error.textContent = '';
         }
+        
+        // Start rotating loading messages
+        startLoadingMessages(shadowRoot);
         
         // Construct absolute URL for app proxy
         const url = window.location.origin + '/apps/tryon/generate?shop=' + encodeURIComponent(state.shop) + '&product_id=' + encodeURIComponent(state.productId);
@@ -541,6 +737,9 @@
           console.log('[VTON] Extracted result URL:', state.resultImageUrl);
           console.log('[VTON] Result element exists:', !!result);
           
+          // Stop loading messages
+          stopLoadingMessages();
+          
           // Hide loading
           if (loading) loading.classList.remove('active');
           
@@ -551,7 +750,7 @@
             const buttonColor = state.widgetSettings.widget_color || '#ffffff';
             result.innerHTML = 
               '<img src="' + state.resultImageUrl + '" alt="Result" style="width: 100%; border-radius: 8px; display: block; margin-bottom: 16px;" />' +
-              '<button class="vton-add-to-cart-btn" style="width: 100%; padding: 14px; border: none; border-radius: 4px; font-size: 16px; font-weight: 600; cursor: pointer; background: ' + buttonBg + '; color: ' + buttonColor + ';" onclick="window.vtonWidgetInstance.handleAddToCart()">' +
+              '<button class="vton-add-to-cart-btn" style="width: 100%; padding: 14px; border: none; border-radius: 4px; font-size: 16px; font-weight: 600; cursor: pointer; background: ' + buttonBg + '; color: ' + buttonColor + '; transition: all 0.3s ease;" onclick="window.vtonWidgetInstance.handleAddToCart()">' +
               'Add to Cart' +
               '</button>';
             console.log('[VTON] Result displayed successfully with Add to Cart button');
@@ -572,6 +771,10 @@
           if (generateBtn) generateBtn.disabled = false;
         }).catch(function(error) {
           console.error('[VTON] Generation error:', error);
+          
+          // Stop loading messages
+          stopLoadingMessages();
+          
           if (loading) loading.classList.remove('active');
           if (error) {
             error.classList.add('active');
