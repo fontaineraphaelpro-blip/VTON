@@ -321,7 +321,7 @@ export async function getTryonStatsByDay(shop: string, days: number = 30) {
  * Note: null means not explicitly set - defaults to ENABLED (all products enabled by default at installation).
  * Admin can then explicitly enable/disable individual products.
  */
-export async function getProductTryonSetting(shop: string, productId: string): Promise<boolean | null> {
+export async function getProductTryonSetting(shop: string, productId: string, productHandle?: string): Promise<boolean | null> {
   // Normalize productId - try multiple formats
   const formatsToTry: string[] = [productId]; // Start with original
   
