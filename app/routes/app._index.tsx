@@ -154,12 +154,14 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             if (data.data?.nodes) {
               console.log(`[Dashboard] Received ${data.data.nodes.length} nodes from GraphQL`);
               
-              data.data.nodes.forEach((node: any, index: number) => {
+              // Use for...of loop instead of forEach to support async/await
+              for (let index = 0; index < data.data.nodes.length; index++) {
+                const node = data.data.nodes[index];
                 const requestedId = batch[index];
                 const requestedGid = gids[index];
                 
                 // #region agent log
-                fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:110',message:'Processing GraphQL node',data:{index,requestedId,requestedGid,nodeIsNull:node===null,nodeHasId:!!node?.id,nodeHasTitle:!!node?.title,nodeId:node?.id,nodeTitle:node?.title},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+                fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:110',message:'Processing GraphQL node',data:{index,requestedId,requestedGid,nodeIsNull:node===null,nodeHasId:!!node?.id,nodeHasTitle:!!node?.title,nodeId:node?.id,nodeTitle:node?.title},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'C'})}).catch(()=>{});
                 // #endregion
                 
                 if (node && node.id && node.title) {
@@ -170,7 +172,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                   productNamesMap[node.id] = node.title; // Also store GID format
                   
                   // #region agent log
-                  fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:118',message:'Stored product name in map',data:{gid:node.id,numericId,title:node.title,mapKeysBefore:Object.keys(productNamesMap).length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+                  fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:118',message:'Stored product name in map',data:{gid:node.id,numericId,title:node.title,mapKeysBefore:Object.keys(productNamesMap).length},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'C'})}).catch(()=>{});
                   // #endregion
                   
                   console.log(`[Dashboard] ✓ Fetched product name: ${node.id} (numeric: ${numericId}) -> ${node.title}`);
@@ -217,10 +219,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                 } else {
                   console.warn(`[Dashboard] ✗ Invalid node in response:`, node, `for ID: ${requestedId} (GID: ${requestedGid})`);
                   // #region agent log
-                  fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:127',message:'Invalid node structure in GraphQL response',data:{requestedId,requestedGid,node},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+                  fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:127',message:'Invalid node structure in GraphQL response',data:{requestedId,requestedGid,node},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'C'})}).catch(()=>{});
                   // #endregion
                 }
-              });
+              }
             } else {
               console.warn(`[Dashboard] No nodes in GraphQL response, data structure:`, {
                 hasData: !!data.data,
