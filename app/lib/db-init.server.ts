@@ -104,6 +104,8 @@ export async function ensureTables() {
       ADD COLUMN IF NOT EXISTS is_enabled BOOLEAN DEFAULT true,
       ADD COLUMN IF NOT EXISTS daily_limit INTEGER DEFAULT 100,
       ADD COLUMN IF NOT EXISTS monthly_quota INTEGER DEFAULT NULL,
+      ADD COLUMN IF NOT EXISTS monthly_quota_used INTEGER DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS last_quota_reset TEXT DEFAULT NULL,
       ADD COLUMN IF NOT EXISTS quality_mode TEXT DEFAULT 'balanced'
     `);
 
