@@ -90,6 +90,7 @@ export async function ensureTables() {
         id SERIAL PRIMARY KEY,
         shop TEXT NOT NULL,
         product_id TEXT NOT NULL,
+        product_handle TEXT,
         tryon_enabled BOOLEAN DEFAULT true,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

@@ -50,14 +50,18 @@
           return;
         }
         
+        // Extract product handle from URL (fallback for matching)
+        const productHandle = extractProductHandle();
+        
         console.log('[VTON] Initializing widget for product:', {
           shop: shop,
           productId: productId,
+          productHandle: productHandle,
           currentUrl: window.location.href
         });
         
         // Check status and initialize widget
-        checkStatus(shop, productId).then(function(status) {
+        checkStatus(shop, productId, productHandle).then(function(status) {
           console.log('[VTON] Status check result:', {
             shop: shop,
             productId: productId,
@@ -215,9 +219,25 @@
         return null;
       }
       
-      function checkStatus(shop, productId) {
+      function extractProductHandle() {
+        // Try from URL (most reliable)
+        const urlMatch = window.location.pathname.match(/\/products\/([^\/\?]+)/);
+        if (urlMatch) {
+          return urlMatch[1];
+        }
+        // Try from Shopify object
+        if (window.Shopify && window.Shopify.product && window.Shopify.product.handle) {
+          return window.Shopify.product.handle;
+        }
+        return null;
+      }
+      
+      function checkStatus(shop, productId, productHandle) {
         // Construct absolute URL for app proxy
-        const url = window.location.origin + '/apps/tryon/status?shop=' + encodeURIComponent(shop) + '&product_id=' + encodeURIComponent(productId);
+        let url = window.location.origin + '/apps/tryon/status?shop=' + encodeURIComponent(shop) + '&product_id=' + encodeURIComponent(productId);
+        if (productHandle) {
+          url += '&product_handle=' + encodeURIComponent(productHandle);
+        }
         
         return fetch(url, {
           method: 'GET',

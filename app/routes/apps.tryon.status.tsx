@@ -118,8 +118,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       return json({ error: "Shop parameter missing" }, { status: 400 });
     }
 
-    // 3. Get product_id from query params and decode if needed
+    // 3. Get product_id and product_handle from query params
     let productId = queryParams.get("product_id");
+    const productHandle = queryParams.get("product_handle");
+    
     if (!productId) {
       return json({ error: "product_id parameter required" }, { status: 400 });
     }
@@ -136,7 +138,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       console.log(`[Status] Could not decode product ID, using as-is: ${productId}`);
     }
     
-    console.log(`[Status] Using product ID: ${productId}`);
+    console.log(`[Status] Using product ID: ${productId}, product handle: ${productHandle}`);
 
     // 4. Normalize product ID: if it's a handle (not GID and not numeric), 
     // we need to try to find it in the database with different formats

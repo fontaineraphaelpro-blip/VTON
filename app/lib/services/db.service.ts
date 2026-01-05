@@ -378,13 +378,35 @@ export async function getProductTryonSetting(shop: string, productId: string): P
     }
   }
   
+  // Also try to find by product handle if provided (most reliable for matching)
+  if (productHandle) {
+    const handleResult = await query(
+      "SELECT tryon_enabled FROM product_settings WHERE shop = $1 AND product_handle = $2",
+      [shop, productHandle]
+    );
+    
+    if (handleResult.rows.length > 0) {
+      const enabled = handleResult.rows[0].tryon_enabled;
+      const enabledBool = enabled === true || enabled === 'true' || enabled === 1;
+      const disabledBool = enabled === false || enabled === 'false' || enabled === 0;
+      
+      if (disabledBool) {
+        console.log(`[DB] Found product setting by handle: shop=${shop}, productHandle=${productHandle}, enabled=false (DISABLED)`);
+        return false;
+      } else if (enabledBool) {
+        console.log(`[DB] Found product setting by handle: shop=${shop}, productHandle=${productHandle}, enabled=true (ENABLED)`);
+        return true;
+      }
+    }
+  }
+  
   // Also try to find by extracting numeric IDs and matching them
   // Sometimes Shopify uses different GID formats for the same product
   const numericIdFromSearched = productId.match(/\d+/)?.[0];
   if (numericIdFromSearched) {
     // Try to find any setting with the same numeric ID (even if GID format differs)
     const allSettings = await query(
-      "SELECT product_id, tryon_enabled FROM product_settings WHERE shop = $1",
+      "SELECT product_id, product_handle, tryon_enabled FROM product_settings WHERE shop = $1",
       [shop]
     );
     
@@ -409,16 +431,16 @@ export async function getProductTryonSetting(shop: string, productId: string): P
     }
     
     // Debug: show all settings if no match
-    console.log(`[DB] No match found by numeric ID. Searched productId=${productId} (numeric: ${numericIdFromSearched}, tried formats: ${formatsToTry.join(', ')}). All stored IDs:`, 
-      allSettings.rows.map((r: any) => `${r.product_id} (numeric: ${r.product_id.match(/\d+/)?.[0]})=${r.tryon_enabled}`));
+    console.log(`[DB] No match found by numeric ID. Searched productId=${productId} (numeric: ${numericIdFromSearched}, handle: ${productHandle}, tried formats: ${formatsToTry.join(', ')}). All stored IDs:`, 
+      allSettings.rows.map((r: any) => `${r.product_id} (numeric: ${r.product_id.match(/\d+/)?.[0]}, handle: ${r.product_handle})=${r.tryon_enabled}`));
   } else {
     // Debug: show all settings if no numeric ID found
     const allSettings = await query(
-      "SELECT product_id, tryon_enabled FROM product_settings WHERE shop = $1 LIMIT 10",
+      "SELECT product_id, product_handle, tryon_enabled FROM product_settings WHERE shop = $1 LIMIT 10",
       [shop]
     );
-    console.log(`[DB] No match found. Searched productId=${productId} (tried formats: ${formatsToTry.join(', ')}). Sample stored IDs:`, 
-      allSettings.rows.map((r: any) => `${r.product_id}=${r.tryon_enabled}`));
+    console.log(`[DB] No match found. Searched productId=${productId} (handle: ${productHandle}, tried formats: ${formatsToTry.join(', ')}). Sample stored IDs:`, 
+      allSettings.rows.map((r: any) => `${r.product_id} (handle: ${r.product_handle})=${r.tryon_enabled}`));
   }
   
   return null; // Not set - defaults to enabled (all products enabled by default, admin can disable individually)
@@ -427,17 +449,17 @@ export async function getProductTryonSetting(shop: string, productId: string): P
 /**
  * ADDED: Sets product try-on enabled/disabled state.
  */
-export async function setProductTryonSetting(shop: string, productId: string, enabled: boolean) {
+export async function setProductTryonSetting(shop: string, productId: string, enabled: boolean, productHandle?: string) {
   if (process.env.NODE_ENV !== "production") {
-    console.log(`[DB] Setting product try-on: shop=${shop}, productId=${productId}, enabled=${enabled}`);
+    console.log(`[DB] Setting product try-on: shop=${shop}, productId=${productId}, productHandle=${productHandle}, enabled=${enabled}`);
   }
   
   const result = await query(
-    `INSERT INTO product_settings (shop, product_id, tryon_enabled, updated_at)
-     VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+    `INSERT INTO product_settings (shop, product_id, product_handle, tryon_enabled, updated_at)
+     VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
      ON CONFLICT (shop, product_id) 
-     DO UPDATE SET tryon_enabled = $3, updated_at = CURRENT_TIMESTAMP`,
-    [shop, productId, enabled]
+     DO UPDATE SET tryon_enabled = $4, product_handle = COALESCE($3, product_settings.product_handle), updated_at = CURRENT_TIMESTAMP`,
+    [shop, productId, productHandle || null, enabled]
   );
   
   // Verify the setting was saved correctly
@@ -546,8 +568,8 @@ export async function getProductTryonStatus(shop: string, productId: string): Pr
   // Check shop-level enablement
   const shopEnabled = shopRecord.is_enabled !== false; // Default to true if not set
   
-  // Check product-level enablement
-  const productSetting = await getProductTryonSetting(shop, productId);
+  // Check product-level enablement (pass handle for better matching)
+  const productSetting = await getProductTryonSetting(shop, productId, productHandle);
   // IMPORTANT: 
   // - If productSetting is explicitly true, product is enabled
   // - If productSetting is explicitly false, product is disabled
