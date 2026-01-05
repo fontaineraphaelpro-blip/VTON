@@ -443,9 +443,18 @@ export async function getProductTryonSetting(shop: string, productId: string, pr
       }
     }
     
-    // Debug: show all settings if no match
-    console.log(`[DB] No match found by numeric ID. Searched productId=${productId} (numeric: ${numericIdFromSearched}, handle: ${productHandle}, tried formats: ${formatsToTry.join(', ')}). All stored IDs:`, 
-      allSettings.rows.map((r: any) => `${r.product_id} (numeric: ${r.product_id.match(/\d+/)?.[0]}, handle: ${r.product_handle})=${r.tryon_enabled}`));
+    // If no match by numeric ID, try to match by handle if we have all settings
+    // This helps when IDs are different but handle is the same
+    if (!productHandle && allSettings.rows.length > 0) {
+      // Try to extract handle from URL or other sources and match
+      // For now, we'll log all settings to help debug
+      console.log(`[DB] No match found by numeric ID. Searched productId=${productId} (numeric: ${numericIdFromSearched}, handle: ${productHandle}, tried formats: ${formatsToTry.join(', ')}). All stored IDs:`, 
+        allSettings.rows.map((r: any) => `${r.product_id} (numeric: ${r.product_id.match(/\d+/)?.[0]}, handle: ${r.product_handle || 'null'})=${r.tryon_enabled}`));
+    } else {
+      // Debug: show all settings if no match
+      console.log(`[DB] No match found by numeric ID. Searched productId=${productId} (numeric: ${numericIdFromSearched}, handle: ${productHandle}, tried formats: ${formatsToTry.join(', ')}). All stored IDs:`, 
+        allSettings.rows.map((r: any) => `${r.product_id} (numeric: ${r.product_id.match(/\d+/)?.[0]}, handle: ${r.product_handle || 'null'})=${r.tryon_enabled}`));
+    }
   } else {
     // Debug: show all settings if no numeric ID found
     const allSettings = await query(
