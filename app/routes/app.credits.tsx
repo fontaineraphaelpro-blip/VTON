@@ -648,16 +648,17 @@ export default function Credits() {
         <div className="credits-balance">
           <div>
             <div className="credits-amount">
-              {PRICING_PLANS.find(p => p.id === activePlanId)?.name || "Free"}
+              {currentCredits}
             </div>
             <div className="credits-label">
-              Current Subscription Plan
+              Available Credits
             </div>
-            {currentMonthlyQuota > 0 && (
-              <div style={{ marginTop: "8px", fontSize: "14px", color: "#6B7280" }}>
-                {currentMonthlyQuota} try-ons/month
-              </div>
-            )}
+            <div style={{ marginTop: "8px", fontSize: "14px", color: "#6B7280" }}>
+              Plan: {PRICING_PLANS.find(p => p.id === activePlanId)?.name || "Free"}
+              {currentMonthlyQuota > 0 && (
+                <span> • {currentMonthlyQuota} credits/month</span>
+              )}
+            </div>
           </div>
         </div>
 
