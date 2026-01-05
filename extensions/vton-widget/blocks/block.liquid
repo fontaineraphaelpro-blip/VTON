@@ -95,14 +95,28 @@
         // Priority order: GID format > numeric ID > handle (last resort)
         
         // 1. Try from Shopify global object (most reliable)
-        if (window.Shopify && window.Shopify.product && window.Shopify.product.id) {
-          const productId = window.Shopify.product.id;
-          console.log('[VTON] Found product ID from window.Shopify.product:', productId);
-          if (/^\d+$/.test(String(productId))) {
-            return 'gid://shopify/Product/' + productId;
+        if (window.Shopify && window.Shopify.product) {
+          // Try product.id first
+          if (window.Shopify.product.id) {
+            const productId = window.Shopify.product.id;
+            console.log('[VTON] Found product ID from window.Shopify.product.id:', productId);
+            if (/^\d+$/.test(String(productId))) {
+              return 'gid://shopify/Product/' + productId;
+            }
+            if (String(productId).startsWith('gid://shopify/Product/')) {
+              return String(productId);
+            }
           }
-          if (String(productId).startsWith('gid://shopify/Product/')) {
-            return String(productId);
+          // Also try product.product_id (sometimes different from id)
+          if (window.Shopify.product.product_id) {
+            const productId = window.Shopify.product.product_id;
+            console.log('[VTON] Found product ID from window.Shopify.product.product_id:', productId);
+            if (/^\d+$/.test(String(productId))) {
+              return 'gid://shopify/Product/' + productId;
+            }
+            if (String(productId).startsWith('gid://shopify/Product/')) {
+              return String(productId);
+            }
           }
         }
         
