@@ -398,6 +398,8 @@ export async function getProductTryonSetting(shop: string, productId: string, pr
           console.log(`[DB] Found product setting by handle: shop=${shop}, productHandle=${productHandle}, enabled=true (ENABLED)`);
           return true;
         }
+      } else {
+        console.log(`[DB] No setting found by handle: shop=${shop}, productHandle=${productHandle}`);
       }
     } catch (error: any) {
       // Column might not exist yet - ignore and continue with other methods
@@ -407,6 +409,8 @@ export async function getProductTryonSetting(shop: string, productId: string, pr
         throw error;
       }
     }
+  } else {
+    console.log(`[DB] No productHandle provided, cannot search by handle`);
   }
   
   // Also try to find by extracting numeric IDs and matching them
