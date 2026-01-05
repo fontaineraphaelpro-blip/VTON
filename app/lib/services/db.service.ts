@@ -207,6 +207,7 @@ export async function getTryonLogs(shop: string, filters: {
 
 /**
  * Creates a tryon log entry.
+ * Returns the ID of the created log entry.
  */
 export async function createTryonLog(data: {
   shop: string;
@@ -218,10 +219,11 @@ export async function createTryonLog(data: {
   errorMessage?: string;
   latencyMs?: number;
   resultImageUrl?: string;
-}) {
-  await query(
+}): Promise<number> {
+  const result = await query(
     `INSERT INTO tryon_logs (shop, customer_ip, customer_id, product_id, product_title, success, error_message, latency_ms, result_image_url)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+     RETURNING id`,
     [
       data.shop,
       data.customerIp || null,
@@ -234,6 +236,7 @@ export async function createTryonLog(data: {
       data.resultImageUrl || null,
     ]
   );
+  return result.rows[0].id;
 }
 
 /**
