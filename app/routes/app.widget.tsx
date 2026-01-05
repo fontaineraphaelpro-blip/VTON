@@ -200,6 +200,16 @@ export default function Widget() {
           </p>
         </header>
 
+        <div style={{ marginBottom: "var(--spacing-lg)" }}>
+          <Banner tone="info" title="Important: Theme App Extension Required">
+            <Text as="p" variant="bodyMd">
+              Don't forget to install the theme app extension on your product pages! 
+              Go to your theme editor and add an "Apps" section to your product template. 
+              Otherwise, the widget will not appear on your product pages.
+            </Text>
+          </Banner>
+        </div>
+
         {error && (
           <div style={{ marginBottom: "var(--spacing-lg)" }}>
             <Banner tone="critical" title="Error">

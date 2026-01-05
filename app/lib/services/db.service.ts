@@ -389,10 +389,6 @@ export async function getProductTryonSetting(shop: string, productId: string, pr
   }
   
   // Also try to find by product handle if provided (most reliable for matching)
-  // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'db.service.ts:getProductTryonSetting:handle',message:'Checking handle search',data:{shop:shop,productId:productId,productHandle:productHandle,hasHandle:!!productHandle},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-  // #endregion
-  
   if (productHandle) {
     try {
       const handleResult = await query(
@@ -400,32 +396,33 @@ export async function getProductTryonSetting(shop: string, productId: string, pr
         [shop, productHandle]
       );
       
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'db.service.ts:getProductTryonSetting:handleResult',message:'Handle query result',data:{shop:shop,productHandle:productHandle,rowCount:handleResult.rows.length,enabled:handleResult.rows[0]?.tryon_enabled},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-      // #endregion
-      
       if (handleResult.rows.length > 0) {
         const enabled = handleResult.rows[0].tryon_enabled;
         const enabledBool = enabled === true || enabled === 'true' || enabled === 1;
         const disabledBool = enabled === false || enabled === 'false' || enabled === 0;
         
         if (disabledBool) {
-          console.log(`[DB] Found product setting by handle: shop=${shop}, productHandle=${productHandle}, enabled=false (DISABLED)`);
+          if (process.env.NODE_ENV !== "production") {
+            console.log(`[DB] Found product setting by handle: shop=${shop}, productHandle=${productHandle}, enabled=false (DISABLED)`);
+          }
           return false;
         } else if (enabledBool) {
-          console.log(`[DB] Found product setting by handle: shop=${shop}, productHandle=${productHandle}, enabled=true (ENABLED)`);
+          if (process.env.NODE_ENV !== "production") {
+            console.log(`[DB] Found product setting by handle: shop=${shop}, productHandle=${productHandle}, enabled=true (ENABLED)`);
+          }
           return true;
         }
       } else {
-        console.log(`[DB] No setting found by handle: shop=${shop}, productHandle=${productHandle}`);
+        if (process.env.NODE_ENV !== "production") {
+          console.log(`[DB] No setting found by handle: shop=${shop}, productHandle=${productHandle}`);
+        }
       }
     } catch (error: any) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'db.service.ts:getProductTryonSetting:handleError',message:'Handle query error',data:{shop:shop,productHandle:productHandle,error:error.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-      // #endregion
       // Column might not exist yet - ignore and continue with other methods
       if (error.message?.includes('product_handle') || error.message?.includes('column')) {
-        console.log(`[DB] product_handle column might not exist yet, skipping handle search`);
+        if (process.env.NODE_ENV !== "production") {
+          console.log(`[DB] product_handle column might not exist yet, skipping handle search`);
+        }
       } else {
         throw error;
       }
