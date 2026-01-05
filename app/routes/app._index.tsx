@@ -113,116 +113,111 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         const productIdsArray = Array.from(productIdsToFetch);
         console.log(`[Dashboard] Fetching ${productIdsArray.length} product names from Shopify...`);
         
-        // Fetch in batches of 10 (Shopify limit)
-        for (let i = 0; i < productIdsArray.length; i += 10) {
-          const batch = productIdsArray.slice(i, i + 10);
-          const productQuery = `#graphql
-            query getProducts($ids: [ID!]!) {
-              nodes(ids: $ids) {
-                ... on Product {
+        // Use products query instead of nodes(ids) - more reliable
+        const productQuery = `#graphql
+          query getProducts {
+            products(first: 250) {
+              edges {
+                node {
                   id
                   title
+                  handle
                 }
               }
             }
-          `;
+          }
+        `;
+        
+        console.log(`[Dashboard] Fetching all products from Shopify...`);
+        
+        const response = await admin.graphql(productQuery);
+        
+        console.log(`[Dashboard] GraphQL response status:`, response.ok, response.status);
+        
+        if (response.ok) {
+          const data = await response.json() as any;
           
-          const gids = batch.map(id => `gid://shopify/Product/${id}`);
-          console.log(`[Dashboard] Fetching batch ${i / 10 + 1} with IDs:`, gids);
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:120',message:'GraphQL products query response received',data:{hasErrors:!!data.errors,errors:data.errors,hasData:!!data.data,hasProducts:!!data.data?.products,productsCount:data.data?.products?.edges?.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run3',hypothesisId:'E'})}).catch(()=>{});
+          // #endregion
           
-          const response = await admin.graphql(productQuery, {
-            variables: { ids: gids }
-          });
-          
-          console.log(`[Dashboard] GraphQL response status:`, response.ok, response.status);
-          
-          if (response.ok) {
-            const data = await response.json() as any;
-            
+          // Check for GraphQL errors first
+          if (data.errors) {
+            console.error(`[Dashboard] GraphQL errors:`, JSON.stringify(data.errors, null, 2));
             // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:97',message:'GraphQL response received',data:{hasErrors:!!data.errors,errors:data.errors,hasData:!!data.data,hasNodes:!!data.data?.nodes,nodesCount:data.data?.nodes?.length,nodes:data.data?.nodes?.map((n:any,i:number)=>({index:i,isNull:n===null,hasId:!!n?.id,hasTitle:!!n?.title,id:n?.id,title:n?.title}))},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-            // #endregion
-            
-            // Check for GraphQL errors first
-            if (data.errors) {
-              console.error(`[Dashboard] GraphQL errors:`, JSON.stringify(data.errors, null, 2));
-              // #region agent log
-              fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:101',message:'GraphQL errors detected',data:{errors:data.errors},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-              // #endregion
-            }
-            
-            if (data.data?.nodes) {
-              console.log(`[Dashboard] Received ${data.data.nodes.length} nodes from GraphQL`);
-              
-              // Use for...of loop instead of forEach to support async/await
-              for (let index = 0; index < data.data.nodes.length; index++) {
-                const node = data.data.nodes[index];
-                const requestedId = batch[index];
-                const requestedGid = gids[index];
-                
-                // #region agent log
-                fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:110',message:'Processing GraphQL node',data:{index,requestedId,requestedGid,nodeIsNull:node===null,nodeHasId:!!node?.id,nodeHasTitle:!!node?.title,nodeId:node?.id,nodeTitle:node?.title},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'C'})}).catch(()=>{});
-                // #endregion
-                
-                if (node && node.id && node.title) {
-                  // Store both GID and numeric ID as keys
-                  productNamesMap[node.id] = node.title;
-                  const numericId = node.id.replace('gid://shopify/Product/', '');
-                  productNamesMap[numericId] = node.title;
-                  productNamesMap[node.id] = node.title; // Also store GID format
-                  
-                  // #region agent log
-                  fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:118',message:'Stored product name in map',data:{gid:node.id,numericId,title:node.title,mapKeysBefore:Object.keys(productNamesMap).length},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'C'})}).catch(()=>{});
-                  // #endregion
-                  
-                  console.log(`[Dashboard] ✓ Fetched product name: ${node.id} (numeric: ${numericId}) -> ${node.title}`);
-                } else if (node === null) {
-                  console.warn(`[Dashboard] ✗ Product not found (null) for ID: ${requestedId} (GID: ${requestedGid})`);
-                  // #region agent log
-                  fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:123',message:'Product returned null in GraphQL, trying logs fallback',data:{requestedId,requestedGid},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'C'})}).catch(()=>{});
-                  // #endregion
-                  
-                  // Fallback: try to find product_title in logs
-                  const logWithTitle = recentLogs.find((log: any) => {
-                    if (!log.product_id) return false;
-                    const logGidMatch = log.product_id.match(/^gid:\/\/shopify\/Product\/(\d+)$/);
-                    const logNumericId = logGidMatch ? logGidMatch[1] : log.product_id;
-                    return log.product_id === requestedGid || logNumericId === requestedId;
-                  });
-                  if (logWithTitle?.product_title) {
-                    // Store the title from log as fallback
-                    productNamesMap[requestedGid] = logWithTitle.product_title;
-                    productNamesMap[requestedId] = logWithTitle.product_title;
-                    console.log(`[Dashboard] Using product_title from log as fallback: ${requestedId} -> ${logWithTitle.product_title}`);
-                    // #region agent log
-                    fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:135',message:'Successfully used product_title from log',data:{requestedId,title:logWithTitle.product_title},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'C'})}).catch(()=>{});
-                    // #endregion
-                  }
-                } else {
-                  console.warn(`[Dashboard] ✗ Invalid node in response:`, node, `for ID: ${requestedId} (GID: ${requestedGid})`);
-                  // #region agent log
-                  fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:127',message:'Invalid node structure in GraphQL response',data:{requestedId,requestedGid,node},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'C'})}).catch(()=>{});
-                  // #endregion
-                }
-              }
-            } else {
-              console.warn(`[Dashboard] No nodes in GraphQL response, data structure:`, {
-                hasData: !!data.data,
-                hasNodes: !!data.data?.nodes,
-                dataKeys: data.data ? Object.keys(data.data) : [],
-                fullData: JSON.stringify(data, null, 2).substring(0, 1000)
-              });
-              // #region agent log
-              fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:133',message:'No nodes in GraphQL response',data:{hasData:!!data.data,hasNodes:!!data.data?.nodes,dataKeys:data.data?Object.keys(data.data):[],fullData:JSON.stringify(data,null,2).substring(0,1000)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-              // #endregion
-            }
-          } else {
-            const errorText = await response.text().catch(() => "Unknown error");
-            console.error(`[Dashboard] Failed to fetch products batch:`, response.status, errorText);
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:137',message:'GraphQL request failed',data:{status:response.status,errorText:errorText.substring(0,500)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+            fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:125',message:'GraphQL errors detected',data:{errors:data.errors},timestamp:Date.now(),sessionId:'debug-session',runId:'run3',hypothesisId:'D'})}).catch(()=>{});
             // #endregion
           }
+          
+          if (data.data?.products?.edges) {
+            console.log(`[Dashboard] Received ${data.data.products.edges.length} products from GraphQL`);
+            
+            // Create a map of all products by ID (both GID and numeric)
+            data.data.products.edges.forEach((edge: any) => {
+              const product = edge.node;
+              if (product && product.id && product.title) {
+                // Store both GID and numeric ID as keys
+                productNamesMap[product.id] = product.title;
+                const numericId = product.id.replace('gid://shopify/Product/', '');
+                productNamesMap[numericId] = product.title;
+                
+                // Also store by handle if available
+                if (product.handle) {
+                  productNamesMap[product.handle] = product.title;
+                }
+                
+                console.log(`[Dashboard] ✓ Stored product: ${product.id} (numeric: ${numericId}, handle: ${product.handle || 'N/A'}) -> ${product.title}`);
+              }
+            });
+            
+            // Now match the requested IDs
+            productIdsArray.forEach((requestedId) => {
+              const requestedGid = `gid://shopify/Product/${requestedId}`;
+              const title = productNamesMap[requestedGid] || productNamesMap[requestedId];
+              
+              if (title) {
+                console.log(`[Dashboard] ✓ Matched product: ${requestedId} -> ${title}`);
+              } else {
+                console.warn(`[Dashboard] ✗ Product not found in products list: ${requestedId} (GID: ${requestedGid})`);
+                // #region agent log
+                fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:150',message:'Product not found in products list',data:{requestedId,requestedGid,availableIds:Object.keys(productNamesMap).slice(0,10)},timestamp:Date.now(),sessionId:'debug-session',runId:'run3',hypothesisId:'E'})}).catch(()=>{});
+                // #endregion
+                
+                // Fallback: try to find product_title in logs
+                const logWithTitle = recentLogs.find((log: any) => {
+                  if (!log.product_id) return false;
+                  const logGidMatch = log.product_id.match(/^gid:\/\/shopify\/Product\/(\d+)$/);
+                  const logNumericId = logGidMatch ? logGidMatch[1] : log.product_id;
+                  return log.product_id === requestedGid || logNumericId === requestedId;
+                });
+                if (logWithTitle?.product_title) {
+                  // Store the title from log as fallback
+                  productNamesMap[requestedGid] = logWithTitle.product_title;
+                  productNamesMap[requestedId] = logWithTitle.product_title;
+                  console.log(`[Dashboard] Using product_title from log as fallback: ${requestedId} -> ${logWithTitle.product_title}`);
+                  // #region agent log
+                  fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:160',message:'Successfully used product_title from log',data:{requestedId,title:logWithTitle.product_title},timestamp:Date.now(),sessionId:'debug-session',runId:'run3',hypothesisId:'E'})}).catch(()=>{});
+                  // #endregion
+                }
+              }
+            });
+          } else {
+            console.warn(`[Dashboard] No products in GraphQL response, data structure:`, {
+              hasData: !!data.data,
+              hasProducts: !!data.data?.products,
+              dataKeys: data.data ? Object.keys(data.data) : [],
+              fullData: JSON.stringify(data, null, 2).substring(0, 1000)
+            });
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:170',message:'No products in GraphQL response',data:{hasData:!!data.data,hasProducts:!!data.data?.products,dataKeys:data.data?Object.keys(data.data):[],fullData:JSON.stringify(data,null,2).substring(0,1000)},timestamp:Date.now(),sessionId:'debug-session',runId:'run3',hypothesisId:'E'})}).catch(()=>{});
+            // #endregion
+          }
+        } else {
+          const errorText = await response.text().catch(() => "Unknown error");
+          console.error(`[Dashboard] Failed to fetch products:`, response.status, errorText);
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:175',message:'GraphQL request failed',data:{status:response.status,errorText:errorText.substring(0,500)},timestamp:Date.now(),sessionId:'debug-session',runId:'run3',hypothesisId:'D'})}).catch(()=>{});
+          // #endregion
         }
         
         console.log(`[Dashboard] Product names map:`, productNamesMap);
