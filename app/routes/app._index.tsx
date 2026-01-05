@@ -97,6 +97,17 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     const productNamesMap: Record<string, string> = {};
     console.log(`[Dashboard] Products to fetch: ${productIdsToFetch.size}`, Array.from(productIdsToFetch));
     
+    // Also collect product handles from logs for fallback
+    const productHandlesMap: Record<string, string> = {};
+    recentLogs.forEach((log: any) => {
+      if (log.product_id && log.product_title) {
+        // Store handle -> title mapping if product_id is a handle
+        if (!log.product_id.startsWith('gid://') && !/^\d+$/.test(log.product_id)) {
+          productHandlesMap[log.product_id] = log.product_title;
+        }
+      }
+    });
+    
     if (productIdsToFetch.size > 0) {
       try {
         const productIdsArray = Array.from(productIdsToFetch);
@@ -226,6 +237,12 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
           }
         }
         
+        // If still not found and product_id is a handle, try handles map
+        if (!title && productHandlesMap[product.product_id]) {
+          title = productHandlesMap[product.product_id];
+          console.log(`[Dashboard] Using product_title from handles map for topProduct: ${product.product_id} -> ${title}`);
+        }
+        
         if (title) {
           console.log(`[Dashboard] Enriched topProduct: ${product.product_id} -> ${title}`);
           return { ...product, product_title: title };
@@ -248,6 +265,12 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         if (!title && log.product_title) {
           title = log.product_title;
           console.log(`[Dashboard] Using existing product_title from log: ${log.product_id} -> ${title}`);
+        }
+        
+        // If still not found and product_id is a handle, try handles map
+        if (!title && productHandlesMap[log.product_id]) {
+          title = productHandlesMap[log.product_id];
+          console.log(`[Dashboard] Using product_title from handles map: ${log.product_id} -> ${title}`);
         }
         
         if (title) {
