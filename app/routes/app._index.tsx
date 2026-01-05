@@ -875,20 +875,26 @@ export default function Dashboard() {
   const monthlyUsage = typeof (loaderData as any).monthlyUsage === 'number' ? (loaderData as any).monthlyUsage : 0;
   const error = (loaderData as any).error || null;
 
-  // ADDED: Monthly quota and usage
+  // ADDED: Monthly quota and usage (for display only)
   const monthlyQuota = shop?.monthly_quota || null;
   const monthlyUsageCount = monthlyUsage || 0;
   const quotaPercentage = monthlyQuota && monthlyQuota > 0 
     ? Math.min((monthlyUsageCount / monthlyQuota) * 100, 100).toFixed(1)
     : null;
   const quotaExceeded = monthlyQuota && monthlyUsageCount >= monthlyQuota;
+
+  // Use credits directly (accumulation system)
+  // Credits accumulate when purchasing plans and are deducted on each generation
+  const credits = shop?.credits || 0;
   
-  // For display: use monthly_quota if available, otherwise use credits
-  // Calculate remaining: monthly_quota - monthly_usage (if using quota system)
-  // Otherwise: use credits (old system)
-  const credits = monthlyQuota 
-    ? Math.max(0, monthlyQuota - monthlyUsageCount) // Remaining quota
-    : (shop?.credits || 0); // Fallback to old credits system
+  // Debug log to verify credits value
+  if (process.env.NODE_ENV !== "production") {
+    console.log(`[Dashboard] Credits display: shop?.credits=${shop?.credits}, credits=${credits}, shop object:`, {
+      credits: shop?.credits,
+      monthly_quota: shop?.monthly_quota,
+      monthly_quota_used: shop?.monthly_quota_used
+    });
+  }
   
   // Get total try-ons from loader data (calculated in loader) or fallback to shop value
   const totalTryons = typeof (loaderData as any).totalTryons === 'number' 
