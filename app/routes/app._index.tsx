@@ -1089,14 +1089,15 @@ export default function Dashboard() {
               <div className="graph-bars">
                 {dailyStats.slice(-7).map((stat: any, index: number) => {
                   const maxCount = Math.max(...dailyStats.map((s: any) => s.count));
-                  const percentage = maxCount > 0 ? (stat.count / maxCount) * 100 : 0;
+                  // Calculate percentage with a minimum of 10% for visibility, and scale up for better visibility
+                  const percentage = maxCount > 0 ? Math.max((stat.count / maxCount) * 90 + 10, stat.count > 0 ? 15 : 0) : 0;
                   const date = new Date(stat.date);
                   return (
                     <div key={index} className="graph-bar-item">
                       <div className="graph-bar-value">{stat.count}</div>
                       <div 
                         className="graph-bar" 
-                        style={{ height: `${Math.max(percentage, 5)}%` }}
+                        style={{ height: `${percentage}%` }}
                       />
                       <div className="graph-bar-label">
                         {date.toLocaleDateString("en-US", { day: "numeric", month: "short" })}
