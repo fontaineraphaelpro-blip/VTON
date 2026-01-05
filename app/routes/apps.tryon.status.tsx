@@ -143,15 +143,13 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     const status = await getProductTryonStatus(shop, productId);
 
     // Log for debugging (only in development)
-    if (process.env.NODE_ENV !== "production") {
-      console.log("[Status] Product try-on status check:", {
-        shop,
-        productId,
-        enabled: status.enabled,
-        shopEnabled: status.shopEnabled,
-        productEnabled: status.productEnabled,
-      });
-    }
+    console.log("[Status] Product try-on status check:", {
+      shop,
+      productId,
+      enabled: status.enabled,
+      shopEnabled: status.shopEnabled,
+      productEnabled: status.productEnabled,
+    });
 
     // 6. Return status
     return json({

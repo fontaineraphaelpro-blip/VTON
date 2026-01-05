@@ -195,6 +195,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const productId = formData.get("productId") as string;
     const enabled = formData.get("enabled") === "true";
     
+    console.log(`[Products Action] Toggle try-on: shop=${shop}, productId=${productId}, enabled=${enabled}`);
+    
     if (!productId) {
       return json({ success: false, error: "Product ID is required" });
     }
@@ -202,6 +204,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     try {
       await ensureTables();
       await setProductTryonSetting(shop, productId, enabled);
+      console.log(`[Products Action] Successfully saved: shop=${shop}, productId=${productId}, enabled=${enabled}`);
       return json({ success: true, productId, enabled });
     } catch (error) {
       // Log only in development
@@ -265,6 +268,7 @@ export default function Products() {
     
     // ADDED: Handle toggle
     const handleToggle = (checked: boolean) => {
+      console.log(`[Products] Toggling try-on for product: id=${product.id}, enabled=${checked}`);
       const formData = new FormData();
       formData.append("intent", "toggle-product-tryon");
       formData.append("productId", product.id);
