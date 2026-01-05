@@ -114,9 +114,13 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         
         // Reset monthly_quota_used to 0 when changing plans
         // This ensures the client gets ALL credits from the new plan
+        // Also update last_quota_reset to current month to prevent auto-reset
+        const now = new Date();
+        const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
         await upsertShop(shop, { 
           monthlyQuota: monthlyQuota,
-          monthly_quota_used: 0 // Reset to 0 so client gets all credits from new plan
+          monthly_quota_used: 0, // Reset to 0 so client gets all credits from new plan
+          last_quota_reset: currentMonth // Update reset date to prevent auto-reset
         });
         
         // Plan activated (log only in development)
@@ -243,9 +247,13 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       // Skip payment for free plan
       if (pack.price === 0) {
         // Reset monthly_quota_used to 0 so client gets all credits from new plan
+        // Also update last_quota_reset to current month to prevent auto-reset
+        const now = new Date();
+        const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
         await upsertShop(shop, { 
           monthlyQuota: monthlyQuota,
-          monthly_quota_used: 0
+          monthly_quota_used: 0,
+          last_quota_reset: currentMonth
         });
         return json({ 
           success: true, 
@@ -261,9 +269,13 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       // ENABLE_DIRECT_PLAN_ACTIVATION is ignored in production for security
       if (process.env.NODE_ENV !== "production") {
         // Reset monthly_quota_used to 0 so client gets all credits from new plan
+        // Also update last_quota_reset to current month to prevent auto-reset
+        const now = new Date();
+        const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
         await upsertShop(shop, { 
           monthlyQuota: monthlyQuota,
-          monthly_quota_used: 0
+          monthly_quota_used: 0,
+          last_quota_reset: currentMonth
         });
         return json({ 
           success: true, 
@@ -379,9 +391,13 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           console.log("[Credits] Managed Pricing detected, activating plan directly for testing");
         }
         // Reset monthly_quota_used to 0 so client gets all credits from new plan
+        // Also update last_quota_reset to current month to prevent auto-reset
+        const now = new Date();
+        const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
         await upsertShop(shop, { 
           monthlyQuota: monthlyQuota,
-          monthly_quota_used: 0
+          monthly_quota_used: 0,
+          last_quota_reset: currentMonth
         });
         return json({ 
           success: true, 

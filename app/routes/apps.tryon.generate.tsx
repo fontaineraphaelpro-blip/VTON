@@ -66,17 +66,20 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     const lastResetMonth = shopRecord.last_quota_reset || currentMonth;
 
+    let monthlyQuotaUsed = shopRecord.monthly_quota_used || 0;
+    
     if (lastResetMonth !== currentMonth) {
       // Reset du quota mensuel
       await upsertShop(shop, { 
         monthly_quota_used: 0,
         last_quota_reset: currentMonth 
       });
+      // Update local variable since we just reset it
+      monthlyQuotaUsed = 0;
     }
 
     // Vérifier le quota mensuel
     const monthlyQuota = shopRecord.monthly_quota || 0;
-    const monthlyQuotaUsed = shopRecord.monthly_quota_used || 0;
 
     if (monthlyQuotaUsed >= monthlyQuota) {
       return json({ 
@@ -116,6 +119,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       console.log("[Generate] Replicate generation completed in", latencyMs, "ms");
 
       // Incrémenter le quota utilisé et le compteur total de try-ons
+      // Use the updated monthlyQuotaUsed value (may have been reset)
       await upsertShop(shop, { 
         monthly_quota_used: (monthlyQuotaUsed + 1),
         incrementTotalTryons: true
