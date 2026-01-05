@@ -1246,15 +1246,26 @@
             product_image_url: state.productImageUrl
           })
         }).then(function(response) {
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'block.liquid:generateTryOn:response',message:'Received response',data:{status:response.status,statusText:response.statusText,ok:response.ok},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+          // #endregion
+          
           console.log('[VTON] Response status:', response.status, response.statusText);
           if (!response.ok) {
             return response.text().then(function(text) {
+              // #region agent log
+              fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'block.liquid:generateTryOn:error',message:'Error response',data:{status:response.status,text:text},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+              // #endregion
               console.error('[VTON] Error response:', text);
               throw new Error('Generation failed: ' + response.status + ' - ' + text);
             });
           }
           return response.json();
         }).then(function(data) {
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'block.liquid:generateTryOn:data',message:'Parsed JSON data',data:{hasResultUrl:!!data.result_url,resultUrl:data.result_url,hasImageUrl:!!data.image_url,hasOutput:!!data.output,hasSuccess:!!data.success,keys:Object.keys(data)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+          // #endregion
+          
           console.log('[VTON] Generation response data:', JSON.stringify(data, null, 2));
           
           // Extract result URL (multiple formats possible)
@@ -1263,6 +1274,10 @@
                                  (Array.isArray(data.result) && data.result[0]) ||
                                  (data.data && data.data.result_url) ||
                                  (data.data && data.data.url);
+          
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'block.liquid:generateTryOn:extracted',message:'Extracted result URL',data:{resultImageUrl:state.resultImageUrl,type:typeof state.resultImageUrl,isValid:!!(state.resultImageUrl&&typeof state.resultImageUrl==='string'&&state.resultImageUrl.startsWith('http'))},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+          // #endregion
           
           console.log('[VTON] Extracted result URL:', state.resultImageUrl);
           console.log('[VTON] Result URL type:', typeof state.resultImageUrl);

@@ -131,15 +131,17 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
       // Success logged in database via createTryonLog
 
-      // Log response in development
-      if (process.env.NODE_ENV !== "production") {
-        console.log("[Generate] Returning success response:", {
-          result_url: resultUrl,
-          success: true,
-          resultUrlType: typeof resultUrl,
-          resultUrlLength: resultUrl?.length
-        });
-      }
+      // Log response (always log for debugging)
+      console.log("[Generate] Returning success response:", {
+        result_url: resultUrl,
+        success: true,
+        resultUrlType: typeof resultUrl,
+        resultUrlLength: resultUrl?.length
+      });
+
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'apps.tryon.generate.tsx:144',message:'Returning success response',data:{resultUrl:resultUrl,success:true},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+      // #endregion
 
       return json({
         result_url: resultUrl,
