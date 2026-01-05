@@ -96,30 +96,31 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       return json({ error: "Invalid product_image_url format. Must be a valid HTTP/HTTPS URL." }, { status: 400 });
     }
 
-    // Generation started (logged in database via createTryonLog)
-
+    // Generation started
     const startTime = Date.now();
+    const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0] || 
+                     request.headers.get('x-real-ip') || 
+                     null;
 
     try {
-      // Générer l'image avec Replicate
+      console.log("[Generate] Starting Replicate generation...");
+      
+      // Générer l'image avec Replicate (synchrone - attend le résultat)
       const resultUrl = await generateTryOn({
         userPhoto: user_photo,
         productImageUrl: productImageUrl,
       });
 
       const latencyMs = Date.now() - startTime;
+      console.log("[Generate] Replicate generation completed in", latencyMs, "ms");
 
       // Incrémenter le quota utilisé et le compteur total de try-ons
       await upsertShop(shop, { 
         monthly_quota_used: (monthlyQuotaUsed + 1),
-        incrementTotalTryons: true // Increment total try-ons counter
+        incrementTotalTryons: true
       });
 
       // Créer un log de succès
-      const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0] || 
-                       request.headers.get('x-real-ip') || 
-                       null;
-      
       await createTryonLog({
         shop: shop,
         customerIp: clientIp || undefined,
@@ -129,12 +130,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         resultImageUrl: resultUrl,
       });
 
-      // Log response (always log for debugging)
       console.log("[Generate] Returning success response:", {
         result_url: resultUrl,
         success: true,
-        resultUrlType: typeof resultUrl,
-        resultUrlLength: resultUrl?.length
+        latencyMs: latencyMs
       });
 
       return json({
@@ -151,11 +150,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       const latencyMs = Date.now() - startTime;
       const errorMessage = genError instanceof Error ? genError.message : 'Unknown error';
       
-      // Créer un log d'erreur
-      const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0] || 
-                       request.headers.get('x-real-ip') || 
-                       null;
+      console.error("[Generate] Generation failed after", latencyMs, "ms:", errorMessage);
       
+      // Créer un log d'erreur
       await createTryonLog({
         shop: shop,
         customerIp: clientIp || undefined,

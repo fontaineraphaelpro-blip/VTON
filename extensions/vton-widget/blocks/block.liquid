@@ -1387,9 +1387,9 @@
         // Construct absolute URL for app proxy
         const url = window.location.origin + '/apps/tryon/generate?shop=' + encodeURIComponent(state.shop) + '&product_id=' + encodeURIComponent(state.productId);
         
-        // Create AbortController for timeout handling
+        // Create AbortController for timeout handling (90 seconds - plus que 60)
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 120000); // 120 seconds timeout
+        const timeoutId = setTimeout(() => controller.abort(), 90000); // 90 seconds timeout
         
         fetch(url, {
           method: 'POST',
@@ -1422,17 +1422,83 @@
         }).then(function(data) {
           console.log('[VTON] Generation response data:', JSON.stringify(data, null, 2));
           
-          // Check if we got a job_id (async mode) or result_url (sync mode)
-          if (data.job_id) {
-            // Async mode: start polling
-            console.log('[VTON] Starting polling for job:', data.job_id);
-            pollJobStatus(shadowRoot, state, data.job_id, loading, result, generateBtn);
-          } else if (data.result_url) {
-            // Sync mode: display result immediately
-            displayResult(shadowRoot, state, data.result_url, loading, result, generateBtn);
-          } else {
-            throw new Error('Invalid response format: missing job_id or result_url');
+          // Extract result URL (synchronous mode - result_url should be present)
+          state.resultImageUrl = data.result_url || data.image_url || data.output || 
+                                 (data.result && (data.result.url || data.result)) || 
+                                 (Array.isArray(data.result) && data.result[0]) ||
+                                 (data.data && data.data.result_url) ||
+                                 (data.data && data.data.url);
+          
+          console.log('[VTON] Extracted result URL:', state.resultImageUrl);
+          console.log('[VTON] Result URL type:', typeof state.resultImageUrl);
+          
+          // Validate result URL
+          if (!state.resultImageUrl || typeof state.resultImageUrl !== 'string') {
+            console.error('[VTON] Invalid result URL format:', {
+              resultImageUrl: state.resultImageUrl,
+              type: typeof state.resultImageUrl,
+              fullData: data
+            });
+            throw new Error('Invalid result URL format received from server');
           }
+          
+          if (!state.resultImageUrl.startsWith('http')) {
+            console.error('[VTON] Result URL is not a valid HTTP URL:', state.resultImageUrl);
+            throw new Error('Result URL is not a valid HTTP URL');
+          }
+          
+          // Complete progress to 100% before stopping
+          const progressBar = shadowRoot.getElementById('vton-progress-bar');
+          const progressText = shadowRoot.getElementById('vton-progress-text');
+          if (progressBar) {
+            progressBar.style.width = '100%';
+          }
+          if (progressText) {
+            progressText.textContent = '100%';
+          }
+          
+          // Complete all steps
+          for (let i = 1; i <= 4; i++) {
+            const stepElement = shadowRoot.getElementById('vton-step-' + i);
+            if (stepElement) {
+              stepElement.classList.remove('active');
+              stepElement.classList.add('completed');
+            }
+          }
+          
+          // Stop loading messages
+          stopLoadingMessages(shadowRoot);
+          
+          // Hide loading
+          if (loading) loading.classList.remove('active');
+          
+          // Display result with "Add to Cart" button
+          if (result && state.resultImageUrl && typeof state.resultImageUrl === 'string' && state.resultImageUrl.startsWith('http')) {
+            result.classList.add('active');
+            const buttonBg = state.widgetSettings.widget_bg || '#000000';
+            const buttonColor = state.widgetSettings.widget_color || '#ffffff';
+            result.innerHTML = 
+              '<img src="' + state.resultImageUrl + '" alt="Result" style="width: 100%; border-radius: 8px; display: block; margin-bottom: 16px;" />' +
+              '<button class="vton-add-to-cart-btn" style="width: 100%; padding: 14px; border: none; border-radius: 4px; font-size: 16px; font-weight: 600; cursor: pointer; background: ' + buttonBg + '; color: ' + buttonColor + '; transition: all 0.3s ease;" onclick="window.vtonWidgetInstance.handleAddToCart()">' +
+              'Add to Cart' +
+              '</button>';
+            console.log('[VTON] Result displayed successfully with Add to Cart button');
+            console.log('[VTON] Image src:', state.resultImageUrl);
+          } else {
+            console.error('[VTON] Cannot display result:', {
+              hasResult: !!result,
+              resultImageUrl: state.resultImageUrl,
+              resultImageUrlType: typeof state.resultImageUrl,
+              data: data
+            });
+            const errorElement = shadowRoot.getElementById('vton-error');
+            if (errorElement) {
+              errorElement.classList.add('active');
+              errorElement.textContent = 'Error: Unable to display the result. Please try again.';
+            }
+          }
+          
+          if (generateBtn) generateBtn.disabled = false;
         }).catch(function(err) {
           clearTimeout(timeoutId);
           console.error('[VTON] Generation error:', err);
