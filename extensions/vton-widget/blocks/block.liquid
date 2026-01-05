@@ -1079,46 +1079,103 @@
       let loadingMessageInterval = null;
       let progressInterval = null;
       let timerInterval = null;
+      let tipInterval = null;
       let startTime = null;
-      const loadingMessages = [
-        'Preparing your virtual try-on experience',
-        'Analyzing your photo and product details',
-        'Processing your image with AI technology',
-        'Creating your personalized try-on result',
-        'Almost there! Finalizing your image',
-        'Applying advanced AI algorithms',
-        'Optimizing colors and fit for you',
-        'Generating your perfect match',
-        'Just a few more seconds',
-        'Fine-tuning every detail'
+      
+      // Contextual messages based on elapsed time
+      const getContextualMessage = function(elapsedSeconds) {
+        if (elapsedSeconds < 10) {
+          return [
+            '✨ Setting up your virtual try-on experience',
+            '📸 Analyzing your photo with AI precision',
+            '🎨 Detecting colors and patterns',
+            '🤖 Initializing advanced algorithms',
+            '⚡ Preparing the magic...'
+          ];
+        } else if (elapsedSeconds < 20) {
+          return [
+            '🔄 Processing your image in high resolution',
+            '🎯 Matching your photo with product details',
+            '💫 Applying realistic fabric textures',
+            '🌟 Creating seamless blend effects',
+            '🔬 Optimizing every pixel for perfection'
+          ];
+        } else if (elapsedSeconds < 30) {
+          return [
+            '🎭 Fine-tuning the fit and proportions',
+            '🌈 Adjusting lighting and shadows',
+            '✨ Adding final touches to make it perfect',
+            '🚀 Almost there! We\'re putting the finishing touches',
+            '💎 Polishing every detail for you'
+          ];
+        } else {
+          return [
+            '⏳ Taking a bit longer than usual, but it\'s worth it!',
+            '🎨 Creating something truly special for you',
+            '💪 Our AI is working extra hard to make it perfect',
+            '🌟 Great things take time - your result is almost ready!',
+            '🎯 Final quality check in progress...'
+          ];
+        }
+      };
+      
+      // Fun tips to show during waiting
+      const tips = [
+        '💡 Tip: Make sure your photo has good lighting for best results!',
+        '💡 Tip: The AI analyzes over 1000 data points to create your try-on',
+        '💡 Tip: Our technology uses the same AI that powers major fashion brands',
+        '💡 Tip: Your photo is processed securely and never stored',
+        '💡 Tip: The result will show exactly how the item looks on you',
+        '💡 Tip: You can try multiple products to find your perfect style',
+        '💡 Tip: The AI considers fabric texture, fit, and lighting',
+        '💡 Tip: Each generation is unique and tailored to your photo'
       ];
       
       function startLoadingMessages(shadowRoot) {
         startTime = Date.now();
         let messageIndex = 0;
+        let tipIndex = 0;
         let progress = 0;
         let currentStep = 1;
         const messageElement = shadowRoot.getElementById('vton-loading-message');
         const progressBar = shadowRoot.getElementById('vton-progress-bar');
         const progressText = shadowRoot.getElementById('vton-progress-text');
         const timerValue = shadowRoot.getElementById('vton-timer-value');
+        const tipElement = shadowRoot.querySelector('.vton-tip');
         
         if (!messageElement) return;
         
-        // Start timer
+        // Start timer with estimated time remaining
         timerInterval = setInterval(function() {
           if (startTime && timerValue) {
             const elapsed = Math.floor((Date.now() - startTime) / 1000);
-            timerValue.textContent = elapsed + 's';
+            const estimatedTotal = 40; // Average 40 seconds
+            const remaining = Math.max(0, estimatedTotal - elapsed);
+            
+            if (remaining > 0 && elapsed < 45) {
+              timerValue.textContent = elapsed + 's • ~' + remaining + 's left';
+            } else {
+              timerValue.textContent = elapsed + 's';
+            }
           }
         }, 1000);
         
-        // Animate progress bar (simulated progress)
+        // Animate progress bar (simulated progress with realistic curve)
         progressInterval = setInterval(function() {
-          if (progress < 90) {
-            // Simulate progress: faster at start, slower near end
-            const increment = progress < 30 ? 2 : (progress < 60 ? 1.5 : 0.8);
-            progress = Math.min(progress + increment, 90);
+          if (progress < 92) {
+            // More realistic progress curve: fast start, slow middle, medium end
+            let increment;
+            if (progress < 25) {
+              increment = 2.5; // Fast start
+            } else if (progress < 50) {
+              increment = 1.2; // Slower middle
+            } else if (progress < 75) {
+              increment = 0.9; // Slow near end
+            } else {
+              increment = 0.6; // Very slow at 90%
+            }
+            
+            progress = Math.min(progress + increment, 92);
             
             if (progressBar) {
               progressBar.style.width = progress + '%';
@@ -1127,38 +1184,55 @@
               progressText.textContent = Math.floor(progress) + '%';
             }
             
-            // Update steps based on progress
-            if (progress >= 20 && currentStep === 1) {
+            // Update steps based on progress with smoother transitions
+            if (progress >= 18 && currentStep === 1) {
               currentStep = 2;
               updateStep(shadowRoot, 1, true);
               updateStep(shadowRoot, 2, false);
-            } else if (progress >= 45 && currentStep === 2) {
+            } else if (progress >= 42 && currentStep === 2) {
               currentStep = 3;
               updateStep(shadowRoot, 2, true);
               updateStep(shadowRoot, 3, false);
-            } else if (progress >= 70 && currentStep === 3) {
+            } else if (progress >= 68 && currentStep === 3) {
               currentStep = 4;
               updateStep(shadowRoot, 3, true);
               updateStep(shadowRoot, 4, false);
             }
           }
-        }, 500);
+        }, 400);
         
-        // Change message every 4 seconds with fade effect
+        // Change message every 3 seconds with contextual messages
         loadingMessageInterval = setInterval(function() {
-          messageIndex = (messageIndex + 1) % loadingMessages.length;
-          if (messageElement) {
-            // Fade out
-            messageElement.classList.add('fade-out');
+          if (startTime) {
+            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            const contextualMessages = getContextualMessage(elapsed);
+            messageIndex = (messageIndex + 1) % contextualMessages.length;
             
-            // Change text and fade in after short delay
-            setTimeout(function() {
-              const dots = '<span class="vton-loading-dots"><span></span><span></span><span></span></span>';
-              messageElement.innerHTML = loadingMessages[messageIndex] + dots;
-              messageElement.classList.remove('fade-out');
-            }, 300);
+            if (messageElement) {
+              // Fade out
+              messageElement.classList.add('fade-out');
+              
+              // Change text and fade in after short delay
+              setTimeout(function() {
+                const dots = '<span class="vton-loading-dots"><span></span><span></span><span></span></span>';
+                messageElement.innerHTML = contextualMessages[messageIndex] + dots;
+                messageElement.classList.remove('fade-out');
+              }, 250);
+            }
           }
-        }, 4000);
+        }, 3000);
+        
+        // Show tips every 8 seconds
+        if (tipElement) {
+          tipInterval = setInterval(function() {
+            tipIndex = (tipIndex + 1) % tips.length;
+            tipElement.style.opacity = '0';
+            setTimeout(function() {
+              tipElement.textContent = tips[tipIndex];
+              tipElement.style.opacity = '1';
+            }, 300);
+          }, 8000);
+        }
       }
       
       function updateStep(shadowRoot, stepNum, completed) {
