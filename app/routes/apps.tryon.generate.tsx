@@ -175,16 +175,24 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       throw genError;
     }
   } catch (error) {
-    // Log error only in development
-    if (process.env.NODE_ENV !== "production") {
-      console.error("[Generate] Error:", error);
-    }
+    // Log error (always log for debugging)
+    const errorMessage = error instanceof Error ? error.message : "Generation failed";
+    console.error("[Generate] Error:", errorMessage, error);
+    
     return json(
       {
-        error: error instanceof Error ? error.message : "Generation failed",
+        error: errorMessage,
         success: false,
       },
-      { status: 500 }
+      {
+        status: 500,
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "POST, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type",
+          "Content-Type": "application/json",
+        },
+      }
     );
   }
 };
