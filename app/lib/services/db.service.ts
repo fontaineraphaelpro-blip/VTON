@@ -361,8 +361,20 @@ export async function getProductTryonSetting(shop: string, productId: string): P
     
     if (result.rows.length > 0) {
       const enabled = result.rows[0].tryon_enabled;
-      console.log(`[DB] Found product setting: shop=${shop}, searched=${productId}, found=${format}, enabled=${enabled}`);
-      return enabled;
+      // Ensure we return a proper boolean (PostgreSQL might return string or other types)
+      const enabledBool = enabled === true || enabled === 'true' || enabled === 1;
+      const disabledBool = enabled === false || enabled === 'false' || enabled === 0;
+      
+      if (disabledBool) {
+        console.log(`[DB] Found product setting: shop=${shop}, searched=${productId}, found=${format}, enabled=false (DISABLED)`);
+        return false;
+      } else if (enabledBool) {
+        console.log(`[DB] Found product setting: shop=${shop}, searched=${productId}, found=${format}, enabled=true (ENABLED)`);
+        return true;
+      } else {
+        console.log(`[DB] Found product setting: shop=${shop}, searched=${productId}, found=${format}, enabled=${enabled} (type: ${typeof enabled}) - treating as null`);
+        return null;
+      }
     }
   }
   
