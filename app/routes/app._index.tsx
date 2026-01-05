@@ -105,6 +105,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
               console.log(`[Dashboard] Received ${data.data.nodes.length} nodes from GraphQL`);
               
               data.data.nodes.forEach((node: any, index: number) => {
+                const requestedId = batch[index];
+                const requestedGid = gids[index];
+                
                 if (node && node.id && node.title) {
                   // Store both GID and numeric ID as keys
                   productNamesMap[node.id] = node.title;
@@ -112,15 +115,21 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                   productNamesMap[numericId] = node.title;
                   productNamesMap[node.id] = node.title; // Also store GID format
                   
-                  console.log(`[Dashboard] ✓ Fetched product name: ${node.id} -> ${node.title}`);
+                  console.log(`[Dashboard] ✓ Fetched product name: ${node.id} (numeric: ${numericId}) -> ${node.title}`);
                 } else if (node === null) {
-                  console.warn(`[Dashboard] ✗ Product not found (null) for ID: ${batch[index]}`);
+                  console.warn(`[Dashboard] ✗ Product not found (null) for ID: ${requestedId} (GID: ${requestedGid})`);
+                  // Product doesn't exist or is not accessible - will fallback to product_id display
                 } else {
-                  console.warn(`[Dashboard] ✗ Invalid node in response:`, node, `for ID: ${batch[index]}`);
+                  console.warn(`[Dashboard] ✗ Invalid node in response:`, node, `for ID: ${requestedId} (GID: ${requestedGid})`);
                 }
               });
             } else {
-              console.warn(`[Dashboard] No nodes in GraphQL response, data:`, JSON.stringify(data, null, 2));
+              console.warn(`[Dashboard] No nodes in GraphQL response, data structure:`, {
+                hasData: !!data.data,
+                hasNodes: !!data.data?.nodes,
+                dataKeys: data.data ? Object.keys(data.data) : [],
+                fullData: JSON.stringify(data, null, 2).substring(0, 1000)
+              });
             }
           } else {
             const errorText = await response.text().catch(() => "Unknown error");
