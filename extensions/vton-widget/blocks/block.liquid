@@ -50,6 +50,12 @@
           return;
         }
         
+        console.log('[VTON] Initializing widget for product:', {
+          shop: shop,
+          productId: productId,
+          currentUrl: window.location.href
+        });
+        
         // Check status and initialize widget
         checkStatus(shop, productId).then(function(status) {
           console.log('[VTON] Status check result:', {
