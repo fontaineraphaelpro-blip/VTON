@@ -122,6 +122,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     let productId = queryParams.get("product_id");
     const productHandle = queryParams.get("product_handle");
     
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'apps.tryon.status.tsx:122',message:'Received query params',data:{productId:productId,productHandle:productHandle,allParams:Object.fromEntries(queryParams.entries())},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+    // #endregion
+    
     if (!productId) {
       return json({ error: "product_id parameter required" }, { status: 400 });
     }
@@ -137,6 +141,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       // If decoding fails, use original
       console.log(`[Status] Could not decode product ID, using as-is: ${productId}`);
     }
+    
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'apps.tryon.status.tsx:139',message:'After decoding',data:{productId:productId,productHandle:productHandle},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+    // #endregion
     
     console.log(`[Status] Using product ID: ${productId}, product handle: ${productHandle}`);
 
