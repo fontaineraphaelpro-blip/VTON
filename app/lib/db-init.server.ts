@@ -107,6 +107,22 @@ export async function ensureTables() {
       ADD COLUMN IF NOT EXISTS quality_mode TEXT DEFAULT 'balanced'
     `);
 
+    // ADDED: Add product_handle column to product_settings table if it doesn't exist (migration)
+    try {
+      await pool.query(`
+        ALTER TABLE product_settings 
+        ADD COLUMN IF NOT EXISTS product_handle TEXT
+      `);
+    } catch (error: any) {
+      // Column might already exist or other error - ignore if it's about duplicate column
+      if (!error.message?.includes('duplicate') && !error.message?.includes('already exists')) {
+        // Log only in development
+        if (process.env.NODE_ENV !== "production") {
+          console.error('Error adding product_handle column:', error);
+        }
+      }
+    }
+
     // Log only in development
     if (process.env.NODE_ENV !== "production") {
       console.log("✅ Business tables initialized");
