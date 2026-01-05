@@ -177,9 +177,21 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                 } else if (node === null) {
                   console.warn(`[Dashboard] ✗ Product not found (null) for ID: ${requestedId} (GID: ${requestedGid})`);
                   // #region agent log
-                  fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:123',message:'Product returned null in GraphQL',data:{requestedId,requestedGid},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+                  fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:123',message:'Product returned null in GraphQL',data:{requestedId,requestedGid},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'C'})}).catch(()=>{});
                   // #endregion
-                  // Product doesn't exist or is not accessible - will fallback to product_id display
+                  // Product doesn't exist or is not accessible - try to find product_title in logs
+                  const logWithTitle = recentLogs.find((log: any) => {
+                    if (!log.product_id) return false;
+                    const logGidMatch = log.product_id.match(/^gid:\/\/shopify\/Product\/(\d+)$/);
+                    const logNumericId = logGidMatch ? logGidMatch[1] : log.product_id;
+                    return log.product_id === requestedGid || logNumericId === requestedId;
+                  });
+                  if (logWithTitle?.product_title) {
+                    // Store the title from log as fallback
+                    productNamesMap[requestedGid] = logWithTitle.product_title;
+                    productNamesMap[requestedId] = logWithTitle.product_title;
+                    console.log(`[Dashboard] Using product_title from log as fallback: ${requestedId} -> ${logWithTitle.product_title}`);
+                  }
                 } else {
                   console.warn(`[Dashboard] ✗ Invalid node in response:`, node, `for ID: ${requestedId} (GID: ${requestedGid})`);
                   // #region agent log
