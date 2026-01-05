@@ -380,22 +380,31 @@ export async function getProductTryonSetting(shop: string, productId: string, pr
   
   // Also try to find by product handle if provided (most reliable for matching)
   if (productHandle) {
-    const handleResult = await query(
-      "SELECT tryon_enabled FROM product_settings WHERE shop = $1 AND product_handle = $2",
-      [shop, productHandle]
-    );
-    
-    if (handleResult.rows.length > 0) {
-      const enabled = handleResult.rows[0].tryon_enabled;
-      const enabledBool = enabled === true || enabled === 'true' || enabled === 1;
-      const disabledBool = enabled === false || enabled === 'false' || enabled === 0;
+    try {
+      const handleResult = await query(
+        "SELECT tryon_enabled FROM product_settings WHERE shop = $1 AND product_handle = $2",
+        [shop, productHandle]
+      );
       
-      if (disabledBool) {
-        console.log(`[DB] Found product setting by handle: shop=${shop}, productHandle=${productHandle}, enabled=false (DISABLED)`);
-        return false;
-      } else if (enabledBool) {
-        console.log(`[DB] Found product setting by handle: shop=${shop}, productHandle=${productHandle}, enabled=true (ENABLED)`);
-        return true;
+      if (handleResult.rows.length > 0) {
+        const enabled = handleResult.rows[0].tryon_enabled;
+        const enabledBool = enabled === true || enabled === 'true' || enabled === 1;
+        const disabledBool = enabled === false || enabled === 'false' || enabled === 0;
+        
+        if (disabledBool) {
+          console.log(`[DB] Found product setting by handle: shop=${shop}, productHandle=${productHandle}, enabled=false (DISABLED)`);
+          return false;
+        } else if (enabledBool) {
+          console.log(`[DB] Found product setting by handle: shop=${shop}, productHandle=${productHandle}, enabled=true (ENABLED)`);
+          return true;
+        }
+      }
+    } catch (error: any) {
+      // Column might not exist yet - ignore and continue with other methods
+      if (error.message?.includes('product_handle') || error.message?.includes('column')) {
+        console.log(`[DB] product_handle column might not exist yet, skipping handle search`);
+      } else {
+        throw error;
       }
     }
   }
