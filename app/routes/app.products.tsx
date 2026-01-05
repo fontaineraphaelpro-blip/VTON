@@ -278,10 +278,13 @@ export default function Products() {
     
     // ADDED: Handle toggle
     const handleToggle = (checked: boolean) => {
-      console.log(`[Products] Toggling try-on for product: id=${product.id}, enabled=${checked}`);
+      console.log(`[Products] Toggling try-on for product: id=${product.id}, handle=${product.handle}, enabled=${checked}`);
       const formData = new FormData();
       formData.append("intent", "toggle-product-tryon");
       formData.append("productId", product.id);
+      if (product.handle) {
+        formData.append("productHandle", product.handle);
+      }
       formData.append("enabled", checked ? "true" : "false");
       fetcher.submit(formData, { method: "post" });
     };
