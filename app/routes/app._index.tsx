@@ -97,14 +97,16 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     const productNamesMap: Record<string, string> = {};
     console.log(`[Dashboard] Products to fetch: ${productIdsToFetch.size}`, Array.from(productIdsToFetch));
     
-    // Also collect product handles from logs for fallback
+    // Also collect product handles from logs for matching (more reliable than IDs)
     const productHandlesMap: Record<string, string> = {};
     recentLogs.forEach((log: any) => {
-      if (log.product_id && log.product_title) {
-        // Store handle -> title mapping if product_id is a handle
-        if (!log.product_id.startsWith('gid://') && !/^\d+$/.test(log.product_id)) {
-          productHandlesMap[log.product_id] = log.product_title;
-        }
+      // Use product_handle if available (new logs)
+      if (log.product_handle && log.product_title) {
+        productHandlesMap[log.product_handle] = log.product_title;
+      }
+      // Fallback: if product_id is a handle (old logs)
+      else if (log.product_id && log.product_title && !log.product_id.startsWith('gid://') && !/^\d+$/.test(log.product_id)) {
+        productHandlesMap[log.product_id] = log.product_title;
       }
     });
     
@@ -343,51 +345,44 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       return product;
     });
     
-    // Enrich recentLogs with product titles (use fetched names, keep existing product_title as fallback)
+    // Enrich recentLogs with product titles (use handles for matching - more reliable)
     const enrichedRecentLogs = recentLogs.map((log: any) => {
-      if (log.product_id) {
-        const gidMatch = log.product_id.match(/^gid:\/\/shopify\/Product\/(\d+)$/);
-        const numericId = gidMatch ? gidMatch[1] : log.product_id;
-        // Try to get title from fetched map first
-        let title = productNamesMap[log.product_id] || productNamesMap[numericId];
+      if (log.product_id || log.product_handle) {
+        let title: string | undefined;
         
-        // If not found and product_id is a handle (not GID, not numeric), try handles map
-        if (!title && !log.product_id.startsWith('gid://') && !/^\d+$/.test(log.product_id)) {
-          title = productNamesMap[log.product_id]; // Already checked above, but try again
-          if (!title && productHandlesMap[log.product_id]) {
-            title = productHandlesMap[log.product_id];
-            console.log(`[Dashboard] Using product_title from handles map: ${log.product_id} -> ${title}`);
-          }
+        // Priority 1: Use product_handle to match with products (most reliable)
+        if (log.product_handle && productNamesMap[log.product_handle]) {
+          title = productNamesMap[log.product_handle];
+          console.log(`[Dashboard] Matched by handle: ${log.product_handle} -> ${title}`);
+        }
+        // Priority 2: Try product_id (GID or numeric) in fetched map
+        else if (log.product_id) {
+          const gidMatch = log.product_id.match(/^gid:\/\/shopify\/Product\/(\d+)$/);
+          const numericId = gidMatch ? gidMatch[1] : log.product_id;
+          title = productNamesMap[log.product_id] || productNamesMap[numericId];
         }
         
-        // If still not found, try to find a product with a similar ID pattern
-        // The IDs in logs might be variant IDs or old product IDs
-        // Try to find any product that has been used with this ID in other logs
-        if (!title) {
-          // Find all logs with the same product_id
-          const logsWithSameId = recentLogs.filter((l: any) => l.product_id === log.product_id);
-          // Check if any of these logs have a product_title
-          const logWithTitle = logsWithSameId.find((l: any) => l.product_title);
-          if (logWithTitle?.product_title) {
-            title = logWithTitle.product_title;
-            console.log(`[Dashboard] Using product_title from another log with same ID: ${log.product_id} -> ${title}`);
-          }
+        // Priority 3: Use product_handle from handles map (from other logs)
+        if (!title && log.product_handle && productHandlesMap[log.product_handle]) {
+          title = productHandlesMap[log.product_handle];
+          console.log(`[Dashboard] Using product_title from handles map: ${log.product_handle} -> ${title}`);
         }
         
-        // If still not found, use existing product_title from log (if available)
+        // Priority 4: Use existing product_title from log
         if (!title && log.product_title) {
           title = log.product_title;
-          console.log(`[Dashboard] Using existing product_title from log: ${log.product_id} -> ${title}`);
+          console.log(`[Dashboard] Using existing product_title from log: ${log.product_id || log.product_handle} -> ${title}`);
         }
         
-        // Always set product_title - use title if found, otherwise use numeric ID (more readable than full GID)
+        // Always set product_title - use title if found, otherwise use numeric ID or handle
         if (title) {
-          console.log(`[Dashboard] Enriched log: ${log.product_id} -> ${title}`);
+          console.log(`[Dashboard] Enriched log: ${log.product_id || log.product_handle} -> ${title}`);
           return { ...log, product_title: title };
         } else {
-          // Use numeric ID as fallback (better than full GID)
-          console.log(`[Dashboard] No title found for log, using numeric ID: ${log.product_id} -> Product #${numericId}`);
-          return { ...log, product_title: `Product #${numericId}` };
+          // Use handle if available, otherwise numeric ID
+          const displayId = log.product_handle || (log.product_id ? (log.product_id.match(/^gid:\/\/shopify\/Product\/(\d+)$/)?.[1] || log.product_id) : 'Unknown');
+          console.log(`[Dashboard] No title found for log, using ID: ${log.product_id || log.product_handle} -> Product #${displayId}`);
+          return { ...log, product_title: `Product #${displayId}` };
         }
       }
       return log;

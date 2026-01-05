@@ -219,6 +219,7 @@ export async function createTryonLog(data: {
   customerIp?: string;
   customerId?: string;
   productId?: string;
+  productHandle?: string;
   productTitle?: string;
   success: boolean;
   errorMessage?: string;
@@ -226,14 +227,15 @@ export async function createTryonLog(data: {
   resultImageUrl?: string;
 }): Promise<number> {
   const result = await query(
-    `INSERT INTO tryon_logs (shop, customer_ip, customer_id, product_id, product_title, success, error_message, latency_ms, result_image_url)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+    `INSERT INTO tryon_logs (shop, customer_ip, customer_id, product_id, product_handle, product_title, success, error_message, latency_ms, result_image_url)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
      RETURNING id`,
     [
       data.shop,
       data.customerIp || null,
       data.customerId || null,
       data.productId || null,
+      data.productHandle || null,
       data.productTitle || null,
       data.success,
       data.errorMessage || null,

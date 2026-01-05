@@ -44,11 +44,12 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         shop: shop,
         hasUserPhoto: !!body.user_photo,
         hasProductId: !!body.product_id,
+        hasProductHandle: !!body.product_handle,
         hasProductImageUrl: !!body.product_image_url,
         productImageUrl: body.product_image_url
       });
     }
-    const { user_photo, product_id, product_image_url } = body;
+    const { user_photo, product_id, product_handle, product_image_url } = body;
 
     if (!user_photo || !product_id) {
       return json({ error: "Missing user_photo or product_id" }, { status: 400 });
@@ -125,6 +126,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         shop: shop,
         customerIp: clientIp || undefined,
         productId: product_id,
+        productHandle: product_handle,
         success: true,
         latencyMs: latencyMs,
         resultImageUrl: resultUrl,

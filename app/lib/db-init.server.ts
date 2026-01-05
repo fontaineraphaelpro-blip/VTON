@@ -61,6 +61,7 @@ export async function ensureTables() {
         customer_ip TEXT,
         customer_id TEXT,
         product_id TEXT,
+        product_handle TEXT,
         product_title TEXT,
         success BOOLEAN NOT NULL,
         error_message TEXT,
@@ -68,6 +69,12 @@ export async function ensureTables() {
         result_image_url TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
+    `);
+    
+    // Add product_handle column if it doesn't exist (migration)
+    await pool.query(`
+      ALTER TABLE tryon_logs 
+      ADD COLUMN IF NOT EXISTS product_handle TEXT
     `);
 
     // Create rate_limits table
