@@ -497,10 +497,6 @@ export default function Credits() {
   const [showSuccessBanner, setShowSuccessBanner] = useState(true);
   const [showErrorBanner, setShowErrorBanner] = useState(true);
   
-  // Utiliser useRef pour stocker une référence stable à revalidator
-  const revalidatorRef = useRef(revalidator);
-  revalidatorRef.current = revalidator;
-
   const isSubmitting = fetcher.state === "submitting";
 
   // Determine which plan is currently active based on monthly_quota
@@ -515,35 +511,62 @@ export default function Credits() {
   };
   const activePlanId = getActivePlanId();
 
-  // Recharger les données après activation d'un plan
+  // Flag to prevent multiple revalidations
+  const hasRevalidatedRef = useRef(false);
+
+  // Recharger les données après activation d'un plan (une seule fois)
   useEffect(() => {
-    if (fetcher.data?.success) {
+    if (fetcher.data?.success && !hasRevalidatedRef.current) {
+      hasRevalidatedRef.current = true;
+      // Preserve scroll position
+      const scrollY = window.scrollY;
       // Recharger les données après activation réussie
       setTimeout(() => {
         revalidator.revalidate();
-      }, 500);
+        // Restore scroll position after a short delay
+        setTimeout(() => {
+          window.scrollTo(0, scrollY);
+        }, 100);
+      }, 300);
     }
-  }, [fetcher.data?.success, revalidator]);
+    // Reset flag when fetcher changes
+    if (fetcher.state === "idle" && !fetcher.data?.success) {
+      hasRevalidatedRef.current = false;
+    }
+  }, [fetcher.data?.success, fetcher.state, revalidator]);
 
-  // Auto-dismiss success banner after 5 seconds
+  // Auto-dismiss success banner after 5 seconds (only trigger once)
+  const successBannerShownRef = useRef(false);
   useEffect(() => {
-    if ((purchaseSuccess || fetcher.data?.success) && (planActivated || (fetcher.data as any)?.planActivated)) {
+    const shouldShow = (purchaseSuccess || fetcher.data?.success) && (planActivated || (fetcher.data as any)?.planActivated);
+    if (shouldShow && !successBannerShownRef.current) {
       setShowSuccessBanner(true);
+      successBannerShownRef.current = true;
       const timer = setTimeout(() => {
         setShowSuccessBanner(false);
       }, 5000);
       return () => clearTimeout(timer);
     }
+    // Reset when conditions change
+    if (!shouldShow) {
+      successBannerShownRef.current = false;
+    }
   }, [purchaseSuccess, fetcher.data?.success, planActivated]);
 
-  // Auto-dismiss error banner after 8 seconds
+  // Auto-dismiss error banner after 8 seconds (only trigger once per error)
+  const errorBannerShownRef = useRef<string | null>(null);
   useEffect(() => {
-    if ((fetcher.data as any)?.error) {
+    const error = (fetcher.data as any)?.error;
+    if (error && errorBannerShownRef.current !== error) {
       setShowErrorBanner(true);
+      errorBannerShownRef.current = error;
       const timer = setTimeout(() => {
         setShowErrorBanner(false);
       }, 8000);
       return () => clearTimeout(timer);
+    }
+    if (!error) {
+      errorBannerShownRef.current = null;
     }
   }, [(fetcher.data as any)?.error]);
 
