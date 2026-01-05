@@ -271,7 +271,7 @@ export default function Products() {
     }
     
     const productId = product.id.replace("gid://shopify/Product/", "");
-    const tryonEnabled = productSettings[product.id] !== false; // Default to true
+    const tryonEnabled = productSettings[product.id] === true; // Only explicitly true means enabled
     const tryonCount = tryonCounts[product.id] || 0;
     
     // ADDED: Handle toggle
