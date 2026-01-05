@@ -583,7 +583,7 @@
       }
       
       function handleAddToCart(shadowRoot, state) {
-        console.log('[VTON] handleAddToCart called');
+        console.log('[VTON] handleAddToCart called - CRITICAL: Must work to avoid losing money');
         
         // Get the button in the result to show loading state
         const atcButton = shadowRoot.querySelector('.vton-add-to-cart-btn');
@@ -597,95 +597,66 @@
           atcButton.style.cursor = 'not-allowed';
         }
         
-        // Method 1: Try to find and click the original Add to Cart button (most reliable)
-        const addToCartButton = document.querySelector('form[action*="/cart/add"] button[type="submit"], form[action*="/cart/add"] input[type="submit"], button[name="add"], .product-form__cart-submit, [data-add-to-cart], button[type="submit"][form*="product"]');
-        
-        if (addToCartButton) {
-          console.log('[VTON] Found Add to Cart button, clicking it...');
-          
-          // Trigger click on the original button
-          if (addToCartButton instanceof HTMLElement) {
-            addToCartButton.click();
-            
-            // Update button to show success after a short delay
-            setTimeout(function() {
-              if (atcButton) {
-                atcButton.textContent = '✓ Added to Cart!';
-                atcButton.style.background = '#28a745';
-                
-                setTimeout(function() {
-                  if (atcButton) {
-                    atcButton.textContent = originalButtonText;
-                    atcButton.style.background = state.widgetSettings.widget_bg || '#000000';
-                    atcButton.disabled = false;
-                    atcButton.style.opacity = '1';
-                    atcButton.style.cursor = 'pointer';
-                  }
-                }, 2000);
-              }
-              
-              // Track the add to cart event
-              trackAddToCart(state);
-            }, 500);
-            
-            return;
-          }
-        }
-        
-        // Method 2: Find the form and submit it directly
-        const addToCartForm = document.querySelector('form[action*="/cart/add"]');
-        
-        if (addToCartForm) {
-          console.log('[VTON] Found Add to Cart form, submitting...');
-          
-          // Check if form has variant selected
-          const variantInput = addToCartForm.querySelector('input[name="id"], select[name="id"]');
-          if (!variantInput || !variantInput.value) {
-            console.warn('[VTON] No variant selected in form');
-            if (atcButton) {
-              atcButton.disabled = false;
-              atcButton.textContent = originalButtonText;
-              atcButton.style.opacity = '1';
-              atcButton.style.cursor = 'pointer';
+        // Find the add to cart form - try multiple selectors
+        let addToCartForm = document.querySelector('form[action*="/cart/add"]');
+        if (!addToCartForm) {
+          // Try alternative selectors
+          addToCartForm = document.querySelector('form[action="/cart/add"]');
+          if (!addToCartForm) {
+            addToCartForm = document.querySelector('form.product-form');
+            if (!addToCartForm) {
+              addToCartForm = document.querySelector('form[method="post"]');
             }
-            alert('Please select a product variant (size, color, etc.) before adding to cart.');
-            return;
-          }
-          
-          // Submit the form directly
-          if (addToCartForm instanceof HTMLFormElement) {
-            addToCartForm.submit();
-            
-            // Update button to show success
-            setTimeout(function() {
-              if (atcButton) {
-                atcButton.textContent = '✓ Added to Cart!';
-                atcButton.style.background = '#28a745';
-                
-                setTimeout(function() {
-                  if (atcButton) {
-                    atcButton.textContent = originalButtonText;
-                    atcButton.style.background = state.widgetSettings.widget_bg || '#000000';
-                    atcButton.disabled = false;
-                    atcButton.style.opacity = '1';
-                    atcButton.style.cursor = 'pointer';
-                  }
-                }, 2000);
-              }
-              
-              // Track the add to cart event
-              trackAddToCart(state);
-            }, 500);
-            
-            return;
           }
         }
-        
-        // Method 3: Use AJAX API as fallback
-        console.log('[VTON] Trying AJAX method...');
         
         if (!addToCartForm) {
-          console.error('[VTON] Add to Cart form not found');
+          console.error('[VTON] CRITICAL: Add to Cart form not found - trying button click method');
+          
+          // Last resort: try to find and click ANY add to cart button
+          const allPossibleButtons = document.querySelectorAll(
+            'button[type="submit"][name="add"], ' +
+            'input[type="submit"][name="add"], ' +
+            'button[name="add"], ' +
+            '.product-form__cart-submit, ' +
+            '[data-add-to-cart], ' +
+            'button[type="submit"][form*="product"], ' +
+            'form[action*="/cart/add"] button[type="submit"], ' +
+            'form[action*="/cart/add"] input[type="submit"], ' +
+            '.btn--add-to-cart, ' +
+            '.add-to-cart, ' +
+            'button[aria-label*="cart" i], ' +
+            'button[aria-label*="add" i]'
+          );
+          
+          if (allPossibleButtons.length > 0) {
+            console.log('[VTON] Found', allPossibleButtons.length, 'possible buttons, clicking first one');
+            const firstButton = allPossibleButtons[0];
+            if (firstButton instanceof HTMLElement) {
+              firstButton.click();
+              
+              // Show success and track
+              setTimeout(function() {
+                if (atcButton) {
+                  atcButton.textContent = '✓ Added to Cart!';
+                  atcButton.style.background = '#28a745';
+                  setTimeout(function() {
+                    if (atcButton) {
+                      atcButton.textContent = originalButtonText;
+                      atcButton.style.background = state.widgetSettings.widget_bg || '#000000';
+                      atcButton.disabled = false;
+                      atcButton.style.opacity = '1';
+                      atcButton.style.cursor = 'pointer';
+                    }
+                  }, 2000);
+                }
+                trackAddToCart(state);
+              }, 500);
+              return;
+            }
+          }
+          
+          // If we still can't find anything, show error
           if (atcButton) {
             atcButton.disabled = false;
             atcButton.textContent = originalButtonText;
@@ -696,28 +667,59 @@
           return;
         }
         
-        // Collect form data
-        const formData = new FormData(addToCartForm);
+        console.log('[VTON] Form found, extracting data...');
         
-        // Get quantity (default to 1 if not specified)
-        let quantity = formData.get('quantity') || '1';
-        if (!quantity || quantity === '') {
-          quantity = '1';
+        // Get variant ID - try multiple methods
+        let variantId = null;
+        let quantity = '1';
+        
+        // Method 1: From FormData
+        const formData = new FormData(addToCartForm);
+        variantId = formData.get('id') || formData.get('variant_id');
+        quantity = formData.get('quantity') || '1';
+        
+        // Method 2: From form inputs directly
+        if (!variantId) {
+          const variantInputs = addToCartForm.querySelectorAll('input[name="id"], select[name="id"], input[name="variant_id"], select[name="variant_id"]');
+          for (let i = 0; i < variantInputs.length; i++) {
+            const input = variantInputs[i];
+            if (input.value) {
+              variantId = input.value;
+              break;
+            }
+          }
         }
         
-        // Get variant ID (required) - try multiple methods
-        let variantId = formData.get('id') || formData.get('variant_id');
-        
-        // If not found in form data, try to find it in the form inputs
+        // Method 3: From data attributes
         if (!variantId) {
-          const variantInput = addToCartForm.querySelector('input[name="id"], select[name="id"]');
-          if (variantInput) {
-            variantId = variantInput.value;
+          const formWithVariant = addToCartForm.closest('[data-product-id], [data-variant-id]');
+          if (formWithVariant) {
+            variantId = formWithVariant.getAttribute('data-variant-id') || formWithVariant.getAttribute('data-product-id');
+          }
+        }
+        
+        // Method 4: From URL if product page
+        if (!variantId) {
+          const urlParams = new URLSearchParams(window.location.search);
+          variantId = urlParams.get('variant');
+        }
+        
+        // If still no variant, try to get default variant
+        if (!variantId) {
+          // Try to find a hidden input or the first option in a select
+          const hiddenVariant = addToCartForm.querySelector('input[type="hidden"][name="id"]');
+          if (hiddenVariant && hiddenVariant.value) {
+            variantId = hiddenVariant.value;
+          } else {
+            const variantSelect = addToCartForm.querySelector('select[name="id"]');
+            if (variantSelect && variantSelect.options.length > 0) {
+              variantId = variantSelect.options[0].value;
+            }
           }
         }
         
         if (!variantId) {
-          console.error('[VTON] Variant ID not found in form');
+          console.error('[VTON] CRITICAL: Variant ID not found - user must select variant');
           if (atcButton) {
             atcButton.disabled = false;
             atcButton.textContent = originalButtonText;
@@ -749,7 +751,7 @@
         
         console.log('[VTON] Sending cart data:', cartData);
         
-        // Submit to Shopify cart using AJAX
+        // CRITICAL: Use AJAX API - this is the most reliable method
         fetch('/cart/add.js', {
           method: 'POST',
           headers: {
@@ -769,7 +771,26 @@
           });
         })
         .then(function(data) {
-          console.log('[VTON] Product added to cart successfully:', data);
+          console.log('[VTON] SUCCESS: Product added to cart successfully:', data);
+          
+          // Verify the product was actually added by checking cart
+          fetch('/cart.js')
+            .then(function(cartResponse) {
+              return cartResponse.json();
+            })
+            .then(function(cartData) {
+              console.log('[VTON] Cart verification:', cartData);
+              const itemAdded = cartData.items && cartData.items.some(function(item) {
+                return item.variant_id == variantId;
+              });
+              
+              if (!itemAdded) {
+                console.warn('[VTON] WARNING: Product may not have been added to cart');
+              }
+            })
+            .catch(function(err) {
+              console.warn('[VTON] Could not verify cart:', err);
+            });
           
           // Update button to show success
           if (atcButton) {
@@ -817,7 +838,34 @@
           });
         })
         .catch(function(error) {
-          console.error('[VTON] Error adding to cart:', error);
+          console.error('[VTON] CRITICAL ERROR adding to cart:', error);
+          
+          // Try fallback: submit form directly
+          console.log('[VTON] Trying fallback: direct form submission');
+          if (addToCartForm instanceof HTMLFormElement) {
+            try {
+              addToCartForm.submit();
+              
+              // Show success (we can't verify but assume it worked)
+              if (atcButton) {
+                atcButton.textContent = '✓ Added to Cart!';
+                atcButton.style.background = '#28a745';
+                setTimeout(function() {
+                  if (atcButton) {
+                    atcButton.textContent = originalButtonText;
+                    atcButton.style.background = state.widgetSettings.widget_bg || '#000000';
+                    atcButton.disabled = false;
+                    atcButton.style.opacity = '1';
+                    atcButton.style.cursor = 'pointer';
+                  }
+                }, 2000);
+              }
+              trackAddToCart(state);
+              return;
+            } catch (submitError) {
+              console.error('[VTON] Form submission also failed:', submitError);
+            }
+          }
           
           // Show error on button
           if (atcButton) {
@@ -843,15 +891,15 @@
       
       function trackAddToCart(state) {
         // Track the add to cart event for analytics
-        const url = window.location.origin + '/apps/tryon/atc?shop=' + encodeURIComponent(state.shop) + '&product_id=' + encodeURIComponent(state.productId);
-        fetch(url, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          }
-        }).catch(function(err) {
-          console.error('[VTON] Failed to track Add to Cart:', err);
-        });
+          const url = window.location.origin + '/apps/tryon/atc?shop=' + encodeURIComponent(state.shop) + '&product_id=' + encodeURIComponent(state.productId);
+          fetch(url, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          }).catch(function(err) {
+            console.error('[VTON] Failed to track Add to Cart:', err);
+          });
       }
       
       // Loading messages that rotate during generation
