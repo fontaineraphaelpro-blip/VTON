@@ -112,11 +112,18 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         // For monthly subscription plans, set the monthly quota instead of adding credits
         const monthlyQuota = (pack as any).monthlyQuota || pack.credits;
         
-        await upsertShop(shop, { monthlyQuota: monthlyQuota });
+        // Preserve the current monthly_quota_used when changing plans
+        // This ensures that used credits are not lost when upgrading
+        const currentQuotaUsed = shopData.monthly_quota_used || 0;
+        
+        await upsertShop(shop, { 
+          monthlyQuota: monthlyQuota,
+          monthly_quota_used: currentQuotaUsed // Preserve used credits
+        });
         
         // Plan activated (log only in development)
         if (process.env.NODE_ENV !== "production") {
-          console.log(`[Credits] Activated plan ${packId} with monthly quota ${monthlyQuota}`);
+          console.log(`[Credits] Activated plan ${packId} with monthly quota ${monthlyQuota}, preserving ${currentQuotaUsed} used credits`);
         }
 
         // Reload shop data after updating plan
@@ -235,9 +242,16 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     try {
       const monthlyQuota = (pack as any).monthlyQuota || pack.credits;
       
+      // Get current shop data to preserve monthly_quota_used
+      const currentShopData = await getShop(shop);
+      const currentQuotaUsed = currentShopData?.monthly_quota_used || 0;
+      
       // Skip payment for free plan
       if (pack.price === 0) {
-        await upsertShop(shop, { monthlyQuota: monthlyQuota });
+        await upsertShop(shop, { 
+          monthlyQuota: monthlyQuota,
+          monthly_quota_used: currentQuotaUsed // Preserve used credits
+        });
         return json({ 
           success: true, 
           message: `Plan ${pack.name} activated successfully! Monthly quota: ${monthlyQuota} try-ons/month.`,
@@ -251,7 +265,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       // In production, billing MUST go through Shopify Billing API
       // ENABLE_DIRECT_PLAN_ACTIVATION is ignored in production for security
       if (process.env.NODE_ENV !== "production") {
-        await upsertShop(shop, { monthlyQuota: monthlyQuota });
+        await upsertShop(shop, { 
+          monthlyQuota: monthlyQuota,
+          monthly_quota_used: currentQuotaUsed // Preserve used credits
+        });
         return json({ 
           success: true, 
           message: `Plan ${pack.name} activated successfully! Monthly quota: ${monthlyQuota} try-ons/month. (Test mode - direct activation)`,
@@ -358,20 +375,26 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         // For test stores and reviewers, we allow direct activation
         // For production stores with Managed Pricing, billing is handled automatically by Shopify
         if (errorMessages.includes("tarification gérée") || errorMessages.includes("Managed Pricing") || errorMessages.includes("Billing API")) {
-          // Always allow direct activation when Managed Pricing error occurs
-          // This covers both test stores (where billing doesn't work) and allows reviewers to test
-          // In production, if it's a real store, Shopify will handle billing automatically via App Store
-          // But we still allow direct activation here to support testing and review scenarios
-          if (process.env.NODE_ENV !== "production") {
-            console.log("[Credits] Managed Pricing detected, activating plan directly for testing");
-          }
-          await upsertShop(shop, { monthlyQuota: monthlyQuota });
-          return json({ 
-            success: true, 
-            message: `Plan ${pack.name} activated successfully! Monthly quota: ${monthlyQuota} try-ons/month.`,
-            planActivated: packId,
-            monthlyQuota: monthlyQuota,
-          });
+        // Always allow direct activation when Managed Pricing error occurs
+        // This covers both test stores (where billing doesn't work) and allows reviewers to test
+        // In production, if it's a real store, Shopify will handle billing automatically via App Store
+        // But we still allow direct activation here to support testing and review scenarios
+        if (process.env.NODE_ENV !== "production") {
+          console.log("[Credits] Managed Pricing detected, activating plan directly for testing");
+        }
+        // Get current shop data to preserve monthly_quota_used
+        const currentShopData = await getShop(shop);
+        const currentQuotaUsed = currentShopData?.monthly_quota_used || 0;
+        await upsertShop(shop, { 
+          monthlyQuota: monthlyQuota,
+          monthly_quota_used: currentQuotaUsed // Preserve used credits
+        });
+        return json({ 
+          success: true, 
+          message: `Plan ${pack.name} activated successfully! Monthly quota: ${monthlyQuota} try-ons/month.`,
+          planActivated: packId,
+          monthlyQuota: monthlyQuota,
+        });
         }
         
         return json({ 
