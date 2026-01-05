@@ -21,7 +21,7 @@ import { getTryonLogs } from "../lib/services/db.service";
 import { ensureTables } from "../lib/db-init.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { session } = await authenticate.admin(request);
+  const { session, admin } = await authenticate.admin(request);
   const shop = session.shop;
 
   try {
@@ -33,8 +33,84 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
     const logs = await getTryonLogs(shop, { limit, offset });
 
+    // Fetch product names from Shopify for ALL products (even if they have product_title, to ensure accuracy)
+    const productIdsToFetch = new Set<string>();
+    
+    // Collect product IDs from logs (fetch all to ensure we have the latest names)
+    logs.forEach((log: any) => {
+      if (log.product_id) {
+        const gidMatch = log.product_id.match(/^gid:\/\/shopify\/Product\/(\d+)$/);
+        if (gidMatch) {
+          productIdsToFetch.add(gidMatch[1]);
+        } else if (/^\d+$/.test(log.product_id)) {
+          productIdsToFetch.add(log.product_id);
+        }
+      }
+    });
+    
+    // Fetch product names from Shopify
+    const productNamesMap: Record<string, string> = {};
+    if (productIdsToFetch.size > 0) {
+      try {
+        const productIdsArray = Array.from(productIdsToFetch);
+        // Fetch in batches of 10 (Shopify limit)
+        for (let i = 0; i < productIdsArray.length; i += 10) {
+          const batch = productIdsArray.slice(i, i + 10);
+          const productQuery = `#graphql
+            query getProducts($ids: [ID!]!) {
+              nodes(ids: $ids) {
+                ... on Product {
+                  id
+                  title
+                }
+              }
+            }
+          `;
+          
+          const gids = batch.map(id => `gid://shopify/Product/${id}`);
+          const response = await admin.graphql(productQuery, {
+            variables: { ids: gids }
+          });
+          
+          if (response.ok) {
+            const data = await response.json() as any;
+            if (data.data?.nodes) {
+              data.data.nodes.forEach((node: any) => {
+                if (node && node.id && node.title) {
+                  // Store both GID and numeric ID as keys
+                  productNamesMap[node.id] = node.title;
+                  const numericId = node.id.replace('gid://shopify/Product/', '');
+                  productNamesMap[numericId] = node.title;
+                  productNamesMap[node.id] = node.title; // Also store GID format
+                }
+              });
+            }
+          }
+        }
+      } catch (error) {
+        // Log error but don't block page load
+        if (process.env.NODE_ENV !== "production") {
+          console.error("Error fetching product names:", error);
+        }
+      }
+    }
+    
+    // Enrich logs with product titles (always use fetched names if available)
+    const enrichedLogs = logs.map((log: any) => {
+      if (log.product_id) {
+        const gidMatch = log.product_id.match(/^gid:\/\/shopify\/Product\/(\d+)$/);
+        const numericId = gidMatch ? gidMatch[1] : log.product_id;
+        const title = productNamesMap[log.product_id] || productNamesMap[numericId];
+        // Always use fetched title if available, otherwise use existing product_title
+        if (title) {
+          return { ...log, product_title: title };
+        }
+      }
+      return log;
+    });
+
     return json({
-      logs: Array.isArray(logs) ? logs : [],
+      logs: Array.isArray(enrichedLogs) ? enrichedLogs : [],
       shop,
     });
   } catch (error) {

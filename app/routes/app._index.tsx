@@ -33,12 +33,12 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       getMonthlyTryonUsage(shop).catch(() => 0), // ADDED: Get monthly usage
     ]);
     
-    // Fetch product names from Shopify for products that don't have product_title
+    // Fetch product names from Shopify for ALL products (even if they have product_title, to ensure accuracy)
     const productIdsToFetch = new Set<string>();
     
-    // Collect product IDs from topProducts that don't have product_title
+    // Collect product IDs from topProducts (fetch all to ensure we have the latest names)
     topProducts.forEach((product: any) => {
-      if (product.product_id && !product.product_title) {
+      if (product.product_id) {
         // Extract numeric ID from GID if needed
         const gidMatch = product.product_id.match(/^gid:\/\/shopify\/Product\/(\d+)$/);
         if (gidMatch) {
@@ -49,9 +49,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       }
     });
     
-    // Collect product IDs from recentLogs that don't have product_title
+    // Collect product IDs from recentLogs (fetch all to ensure we have the latest names)
     recentLogs.forEach((log: any) => {
-      if (log.product_id && !log.product_title) {
+      if (log.product_id) {
         const gidMatch = log.product_id.match(/^gid:\/\/shopify\/Product\/(\d+)$/);
         if (gidMatch) {
           productIdsToFetch.add(gidMatch[1]);
@@ -108,12 +108,13 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       }
     }
     
-    // Enrich topProducts with product titles
+    // Enrich topProducts with product titles (always use fetched names if available)
     const enrichedTopProducts = topProducts.map((product: any) => {
-      if (!product.product_title && product.product_id) {
+      if (product.product_id) {
         const gidMatch = product.product_id.match(/^gid:\/\/shopify\/Product\/(\d+)$/);
         const numericId = gidMatch ? gidMatch[1] : product.product_id;
         const title = productNamesMap[product.product_id] || productNamesMap[numericId];
+        // Always use fetched title if available, otherwise use existing product_title
         if (title) {
           return { ...product, product_title: title };
         }
@@ -121,12 +122,13 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       return product;
     });
     
-    // Enrich recentLogs with product titles
+    // Enrich recentLogs with product titles (always use fetched names if available)
     const enrichedRecentLogs = recentLogs.map((log: any) => {
-      if (!log.product_title && log.product_id) {
+      if (log.product_id) {
         const gidMatch = log.product_id.match(/^gid:\/\/shopify\/Product\/(\d+)$/);
         const numericId = gidMatch ? gidMatch[1] : log.product_id;
         const title = productNamesMap[log.product_id] || productNamesMap[numericId];
+        // Always use fetched title if available, otherwise use existing product_title
         if (title) {
           return { ...log, product_title: title };
         }
