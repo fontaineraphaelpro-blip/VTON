@@ -115,7 +115,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         const productIdsArray = Array.from(productIdsToFetch);
         console.log(`[Dashboard] Fetching ${productIdsArray.length} product names from Shopify...`);
         
-        // Use products query instead of nodes(ids) - more reliable
+        // Use products query with variants to match variant IDs in logs
         const productQuery = `#graphql
           query getProducts {
             products(first: 250) {
@@ -124,6 +124,13 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                   id
                   title
                   handle
+                  variants(first: 100) {
+                    edges {
+                      node {
+                        id
+                      }
+                    }
+                  }
                 }
               }
             }
@@ -154,7 +161,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
           if (data.data?.products?.edges) {
             console.log(`[Dashboard] Received ${data.data.products.edges.length} products from GraphQL`);
             
-            // Create a map of all products by ID (both GID and numeric)
+            // Create a map of all products by ID (both GID and numeric) and variants
             data.data.products.edges.forEach((edge: any) => {
               const product = edge.node;
               if (product && product.id && product.title) {
@@ -168,9 +175,27 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                   productNamesMap[product.handle] = product.title;
                 }
                 
+                // Store variant IDs -> product title mapping (for matching variant IDs in logs)
+                if (product.variants?.edges) {
+                  product.variants.edges.forEach((variantEdge: any) => {
+                    const variant = variantEdge.node;
+                    if (variant && variant.id) {
+                      // Store variant GID -> product title
+                      productNamesMap[variant.id] = product.title;
+                      // Extract numeric ID from variant GID (format: gid://shopify/ProductVariant/123456)
+                      const variantGidMatch = variant.id.match(/^gid:\/\/shopify\/ProductVariant\/(\d+)$/);
+                      if (variantGidMatch) {
+                        const variantNumericId = variantGidMatch[1];
+                        productNamesMap[variantNumericId] = product.title;
+                        console.log(`[Dashboard] ✓ Stored variant mapping: ${variant.id} (numeric: ${variantNumericId}) -> ${product.title}`);
+                      }
+                    }
+                  });
+                }
+                
                 console.log(`[Dashboard] ✓ Stored product: ${product.id} (numeric: ${numericId}, handle: ${product.handle || 'N/A'}) -> ${product.title}`);
                 // #region agent log
-                fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:160',message:'Stored product in map',data:{gid:product.id,numericId,handle:product.handle,title:product.title},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'F'})}).catch(()=>{});
+                fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:160',message:'Stored product in map',data:{gid:product.id,numericId,handle:product.handle,title:product.title,variantsCount:product.variants?.edges?.length||0},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'F'})}).catch(()=>{});
                 // #endregion
               }
             });
