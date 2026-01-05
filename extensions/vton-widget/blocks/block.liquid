@@ -732,10 +732,30 @@
           console.log('[VTON] Generation response data:', JSON.stringify(data, null, 2));
           
           // Extract result URL (multiple formats possible)
-          state.resultImageUrl = data.result_url || data.image_url || data.output || (data.result && data.result.url) || (Array.isArray(data.result) && data.result[0]);
+          state.resultImageUrl = data.result_url || data.image_url || data.output || 
+                                 (data.result && (data.result.url || data.result)) || 
+                                 (Array.isArray(data.result) && data.result[0]) ||
+                                 (data.data && data.data.result_url) ||
+                                 (data.data && data.data.url);
           
           console.log('[VTON] Extracted result URL:', state.resultImageUrl);
+          console.log('[VTON] Result URL type:', typeof state.resultImageUrl);
           console.log('[VTON] Result element exists:', !!result);
+          
+          // Validate result URL
+          if (!state.resultImageUrl || typeof state.resultImageUrl !== 'string') {
+            console.error('[VTON] Invalid result URL format:', {
+              resultImageUrl: state.resultImageUrl,
+              type: typeof state.resultImageUrl,
+              fullData: data
+            });
+            throw new Error('Invalid result URL format received from server');
+          }
+          
+          if (!state.resultImageUrl.startsWith('http')) {
+            console.error('[VTON] Result URL is not a valid HTTP URL:', state.resultImageUrl);
+            throw new Error('Result URL is not a valid HTTP URL');
+          }
           
           // Stop loading messages
           stopLoadingMessages();
@@ -744,7 +764,7 @@
           if (loading) loading.classList.remove('active');
           
           // Display result with "Add to Cart" button
-          if (result && state.resultImageUrl && typeof state.resultImageUrl === 'string') {
+          if (result && state.resultImageUrl && typeof state.resultImageUrl === 'string' && state.resultImageUrl.startsWith('http')) {
             result.classList.add('active');
             const buttonBg = state.widgetSettings.widget_bg || '#000000';
             const buttonColor = state.widgetSettings.widget_color || '#ffffff';

@@ -17,6 +17,18 @@ import { getProductImageUrl } from "../lib/services/shopify.service";
  */
 export const action = async ({ request }: ActionFunctionArgs) => {
   try {
+    // Handle CORS preflight
+    if (request.method === "OPTIONS") {
+      return new Response(null, {
+        status: 200,
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "POST, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type",
+        },
+      });
+    }
+
     const url = new URL(request.url);
     const shop = url.searchParams.get("shop");
     
@@ -25,6 +37,17 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     }
 
     const body = await request.json();
+    
+    // Log request in development
+    if (process.env.NODE_ENV !== "production") {
+      console.log("[Generate] Received request:", {
+        shop: shop,
+        hasUserPhoto: !!body.user_photo,
+        hasProductId: !!body.product_id,
+        hasProductImageUrl: !!body.product_image_url,
+        productImageUrl: body.product_image_url
+      });
+    }
     const { user_photo, product_id, product_image_url } = body;
 
     if (!user_photo || !product_id) {
@@ -107,9 +130,25 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
       // Success logged in database via createTryonLog
 
+      // Log response in development
+      if (process.env.NODE_ENV !== "production") {
+        console.log("[Generate] Returning success response:", {
+          result_url: resultUrl,
+          success: true,
+          resultUrlType: typeof resultUrl,
+          resultUrlLength: resultUrl?.length
+        });
+      }
+
       return json({
         result_url: resultUrl,
         success: true,
+      }, {
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "POST, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type",
+        }
       });
     } catch (genError) {
       const latencyMs = Date.now() - startTime;
