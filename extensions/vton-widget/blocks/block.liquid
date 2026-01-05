@@ -480,19 +480,7 @@
       }
       
       function handleAddToCart(shadowRoot, state) {
-        // Find the add to cart form
-        const addToCartForm = document.querySelector('form[action*="/cart/add"]');
-        
-        if (!addToCartForm) {
-          console.warn('[VTON] Add to Cart form not found');
-          // Fallback: try to find and click the button
-          const addToCartButton = document.querySelector('button[type="submit"][name="add"], input[type="submit"][name="add"], .product-form__cart-submit, [data-add-to-cart]');
-          if (addToCartButton) {
-            addToCartButton.click();
-            trackAddToCart(state);
-          }
-          return;
-        }
+        console.log('[VTON] handleAddToCart called');
         
         // Get the button in the result to show loading state
         const atcButton = shadowRoot.querySelector('.vton-add-to-cart-btn');
@@ -506,6 +494,105 @@
           atcButton.style.cursor = 'not-allowed';
         }
         
+        // Method 1: Try to find and click the original Add to Cart button (most reliable)
+        const addToCartButton = document.querySelector('form[action*="/cart/add"] button[type="submit"], form[action*="/cart/add"] input[type="submit"], button[name="add"], .product-form__cart-submit, [data-add-to-cart], button[type="submit"][form*="product"]');
+        
+        if (addToCartButton) {
+          console.log('[VTON] Found Add to Cart button, clicking it...');
+          
+          // Trigger click on the original button
+          if (addToCartButton instanceof HTMLElement) {
+            addToCartButton.click();
+            
+            // Update button to show success after a short delay
+            setTimeout(function() {
+              if (atcButton) {
+                atcButton.textContent = '✓ Added to Cart!';
+                atcButton.style.background = '#28a745';
+                
+                setTimeout(function() {
+                  if (atcButton) {
+                    atcButton.textContent = originalButtonText;
+                    atcButton.style.background = state.widgetSettings.widget_bg || '#000000';
+                    atcButton.disabled = false;
+                    atcButton.style.opacity = '1';
+                    atcButton.style.cursor = 'pointer';
+                  }
+                }, 2000);
+              }
+              
+              // Track the add to cart event
+              trackAddToCart(state);
+            }, 500);
+            
+            return;
+          }
+        }
+        
+        // Method 2: Find the form and submit it directly
+        const addToCartForm = document.querySelector('form[action*="/cart/add"]');
+        
+        if (addToCartForm) {
+          console.log('[VTON] Found Add to Cart form, submitting...');
+          
+          // Check if form has variant selected
+          const variantInput = addToCartForm.querySelector('input[name="id"], select[name="id"]');
+          if (!variantInput || !variantInput.value) {
+            console.warn('[VTON] No variant selected in form');
+            if (atcButton) {
+              atcButton.disabled = false;
+              atcButton.textContent = originalButtonText;
+              atcButton.style.opacity = '1';
+              atcButton.style.cursor = 'pointer';
+            }
+            alert('Please select a product variant (size, color, etc.) before adding to cart.');
+            return;
+          }
+          
+          // Submit the form directly
+          if (addToCartForm instanceof HTMLFormElement) {
+            addToCartForm.submit();
+            
+            // Update button to show success
+            setTimeout(function() {
+              if (atcButton) {
+                atcButton.textContent = '✓ Added to Cart!';
+                atcButton.style.background = '#28a745';
+                
+                setTimeout(function() {
+                  if (atcButton) {
+                    atcButton.textContent = originalButtonText;
+                    atcButton.style.background = state.widgetSettings.widget_bg || '#000000';
+                    atcButton.disabled = false;
+                    atcButton.style.opacity = '1';
+                    atcButton.style.cursor = 'pointer';
+                  }
+                }, 2000);
+              }
+              
+              // Track the add to cart event
+              trackAddToCart(state);
+            }, 500);
+            
+            return;
+          }
+        }
+        
+        // Method 3: Use AJAX API as fallback
+        console.log('[VTON] Trying AJAX method...');
+        
+        if (!addToCartForm) {
+          console.error('[VTON] Add to Cart form not found');
+          if (atcButton) {
+            atcButton.disabled = false;
+            atcButton.textContent = originalButtonText;
+            atcButton.style.opacity = '1';
+            atcButton.style.cursor = 'pointer';
+          }
+          alert('Unable to find the product form. Please use the regular Add to Cart button on the page.');
+          return;
+        }
+        
         // Collect form data
         const formData = new FormData(addToCartForm);
         
@@ -515,8 +602,17 @@
           quantity = '1';
         }
         
-        // Get variant ID (required)
-        const variantId = formData.get('id') || formData.get('variant_id');
+        // Get variant ID (required) - try multiple methods
+        let variantId = formData.get('id') || formData.get('variant_id');
+        
+        // If not found in form data, try to find it in the form inputs
+        if (!variantId) {
+          const variantInput = addToCartForm.querySelector('input[name="id"], select[name="id"]');
+          if (variantInput) {
+            variantId = variantInput.value;
+          }
+        }
+        
         if (!variantId) {
           console.error('[VTON] Variant ID not found in form');
           if (atcButton) {
@@ -525,9 +621,11 @@
             atcButton.style.opacity = '1';
             atcButton.style.cursor = 'pointer';
           }
-          alert('Please select a product variant before adding to cart.');
+          alert('Please select a product variant (size, color, etc.) before adding to cart.');
           return;
         }
+        
+        console.log('[VTON] Using variant ID:', variantId, 'quantity:', quantity);
         
         // Prepare cart add data
         const cartData = {
@@ -546,7 +644,9 @@
           }
         });
         
-        // Submit to Shopify cart
+        console.log('[VTON] Sending cart data:', cartData);
+        
+        // Submit to Shopify cart using AJAX
         fetch('/cart/add.js', {
           method: 'POST',
           headers: {
@@ -556,7 +656,9 @@
           body: JSON.stringify(cartData)
         })
         .then(function(response) {
+          console.log('[VTON] Cart add response status:', response.status);
           return response.json().then(function(data) {
+            console.log('[VTON] Cart add response data:', data);
             if (!response.ok) {
               throw new Error(data.description || data.message || 'Failed to add to cart');
             }
@@ -586,18 +688,30 @@
           // Track the add to cart event
           trackAddToCart(state);
           
-          // Optionally trigger cart drawer/notification if theme supports it
-          // Many Shopify themes listen for custom events
+          // Trigger cart drawer/notification if theme supports it
           const cartUpdatedEvent = new CustomEvent('cart:updated', { detail: data });
           document.dispatchEvent(cartUpdatedEvent);
           
-          // Also try to open cart drawer if theme uses this pattern
-          const cartDrawerButton = document.querySelector('[data-cart-drawer-toggle], .cart-drawer-toggle, [aria-controls*="cart"]');
+          // Also trigger other common cart events
+          document.dispatchEvent(new CustomEvent('cart:add', { detail: data }));
+          document.dispatchEvent(new Event('cart:refresh'));
+          
+          // Try to open cart drawer if theme uses this pattern
+          const cartDrawerButton = document.querySelector('[data-cart-drawer-toggle], .cart-drawer-toggle, [aria-controls*="cart"], [data-cart-toggle]');
           if (cartDrawerButton) {
             setTimeout(function() {
               cartDrawerButton.click();
             }, 500);
           }
+          
+          // Try to refresh cart count if theme has a cart count element
+          const cartCountElements = document.querySelectorAll('[data-cart-count], .cart-count, #cart-count');
+          cartCountElements.forEach(function(el) {
+            if (el instanceof HTMLElement) {
+              const currentCount = parseInt(el.textContent || '0', 10);
+              el.textContent = String(currentCount + parseInt(quantity, 10));
+            }
+          });
         })
         .catch(function(error) {
           console.error('[VTON] Error adding to cart:', error);
@@ -620,7 +734,7 @@
           }
           
           // Show alert for user feedback
-          alert('Unable to add product to cart. Please try again or use the regular Add to Cart button.');
+          alert('Unable to add product to cart: ' + (error.message || 'Unknown error') + '. Please try using the regular Add to Cart button on the page.');
         });
       }
       
