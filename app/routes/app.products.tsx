@@ -140,8 +140,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       // Get product settings (try-on enabled/disabled)
       for (const product of products) {
         const setting = await getProductTryonSetting(shop, product.id).catch(() => null);
-        // Default to true if not set
-        productSettings[product.id] = setting !== false;
+        // Only explicitly true means enabled (null or false means disabled)
+        productSettings[product.id] = setting === true;
       }
     } catch (dbError) {
       // Log only in development
