@@ -61,29 +61,12 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       return json({ error: "Shop not found" }, { status: 404 });
     }
 
-    // Vérifier les crédits/quota mensuel
-    const now = new Date();
-    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-    const lastResetMonth = shopRecord.last_quota_reset || currentMonth;
+    // Vérifier les crédits disponibles (système d'accumulation)
+    const currentCredits = shopRecord.credits || 0;
 
-    let monthlyQuotaUsed = shopRecord.monthly_quota_used || 0;
-    
-    if (lastResetMonth !== currentMonth) {
-      // Reset du quota mensuel
-      await upsertShop(shop, { 
-        monthly_quota_used: 0,
-        last_quota_reset: currentMonth 
-      });
-      // Update local variable since we just reset it
-      monthlyQuotaUsed = 0;
-    }
-
-    // Vérifier le quota mensuel
-    const monthlyQuota = shopRecord.monthly_quota || 0;
-
-    if (monthlyQuotaUsed >= monthlyQuota) {
+    if (currentCredits <= 0) {
       return json({ 
-        error: "Monthly quota exceeded. Please upgrade your plan." 
+        error: "No credits available. Please purchase a plan to continue." 
       }, { status: 403 });
     }
 
@@ -118,10 +101,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       const latencyMs = Date.now() - startTime;
       console.log("[Generate] Replicate generation completed in", latencyMs, "ms");
 
-      // Incrémenter le quota utilisé et le compteur total de try-ons
-      // Use the updated monthlyQuotaUsed value (may have been reset)
+      // Décrémenter les crédits et incrémenter le compteur total de try-ons
       await upsertShop(shop, { 
-        monthly_quota_used: (monthlyQuotaUsed + 1),
+        credits: currentCredits - 1, // Deduct one credit
         incrementTotalTryons: true
       });
 

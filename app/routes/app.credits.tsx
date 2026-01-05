@@ -109,23 +109,24 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       const pack = PRICING_PLANS.find((p) => p.id === packId);
       
       if (pack && shopData) {
-        // For monthly subscription plans, set the monthly quota instead of adding credits
-        const monthlyQuota = (pack as any).monthlyQuota || pack.credits;
+        // Get the number of credits from the pack
+        const packCredits = (pack as any).monthlyQuota || pack.credits;
+        const monthlyQuota = packCredits; // Store as monthly quota for future renewals
         
-        // Reset monthly_quota_used to 0 when changing plans
-        // This ensures the client gets ALL credits from the new plan
-        // Also update last_quota_reset to current month to prevent auto-reset
-        const now = new Date();
-        const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        // Get current credits (if any)
+        const currentCredits = shopData.credits || 0;
+        
+        // Add pack credits to existing credits (accumulation)
+        const newCredits = currentCredits + packCredits;
+        
         await upsertShop(shop, { 
-          monthlyQuota: monthlyQuota,
-          monthly_quota_used: 0, // Reset to 0 so client gets all credits from new plan
-          last_quota_reset: currentMonth // Update reset date to prevent auto-reset
+          credits: newCredits, // Add credits to existing ones
+          monthlyQuota: monthlyQuota, // Store plan for monthly renewals
         });
         
         // Plan activated (log only in development)
         if (process.env.NODE_ENV !== "production") {
-          console.log(`[Credits] Activated plan ${packId} with monthly quota ${monthlyQuota}, resetting used credits to 0`);
+          console.log(`[Credits] Activated plan ${packId}: added ${packCredits} credits (had ${currentCredits}, now has ${newCredits})`);
         }
 
         // Reload shop data after updating plan
@@ -242,22 +243,25 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     }
 
     try {
-      const monthlyQuota = (pack as any).monthlyQuota || pack.credits;
+      const packCredits = (pack as any).monthlyQuota || pack.credits;
+      const monthlyQuota = packCredits; // Store as monthly quota for future renewals
+      
+      // Get current shop data to get existing credits
+      const currentShopData = await getShop(shop);
+      const currentCredits = currentShopData?.credits || 0;
+      
+      // Add pack credits to existing credits (accumulation)
+      const newCredits = currentCredits + packCredits;
       
       // Skip payment for free plan
       if (pack.price === 0) {
-        // Reset monthly_quota_used to 0 so client gets all credits from new plan
-        // Also update last_quota_reset to current month to prevent auto-reset
-        const now = new Date();
-        const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
         await upsertShop(shop, { 
-          monthlyQuota: monthlyQuota,
-          monthly_quota_used: 0,
-          last_quota_reset: currentMonth
+          credits: newCredits, // Add credits to existing ones
+          monthlyQuota: monthlyQuota, // Store plan for monthly renewals
         });
         return json({ 
           success: true, 
-          message: `Plan ${pack.name} activated successfully! Monthly quota: ${monthlyQuota} try-ons/month.`,
+          message: `Plan ${pack.name} activated successfully! Added ${packCredits} credits. Total: ${newCredits} credits.`,
           planActivated: packId,
           monthlyQuota: monthlyQuota,
         });
@@ -268,18 +272,13 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       // In production, billing MUST go through Shopify Billing API
       // ENABLE_DIRECT_PLAN_ACTIVATION is ignored in production for security
       if (process.env.NODE_ENV !== "production") {
-        // Reset monthly_quota_used to 0 so client gets all credits from new plan
-        // Also update last_quota_reset to current month to prevent auto-reset
-        const now = new Date();
-        const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
         await upsertShop(shop, { 
-          monthlyQuota: monthlyQuota,
-          monthly_quota_used: 0,
-          last_quota_reset: currentMonth
+          credits: newCredits, // Add credits to existing ones
+          monthlyQuota: monthlyQuota, // Store plan for monthly renewals
         });
         return json({ 
           success: true, 
-          message: `Plan ${pack.name} activated successfully! Monthly quota: ${monthlyQuota} try-ons/month. (Test mode - direct activation)`,
+          message: `Plan ${pack.name} activated successfully! Added ${packCredits} credits. Total: ${newCredits} credits. (Test mode - direct activation)`,
           planActivated: packId,
           monthlyQuota: monthlyQuota,
         });
@@ -390,18 +389,20 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         if (process.env.NODE_ENV !== "production") {
           console.log("[Credits] Managed Pricing detected, activating plan directly for testing");
         }
-        // Reset monthly_quota_used to 0 so client gets all credits from new plan
-        // Also update last_quota_reset to current month to prevent auto-reset
-        const now = new Date();
-        const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        // Get current shop data to get existing credits
+        const currentShopData = await getShop(shop);
+        const currentCredits = currentShopData?.credits || 0;
+        
+        // Add pack credits to existing credits (accumulation)
+        const newCredits = currentCredits + packCredits;
+        
         await upsertShop(shop, { 
-          monthlyQuota: monthlyQuota,
-          monthly_quota_used: 0,
-          last_quota_reset: currentMonth
+          credits: newCredits, // Add credits to existing ones
+          monthlyQuota: monthlyQuota, // Store plan for monthly renewals
         });
         return json({ 
           success: true, 
-          message: `Plan ${pack.name} activated successfully! Monthly quota: ${monthlyQuota} try-ons/month.`,
+          message: `Plan ${pack.name} activated successfully! Added ${packCredits} credits. Total: ${newCredits} credits.`,
           planActivated: packId,
           monthlyQuota: monthlyQuota,
         });
