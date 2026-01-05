@@ -112,18 +112,16 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         // For monthly subscription plans, set the monthly quota instead of adding credits
         const monthlyQuota = (pack as any).monthlyQuota || pack.credits;
         
-        // Preserve the current monthly_quota_used when changing plans
-        // This ensures that used credits are not lost when upgrading
-        const currentQuotaUsed = shopData.monthly_quota_used || 0;
-        
+        // Reset monthly_quota_used to 0 when changing plans
+        // This ensures the client gets ALL credits from the new plan
         await upsertShop(shop, { 
           monthlyQuota: monthlyQuota,
-          monthly_quota_used: currentQuotaUsed // Preserve used credits
+          monthly_quota_used: 0 // Reset to 0 so client gets all credits from new plan
         });
         
         // Plan activated (log only in development)
         if (process.env.NODE_ENV !== "production") {
-          console.log(`[Credits] Activated plan ${packId} with monthly quota ${monthlyQuota}, preserving ${currentQuotaUsed} used credits`);
+          console.log(`[Credits] Activated plan ${packId} with monthly quota ${monthlyQuota}, resetting used credits to 0`);
         }
 
         // Reload shop data after updating plan
@@ -242,15 +240,12 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     try {
       const monthlyQuota = (pack as any).monthlyQuota || pack.credits;
       
-      // Get current shop data to preserve monthly_quota_used
-      const currentShopData = await getShop(shop);
-      const currentQuotaUsed = currentShopData?.monthly_quota_used || 0;
-      
       // Skip payment for free plan
       if (pack.price === 0) {
+        // Reset monthly_quota_used to 0 so client gets all credits from new plan
         await upsertShop(shop, { 
           monthlyQuota: monthlyQuota,
-          monthly_quota_used: currentQuotaUsed // Preserve used credits
+          monthly_quota_used: 0
         });
         return json({ 
           success: true, 
@@ -265,9 +260,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       // In production, billing MUST go through Shopify Billing API
       // ENABLE_DIRECT_PLAN_ACTIVATION is ignored in production for security
       if (process.env.NODE_ENV !== "production") {
+        // Reset monthly_quota_used to 0 so client gets all credits from new plan
         await upsertShop(shop, { 
           monthlyQuota: monthlyQuota,
-          monthly_quota_used: currentQuotaUsed // Preserve used credits
+          monthly_quota_used: 0
         });
         return json({ 
           success: true, 
@@ -382,12 +378,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         if (process.env.NODE_ENV !== "production") {
           console.log("[Credits] Managed Pricing detected, activating plan directly for testing");
         }
-        // Get current shop data to preserve monthly_quota_used
-        const currentShopData = await getShop(shop);
-        const currentQuotaUsed = currentShopData?.monthly_quota_used || 0;
+        // Reset monthly_quota_used to 0 so client gets all credits from new plan
         await upsertShop(shop, { 
           monthlyQuota: monthlyQuota,
-          monthly_quota_used: currentQuotaUsed // Preserve used credits
+          monthly_quota_used: 0
         });
         return json({ 
           success: true, 
