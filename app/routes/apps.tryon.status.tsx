@@ -156,12 +156,25 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
     // 5. Get comprehensive try-on status (shop + product level)
     // getProductTryonStatus will try to match with different ID formats and handle
-    const status = await getProductTryonStatus(shop, productId, productHandle || undefined);
+    let status;
+    try {
+      status = await getProductTryonStatus(shop, productId, productHandle || undefined);
+    } catch (error) {
+      console.error("[Status] Error in getProductTryonStatus:", error);
+      return json(
+        {
+          error: "Failed to check try-on status",
+          message: error instanceof Error ? error.message : "Unknown error",
+        },
+        { status: 500 }
+      );
+    }
 
-    // Log for debugging (only in development)
+    // Log for debugging
     console.log("[Status] Product try-on status check:", {
       shop,
       productId,
+      productHandle,
       enabled: status.enabled,
       shopEnabled: status.shopEnabled,
       productEnabled: status.productEnabled,
