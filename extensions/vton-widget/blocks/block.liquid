@@ -220,15 +220,37 @@
       }
       
       function extractProductHandle() {
-        // Try from URL (most reliable)
+        // Try from URL (most reliable) - extract handle from /products/handle
         const urlMatch = window.location.pathname.match(/\/products\/([^\/\?]+)/);
         if (urlMatch) {
-          return urlMatch[1];
+          const handle = urlMatch[1];
+          console.log('[VTON] Extracted handle from URL:', handle);
+          return handle;
         }
         // Try from Shopify object
-        if (window.Shopify && window.Shopify.product && window.Shopify.product.handle) {
-          return window.Shopify.product.handle;
+        if (window.Shopify && window.Shopify.product) {
+          if (window.Shopify.product.handle) {
+            console.log('[VTON] Extracted handle from window.Shopify.product.handle:', window.Shopify.product.handle);
+            return window.Shopify.product.handle;
+          }
+          // Also try from product JSON data
+          if (window.Shopify.productJson && window.Shopify.productJson.handle) {
+            console.log('[VTON] Extracted handle from window.Shopify.productJson.handle:', window.Shopify.productJson.handle);
+            return window.Shopify.productJson.handle;
+          }
         }
+        // Try from meta tags
+        const metaHandle = document.querySelector('meta[property="product:handle"]') || 
+                          document.querySelector('[data-product-handle]');
+        if (metaHandle) {
+          const handle = metaHandle.getAttribute('content') || 
+                        metaHandle.getAttribute('data-product-handle');
+          if (handle) {
+            console.log('[VTON] Extracted handle from meta tag:', handle);
+            return handle;
+          }
+        }
+        console.warn('[VTON] Could not extract product handle');
         return null;
       }
       
