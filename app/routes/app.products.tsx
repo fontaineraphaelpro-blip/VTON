@@ -236,26 +236,34 @@ export default function Products() {
   // Show success banner when fetcher.data?.success changes
   useEffect(() => {
     if (fetcher.data?.success) {
+      console.log('[Products] Showing success banner');
       setShowSuccessBanner(true);
       // Auto-hide after 5 seconds
       const timer = setTimeout(() => {
         setShowSuccessBanner(false);
       }, 5000);
       return () => clearTimeout(timer);
+    } else if (fetcher.state === 'idle' && !fetcher.data?.success) {
+      // Reset banner when fetcher is idle and no success
+      setShowSuccessBanner(false);
     }
-  }, [fetcher.data?.success]);
+  }, [fetcher.data?.success, fetcher.state]);
   
   // Show error banner when fetcher.data?.error changes
   useEffect(() => {
     if ((fetcher.data as any)?.error) {
+      console.log('[Products] Showing error banner:', (fetcher.data as any).error);
       setShowErrorBanner(true);
       // Auto-hide after 7 seconds (errors stay a bit longer)
       const timer = setTimeout(() => {
         setShowErrorBanner(false);
       }, 7000);
       return () => clearTimeout(timer);
+    } else if (fetcher.state === 'idle' && !(fetcher.data as any)?.error) {
+      // Reset banner when fetcher is idle and no error
+      setShowErrorBanner(false);
     }
-  }, [(fetcher.data as any)?.error]);
+  }, [(fetcher.data as any)?.error, fetcher.state]);
 
   const productRows = products.map((product: any) => {
     if (!product || !product.id) {
@@ -387,18 +395,30 @@ export default function Products() {
                   </EmptyState>
                 ) : (
                   <>
-                    {showSuccessBanner && fetcher.data?.success && (
+                    {(showSuccessBanner || fetcher.data?.success) && (
                       <Banner 
                         tone="success" 
-                        onDismiss={() => setShowSuccessBanner(false)}
+                        onDismiss={() => {
+                          setShowSuccessBanner(false);
+                          // Clear fetcher data to prevent re-showing
+                          if (fetcher.data?.success) {
+                            fetcher.load('/app/products');
+                          }
+                        }}
                       >
                         Product try-on setting updated successfully
                       </Banner>
                     )}
-                    {showErrorBanner && (fetcher.data as any)?.error && (
+                    {(showErrorBanner || (fetcher.data as any)?.error) && (
                       <Banner 
                         tone="critical" 
-                        onDismiss={() => setShowErrorBanner(false)}
+                        onDismiss={() => {
+                          setShowErrorBanner(false);
+                          // Clear fetcher data to prevent re-showing
+                          if ((fetcher.data as any)?.error) {
+                            fetcher.load('/app/products');
+                          }
+                        }}
                       >
                         {(fetcher.data as any).error}
                       </Banner>
