@@ -167,6 +167,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                 }
                 
                 console.log(`[Dashboard] ✓ Stored product: ${product.id} (numeric: ${numericId}, handle: ${product.handle || 'N/A'}) -> ${product.title}`);
+                // #region agent log
+                fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:160',message:'Stored product in map',data:{gid:product.id,numericId,handle:product.handle,title:product.title},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'F'})}).catch(()=>{});
+                // #endregion
               }
             });
             
@@ -175,12 +178,16 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
               const requestedGid = `gid://shopify/Product/${requestedId}`;
               const title = productNamesMap[requestedGid] || productNamesMap[requestedId];
               
+              // #region agent log
+              fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:175',message:'Trying to match requested ID',data:{requestedId,requestedGid,foundInMap:!!title,availableKeys:Object.keys(productNamesMap).slice(0,15)},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'F'})}).catch(()=>{});
+              // #endregion
+              
               if (title) {
                 console.log(`[Dashboard] ✓ Matched product: ${requestedId} -> ${title}`);
               } else {
                 console.warn(`[Dashboard] ✗ Product not found in products list: ${requestedId} (GID: ${requestedGid})`);
                 // #region agent log
-                fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:150',message:'Product not found in products list',data:{requestedId,requestedGid,availableIds:Object.keys(productNamesMap).slice(0,10)},timestamp:Date.now(),sessionId:'debug-session',runId:'run3',hypothesisId:'E'})}).catch(()=>{});
+                fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:181',message:'Product not found in products list',data:{requestedId,requestedGid,availableIds:Object.keys(productNamesMap).slice(0,15),allAvailableKeys:Object.keys(productNamesMap)},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'F'})}).catch(()=>{});
                 // #endregion
                 
                 // Fallback: try to find product_title in logs
@@ -190,13 +197,16 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                   const logNumericId = logGidMatch ? logGidMatch[1] : log.product_id;
                   return log.product_id === requestedGid || logNumericId === requestedId;
                 });
+                // #region agent log
+                fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:187',message:'Checking logs for fallback title',data:{requestedId,foundLog:!!logWithTitle,logProductId:logWithTitle?.product_id,logProductTitle:logWithTitle?.product_title},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'F'})}).catch(()=>{});
+                // #endregion
                 if (logWithTitle?.product_title) {
                   // Store the title from log as fallback
                   productNamesMap[requestedGid] = logWithTitle.product_title;
                   productNamesMap[requestedId] = logWithTitle.product_title;
                   console.log(`[Dashboard] Using product_title from log as fallback: ${requestedId} -> ${logWithTitle.product_title}`);
                   // #region agent log
-                  fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:160',message:'Successfully used product_title from log',data:{requestedId,title:logWithTitle.product_title},timestamp:Date.now(),sessionId:'debug-session',runId:'run3',hypothesisId:'E'})}).catch(()=>{});
+                  fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:193',message:'Successfully used product_title from log',data:{requestedId,title:logWithTitle.product_title},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'F'})}).catch(()=>{});
                   // #endregion
                 }
               }
