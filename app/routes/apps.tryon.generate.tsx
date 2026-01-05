@@ -162,27 +162,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         "Access-Control-Allow-Headers": "Content-Type",
       }
     });
-    } catch (genError) {
-      const latencyMs = Date.now() - startTime;
-      const errorMessage = genError instanceof Error ? genError.message : 'Unknown error';
-      
-      // Créer un log d'erreur
-      const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0] || 
-                       request.headers.get('x-real-ip') || 
-                       null;
-      
-      await createTryonLog({
-        shop: shop,
-        customerIp: clientIp || undefined,
-        productId: product_id,
-        success: false,
-        errorMessage: errorMessage,
-        latencyMs: latencyMs,
-      }); // ID not needed for error logs
-
-      // Re-throw l'erreur pour qu'elle soit gérée par le catch externe
-      throw genError;
-    }
   } catch (error) {
     // Log error (always log for debugging)
     const errorMessage = error instanceof Error ? error.message : "Generation failed";
