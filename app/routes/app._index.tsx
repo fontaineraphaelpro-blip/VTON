@@ -184,11 +184,12 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                   
                   // Try to fetch via REST API as fallback
                   try {
-                    const product = new admin.rest.resources.Product({ session });
-                    product.id = requestedId;
-                    await product.load();
+                    const product = await admin.rest.resources.Product.find({
+                      session,
+                      id: requestedId,
+                    });
                     
-                    if (product.title) {
+                    if (product && product.title) {
                       productNamesMap[requestedGid] = product.title;
                       productNamesMap[requestedId] = product.title;
                       console.log(`[Dashboard] ✓ Fetched product name via REST API: ${requestedId} -> ${product.title}`);
