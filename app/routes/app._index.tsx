@@ -1089,18 +1089,35 @@ export default function Dashboard() {
               <div className="graph-bars">
                 {dailyStats.slice(-7).map((stat: any, index: number) => {
                   const maxCount = Math.max(...dailyStats.map((s: any) => s.count));
-                  // Calculate percentage with a minimum of 10% for visibility, and scale up for better visibility
-                  const percentage = maxCount > 0 ? Math.max((stat.count / maxCount) * 90 + 10, stat.count > 0 ? 15 : 0) : 0;
+                  // Calculate percentage properly: 0% for no data, scale from 20% to 100% for better visibility
+                  const percentage = maxCount > 0 && stat.count > 0 
+                    ? Math.max((stat.count / maxCount) * 80 + 20, 20) 
+                    : 0;
                   const date = new Date(stat.date);
+                  const isToday = date.toDateString() === new Date().toDateString();
+                  const isHighest = stat.count === maxCount && stat.count > 0;
+                  
                   return (
                     <div key={index} className="graph-bar-item">
-                      <div className="graph-bar-value">{stat.count}</div>
+                      <div className={`graph-bar-value ${isHighest ? 'graph-bar-value-highlight' : ''}`}>
+                        {stat.count}
+                        {isHighest && <span className="graph-bar-badge">🔥</span>}
+                      </div>
                       <div 
-                        className="graph-bar" 
-                        style={{ height: `${percentage}%` }}
+                        className={`graph-bar ${isToday ? 'graph-bar-today' : ''} ${isHighest ? 'graph-bar-highlight' : ''}`}
+                        style={{ 
+                          height: `${percentage}%`,
+                          background: isHighest 
+                            ? 'linear-gradient(180deg, #10b981 0%, #059669 100%)'
+                            : isToday
+                            ? 'linear-gradient(180deg, #3b82f6 0%, #2563eb 100%)'
+                            : 'linear-gradient(180deg, #10b981 0%, #34d399 100%)'
+                        }}
+                        title={`${stat.count} generation${stat.count !== 1 ? 's' : ''} on ${date.toLocaleDateString("en-US", { month: "long", day: "numeric" })}`}
                       />
-                      <div className="graph-bar-label">
+                      <div className={`graph-bar-label ${isToday ? 'graph-bar-label-today' : ''}`}>
                         {date.toLocaleDateString("en-US", { day: "numeric", month: "short" })}
+                        {isToday && <span className="graph-bar-today-indicator">Today</span>}
                       </div>
                     </div>
                   );
