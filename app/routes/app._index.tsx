@@ -261,11 +261,14 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
           console.log(`[Dashboard] Using product_title from handles map for topProduct: ${product.product_id} -> ${title}`);
         }
         
+        // Always set product_title - use title if found, otherwise use numeric ID (more readable than full GID)
         if (title) {
           console.log(`[Dashboard] Enriched topProduct: ${product.product_id} -> ${title}`);
           return { ...product, product_title: title };
         } else {
-          console.warn(`[Dashboard] No title found for topProduct: ${product.product_id} (numeric: ${numericId}), map keys:`, Object.keys(productNamesMap));
+          // Use numeric ID as fallback (better than full GID)
+          console.log(`[Dashboard] No title found for topProduct, using numeric ID: ${product.product_id} -> Product #${numericId}`);
+          return { ...product, product_title: `Product #${numericId}` };
         }
       }
       return product;
@@ -291,11 +294,14 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
           console.log(`[Dashboard] Using product_title from handles map: ${log.product_id} -> ${title}`);
         }
         
+        // Always set product_title - use title if found, otherwise use numeric ID (more readable than full GID)
         if (title) {
           console.log(`[Dashboard] Enriched log: ${log.product_id} -> ${title}`);
           return { ...log, product_title: title };
         } else {
-          console.warn(`[Dashboard] No title found for log: ${log.product_id} (numeric: ${numericId}), map keys:`, Object.keys(productNamesMap));
+          // Use numeric ID as fallback (better than full GID)
+          console.log(`[Dashboard] No title found for log, using numeric ID: ${log.product_id} -> Product #${numericId}`);
+          return { ...log, product_title: `Product #${numericId}` };
         }
       }
       return log;
