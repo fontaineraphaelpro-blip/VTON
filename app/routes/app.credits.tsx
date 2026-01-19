@@ -371,11 +371,12 @@ export const action = async ({ request }: ActionFunctionArgs) => {
             // 3. There's a configuration mismatch
             console.warn(`[Credits] billing.require() onFailure called`);
             console.warn(`[Credits] This might indicate Managed Pricing is not fully activated`);
-            console.warn(`[Credits] However, we'll let billing.require() handle the redirect`);
+            console.warn(`[Credits] Returning undefined to let billing.require() handle the redirect`);
             
-            // Return null to let billing.require() handle the redirect
-            // If Managed Pricing is properly configured, it should redirect automatically
-            return null;
+            // Don't return null - return undefined or nothing
+            // billing.require() will handle the redirect if Managed Pricing is configured
+            // If it's not configured, we'll catch the error and show a helpful message
+            return undefined;
           },
         });
         console.log(`[Credits] billing.require() returned:`, {
