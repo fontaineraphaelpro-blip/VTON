@@ -298,6 +298,15 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       const isTestMode = shop.includes('.myshopify.com') || process.env.NODE_ENV !== "production";
       
       console.log(`[Credits] Requesting billing redirect for plan: ${pack.name} (handle: ${planHandle}, packId: ${packId}, isTest: ${isTestMode})`);
+      console.log(`[Credits] Billing object available: ${!!billing}, Session shop: ${shop}`);
+      
+      // Check if billing is available (indicates Managed Pricing is configured)
+      if (!billing) {
+        return json({ 
+          success: false, 
+          error: "Billing is not available. Managed Pricing must be configured in shopify.server.ts and the Partner Dashboard."
+        });
+      }
       
       // Use billing.require() which handles Managed Pricing correctly
       // With Managed Pricing, billing.require() automatically redirects to Shopify's pricing page
@@ -307,6 +316,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         // With Managed Pricing, billing.require() will automatically redirect to the pricing page
         // if no active subscription is found. The onFailure callback is required by the API
         // but should not redirect manually - let billing.require() handle it automatically.
+        console.log(`[Credits] Calling billing.require() with plan: ${planHandle}`);
         billingResponse = await billing.require({
           session,
           plans: [planHandle],
@@ -314,15 +324,23 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           onFailure: () => {
             // With Managed Pricing, this callback should not be called
             // If it is called, it indicates that Managed Pricing is not properly configured
-            // in the Partner Dashboard or the app is not set to Public
-            console.error(`[Credits] billing.require() onFailure called - Managed Pricing is NOT configured correctly`);
-            console.error(`[Credits] This means Managed Pricing is not enabled in Partner Dashboard or plans are not configured`);
-            // Throw an error with a clear message instead of returning null
+            // Possible causes:
+            // 1. Handles in code don't match handles in Partner Dashboard (case-sensitive)
+            // 2. App is not set to Public in Partner Dashboard
+            // 3. Plans are not published/active in Partner Dashboard
+            // 4. Testing on development store may require different configuration
+            console.error(`[Credits] billing.require() onFailure called - Managed Pricing is NOT detected by Shopify`);
+            console.error(`[Credits] Possible causes:`);
+            console.error(`[Credits] 1. Handles mismatch: code uses "${planHandle}", Partner Dashboard must have exact same handle`);
+            console.error(`[Credits] 2. App not Public: App must be set to Public (not just Development) in Partner Dashboard`);
+            console.error(`[Credits] 3. Plans not published: Plans must be published and active in Partner Dashboard`);
+            console.error(`[Credits] 4. Testing store: Development stores may have different requirements`);
+            
+            // Instead of throwing, return a redirect to credits page with error message
+            // This allows the user to see the error and try again
             throw new Error(
-              "Managed Pricing is not properly configured. " +
-              "Please ensure: 1) Managed Pricing is enabled in Partner Dashboard → Distribution → Listings → Pricing, " +
-              "2) Plans (starter, pro, studio) are configured with correct amounts, " +
-              "3) App is set to Public (not just Development mode)."
+              `Managed Pricing not detected. Verify: 1) Handle "${planHandle}" matches Partner Dashboard exactly (case-sensitive), ` +
+              `2) App is Public in Partner Dashboard, 3) Plans are published, 4) Try redeploying with 'npm run deploy'`
             );
           },
         });
