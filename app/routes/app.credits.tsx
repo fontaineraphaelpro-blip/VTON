@@ -162,12 +162,15 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
 export const action = async ({ request }: ActionFunctionArgs) => {
   try {
-    let admin, session;
+    // authenticate.admin() returns { admin, billing, session }
+    // billing is only available if the app is configured for Managed Pricing
+    let admin, billing, session;
+    
     try {
       const authResult = await authenticate.admin(request);
       admin = authResult.admin;
+      billing = authResult.billing; // billing is available when Managed Pricing is configured
       session = authResult.session;
-      
     } catch (authError) {
       // Si authenticate.admin lance une Response (redirection), la gérer
       if (authError instanceof Response) {
@@ -194,7 +197,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         }
         return json({ 
           success: false, 
-            error: `Authentication error (${authError.status}). Please refresh the page.`,
+          error: `Authentication error (${authError.status}). Please refresh the page.`,
           requiresAuth: true,
         });
       }
@@ -223,7 +226,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       }
       return json({ 
         success: false, 
-            error: "GraphQL client not available. Please refresh the page.",
+        error: "GraphQL client not available. Please refresh the page.",
         requiresAuth: true,
       });
     }
@@ -269,8 +272,15 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       }
       
       // For paid plans, use Shopify Managed Pricing with billing.require()
-      // This is the correct way to handle billing with Managed Pricing
-      // The plan name must match the billing configuration in shopify.server.ts
+      // billing is available from authenticate.admin() if app is configured for Managed Pricing
+      if (!billing) {
+        console.error("[Credits] Billing is not available. App may not be configured for Managed Pricing.");
+        return json({ 
+          success: false, 
+          error: "Billing is not available. Please ensure the app is configured for Managed Pricing in the Shopify Partner Dashboard."
+        });
+      }
+
       const planName = pack.name; // "Starter", "Pro", or "Enterprise"
       
       console.log(`[Credits] Requesting billing for plan: ${planName} (${packId})`);
@@ -278,7 +288,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       // Use billing.require() which handles Managed Pricing correctly
       // This will return a redirect Response if billing is needed
       // For Managed Pricing, this redirects to Shopify's pricing page
-      const billingResponse = await shopify.billing.require({
+      const billingResponse = await billing.require({
         session,
         plans: [planName],
         isTest: shop.includes('.myshopify.com') || process.env.NODE_ENV !== "production",
