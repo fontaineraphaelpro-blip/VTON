@@ -295,21 +295,35 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       // Use pack.id (handle) instead of pack.name for billing.require()
       // Handles must match the keys in shopify.server.ts: "starter", "pro", "studio"
       const planHandle = pack.id; // "starter", "pro", or "studio"
+      const isTestMode = shop.includes('.myshopify.com') || process.env.NODE_ENV !== "production";
       
-      console.log(`[Credits] Requesting billing redirect for plan: ${pack.name} (handle: ${planHandle}, packId: ${packId})`);
+      console.log(`[Credits] Requesting billing redirect for plan: ${pack.name} (handle: ${planHandle}, packId: ${packId}, isTest: ${isTestMode})`);
       
       // Use billing.require() which handles Managed Pricing correctly
       // This will redirect to Shopify's Managed Pricing page where merchant can select a plan
       // With Managed Pricing, we don't create subscriptions - Shopify does it automatically
-      const billingResponse = await billing.require({
-        session,
-        plans: [planHandle],
-        isTest: shop.includes('.myshopify.com') || process.env.NODE_ENV !== "production",
-        onFailure: () => {
-          // If billing fails, redirect back to credits page
-          return redirect("/app/credits");
-        },
-      });
+      let billingResponse;
+      try {
+        billingResponse = await billing.require({
+          session,
+          plans: [planHandle],
+          isTest: isTestMode,
+          onFailure: () => {
+            // If billing fails, redirect back to credits page
+            console.error(`[Credits] billing.require() onFailure callback triggered for plan: ${planHandle}`);
+            return redirect("/app/credits");
+          },
+        });
+        console.log(`[Credits] billing.require() returned:`, {
+          type: typeof billingResponse,
+          isResponse: billingResponse instanceof Response,
+          status: billingResponse instanceof Response ? billingResponse.status : 'N/A',
+        });
+      } catch (billingError) {
+        console.error(`[Credits] billing.require() threw an error:`, billingError);
+        // If billing.require() throws an error, it might be a configuration issue
+        throw new Error(`Failed to initiate billing: ${billingError instanceof Error ? billingError.message : String(billingError)}`);
+      }
 
       // billing.require() returns a Response with redirect if billing is needed
       // With Managed Pricing, this always redirects to Shopify's pricing page
