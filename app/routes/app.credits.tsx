@@ -162,15 +162,16 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
 export const action = async ({ request }: ActionFunctionArgs) => {
   try {
-    // authenticate.admin() returns { admin, billing, session }
+    // authenticate.admin() returns { admin, billing, session, redirect }
     // billing is only available if the app is configured for Managed Pricing
-    let admin, billing, session;
+    let admin, billing, session, redirect;
     
     try {
       const authResult = await authenticate.admin(request);
       admin = authResult.admin;
       billing = authResult.billing; // billing is available when Managed Pricing is configured
       session = authResult.session;
+      redirect = authResult.redirect; // redirect is needed for onFailure callback
     } catch (authError) {
       // Si authenticate.admin lance une Response (redirection), la gérer
       if (authError instanceof Response) {
@@ -281,17 +282,28 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         });
       }
 
+      if (!redirect) {
+        console.error("[Credits] Redirect is not available from authenticate.admin().");
+        return json({ 
+          success: false, 
+          error: "Redirect function is not available. Please refresh the page."
+        });
+      }
+
       const planName = pack.name; // "Starter", "Pro", or "Enterprise"
       
       console.log(`[Credits] Requesting billing for plan: ${planName} (${packId})`);
       
       // Use billing.require() which handles Managed Pricing correctly
-      // This will return a redirect Response if billing is needed
-      // For Managed Pricing, this redirects to Shopify's pricing page
+      // onFailure callback is required - redirect back to credits page if billing fails
       const billingResponse = await billing.require({
         session,
         plans: [planName],
         isTest: shop.includes('.myshopify.com') || process.env.NODE_ENV !== "production",
+        onFailure: () => {
+          // If billing fails, redirect back to credits page
+          return redirect("/app/credits");
+        },
       });
 
       // billing.require() returns a Response with redirect if billing is needed
