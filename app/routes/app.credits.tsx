@@ -274,9 +274,13 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       // Return URL after successful payment - Shopify will redirect here with purchase=success
       const returnUrl = new URL(request.url).origin + `/app/credits?purchase=success&pack=${packId}&monthlyQuota=${monthlyQuota}`;
       
-      // Always use test mode for development stores to allow testing without real charges
-      // In production, Shopify will automatically handle test vs production billing
+      // Determine test mode: use test=true for development stores (.myshopify.com)
+      // Even in test mode, Shopify will show a payment confirmation page (with test payment)
+      // This is important for testing the full payment flow
       const isTestStore = shop.includes('.myshopify.com');
+      const useTestMode = isTestStore || process.env.NODE_ENV !== "production";
+      
+      console.log(`[Credits] Creating subscription for ${shop}, test mode: ${useTestMode}`);
       
       const response = await admin.graphql(
         `#graphql
@@ -316,7 +320,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
               }
             ],
             returnUrl: returnUrl,
-            test: isTestStore // Use test mode for development stores
+            test: useTestMode // Use test mode for development stores, but still show payment page
           }
         }
       );
@@ -348,6 +352,16 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       }
 
       const responseData = await response.json();
+      
+      // Log response for debugging (always log to help diagnose payment issues)
+      console.log("[Credits] Subscription creation response:", {
+        hasData: !!responseData.data,
+        hasAppSubscriptionCreate: !!responseData.data?.appSubscriptionCreate,
+        hasConfirmationUrl: !!responseData.data?.appSubscriptionCreate?.confirmationUrl,
+        hasUserErrors: !!responseData.data?.appSubscriptionCreate?.userErrors,
+        userErrors: responseData.data?.appSubscriptionCreate?.userErrors,
+        confirmationUrl: responseData.data?.appSubscriptionCreate?.confirmationUrl,
+      });
       
       if (responseData.data?.appSubscriptionCreate?.userErrors?.length > 0) {
         const errors = responseData.data.appSubscriptionCreate.userErrors;
@@ -387,8 +401,15 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         });
       }
 
-      // Redirect to Shopify subscription confirmation page
-      return redirect(confirmationUrl);
+      // Return confirmation URL in JSON response
+      // The client will handle the redirect since we're using fetcher.submit()
+      // This is necessary because fetcher.submit() doesn't follow redirects automatically
+      return json({ 
+        success: true,
+        confirmationUrl: confirmationUrl,
+        redirect: true,
+        message: "Redirecting to Shopify payment page..."
+      });
     } catch (error) {
       // Log only in development
       if (process.env.NODE_ENV !== "production") {
@@ -546,6 +567,22 @@ export default function Credits() {
       setSubmittingPackId(null);
     }
   }, [fetcher.state, submittingPackId]);
+
+  // Handle redirect to Shopify payment page
+  useEffect(() => {
+    const confirmationUrl = (fetcher.data as any)?.confirmationUrl;
+    const shouldRedirect = (fetcher.data as any)?.redirect === true;
+    
+    if (confirmationUrl && shouldRedirect && fetcher.state === "idle") {
+      // Redirect to Shopify payment confirmation page
+      console.log("[Credits] Redirecting to Shopify payment page:", confirmationUrl);
+      // Use window.location.href for full page redirect (necessary for Shopify payment flow)
+      window.location.href = confirmationUrl;
+    } else if (shouldRedirect && !confirmationUrl && fetcher.state === "idle") {
+      // Log if we expected a redirect but didn't get a confirmation URL
+      console.error("[Credits] Expected redirect but no confirmationUrl received:", fetcher.data);
+    }
+  }, [fetcher.data, fetcher.state]);
 
   const handlePurchase = (packId: string) => {
     if (isSubmitting || submittingPackId !== null) {
