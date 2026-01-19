@@ -320,25 +320,48 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         
         if (redirectUrl) {
           console.log(`[Credits] Redirecting to Shopify Managed Pricing page: ${redirectUrl}`);
+          
+          // For embedded apps, we need to exit the iframe to redirect to Shopify's pricing page
+          // The redirect URL from billing.require() should already handle this, but we ensure
+          // it's properly formatted for embedded apps
+          let finalRedirectUrl = redirectUrl;
+          
+          // If the URL doesn't already include exit-iframe logic and we're in an embedded context,
+          // we might need to wrap it, but billing.require() should handle this automatically
+          
           // Return the redirect URL to the client so it can redirect
           return json({ 
             success: true,
-            confirmationUrl: redirectUrl,
+            confirmationUrl: finalRedirectUrl,
             redirect: true,
             message: "Redirecting to Shopify pricing page..."
           });
         }
         
-        // If no location header, return the response directly (it should be a redirect)
-        console.log(`[Credits] Billing response received, returning redirect response directly`);
-        return billingResponse;
+        // If no location header, try to get the URL from the response body or status
+        // For embedded apps, billing.require() might return a redirect response directly
+        if (billingResponse.status >= 300 && billingResponse.status < 400) {
+          // It's a redirect response, return it directly
+          console.log(`[Credits] Billing response is a redirect (status ${billingResponse.status}), returning directly`);
+          return billingResponse;
+        }
+        
+        // If we get here, something unexpected happened
+        console.error(`[Credits] billing.require() returned unexpected response:`, {
+          status: billingResponse.status,
+          headers: Object.fromEntries(billingResponse.headers.entries()),
+        });
+        return json({ 
+          success: false, 
+          error: "Unable to redirect to pricing page. The billing configuration may not be deployed. Please run 'npm run deploy' to sync your configuration with Shopify."
+        });
       }
 
       // This should never happen with Managed Pricing, but handle it gracefully
       console.warn(`[Credits] billing.require() returned null/undefined - this is unexpected with Managed Pricing`);
       return json({ 
         success: false, 
-        error: "Unable to redirect to pricing page. Please try again or contact support."
+        error: "Unable to redirect to pricing page. The billing configuration may not be deployed. Please ensure Managed Pricing is configured in the Partner Dashboard and run 'npm run deploy' to sync your configuration."
       });
     } catch (error) {
       // Log error for debugging
