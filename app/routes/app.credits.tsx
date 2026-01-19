@@ -292,16 +292,18 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         });
       }
 
-      const planName = pack.name; // "Starter", "Pro", or "Enterprise"
+      // Use pack.id (handle) instead of pack.name for billing.require()
+      // Handles must match the keys in shopify.server.ts: "starter", "pro", "studio"
+      const planHandle = pack.id; // "starter", "pro", or "studio"
       
-      console.log(`[Credits] Requesting billing redirect for plan: ${planName} (${packId})`);
+      console.log(`[Credits] Requesting billing redirect for plan: ${pack.name} (handle: ${planHandle}, packId: ${packId})`);
       
       // Use billing.require() which handles Managed Pricing correctly
       // This will redirect to Shopify's Managed Pricing page where merchant can select a plan
       // With Managed Pricing, we don't create subscriptions - Shopify does it automatically
       const billingResponse = await billing.require({
         session,
-        plans: [planName],
+        plans: [planHandle],
         isTest: shop.includes('.myshopify.com') || process.env.NODE_ENV !== "production",
         onFailure: () => {
           // If billing fails, redirect back to credits page

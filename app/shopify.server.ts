@@ -13,7 +13,8 @@ export const shopify = shopifyApp({
   distribution: "AppStore",
   useOnlineTokens: true, // CRITIQUE: Utilise des tokens online pour les paiements et draft orders
   billing: {
-    "Starter": {
+    "starter": {
+      // Handle technique: "starter", Display name: "Starter"
       lineItems: [
         {
           amount: 29.0,
@@ -22,7 +23,8 @@ export const shopify = shopifyApp({
         },
       ],
     },
-    "Pro": {
+    "pro": {
+      // Handle technique: "pro", Display name: "Pro"
       lineItems: [
         {
           amount: 99.0,
@@ -31,7 +33,7 @@ export const shopify = shopifyApp({
         },
       ],
     },
-    "Enterprise": {
+    "studio": {
       // Handle technique: "studio", Display name: "Enterprise"
       // Le prix doit correspondre au prix dans le Partner Dashboard ($399/month)
       lineItems: [
