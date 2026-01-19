@@ -273,7 +273,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       }
       
       // For paid plans, use Shopify Managed Pricing with billing.require()
-      // billing is available from authenticate.admin() if app is configured for Managed Pricing
+      // With Managed Pricing, billing.require() simply redirects to Shopify's pricing page
+      // No subscription is created manually - Shopify handles everything automatically
+      // Credits will be added automatically via app_subscriptions/update webhook when subscription is activated
       if (!billing) {
         console.error("[Credits] Billing is not available. App may not be configured for Managed Pricing.");
         return json({ 
@@ -292,10 +294,11 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
       const planName = pack.name; // "Starter", "Pro", or "Enterprise"
       
-      console.log(`[Credits] Requesting billing for plan: ${planName} (${packId})`);
+      console.log(`[Credits] Requesting billing redirect for plan: ${planName} (${packId})`);
       
       // Use billing.require() which handles Managed Pricing correctly
-      // onFailure callback is required - redirect back to credits page if billing fails
+      // This will redirect to Shopify's Managed Pricing page where merchant can select a plan
+      // With Managed Pricing, we don't create subscriptions - Shopify does it automatically
       const billingResponse = await billing.require({
         session,
         plans: [planName],
@@ -307,54 +310,40 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       });
 
       // billing.require() returns a Response with redirect if billing is needed
-      // If it returns null/undefined, the shop already has an active subscription
+      // With Managed Pricing, this always redirects to Shopify's pricing page
+      // We should always get a redirect Response, never null
       if (billingResponse) {
-        // Billing is required - billingResponse is a redirect Response
-        // We need to extract the redirect URL and return it to the client
-        // The redirect URL should be in the Location header
+        // Extract the redirect URL from the response
         const redirectUrl = billingResponse.headers.get('location');
         
         if (redirectUrl) {
-          console.log(`[Credits] Redirecting to Shopify billing page: ${redirectUrl}`);
+          console.log(`[Credits] Redirecting to Shopify Managed Pricing page: ${redirectUrl}`);
           // Return the redirect URL to the client so it can redirect
           return json({ 
             success: true,
             confirmationUrl: redirectUrl,
             redirect: true,
-            message: "Redirecting to Shopify payment page..."
+            message: "Redirecting to Shopify pricing page..."
           });
         }
         
-        // If no location header, try to get the URL from the response
-        // For Managed Pricing, the response might be a redirect with the URL in the body
-        console.log(`[Credits] Billing response received but no location header, returning response directly`);
+        // If no location header, return the response directly (it should be a redirect)
+        console.log(`[Credits] Billing response received, returning redirect response directly`);
         return billingResponse;
       }
 
-      // If billing.require() returns null/undefined, the shop already has an active subscription
-      // In this case, we should still add credits based on the plan they're purchasing
-      // This handles the case where they're upgrading or adding a new plan
-      console.log(`[Credits] Shop already has active subscription for ${planName}, adding credits`);
-      
-      await upsertShop(shop, { 
-        credits: newCredits,
-        monthlyQuota: monthlyQuota,
-      });
-
-      return json({ 
-        success: true, 
-        message: `Plan ${pack.name} activated successfully! Added ${packCredits} credits. Total: ${newCredits} credits.`,
-        planActivated: packId,
-        monthlyQuota: monthlyQuota,
-      });
-    } catch (error) {
-      // Log only in development
-      if (process.env.NODE_ENV !== "production") {
-        console.error("[Credits] Error creating subscription:", error);
-      }
+      // This should never happen with Managed Pricing, but handle it gracefully
+      console.warn(`[Credits] billing.require() returned null/undefined - this is unexpected with Managed Pricing`);
       return json({ 
         success: false, 
-        error: error instanceof Error ? error.message : "Error creating subscription" 
+        error: "Unable to redirect to pricing page. Please try again or contact support."
+      });
+    } catch (error) {
+      // Log error for debugging
+      console.error("[Credits] Error in billing flow:", error);
+      return json({ 
+        success: false, 
+        error: error instanceof Error ? error.message : "Error redirecting to pricing page. Please try again." 
       });
     }
   }
