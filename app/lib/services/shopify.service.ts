@@ -38,3 +38,86 @@ export async function getProductImageUrl(shop: string, productHandle: string): P
   }
 }
 
+/**
+ * Vérifie le statut de l'abonnement Shopify pour une boutique
+ * Utilise l'API GraphQL Admin de Shopify pour vérifier les abonnements actifs
+ * 
+ * @param admin - Instance du client GraphQL Admin Shopify
+ * @returns Object avec le statut de l'abonnement et les détails
+ */
+export async function checkShopifySubscriptionStatus(admin: any): Promise<{
+  hasActiveSubscription: boolean;
+  subscriptions: Array<{
+    id: string;
+    name: string;
+    status: string;
+    createdAt: string;
+    currentPeriodEnd?: string;
+  }>;
+}> {
+  try {
+    const query = `#graphql
+      query {
+        currentAppInstallation {
+          activeSubscriptions {
+            id
+            name
+            status
+            createdAt
+            currentPeriodEnd
+            lineItems {
+              id
+              plan {
+                pricingDetails {
+                  ... on AppRecurringPricing {
+                    price {
+                      amount
+                      currencyCode
+                    }
+                    interval
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    `;
+
+    const response = await admin.graphql(query);
+    
+    if (!response.ok) {
+      console.error(`[Shopify Service] Failed to fetch subscription status: ${response.status}`);
+      return {
+        hasActiveSubscription: false,
+        subscriptions: [],
+      };
+    }
+
+    const data = await response.json();
+    const subscriptions = data.data?.currentAppInstallation?.activeSubscriptions || [];
+    
+    // Filtrer les abonnements actifs
+    const activeSubscriptions = subscriptions.filter(
+      (sub: any) => sub.status === "ACTIVE"
+    );
+
+    return {
+      hasActiveSubscription: activeSubscriptions.length > 0,
+      subscriptions: subscriptions.map((sub: any) => ({
+        id: sub.id,
+        name: sub.name,
+        status: sub.status,
+        createdAt: sub.createdAt,
+        currentPeriodEnd: sub.currentPeriodEnd,
+      })),
+    };
+  } catch (error) {
+    console.error("[Shopify Service] Error checking subscription status:", error);
+    return {
+      hasActiveSubscription: false,
+      subscriptions: [],
+    };
+  }
+}
+

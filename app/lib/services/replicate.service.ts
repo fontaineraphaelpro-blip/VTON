@@ -49,12 +49,14 @@ export async function generateTryOn({ userPhoto, productImageUrl }: GenerateTryO
     throw new Error('Invalid product image URL');
   }
 
+  // Format correct pour google/nano-banana-pro selon la documentation Replicate
+  // Le modèle accepte image_input comme tableau d'images et un prompt
   const inputPayload = {
-    image_input: [
-      userPhotoInput, // Photo de la personne (data URI ou URL)
-      productImageUrl, // Image du vêtement
-    ],
     prompt: "This is NOT a redesign task. It is a garment transfer task. Use the clothing from the second image exactly as-is with zero creative interpretation. The output must look like the REAL clothing item was physically worn by the person. No invented graphics, no color changes, no simplification.",
+    image_input: [
+      userPhotoInput, // Photo de la personne (première image)
+      productImageUrl, // Image du vêtement (deuxième image)
+    ],
     aspect_ratio: "4:3",
     resolution: "2K",
     output_format: "png",
@@ -73,13 +75,42 @@ export async function generateTryOn({ userPhoto, productImageUrl }: GenerateTryO
     }, null, 2));
   }
 
-  // Appeler le modèle google/nano-banana-pro
-  const output = await replicate.run(
-    "google/nano-banana-pro",
-    {
-      input: inputPayload,
+  // Créer une promesse avec timeout pour éviter les blocages infinis
+  const TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes timeout
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    setTimeout(() => {
+      reject(new Error(`Replicate generation timeout after ${TIMEOUT_MS / 1000} seconds. The model may be overloaded or stuck.`));
+    }, TIMEOUT_MS);
+  });
+
+  // Appeler le modèle google/nano-banana-pro avec timeout
+  let output: any;
+  try {
+    output = await Promise.race([
+      replicate.run(
+        "google/nano-banana-pro",
+        {
+          input: inputPayload,
+        }
+      ),
+      timeoutPromise
+    ]);
+  } catch (error) {
+    // Log l'erreur pour debugging
+    console.error('[Replicate] Error during generation:', error);
+    
+    // Si c'est une erreur de timeout, donner plus de détails
+    if (error instanceof Error && error.message.includes('timeout')) {
+      throw new Error(`Generation timeout: The model took longer than ${TIMEOUT_MS / 1000} seconds to respond. This may indicate the model is overloaded or there's an issue with the input parameters. Please try again later or check your Replicate account status.`);
     }
-  );
+    
+    // Si c'est une erreur de l'API Replicate, la propager avec plus de contexte
+    if (error instanceof Error) {
+      throw new Error(`Replicate API error: ${error.message}. Please check your API token, account status, and model availability.`);
+    }
+    
+    throw error;
+  }
 
   // Log (always log for debugging)
   console.log('[Replicate] Generation completed, output type:', typeof output);

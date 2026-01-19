@@ -13,6 +13,10 @@ api_version = "2025-01"
   uri = "https://vton-production-890a.up.railway.app/webhooks"
 
   [[webhooks.subscriptions]]
+  topics = [ "app_subscriptions/update" ]
+  uri = "https://vton-production-890a.up.railway.app/webhooks/app_subscriptions/update"
+
+  [[webhooks.subscriptions]]
   compliance_topics = [ "customers/data_request", "customers/redact", "shop/redact" ]
   uri = "https://vton-production-890a.up.railway.app/webhooks/gdpr"
 
