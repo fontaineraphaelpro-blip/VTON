@@ -32,9 +32,11 @@ export const shopify = shopifyApp({
       ],
     },
     "Enterprise": {
+      // Handle technique: "studio", Display name: "Enterprise"
+      // Le prix doit correspondre au prix dans le Partner Dashboard ($199/month selon l'image)
       lineItems: [
         {
-          amount: 399.0,
+          amount: 199.0,
           currencyCode: "USD",
           interval: BillingInterval.Every30Days,
         },

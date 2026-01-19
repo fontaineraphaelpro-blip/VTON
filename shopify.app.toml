@@ -41,7 +41,8 @@ prefix = "apps"
 
 [subscriptions]
 # Plans tarifaires pour Managed Pricing
-# Les noms doivent correspondre aux IDs utilisés dans le code
+# Les handles doivent correspondre aux handles techniques dans le Shopify Partner Dashboard
+# Le display name peut être différent du handle
 [subscriptions.starter]
 plans = [
   { name = "Starter", amount = 29.0, currency_code = "USD", interval = "EVERY_30_DAYS" }
@@ -52,9 +53,10 @@ plans = [
   { name = "Pro", amount = 99.0, currency_code = "USD", interval = "EVERY_30_DAYS" }
 ]
 
-[subscriptions.enterprise]
+[subscriptions.studio]
+# Handle technique: "studio", Display name: "Enterprise"
 plans = [
-  { name = "Enterprise", amount = 399.0, currency_code = "USD", interval = "EVERY_30_DAYS" }
+  { name = "Enterprise", amount = 199.0, currency_code = "USD", interval = "EVERY_30_DAYS" }
 ]
 
 [build]
