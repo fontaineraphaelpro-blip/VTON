@@ -108,13 +108,14 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       // Find the pack that was purchased
       const pack = PRICING_PLANS.find((p) => p.id === packId);
       
-      if (pack && shopData) {
+      if (pack) {
         // Get the number of credits from the pack
         const packCredits = (pack as any).monthlyQuota || pack.credits;
         const monthlyQuota = packCredits; // Store as monthly quota for future renewals
         
-        // Get current credits (if any)
-        const currentCredits = shopData.credits || 0;
+        // Get current shop data to ensure we have the latest credits
+        const currentShopData = await getShop(shop);
+        const currentCredits = currentShopData?.credits || 0;
         
         // Add pack credits to existing credits (accumulation)
         const newCredits = currentCredits + packCredits;
@@ -129,7 +130,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
           console.log(`[Credits] Activated plan ${packId}: added ${packCredits} credits (had ${currentCredits}, now has ${newCredits})`);
         }
 
-        // Reload shop data after updating plan
+        // Reload shop data after updating plan to ensure UI shows latest credits
         const updatedShopData = await getShop(shop);
         return json({
           shop: updatedShopData || null,
@@ -253,7 +254,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       // Add pack credits to existing credits (accumulation)
       const newCredits = currentCredits + packCredits;
       
-      // Skip payment for free plan
+      // Skip payment for free plan only
       if (pack.price === 0) {
         await upsertShop(shop, { 
           credits: newCredits, // Add credits to existing ones
@@ -267,35 +268,15 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         });
       }
       
-      // FOR TESTING ONLY: Direct plan activation bypasses Shopify billing
-      // SECURITY: This code ONLY runs in development (NODE_ENV !== "production")
-      // In production, billing MUST go through Shopify Billing API
-      // ENABLE_DIRECT_PLAN_ACTIVATION is ignored in production for security
-      if (process.env.NODE_ENV !== "production") {
-        await upsertShop(shop, { 
-          credits: newCredits, // Add credits to existing ones
-          monthlyQuota: monthlyQuota, // Store plan for monthly renewals
-        });
-        return json({ 
-          success: true, 
-          message: `Plan ${pack.name} activated successfully! Added ${packCredits} credits. Total: ${newCredits} credits. (Test mode - direct activation)`,
-          planActivated: packId,
-          monthlyQuota: monthlyQuota,
-        });
-      }
+      // For paid plans, ALWAYS route through Shopify billing API
+      // This ensures proper payment processing and transaction handling
+      // Create recurring subscription for paid plans
+      // Return URL after successful payment - Shopify will redirect here with purchase=success
+      const returnUrl = new URL(request.url).origin + `/app/credits?purchase=success&pack=${packId}&monthlyQuota=${monthlyQuota}`;
       
-      // Create recurring subscription for paid plans (only if not Managed Pricing App)
-      const returnUrl = new URL(request.url).origin + `/app/credits?pack=${packId}&monthlyQuota=${monthlyQuota}`;
-      
-      // Determine if we're in test mode
-      // Test mode is enabled for:
-      // 1. Development stores (always test mode)
-      // 2. Development environment (NODE_ENV !== "production")
-      // 3. Stores with .myshopify.com domain that are test stores
-      const isTestStore = shop.includes('.myshopify.com') && 
-                         (process.env.NODE_ENV !== "production" || 
-                          shop.includes('test-') || 
-                          shop.includes('dev-'));
+      // Always use test mode for development stores to allow testing without real charges
+      // In production, Shopify will automatically handle test vs production billing
+      const isTestStore = shop.includes('.myshopify.com');
       
       const response = await admin.graphql(
         `#graphql
@@ -335,7 +316,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
               }
             ],
             returnUrl: returnUrl,
-            test: process.env.NODE_ENV !== "production"
+            test: isTestStore // Use test mode for development stores
           }
         }
       );
@@ -376,36 +357,15 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           console.error("[Credits] GraphQL errors:", errors);
         }
         
-        // If error is about Managed Pricing, this typically means:
-        // 1. The app is a Managed Pricing App (billing handled by Shopify App Store)
-        // 2. OR it's a test/development store where billing doesn't work
-        // For test stores and reviewers, we allow direct activation
-        // For production stores with Managed Pricing, billing is handled automatically by Shopify
+        // If error is about Managed Pricing, the app uses Managed Pricing
+        // In this case, billing is handled by Shopify App Store automatically
+        // We should NOT bypass payment - instead, return an error explaining the situation
+        // The merchant needs to purchase through the Shopify App Store
         if (errorMessages.includes("tarification gérée") || errorMessages.includes("Managed Pricing") || errorMessages.includes("Billing API")) {
-        // Always allow direct activation when Managed Pricing error occurs
-        // This covers both test stores (where billing doesn't work) and allows reviewers to test
-        // In production, if it's a real store, Shopify will handle billing automatically via App Store
-        // But we still allow direct activation here to support testing and review scenarios
-        if (process.env.NODE_ENV !== "production") {
-          console.log("[Credits] Managed Pricing detected, activating plan directly for testing");
-        }
-        // Get current shop data to get existing credits
-        const currentShopData = await getShop(shop);
-        const currentCredits = currentShopData?.credits || 0;
-        
-        // Add pack credits to existing credits (accumulation)
-        const newCredits = currentCredits + packCredits;
-        
-        await upsertShop(shop, { 
-          credits: newCredits, // Add credits to existing ones
-          monthlyQuota: monthlyQuota, // Store plan for monthly renewals
-        });
-        return json({ 
-          success: true, 
-          message: `Plan ${pack.name} activated successfully! Added ${packCredits} credits. Total: ${newCredits} credits.`,
-          planActivated: packId,
-          monthlyQuota: monthlyQuota,
-        });
+          return json({ 
+            success: false, 
+            error: "This app uses Managed Pricing. Please purchase this plan through the Shopify App Store. Billing will be handled automatically by Shopify."
+          });
         }
         
         return json({ 
@@ -525,7 +485,8 @@ export default function Credits() {
 
   // Recharger les données après activation d'un plan (une seule fois)
   useEffect(() => {
-    if (fetcher.data?.success && !hasRevalidatedRef.current) {
+    // Revalidate when purchase succeeds from Shopify redirect OR from action
+    if ((purchaseSuccess || fetcher.data?.success) && !hasRevalidatedRef.current) {
       hasRevalidatedRef.current = true;
       // Preserve scroll position
       const scrollY = window.scrollY;
@@ -539,10 +500,10 @@ export default function Credits() {
       }, 300);
     }
     // Reset flag when fetcher changes
-    if (fetcher.state === "idle" && !fetcher.data?.success) {
+    if (fetcher.state === "idle" && !fetcher.data?.success && !purchaseSuccess) {
       hasRevalidatedRef.current = false;
     }
-  }, [fetcher.data?.success, fetcher.state, revalidator]);
+  }, [fetcher.data?.success, fetcher.state, revalidator, purchaseSuccess]);
 
   // Auto-dismiss success banner after 5 seconds (only trigger once)
   const successBannerShownRef = useRef(false);

@@ -36,7 +36,21 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       return json({ error: "Missing shop parameter" }, { status: 400 });
     }
 
-    const body = await request.json();
+    let body;
+    try {
+      body = await request.json();
+    } catch (parseError) {
+      return json({ 
+        error: "Invalid JSON in request body. Please check your request format." 
+      }, { 
+        status: 400,
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "POST, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type",
+        }
+      });
+    }
     
     // Log request in development
     if (process.env.NODE_ENV !== "production") {
@@ -51,8 +65,31 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     }
     const { user_photo, product_id, product_handle, product_image_url } = body;
 
-    if (!user_photo || !product_id) {
-      return json({ error: "Missing user_photo or product_id" }, { status: 400 });
+    // Validate required fields
+    if (!user_photo) {
+      return json({ 
+        error: "Missing required parameter: user_photo. Please provide a user photo." 
+      }, { 
+        status: 400,
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "POST, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type",
+        }
+      });
+    }
+
+    if (!product_id) {
+      return json({ 
+        error: "Missing required parameter: product_id. Please provide a product ID." 
+      }, { 
+        status: 400,
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "POST, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type",
+        }
+      });
     }
 
     // Vérifier que le shop existe et a des crédits
@@ -102,12 +139,30 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const productImageUrl = product_image_url;
     
     if (!productImageUrl) {
-      return json({ error: "Missing product_image_url parameter. The widget must provide the product image URL." }, { status: 400 });
+      return json({ 
+        error: "Missing product_image_url parameter. The widget must provide the product image URL." 
+      }, { 
+        status: 400,
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "POST, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type",
+        }
+      });
     }
     
     // Vérifier que l'URL est valide et accessible
-    if (!productImageUrl.startsWith('http')) {
-      return json({ error: "Invalid product_image_url format. Must be a valid HTTP/HTTPS URL." }, { status: 400 });
+    if (typeof productImageUrl !== 'string' || !productImageUrl.startsWith('http')) {
+      return json({ 
+        error: `Invalid product_image_url format. Must be a valid HTTP/HTTPS URL. Received: ${typeof productImageUrl === 'string' ? productImageUrl.substring(0, 100) : typeof productImageUrl}` 
+      }, { 
+        status: 400,
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "POST, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type",
+        }
+      });
     }
 
     // Generation started
@@ -119,11 +174,21 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     try {
       console.log("[Generate] Starting Replicate generation...");
       
+      // Validate user_photo format
+      if (typeof user_photo !== 'string') {
+        throw new Error("Invalid user_photo format. Expected a string (base64 data URL or URL).");
+      }
+
       // Générer l'image avec Replicate (synchrone - attend le résultat)
       const resultUrl = await generateTryOn({
         userPhoto: user_photo,
         productImageUrl: productImageUrl,
       });
+
+      // Validate result URL
+      if (!resultUrl || typeof resultUrl !== 'string' || !resultUrl.startsWith('http')) {
+        throw new Error(`Invalid result URL returned from generation service: ${resultUrl}`);
+      }
 
       const latencyMs = Date.now() - startTime;
       console.log("[Generate] Replicate generation completed in", latencyMs, "ms");
@@ -143,6 +208,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         success: true,
         latencyMs: latencyMs,
         resultImageUrl: resultUrl,
+      }).catch((logError) => {
+        // Log error but don't fail the request
+        console.error("[Generate] Failed to create success log:", logError);
       });
 
       console.log("[Generate] Returning success response:", {
@@ -167,27 +235,41 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       
       console.error("[Generate] Generation failed after", latencyMs, "ms:", errorMessage);
       
-      // Créer un log d'erreur
-      await createTryonLog({
+      // Créer un log d'erreur (don't fail if logging fails)
+      createTryonLog({
         shop: shop,
         customerIp: clientIp || undefined,
         productId: product_id,
+        productHandle: product_handle,
         success: false,
         errorMessage: errorMessage,
         latencyMs: latencyMs,
+      }).catch((logError) => {
+        console.error("[Generate] Failed to create error log:", logError);
       });
 
-      // Re-throw l'erreur pour qu'elle soit gérée par le catch externe
-      throw genError;
+      // Return error response instead of throwing
+      return json({
+        error: errorMessage,
+        success: false,
+      }, {
+        status: 500,
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "POST, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type",
+        }
+      });
     }
   } catch (error) {
     // Log error (always log for debugging)
     const errorMessage = error instanceof Error ? error.message : "Generation failed";
-    console.error("[Generate] Error:", errorMessage, error);
+    console.error("[Generate] Unexpected error:", errorMessage, error);
     
+    // Return user-friendly error message
     return json(
       {
-        error: errorMessage,
+        error: `An unexpected error occurred: ${errorMessage}. Please try again or contact support if the issue persists.`,
         success: false,
       },
       {
