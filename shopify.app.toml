@@ -39,25 +39,5 @@ url = "https://vton-production-890a.up.railway.app"
 subpath = "tryon"
 prefix = "apps"
 
-[subscriptions]
-# Plans tarifaires pour Managed Pricing
-# Les handles doivent correspondre aux handles techniques dans le Shopify Partner Dashboard
-# Le display name peut être différent du handle
-[subscriptions.starter]
-plans = [
-  { name = "Starter", amount = 29.0, currency_code = "USD", interval = "EVERY_30_DAYS" }
-]
-
-[subscriptions.pro]
-plans = [
-  { name = "Pro", amount = 99.0, currency_code = "USD", interval = "EVERY_30_DAYS" }
-]
-
-[subscriptions.studio]
-# Handle technique: "studio", Display name: "Enterprise"
-plans = [
-  { name = "Enterprise", amount = 399.0, currency_code = "USD", interval = "EVERY_30_DAYS" }
-]
-
 [build]
 automatically_update_urls_on_dev = true
