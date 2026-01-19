@@ -313,10 +313,17 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           isTest: isTestMode,
           onFailure: () => {
             // With Managed Pricing, this callback should not be called
-            // If it is called, it indicates a configuration issue
-            console.error(`[Credits] billing.require() onFailure called - Managed Pricing may not be configured correctly`);
-            // Return null to let the error propagate
-            return null;
+            // If it is called, it indicates that Managed Pricing is not properly configured
+            // in the Partner Dashboard or the app is not set to Public
+            console.error(`[Credits] billing.require() onFailure called - Managed Pricing is NOT configured correctly`);
+            console.error(`[Credits] This means Managed Pricing is not enabled in Partner Dashboard or plans are not configured`);
+            // Throw an error with a clear message instead of returning null
+            throw new Error(
+              "Managed Pricing is not properly configured. " +
+              "Please ensure: 1) Managed Pricing is enabled in Partner Dashboard → Distribution → Listings → Pricing, " +
+              "2) Plans (starter, pro, studio) are configured with correct amounts, " +
+              "3) App is set to Public (not just Development mode)."
+            );
           },
         });
         console.log(`[Credits] billing.require() returned:`, {
