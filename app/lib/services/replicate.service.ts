@@ -49,31 +49,33 @@ export async function generateTryOn({ userPhoto, productImageUrl }: GenerateTryO
     throw new Error('Invalid product image URL');
   }
 
-  // Format correct pour google/nano-banana-pro selon la documentation Replicate
-  // Le modèle accepte image_input comme tableau d'images et un prompt
-  const inputPayload = {
-    prompt: "This is NOT a redesign task. It is a garment transfer task. Use the clothing from the second image exactly as-is with zero creative interpretation. The output must look like the REAL clothing item was physically worn by the person. No invented graphics, no color changes, no simplification.",
+  // Format pour google/nano-banana-pro
+  // Le modèle peut accepter différentes configurations selon la version
+  // Simplifions pour utiliser les paramètres de base qui fonctionnent
+  const inputPayload: any = {
+    prompt: "Virtual try-on: Transfer the clothing from the second image onto the person in the first image. The clothing must look exactly as shown in the product image - no color changes, no design modifications, no simplification. The person should appear to be wearing the actual garment.",
     image_input: [
       userPhotoInput, // Photo de la personne (première image)
       productImageUrl, // Image du vêtement (deuxième image)
     ],
-    aspect_ratio: "4:3",
-    resolution: "2K",
-    output_format: "png",
-    safety_filter_level: "block_only_high",
   };
 
-  // Log only in development
-  if (process.env.NODE_ENV !== "production") {
-    console.log('[Replicate] Starting generation with google/nano-banana-pro model');
-    console.log('[Replicate] Input payload:', JSON.stringify({
-      ...inputPayload,
-      image_input: [
-        userPhotoInput,
-        productImageUrl
-      ]
-    }, null, 2));
-  }
+  // Ajouter les paramètres optionnels seulement s'ils sont supportés
+  // Certains paramètres peuvent causer des erreurs silencieuses qui ralentissent
+  // Testons d'abord avec les paramètres minimaux, puis ajoutons si nécessaire
+  // Note: aspect_ratio, resolution, output_format peuvent ne pas être supportés par toutes les versions
+  // Si le modèle les rejette silencieusement, cela peut causer des délais
+
+  // Log request details (always log for debugging performance issues)
+  const requestStartTime = Date.now();
+  console.log('[Replicate] Starting generation with google/nano-banana-pro model');
+  console.log('[Replicate] Input payload:', JSON.stringify({
+    ...inputPayload,
+    image_input: [
+      userPhotoInput?.substring(0, 100) + '...',
+      productImageUrl?.substring(0, 100) + '...'
+    ]
+  }, null, 2));
 
   // Créer une promesse avec timeout pour éviter les blocages infinis
   const TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes timeout
@@ -86,6 +88,9 @@ export async function generateTryOn({ userPhoto, productImageUrl }: GenerateTryO
   // Appeler le modèle google/nano-banana-pro avec timeout
   let output: any;
   try {
+    const replicateStartTime = Date.now();
+    console.log('[Replicate] Calling replicate.run() at', new Date().toISOString());
+    
     output = await Promise.race([
       replicate.run(
         "google/nano-banana-pro",
@@ -95,6 +100,10 @@ export async function generateTryOn({ userPhoto, productImageUrl }: GenerateTryO
       ),
       timeoutPromise
     ]);
+    
+    const replicateEndTime = Date.now();
+    const replicateDuration = replicateEndTime - replicateStartTime;
+    console.log(`[Replicate] replicate.run() completed in ${replicateDuration}ms (${(replicateDuration / 1000).toFixed(2)}s)`);
   } catch (error) {
     // Log l'erreur pour debugging
     console.error('[Replicate] Error during generation:', error);
