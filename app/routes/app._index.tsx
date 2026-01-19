@@ -19,8 +19,46 @@ import { getShop, upsertShop, getTryonLogs, getTopProducts, getTryonStatsByDay, 
 import { ensureTables } from "../lib/db-init.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { admin, session } = await authenticate.admin(request);
+  const { admin, session, billing } = await authenticate.admin(request);
   const shop = session.shop;
+
+  // Vérification de l'abonnement avec Managed Pricing
+  // Le returnUrl est crucial pour que Shopify sache où renvoyer l'utilisateur après l'approbation
+  if (billing) {
+    try {
+      // Tentative de vérification de l'abonnement
+      // Utilisez les MÊMES clés que dans shopify.server.ts (ex: "starter", "pro", "studio")
+      const billingResponse = await billing.require({
+        plans: ["starter", "pro", "studio"], 
+        isTest: shop.includes('.myshopify.com') || process.env.NODE_ENV !== "production", // Important pour le développement
+        onFailure: async () => {
+          // Si aucun plan n'est actif, on demande le plan "starter"
+          // Le returnUrl est souvent la cause de l'erreur de redirection
+          const url = new URL(request.url);
+          // Construire le returnUrl complet vers l'app après le paiement
+          const returnUrl = `${url.protocol}//${url.host}/app`;
+          
+          console.log(`[Dashboard] No active subscription, requesting billing with returnUrl: ${returnUrl}`);
+          
+          return await billing.request({
+            plan: "starter", 
+            isTest: shop.includes('.myshopify.com') || process.env.NODE_ENV !== "production", 
+            returnUrl: returnUrl, 
+          });
+        },
+      });
+      
+      // Si billing.require() retourne une Response (redirection), la retourner
+      if (billingResponse instanceof Response) {
+        return billingResponse;
+      }
+    } catch (error) {
+      // Si billing.request échoue, on log l'erreur pour comprendre
+      console.error("[Dashboard] Erreur détaillée du billing:", error);
+      // Ne pas bloquer l'accès à l'app si le billing échoue
+      // L'utilisateur pourra toujours accéder à la page credits pour souscrire
+    }
+  }
 
   try {
     await ensureTables();
