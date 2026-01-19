@@ -317,31 +317,65 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         // if no active subscription is found. The onFailure callback is required by the API
         // but should not redirect manually - let billing.require() handle it automatically.
         console.log(`[Credits] Calling billing.require() with plan: ${planHandle}`);
+        // First, check if there's an active subscription using GraphQL
+        // This is the recommended way to check subscriptions with Managed Pricing
+        const subscriptionQuery = `#graphql
+          query {
+            currentAppInstallation {
+              activeSubscriptions {
+                name
+                status
+                lineItems {
+                  plan {
+                    pricingDetails {
+                      ... on AppRecurringPricing {
+                        price {
+                          amount
+                          currencyCode
+                        }
+                        interval
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        `;
+        
+        let hasActiveSubscription = false;
+        try {
+          const subscriptionResponse = await admin.graphql(subscriptionQuery);
+          const subscriptionData = await subscriptionResponse.json() as any;
+          const activeSubscriptions = subscriptionData?.data?.currentAppInstallation?.activeSubscriptions || [];
+          hasActiveSubscription = activeSubscriptions.length > 0;
+          console.log(`[Credits] Active subscriptions check:`, {
+            count: activeSubscriptions.length,
+            subscriptions: activeSubscriptions.map((s: any) => ({ name: s.name, status: s.status })),
+          });
+        } catch (graphqlError) {
+          console.error(`[Credits] Error checking subscriptions via GraphQL:`, graphqlError);
+        }
+        
+        // If no active subscription, billing.require() should redirect to pricing page
         billingResponse = await billing.require({
           session,
           plans: [planHandle],
           isTest: isTestMode,
-          onFailure: () => {
-            // With Managed Pricing, this callback should not be called
-            // If it is called, it indicates that Managed Pricing is not properly configured
-            // Possible causes:
-            // 1. Handles in code don't match handles in Partner Dashboard (case-sensitive)
-            // 2. App is not set to Public in Partner Dashboard
-            // 3. Plans are not published/active in Partner Dashboard
-            // 4. Testing on development store may require different configuration
-            console.error(`[Credits] billing.require() onFailure called - Managed Pricing is NOT detected by Shopify`);
-            console.error(`[Credits] Possible causes:`);
-            console.error(`[Credits] 1. Handles mismatch: code uses "${planHandle}", Partner Dashboard must have exact same handle`);
-            console.error(`[Credits] 2. App not Public: App must be set to Public (not just Development) in Partner Dashboard`);
-            console.error(`[Credits] 3. Plans not published: Plans must be published and active in Partner Dashboard`);
-            console.error(`[Credits] 4. Testing store: Development stores may have different requirements`);
+          onFailure: async () => {
+            // onFailure is called when no active subscription is found
+            // With Managed Pricing properly configured, billing.require() should handle
+            // the redirect automatically. If onFailure is called, it might mean:
+            // 1. Managed Pricing is not fully activated (app not published)
+            // 2. Plans are configured but not yet synced
+            // 3. There's a configuration mismatch
+            console.warn(`[Credits] billing.require() onFailure called`);
+            console.warn(`[Credits] This might indicate Managed Pricing is not fully activated`);
+            console.warn(`[Credits] However, we'll let billing.require() handle the redirect`);
             
-            // Instead of throwing, return a redirect to credits page with error message
-            // This allows the user to see the error and try again
-            throw new Error(
-              `Managed Pricing not detected. Verify: 1) Handle "${planHandle}" matches Partner Dashboard exactly (case-sensitive), ` +
-              `2) App is Public in Partner Dashboard, 3) Plans are published, 4) Try redeploying with 'npm run deploy'`
-            );
+            // Return null to let billing.require() handle the redirect
+            // If Managed Pricing is properly configured, it should redirect automatically
+            return null;
           },
         });
         console.log(`[Credits] billing.require() returned:`, {
