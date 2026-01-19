@@ -300,24 +300,24 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       console.log(`[Credits] Requesting billing redirect for plan: ${pack.name} (handle: ${planHandle}, packId: ${packId}, isTest: ${isTestMode})`);
       
       // Use billing.require() which handles Managed Pricing correctly
-      // This will redirect to Shopify's Managed Pricing page where merchant can select a plan
-      // With Managed Pricing, we don't create subscriptions - Shopify does it automatically
+      // With Managed Pricing, billing.require() automatically redirects to Shopify's pricing page
+      // We should NOT use onFailure callback with Managed Pricing - it will handle redirection automatically
       let billingResponse;
       try {
+        // With Managed Pricing, billing.require() will automatically redirect to the pricing page
+        // if no active subscription is found. We don't need onFailure callback.
         billingResponse = await billing.require({
           session,
           plans: [planHandle],
           isTest: isTestMode,
-          onFailure: () => {
-            // If billing fails, redirect back to credits page
-            console.error(`[Credits] billing.require() onFailure callback triggered for plan: ${planHandle}`);
-            return redirect("/app/credits");
-          },
+          // Note: onFailure callback is NOT needed with Managed Pricing
+          // billing.require() will automatically redirect to Shopify's pricing page
         });
         console.log(`[Credits] billing.require() returned:`, {
           type: typeof billingResponse,
           isResponse: billingResponse instanceof Response,
           status: billingResponse instanceof Response ? billingResponse.status : 'N/A',
+          location: billingResponse instanceof Response ? billingResponse.headers.get('location') : 'N/A',
         });
       } catch (billingError) {
         console.error(`[Credits] billing.require() threw an error:`, billingError);
@@ -326,50 +326,41 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       }
 
       // billing.require() returns a Response with redirect if billing is needed
-      // With Managed Pricing, this always redirects to Shopify's pricing page
-      // We should always get a redirect Response, never null
-      if (billingResponse) {
-        // Extract the redirect URL from the response
+      // With Managed Pricing, this should redirect to Shopify's pricing page
+      // If billingResponse is a Response, return it directly (it's a redirect)
+      if (billingResponse instanceof Response) {
         const redirectUrl = billingResponse.headers.get('location');
+        console.log(`[Credits] billing.require() returned redirect Response:`, {
+          status: billingResponse.status,
+          location: redirectUrl,
+        });
         
-        if (redirectUrl) {
-          console.log(`[Credits] Redirecting to Shopify Managed Pricing page: ${redirectUrl}`);
-          
-          // For embedded apps, we need to exit the iframe to redirect to Shopify's pricing page
-          // The redirect URL from billing.require() should already handle this, but we ensure
-          // it's properly formatted for embedded apps
-          let finalRedirectUrl = redirectUrl;
-          
-          // If the URL doesn't already include exit-iframe logic and we're in an embedded context,
-          // we might need to wrap it, but billing.require() should handle this automatically
-          
-          // Return the redirect URL to the client so it can redirect
+        // Check if the redirect is to the credits page (this shouldn't happen with Managed Pricing)
+        if (redirectUrl && redirectUrl.includes('/app/credits')) {
+          console.error(`[Credits] billing.require() redirected to /app/credits instead of pricing page. This suggests Managed Pricing is not properly configured.`);
           return json({ 
-            success: true,
-            confirmationUrl: finalRedirectUrl,
-            redirect: true,
-            message: "Redirecting to Shopify pricing page..."
+            success: false, 
+            error: "Managed Pricing is not properly configured. Please ensure Managed Pricing is enabled in the Partner Dashboard and the plans are correctly set up."
           });
         }
         
-        // If no location header, try to get the URL from the response body or status
-        // For embedded apps, billing.require() might return a redirect response directly
+        // If it's a redirect to Shopify's pricing page, return it directly
+        // For embedded apps, the Response should already handle exiting the iframe
         if (billingResponse.status >= 300 && billingResponse.status < 400) {
-          // It's a redirect response, return it directly
-          console.log(`[Credits] Billing response is a redirect (status ${billingResponse.status}), returning directly`);
+          console.log(`[Credits] Returning billing redirect Response directly (status ${billingResponse.status})`);
           return billingResponse;
         }
-        
-        // If we get here, something unexpected happened
-        console.error(`[Credits] billing.require() returned unexpected response:`, {
-          status: billingResponse.status,
-          headers: Object.fromEntries(billingResponse.headers.entries()),
-        });
-        return json({ 
-          success: false, 
-          error: "Unable to redirect to pricing page. The billing configuration may not be deployed. Please run 'npm run deploy' to sync your configuration with Shopify."
-        });
       }
+      
+      // If we get here, something unexpected happened
+      console.error(`[Credits] billing.require() returned unexpected value:`, {
+        type: typeof billingResponse,
+        value: billingResponse,
+      });
+      return json({ 
+        success: false, 
+        error: "Unable to redirect to pricing page. Please ensure Managed Pricing is configured in the Partner Dashboard."
+      });
 
       // This should never happen with Managed Pricing, but handle it gracefully
       console.warn(`[Credits] billing.require() returned null/undefined - this is unexpected with Managed Pricing`);
