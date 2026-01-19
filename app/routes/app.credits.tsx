@@ -17,7 +17,7 @@ import {
   Badge,
 } from "@shopify/polaris";
 import { TitleBar } from "@shopify/app-bridge-react";
-import { authenticate } from "../shopify.server";
+import { authenticate, shopify } from "../shopify.server";
 import { getShop, upsertShop } from "../lib/services/db.service";
 import { ensureTables } from "../lib/db-init.server";
 
@@ -268,147 +268,62 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         });
       }
       
-      // For paid plans, ALWAYS route through Shopify billing API
-      // This ensures proper payment processing and transaction handling
-      // Create recurring subscription for paid plans
-      // Return URL after successful payment - Shopify will redirect here with purchase=success
-      const returnUrl = new URL(request.url).origin + `/app/credits?purchase=success&pack=${packId}&monthlyQuota=${monthlyQuota}`;
+      // For paid plans, use Shopify Managed Pricing with billing.require()
+      // This is the correct way to handle billing with Managed Pricing
+      // The plan name must match the billing configuration in shopify.server.ts
+      const planName = pack.name; // "Starter", "Pro", or "Enterprise"
       
-      // Determine test mode: use test=true for development stores (.myshopify.com)
-      // Even in test mode, Shopify will show a payment confirmation page (with test payment)
-      // This is important for testing the full payment flow
-      const isTestStore = shop.includes('.myshopify.com');
-      const useTestMode = isTestStore || process.env.NODE_ENV !== "production";
+      console.log(`[Credits] Requesting billing for plan: ${planName} (${packId})`);
       
-      console.log(`[Credits] Creating subscription for ${shop}, test mode: ${useTestMode}`);
-      
-      const response = await admin.graphql(
-        `#graphql
-          mutation appSubscriptionCreate($name: String!, $lineItems: [AppSubscriptionLineItemInput!]!, $returnUrl: URL!, $test: Boolean) {
-            appSubscriptionCreate(
-              name: $name
-              lineItems: $lineItems
-              returnUrl: $returnUrl
-              test: $test
-            ) {
-              appSubscription {
-                id
-                status
-              }
-              confirmationUrl
-              userErrors {
-                field
-                message
-              }
-            }
-          }
-        `,
-        {
-          variables: {
-            name: `${pack.name} Plan - ${monthlyQuota} try-ons/month`,
-            lineItems: [
-              {
-                plan: {
-                  appRecurringPricingDetails: {
-                    price: {
-                      amount: pack.price,
-                        currencyCode: "USD"
-                    },
-                    interval: "EVERY_30_DAYS"
-                  }
-                }
-              }
-            ],
-            returnUrl: returnUrl,
-            test: useTestMode // Use test mode for development stores, but still show payment page
-          }
-        }
-      );
-
-      // Check if response is OK
-      if (!response.ok) {
-        if (response.status === 401) {
-          const reauthUrl = response.headers.get('x-shopify-api-request-failure-reauthorize-url');
-          // Log only in development
-          if (process.env.NODE_ENV !== "production") {
-            console.error("[Credits] Authentication required (401) for subscription creation");
-          }
-          return json({ 
-            success: false, 
-            error: "Your session has expired. Please refresh the page to re-authenticate.",
-            requiresAuth: true,
-            reauthUrl: reauthUrl || null,
-          });
-        }
-        const errorText = await response.text().catch(() => `HTTP ${response.status} ${response.statusText}`);
-        // Log only in development
-        if (process.env.NODE_ENV !== "production") {
-          console.error("[Credits] GraphQL request failed:", response.status, errorText);
-        }
-        return json({ 
-          success: false, 
-          error: `Shopify API error (${response.status}): ${errorText.substring(0, 200)}` 
-        });
-      }
-
-      const responseData = await response.json();
-      
-      // Log response for debugging (always log to help diagnose payment issues)
-      console.log("[Credits] Subscription creation response:", {
-        hasData: !!responseData.data,
-        hasAppSubscriptionCreate: !!responseData.data?.appSubscriptionCreate,
-        hasConfirmationUrl: !!responseData.data?.appSubscriptionCreate?.confirmationUrl,
-        hasUserErrors: !!responseData.data?.appSubscriptionCreate?.userErrors,
-        userErrors: responseData.data?.appSubscriptionCreate?.userErrors,
-        confirmationUrl: responseData.data?.appSubscriptionCreate?.confirmationUrl,
+      // Use billing.require() which handles Managed Pricing correctly
+      // This will return a redirect Response if billing is needed
+      // For Managed Pricing, this redirects to Shopify's pricing page
+      const billingResponse = await shopify.billing.require({
+        session,
+        plans: [planName],
+        isTest: shop.includes('.myshopify.com') || process.env.NODE_ENV !== "production",
       });
-      
-      if (responseData.data?.appSubscriptionCreate?.userErrors?.length > 0) {
-        const errors = responseData.data.appSubscriptionCreate.userErrors;
-        const errorMessages = errors.map((e: any) => e.message).join(", ");
-        // Log only in development
-        if (process.env.NODE_ENV !== "production") {
-          console.error("[Credits] GraphQL errors:", errors);
-        }
+
+      // billing.require() returns a Response with redirect if billing is needed
+      // If it returns null/undefined, the shop already has an active subscription
+      if (billingResponse) {
+        // Billing is required - billingResponse is a redirect Response
+        // We need to extract the redirect URL and return it to the client
+        // The redirect URL should be in the Location header
+        const redirectUrl = billingResponse.headers.get('location');
         
-        // If error is about Managed Pricing, the app uses Managed Pricing
-        // In this case, billing is handled by Shopify App Store automatically
-        // We should NOT bypass payment - instead, return an error explaining the situation
-        // The merchant needs to purchase through the Shopify App Store
-        if (errorMessages.includes("tarification gérée") || errorMessages.includes("Managed Pricing") || errorMessages.includes("Billing API")) {
+        if (redirectUrl) {
+          console.log(`[Credits] Redirecting to Shopify billing page: ${redirectUrl}`);
+          // Return the redirect URL to the client so it can redirect
           return json({ 
-            success: false, 
-            error: "This app uses Managed Pricing. Please purchase this plan through the Shopify App Store. Billing will be handled automatically by Shopify."
+            success: true,
+            confirmationUrl: redirectUrl,
+            redirect: true,
+            message: "Redirecting to Shopify payment page..."
           });
         }
         
-        return json({ 
-          success: false, 
-          error: errorMessages
-        });
+        // If no location header, try to get the URL from the response
+        // For Managed Pricing, the response might be a redirect with the URL in the body
+        console.log(`[Credits] Billing response received but no location header, returning response directly`);
+        return billingResponse;
       }
 
-      const confirmationUrl = responseData.data?.appSubscriptionCreate?.confirmationUrl;
+      // If billing.require() returns null/undefined, the shop already has an active subscription
+      // In this case, we should still add credits based on the plan they're purchasing
+      // This handles the case where they're upgrading or adding a new plan
+      console.log(`[Credits] Shop already has active subscription for ${planName}, adding credits`);
       
-      if (!confirmationUrl) {
-        // Log only in development
-        if (process.env.NODE_ENV !== "production") {
-          console.error("[Credits] No confirmation URL returned:", responseData);
-        }
-        return json({ 
-          success: false, 
-          error: "Failed to create subscription. Please try again." 
-        });
-      }
+      await upsertShop(shop, { 
+        credits: newCredits,
+        monthlyQuota: monthlyQuota,
+      });
 
-      // Return confirmation URL in JSON response
-      // The client will handle the redirect since we're using fetcher.submit()
-      // This is necessary because fetcher.submit() doesn't follow redirects automatically
       return json({ 
-        success: true,
-        confirmationUrl: confirmationUrl,
-        redirect: true,
-        message: "Redirecting to Shopify payment page..."
+        success: true, 
+        message: `Plan ${pack.name} activated successfully! Added ${packCredits} credits. Total: ${newCredits} credits.`,
+        planActivated: packId,
+        monthlyQuota: monthlyQuota,
       });
     } catch (error) {
       // Log only in development

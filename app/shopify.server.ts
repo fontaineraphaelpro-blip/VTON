@@ -1,5 +1,6 @@
 import { shopifyApp } from "@shopify/shopify-app-remix/server";
 import { PrismaSessionStorage } from "@shopify/shopify-app-session-storage-prisma";
+import { BillingInterval } from "@shopify/shopify-app-remix/server";
 import { prisma } from "./db.server";
 
 export const shopify = shopifyApp({
@@ -11,6 +12,35 @@ export const shopify = shopifyApp({
   sessionStorage: new PrismaSessionStorage(prisma),
   distribution: "AppStore",
   useOnlineTokens: true, // CRITIQUE: Utilise des tokens online pour les paiements et draft orders
+  billing: {
+    "Starter": {
+      lineItems: [
+        {
+          amount: 29.0,
+          currencyCode: "USD",
+          interval: BillingInterval.Every30Days,
+        },
+      ],
+    },
+    "Pro": {
+      lineItems: [
+        {
+          amount: 99.0,
+          currencyCode: "USD",
+          interval: BillingInterval.Every30Days,
+        },
+      ],
+    },
+    "Enterprise": {
+      lineItems: [
+        {
+          amount: 399.0,
+          currencyCode: "USD",
+          interval: BillingInterval.Every30Days,
+        },
+      ],
+    },
+  },
 });
 
 export default shopify;

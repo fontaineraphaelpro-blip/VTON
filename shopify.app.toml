@@ -39,5 +39,23 @@ url = "https://vton-production-890a.up.railway.app"
 subpath = "tryon"
 prefix = "apps"
 
+[subscriptions]
+# Plans tarifaires pour Managed Pricing
+# Les noms doivent correspondre aux IDs utilisés dans le code
+[subscriptions.starter]
+plans = [
+  { name = "Starter", amount = 29.0, currency_code = "USD", interval = "EVERY_30_DAYS" }
+]
+
+[subscriptions.pro]
+plans = [
+  { name = "Pro", amount = 99.0, currency_code = "USD", interval = "EVERY_30_DAYS" }
+]
+
+[subscriptions.enterprise]
+plans = [
+  { name = "Enterprise", amount = 399.0, currency_code = "USD", interval = "EVERY_30_DAYS" }
+]
+
 [build]
 automatically_update_urls_on_dev = true
