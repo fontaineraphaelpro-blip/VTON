@@ -56,7 +56,7 @@ plans = [
 [subscriptions.studio]
 # Handle technique: "studio", Display name: "Enterprise"
 plans = [
-  { name = "Enterprise", amount = 199.0, currency_code = "USD", interval = "EVERY_30_DAYS" }
+  { name = "Enterprise", amount = 399.0, currency_code = "USD", interval = "EVERY_30_DAYS" }
 ]
 
 [build]
