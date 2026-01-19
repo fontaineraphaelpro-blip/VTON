@@ -301,17 +301,23 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       
       // Use billing.require() which handles Managed Pricing correctly
       // With Managed Pricing, billing.require() automatically redirects to Shopify's pricing page
-      // We should NOT use onFailure callback with Managed Pricing - it will handle redirection automatically
+      // onFailure callback is required by the API but should not be used with Managed Pricing
       let billingResponse;
       try {
         // With Managed Pricing, billing.require() will automatically redirect to the pricing page
-        // if no active subscription is found. We don't need onFailure callback.
+        // if no active subscription is found. The onFailure callback is required by the API
+        // but should not redirect manually - let billing.require() handle it automatically.
         billingResponse = await billing.require({
           session,
           plans: [planHandle],
           isTest: isTestMode,
-          // Note: onFailure callback is NOT needed with Managed Pricing
-          // billing.require() will automatically redirect to Shopify's pricing page
+          onFailure: () => {
+            // With Managed Pricing, this callback should not be called
+            // If it is called, it indicates a configuration issue
+            console.error(`[Credits] billing.require() onFailure called - Managed Pricing may not be configured correctly`);
+            // Return null to let the error propagate
+            return null;
+          },
         });
         console.log(`[Credits] billing.require() returned:`, {
           type: typeof billingResponse,
