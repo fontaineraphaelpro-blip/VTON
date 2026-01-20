@@ -592,19 +592,54 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       } catch (billingRedirect: any) {
         // billing.request() lance une Response de redirection
         if (billingRedirect instanceof Response) {
-          const confirmationUrl = billingRedirect.headers.get("location") || 
-                                 billingRedirect.headers.get("x-shopify-api-redirect") ||
-                                 billingRedirect.url;
-          
-          if (confirmationUrl) {
-            console.log("[Credits] Billing confirmation URL received:", confirmationUrl);
+          // Vérifier si c'est une erreur d'authentification (401)
+          if (billingRedirect.status === 401) {
+            const reauthUrl = billingRedirect.headers.get("x-shopify-api-request-failure-reauthorize-url") || 
+                             billingRedirect.headers.get("location");
+            
+            if (reauthUrl) {
+              console.log("[Credits] Authentication required (401), redirecting to reauth URL:", reauthUrl);
+              // Rediriger directement vers l'URL de ré-authentification dans l'iframe
+              return json({ 
+                success: true, 
+                redirect: true,
+                checkoutUrl: reauthUrl,
+                message: "Ré-authentification requise...",
+                requiresAuth: true,
+              });
+            }
+            
+            // Si pas d'URL de ré-auth, retourner une erreur
             return json({ 
-              success: true, 
-              redirect: true,
-              checkoutUrl: confirmationUrl,
-              message: "Redirection vers le paiement Shopify",
+              success: false, 
+              error: "Erreur d'authentification. Veuillez rafraîchir la page.",
+              requiresAuth: true,
             });
           }
+          
+          // Si c'est une redirection de paiement (302 ou 200)
+          if (billingRedirect.status === 302 || billingRedirect.status === 200) {
+            const confirmationUrl = billingRedirect.headers.get("location") || 
+                                   billingRedirect.headers.get("x-shopify-api-redirect") ||
+                                   billingRedirect.url;
+            
+            if (confirmationUrl) {
+              console.log("[Credits] Billing confirmation URL received:", confirmationUrl);
+              return json({ 
+                success: true, 
+                redirect: true,
+                checkoutUrl: confirmationUrl,
+                message: "Redirection vers le paiement Shopify",
+              });
+            }
+          }
+          
+          // Autre status de Response
+          console.error("[Credits] Unexpected Response status:", billingRedirect.status);
+          return json({ 
+            success: false, 
+            error: `Erreur inattendue (status: ${billingRedirect.status})`,
+          });
         }
         
         // Si ce n'est pas une Response, c'est une erreur
