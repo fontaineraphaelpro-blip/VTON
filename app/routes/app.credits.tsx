@@ -18,7 +18,7 @@ import {
 } from "@shopify/polaris";
 import { TitleBar } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
-import { getShop, upsertShop } from "../lib/services/db.service";
+import { getShop, upsertShop, query } from "../lib/services/db.service";
 import { ensureTables } from "../lib/db-init.server";
 
 // Packs de crédits optimisés avec pack Découverte
@@ -107,6 +107,93 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
           creditsAdded: creditsToAdd,
         });
       }
+    }
+
+    // Vérifier si on revient après un paiement d'abonnement
+    // Shopify redirige vers returnUrl après le paiement, on vérifie le statut de l'abonnement
+    try {
+      const subscriptionQuery = `#graphql
+        query {
+          currentAppInstallation {
+            activeSubscriptions {
+              id
+              name
+              status
+              test
+              lineItems {
+                plan {
+                  pricingDetails {
+                    ... on AppRecurringPricing {
+                      price {
+                        amount
+                        currencyCode
+                      }
+                      interval
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      `;
+
+      const subscriptionResponse = await admin.graphql(subscriptionQuery);
+      const subscriptionData = await subscriptionResponse.json() as any;
+      
+      const activeSubscriptions = subscriptionData?.data?.currentAppInstallation?.activeSubscriptions || [];
+      const activeSubscription = activeSubscriptions.find((sub: any) => 
+        sub.status === "ACTIVE" && !sub.test
+      );
+
+      // Si un abonnement actif est trouvé, mettre à jour les crédits et le plan
+      if (activeSubscription) {
+        const planName = activeSubscription.name.toLowerCase().replace(/\s+/g, '-');
+        console.log("[Credits] Active subscription found:", { 
+          planName, 
+          status: activeSubscription.status,
+          subscriptionId: activeSubscription.id 
+        });
+
+        // Définir les crédits mensuels selon le plan
+        const planCredits: Record<string, number> = {
+          "free-installation-setup": 4,
+          "starter": 100,
+          "pro": 500,
+          "studio": 2000,
+        };
+
+        const monthlyCredits = planCredits[planName] || planCredits["free-installation-setup"];
+        
+        // Mettre à jour le shop avec le nouveau plan et crédits
+        await upsertShop(shop, {
+          monthlyQuota: monthlyCredits,
+        });
+
+        // Mettre à jour plan_name dans la base de données
+        try {
+          await query(
+            `ALTER TABLE shops ADD COLUMN IF NOT EXISTS plan_name TEXT`
+          );
+          await query(
+            `UPDATE shops SET plan_name = $1 WHERE domain = $2`,
+            [planName, shop]
+          );
+        } catch (planError) {
+          console.log("ℹ️ Plan name update skipped:", planError);
+        }
+
+        // Recharger les données du shop après mise à jour
+        const updatedShopData = await getShop(shop);
+        return json({
+          shop: updatedShopData || null,
+          subscriptionUpdated: true,
+          planName: planName,
+        });
+      }
+    } catch (subscriptionError) {
+      console.error("[Credits] Error checking subscription status:", subscriptionError);
+      // Continuer même si la vérification échoue
     }
 
     return json({
