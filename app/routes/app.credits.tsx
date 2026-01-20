@@ -127,11 +127,12 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
 export const action = async ({ request }: ActionFunctionArgs) => {
   try {
-    let admin, session;
+    let admin, session, billing;
     try {
       const authResult = await authenticate.admin(request);
       admin = authResult.admin;
       session = authResult.session;
+      billing = authResult.billing;
       
       // Logs de diagnostic CRITIQUES
       console.log("[Credits Action] ✅ Authentication successful:", {
@@ -550,16 +551,12 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       return json({ success: false, error: "Minimum 250 credits required for custom pack" });
     }
   } else if (intent === "purchase-subscription") {
-    // Gestion de l'achat d'abonnement (Starter, Pro, Studio)
+    // Gestion de l'achat d'abonnement (Starter, Pro, Studio) - Utilisation de l'API billing Remix
     const planId = formData.get("planId") as string;
-    const subscriptionPlans: Record<string, { name: string; price: number }> = {
-      "starter": { name: "Starter", price: 29.0 },
-      "pro": { name: "Pro", price: 99.0 },
-      "studio": { name: "Studio", price: 399.0 },
-    };
-
-    const plan = subscriptionPlans[planId];
-    if (!plan) {
+    
+    // Vérifier que le plan existe dans la configuration
+    const validPlans = ["starter", "pro", "studio"];
+    if (!validPlans.includes(planId)) {
       return json({ 
         success: false, 
         error: "Plan d'abonnement invalide",
@@ -572,85 +569,30 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       returnUrl.searchParams.set("subscription", "success");
       returnUrl.searchParams.set("plan", planId);
 
-      console.log("[Credits] Creating subscription using GraphQL", {
+      console.log("[Credits] Requesting subscription using billing.request()", {
         planId,
-        planName: plan.name,
-        price: plan.price,
         shop,
         returnUrl: returnUrl.toString(),
       });
 
-      // Créer un abonnement récurrent via GraphQL
-      const mutation = `
-        mutation AppSubscriptionCreate($name: String!, $lineItems: [AppSubscriptionLineItemInput!]!, $returnUrl: URL!, $test: Boolean) {
-          appSubscriptionCreate(name: $name, lineItems: $lineItems, returnUrl: $returnUrl, test: $test) {
-            userErrors {
-              field
-              message
-            }
-            confirmationUrl
-            appSubscription {
-              id
-            }
-          }
-        }
-      `;
-
-      const variables = {
-        name: plan.name,
+      // Utiliser billing.request() de Remix - gère automatiquement Managed Pricing
+      // Cette méthode retourne une Response de redirection que Remix gère automatiquement
+      return await billing.request({
+        plan: planId,
+        isTest: process.env.NODE_ENV !== "production",
         returnUrl: returnUrl.toString(),
-        test: process.env.NODE_ENV !== "production",
-        lineItems: [
-          {
-            plan: {
-              appRecurringPricingDetails: {
-                price: { amount: plan.price, currencyCode: "USD" },
-                interval: "EVERY_30_DAYS"
-              }
-            }
-          }
-        ]
-      };
-
-      const graphqlResponse = await admin.graphql(mutation, { variables });
-      const graphqlData = await graphqlResponse.json() as any;
-
-      if (graphqlData.errors) {
-        const errorMessage = graphqlData.errors.map((e: any) => e.message).join(", ");
-        return json({ 
-          success: false, 
-          error: `Shopify API error: ${errorMessage}`,
-        });
-      }
-
-      const subscriptionData = graphqlData.data?.appSubscriptionCreate;
-      
-      if (subscriptionData?.userErrors?.length > 0) {
-        const errorMessage = subscriptionData.userErrors.map((e: any) => e.message).join(", ");
-        return json({ 
-          success: false, 
-          error: `Shopify API error: ${errorMessage}`,
-        });
-      }
-
-      if (!subscriptionData?.confirmationUrl) {
-        return json({ 
-          success: false, 
-          error: "Abonnement créé mais aucune URL de confirmation disponible.",
-        });
-      }
-
-      return json({ 
-        success: true, 
-        redirect: true,
-        checkoutUrl: subscriptionData.confirmationUrl,
-        plan: plan.name,
       });
     } catch (error) {
-      console.error("Error creating subscription:", error);
+      console.error("[Credits] Error requesting subscription:", error);
+      
+      // Si c'est une Response (redirection), la laisser passer
+      if (error instanceof Response) {
+        return error;
+      }
+      
       return json({ 
         success: false, 
-        error: error instanceof Error ? error.message : "Erreur lors de la création de l'abonnement.",
+        error: error instanceof Error ? error.message : "Erreur lors de la demande d'abonnement.",
       });
     }
   }
