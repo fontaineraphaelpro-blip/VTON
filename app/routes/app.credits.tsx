@@ -572,27 +572,27 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       });
     }
 
-    // Avec Managed Pricing, on redirige vers la page de l'app dans l'Admin Shopify
-    // Format de l'URL : https://admin.shopify.com/store/{shop}/settings/apps/{app_id}
+    // Avec Managed Pricing, on redirige vers la page de pricing de l'app dans l'Admin Shopify
+    // Format de l'URL : https://admin.shopify.com/store/{shop}/settings/apps/app_installations/app/{app_id}/pricing
     // Cette page permet à l'utilisateur de voir et gérer ses abonnements directement depuis l'Admin
     const appId = process.env.SHOPIFY_API_KEY || '85e1a9dba888450e33b84fbb067bc3a5';
     // Extraire le nom du shop sans .myshopify.com
     const shopName = shop.replace('.myshopify.com', '');
-    const adminAppUrl = `https://admin.shopify.com/store/${shopName}/settings/apps/${appId}`;
+    const adminPricingUrl = `https://admin.shopify.com/store/${shopName}/settings/apps/app_installations/app/${appId}/pricing`;
     
-    console.log("[Credits] Redirecting to Shopify Admin app settings page (Managed Pricing)", {
+    console.log("[Credits] Redirecting to Shopify Admin pricing page (Managed Pricing)", {
       planId,
       shop,
       shopName,
       appId,
-      adminAppUrl,
+      adminPricingUrl,
     });
     
     return json({ 
       success: true, 
       redirect: true,
-      checkoutUrl: adminAppUrl,
-      message: "Redirection vers la page de gestion de l'app dans Shopify Admin",
+      checkoutUrl: adminPricingUrl,
+      message: "Redirection vers la page de pricing dans Shopify Admin",
     });
   }
   
