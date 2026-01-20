@@ -49,18 +49,6 @@ api_version = "2024-10"
   # uri = "/webhooks/shop/redact"
   # compliance_topics = ["shop/redact"]
 
-[subscriptions]
-  [subscriptions.starter]
-  plans = [
-    { name = "Starter", amount = 29.0, currency_code = "USD", interval = "EVERY_30_DAYS" }
-  ]
-
-  [subscriptions.pro]
-  plans = [
-    { name = "Pro", amount = 99.0, currency_code = "USD", interval = "EVERY_30_DAYS" }
-  ]
-
-  [subscriptions.studio]
-  plans = [
-    { name = "Studio", amount = 399.0, currency_code = "USD", interval = "EVERY_30_DAYS" }
-  ]
+# Note: Subscription plans are configured in app/shopify.server.ts
+# The billing configuration with starter, pro, and studio plans is defined there
+# Shopify CLI does not support [subscriptions] section in shopify.app.toml for Remix apps

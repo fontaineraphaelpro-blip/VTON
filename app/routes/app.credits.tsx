@@ -1,5 +1,5 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
-import { json, redirect } from "@remix-run/node";
+import { json } from "@remix-run/node";
 import { useLoaderData, useFetcher, useRevalidator } from "@remix-run/react";
 import { useState, useEffect, useRef } from "react";
 import {
@@ -17,79 +17,61 @@ import {
   Badge,
 } from "@shopify/polaris";
 import { TitleBar } from "@shopify/app-bridge-react";
-import { authenticate, shopify } from "../shopify.server";
+import { authenticate } from "../shopify.server";
 import { getShop, upsertShop } from "../lib/services/db.service";
 import { ensureTables } from "../lib/db-init.server";
 
-// Plans tarifaires optimisés pour Virtual Try-On
-const PRICING_PLANS = [
+// Packs de crédits optimisés avec pack Découverte
+const CREDIT_PACKS = [
   {
-    id: "free",
-    name: "Free Discovery",
-    credits: 4,
-    price: 0.00,
-    pricePerCredit: 0.00,
-    description: "4 free try-ons per month with watermark to discover the tool",
+    id: "decouverte",
+    name: "Découverte",
+    credits: 25,
+    price: 9.99,
+    pricePerCredit: 0.40,
+    description: "Essai gratuit - Parfait pour tester",
     highlight: false,
     popular: false,
-    badge: "Free",
-    monthlyQuota: 4,
-    hasWatermark: true,
   },
   {
     id: "starter",
     name: "Starter",
-    credits: 50,
-    price: 29.00,
-    pricePerCredit: 0.58,
-    description: "50 try-ons per month - Perfect for launches",
+    credits: 100,
+    price: 29.99,
+    pricePerCredit: 0.30,
+    description: "Parfait pour démarrer",
     highlight: false,
-    popular: true,
-    badge: "Popular",
-    monthlyQuota: 50,
-    hasWatermark: false,
+    popular: false,
   },
   {
     id: "pro",
     name: "Pro",
-    credits: 200,
-    price: 99.00,
-    pricePerCredit: 0.495,
-    description: "200 try-ons per month - For active merchants",
+    credits: 500,
+    price: 129.99,
+    pricePerCredit: 0.26,
+    description: "Idéal pour les boutiques en croissance",
     highlight: true,
-    popular: false,
-    badge: "Recommended",
-    monthlyQuota: 200,
-    hasWatermark: false,
-  },
-  {
-    id: "studio",
-    name: "Enterprise",
-    credits: 1000,
-    price: 399.00,
-    pricePerCredit: 0.399,
-    description: "1000 try-ons per month - Designed for high volume",
-    highlight: false,
-    popular: false,
-    badge: "Premium",
-    monthlyQuota: 1000,
-    hasWatermark: false,
+    popular: true,
   },
 ];
-
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
     const { admin, session } = await authenticate.admin(request);
     
+    // Logs de diagnostic CRITIQUES
+    console.log("[Credits Loader] Session check:", {
+      shop: session?.shop || "NULL",
+      hasAccessToken: !!session?.accessToken,
+      isOnline: session?.isOnline,
+      userId: (session as any)?.userId,
+    });
+    
     if (!session || !session.shop) {
-      // Log only in development
-      if (process.env.NODE_ENV !== "production") {
-        console.error("[Credits Loader] Invalid session - shop is null!");
-      }
+      console.error("[Credits Loader] ❌ Session invalide - shop is null!");
       return json({
         shop: null,
-        error: "Invalid session. Please refresh the page.",
+        error: "Session invalide. Veuillez rafraîchir la page.",
       });
     }
     
@@ -102,41 +84,27 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     const url = new URL(request.url);
     const purchaseSuccess = url.searchParams.get("purchase");
     const packId = url.searchParams.get("pack");
-    const monthlyQuotaParam = url.searchParams.get("monthlyQuota");
+    const creditsParam = url.searchParams.get("credits");
 
-    if (purchaseSuccess === "success" && packId) {
-      // Find the pack that was purchased
-      const pack = PRICING_PLANS.find((p) => p.id === packId);
-      
-      if (pack) {
-        // Get the number of credits from the pack
-        const packCredits = (pack as any).monthlyQuota || pack.credits;
-        const monthlyQuota = packCredits; // Store as monthly quota for future renewals
+    if (purchaseSuccess === "success" && packId && creditsParam) {
+      const creditsToAdd = parseInt(creditsParam);
+      if (creditsToAdd > 0 && shopData) {
+        // Credit the tokens automatically
+        const newCredits = (shopData.credits || 0) + creditsToAdd;
+        await upsertShop(shop, { credits: newCredits });
         
-        // Get current shop data to ensure we have the latest credits
-        const currentShopData = await getShop(shop);
-        const currentCredits = currentShopData?.credits || 0;
-        
-        // Add pack credits to existing credits (accumulation)
-        const newCredits = currentCredits + packCredits;
-        
-        await upsertShop(shop, { 
-          credits: newCredits, // Add credits to existing ones
-          monthlyQuota: monthlyQuota, // Store plan for monthly renewals
+        console.log(`[Credits] Auto-credited ${creditsToAdd} credits for pack ${packId}`, {
+          shop,
+          oldCredits: shopData.credits,
+          newCredits,
         });
-        
-        // Plan activated (log only in development)
-        if (process.env.NODE_ENV !== "production") {
-          console.log(`[Credits] Activated plan ${packId}: added ${packCredits} credits (had ${currentCredits}, now has ${newCredits})`);
-        }
 
-        // Reload shop data after updating plan to ensure UI shows latest credits
+        // Reload shop data after crediting
         const updatedShopData = await getShop(shop);
         return json({
           shop: updatedShopData || null,
           purchaseSuccess: true,
-          planActivated: packId,
-          monthlyQuota: monthlyQuota,
+          creditsAdded: creditsToAdd,
         });
       }
     }
@@ -145,10 +113,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       shop: shopData || null,
     });
   } catch (error) {
-    // Log only in development
-    if (process.env.NODE_ENV !== "production") {
-      console.error("[Credits Loader] Error:", error);
-    }
+    console.error("[Credits Loader] ❌ Error:", error);
     // Si c'est une Response (redirection d'auth), la propager
     if (error instanceof Response) {
       throw error;
@@ -162,72 +127,71 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
 export const action = async ({ request }: ActionFunctionArgs) => {
   try {
-    // authenticate.admin() returns { admin, billing, session, redirect }
-    // billing is only available if the app is configured for Managed Pricing
-    let admin, billing, session, redirect;
-    
+    let admin, session;
     try {
       const authResult = await authenticate.admin(request);
       admin = authResult.admin;
-      billing = authResult.billing; // billing is available when Managed Pricing is configured
       session = authResult.session;
-      redirect = authResult.redirect; // redirect is needed for onFailure callback
+      
+      // Logs de diagnostic CRITIQUES
+      console.log("[Credits Action] ✅ Authentication successful:", {
+        shop: session?.shop || "NULL",
+        hasAccessToken: !!session?.accessToken,
+        isOnline: session?.isOnline,
+        userId: (session as any)?.userId,
+        hasAdmin: !!admin,
+      });
+      
     } catch (authError) {
       // Si authenticate.admin lance une Response (redirection), la gérer
       if (authError instanceof Response) {
         if (authError.status === 401 || authError.status === 302) {
           const reauthUrl = authError.headers.get('x-shopify-api-request-failure-reauthorize-url') || 
                            authError.headers.get('location');
-          // Log only in development
-          if (process.env.NODE_ENV !== "production") {
-            console.error("[Credits Action] Authentication required (401/302):", { 
-              status: authError.status, 
-              reauthUrl,
-            });
-          }
+          console.error("[Credits Action] ❌ Authentication required (401/302):", { 
+            status: authError.status, 
+            reauthUrl,
+            headers: Object.fromEntries(authError.headers.entries()),
+          });
           return json({ 
             success: false, 
-            error: "Your session has expired. Please refresh the page to re-authenticate.",
+            error: "Votre session a expiré. Veuillez rafraîchir la page pour vous ré-authentifier.",
             requiresAuth: true,
             reauthUrl: reauthUrl || null,
           });
         }
         // Pour toute autre Response, retourner une erreur JSON
-        if (process.env.NODE_ENV !== "production") {
-          console.error("[Credits Action] Authentication error:", authError.status);
-        }
+        console.error("[Credits Action] ❌ Authentication error:", authError.status);
         return json({ 
           success: false, 
-          error: `Authentication error (${authError.status}). Please refresh the page.`,
+          error: `Erreur d'authentification (${authError.status}). Veuillez rafraîchir la page.`,
           requiresAuth: true,
         });
       }
       // Pour les autres erreurs, les propager
-      if (process.env.NODE_ENV !== "production") {
-        console.error("[Credits Action] Authentication error (non-Response):", authError);
-      }
+      console.error("[Credits Action] ❌ Authentication error (non-Response):", authError);
       throw authError;
     }
     
     // Vérifier que la session est valide
     if (!session || !session.shop) {
-      if (process.env.NODE_ENV !== "production") {
-        console.error("[Credits Action] Invalid session - shop is null!");
-      }
+      console.error("[Credits Action] ❌ Invalid session - shop is null!", {
+        hasSession: !!session,
+        shop: session?.shop,
+        accessToken: session?.accessToken ? "EXISTS" : "MISSING",
+      });
       return json({ 
         success: false, 
-        error: "Invalid session. Please refresh the page.",
+        error: "Session invalide. Veuillez rafraîchir la page.",
         requiresAuth: true,
       });
     }
     
     if (!admin) {
-      if (process.env.NODE_ENV !== "production") {
-        console.error("[Credits Action] Admin client is missing!");
-      }
+      console.error("[Credits Action] ❌ Admin client is missing!");
       return json({ 
         success: false, 
-        error: "GraphQL client not available. Please refresh the page.",
+        error: "Client GraphQL non disponible. Veuillez rafraîchir la page.",
         requiresAuth: true,
       });
     }
@@ -235,235 +199,372 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const shop = session.shop;
     const formData = await request.formData();
     const intent = formData.get("intent");
+    
+    console.log("[Credits] Action called", { intent, shop });
 
   if (intent === "purchase-credits") {
     const packId = formData.get("packId") as string;
-    const pack = PRICING_PLANS.find((p) => p.id === packId);
+    const pack = CREDIT_PACKS.find((p) => p.id === packId);
 
-    if (!pack) {
-      return json({ 
-        success: false, 
-        error: "Plan not found" 
-      });
-    }
-
-    try {
-      const packCredits = (pack as any).monthlyQuota || pack.credits;
-      const monthlyQuota = packCredits; // Store as monthly quota for future renewals
-      
-      // Get current shop data to get existing credits
-      const currentShopData = await getShop(shop);
-      const currentCredits = currentShopData?.credits || 0;
-      
-      // Add pack credits to existing credits (accumulation)
-      const newCredits = currentCredits + packCredits;
-      
-      // Skip payment for free plan only
-      if (pack.price === 0) {
-        await upsertShop(shop, { 
-          credits: newCredits, // Add credits to existing ones
-          monthlyQuota: monthlyQuota, // Store plan for monthly renewals
-        });
-        return json({ 
-          success: true, 
-          message: `Plan ${pack.name} activated successfully! Added ${packCredits} credits. Total: ${newCredits} credits.`,
-          planActivated: packId,
-          monthlyQuota: monthlyQuota,
-        });
-      }
-      
-      // For paid plans, use Shopify Managed Pricing with billing.require()
-      // With Managed Pricing, billing.require() simply redirects to Shopify's pricing page
-      // No subscription is created manually - Shopify handles everything automatically
-      // Credits will be added automatically via app_subscriptions/update webhook when subscription is activated
-      if (!billing) {
-        console.error("[Credits] Billing is not available. App may not be configured for Managed Pricing.");
-        return json({ 
-          success: false, 
-          error: "Billing is not available. Please ensure the app is configured for Managed Pricing in the Shopify Partner Dashboard."
-        });
-      }
-
-      if (!redirect) {
-        console.error("[Credits] Redirect is not available from authenticate.admin().");
-        return json({ 
-          success: false, 
-          error: "Redirect function is not available. Please refresh the page."
-        });
-      }
-
-      // Use pack.id (handle) instead of pack.name for billing.require()
-      // Handles must match the keys in shopify.server.ts: "starter", "pro", "studio"
-      const planHandle = pack.id; // "starter", "pro", or "studio"
-      const isTestMode = shop.includes('.myshopify.com') || process.env.NODE_ENV !== "production";
-      
-      console.log(`[Credits] Requesting billing redirect for plan: ${pack.name} (handle: ${planHandle}, packId: ${packId}, isTest: ${isTestMode})`);
-      console.log(`[Credits] Billing object available: ${!!billing}, Session shop: ${shop}`);
-      
-      // Check if billing is available (indicates Managed Pricing is configured)
-      if (!billing) {
-        return json({ 
-          success: false, 
-          error: "Billing is not available. Managed Pricing must be configured in shopify.server.ts and the Partner Dashboard."
-        });
-      }
-      
-      // Use billing.require() which handles Managed Pricing correctly
-      // With Managed Pricing, billing.require() automatically redirects to Shopify's pricing page
-      // onFailure callback is required by the API but should not be used with Managed Pricing
-      let billingResponse;
+    if (pack) {
+      // Create a Shopify one-time charge using REST API (RecurringApplicationCharge)
       try {
-        // With Managed Pricing, billing.require() will automatically redirect to the pricing page
-        // if no active subscription is found. The onFailure callback is required by the API
-        // but should not redirect manually - let billing.require() handle it automatically.
-        console.log(`[Credits] Calling billing.require() with plan: ${planHandle}`);
-        // First, check if there's an active subscription using GraphQL
-        // This is the recommended way to check subscriptions with Managed Pricing
-        const subscriptionQuery = `#graphql
-          query {
-            currentAppInstallation {
-              activeSubscriptions {
-                name
-                status
-                lineItems {
-                  plan {
-                    pricingDetails {
-                      ... on AppRecurringPricing {
-                        price {
-                          amount
-                          currencyCode
-                        }
-                        interval
-                      }
-                    }
-                  }
-                }
+        // Build return URL - redirect back to credits page after payment
+        const baseUrl = new URL(request.url).origin;
+        const returnUrl = new URL("/app/credits", baseUrl);
+        returnUrl.searchParams.set("purchase", "success");
+        returnUrl.searchParams.set("pack", pack.id);
+        returnUrl.searchParams.set("credits", String(pack.credits));
+
+        console.log("[Credits Action] Creating one-time charge using REST API for pack", {
+          packId: pack.id,
+          packName: pack.name,
+          price: pack.price,
+          shop,
+          returnUrl: returnUrl.toString(),
+        });
+
+        // Use Shopify GraphQL API to create a one-time charge (recommended method)
+        const mutation = `
+          mutation appPurchaseOneTimeCreate($name: String!, $price: MoneyInput!, $returnUrl: URL!, $test: Boolean) {
+            appPurchaseOneTimeCreate(
+              name: $name
+              price: $price
+              returnUrl: $returnUrl
+              test: $test
+            ) {
+              confirmationUrl
+              userErrors {
+                field
+                message
               }
             }
           }
         `;
-        
-        let hasActiveSubscription = false;
-        try {
-          const subscriptionResponse = await admin.graphql(subscriptionQuery);
-          const subscriptionData = await subscriptionResponse.json() as any;
-          const activeSubscriptions = subscriptionData?.data?.currentAppInstallation?.activeSubscriptions || [];
-          hasActiveSubscription = activeSubscriptions.length > 0;
-          console.log(`[Credits] Active subscriptions check:`, {
-            count: activeSubscriptions.length,
-            subscriptions: activeSubscriptions.map((s: any) => ({ name: s.name, status: s.status })),
-          });
-        } catch (graphqlError) {
-          console.error(`[Credits] Error checking subscriptions via GraphQL:`, graphqlError);
-        }
-        
-        // If no active subscription, billing.require() should redirect to pricing page
-        billingResponse = await billing.require({
-          session,
-          plans: [planHandle],
-          isTest: isTestMode,
-          onFailure: async () => {
-            // onFailure is called when no active subscription is found
-            // With Managed Pricing properly configured, billing.require() should handle
-            // the redirect automatically. If onFailure is called, it might mean:
-            // 1. Managed Pricing is not fully activated (app not published)
-            // 2. Plans are configured but not yet synced
-            // 3. There's a configuration mismatch
-            console.warn(`[Credits] billing.require() onFailure called`);
-            console.warn(`[Credits] This might indicate Managed Pricing is not fully activated`);
-            console.warn(`[Credits] Returning undefined to let billing.require() handle the redirect`);
-            
-            // Don't return null - return undefined or nothing
-            // billing.require() will handle the redirect if Managed Pricing is configured
-            // If it's not configured, we'll catch the error and show a helpful message
-            return undefined;
-          },
-        });
-        console.log(`[Credits] billing.require() returned:`, {
-          type: typeof billingResponse,
-          isResponse: billingResponse instanceof Response,
-          status: billingResponse instanceof Response ? billingResponse.status : 'N/A',
-          location: billingResponse instanceof Response ? billingResponse.headers.get('location') : 'N/A',
-        });
-      } catch (billingError) {
-        console.error(`[Credits] billing.require() threw an error:`, billingError);
-        // If billing.require() throws an error, it might be a configuration issue
-        throw new Error(`Failed to initiate billing: ${billingError instanceof Error ? billingError.message : String(billingError)}`);
-      }
 
-      // billing.require() returns a Response with redirect if billing is needed
-      // With Managed Pricing, this should redirect to Shopify's pricing page
-      // If billingResponse is a Response, return it directly (it's a redirect)
-      if (billingResponse instanceof Response) {
-        const redirectUrl = billingResponse.headers.get('location');
-        console.log(`[Credits] billing.require() returned redirect Response:`, {
-          status: billingResponse.status,
-          location: redirectUrl,
+        const variables = {
+          name: `${pack.name} Pack - ${pack.credits} Credits`,
+          price: {
+            amount: pack.price.toFixed(2),
+            currencyCode: "EUR"
+          },
+          returnUrl: returnUrl.toString(),
+          test: process.env.NODE_ENV !== "production"
+        };
+
+        console.log("[Credits Action] Creating one-time charge using GraphQL", {
+          packId: pack.id,
+          packName: pack.name,
+          price: pack.price,
+          shop,
+          returnUrl: returnUrl.toString(),
+          variables
         });
-        
-        // Check if the redirect is to the credits page (this shouldn't happen with Managed Pricing)
-        if (redirectUrl && redirectUrl.includes('/app/credits')) {
-          console.error(`[Credits] billing.require() redirected to /app/credits instead of pricing page. This suggests Managed Pricing is not properly configured.`);
+
+        const graphqlResponse = await admin.graphql(mutation, {
+          variables
+        });
+
+        const graphqlData = await graphqlResponse.json() as any;
+
+        console.log("[Credits Action] GraphQL response received", {
+          hasData: !!graphqlData,
+          hasErrors: !!graphqlData.errors,
+          data: graphqlData
+        });
+
+        if (graphqlData.errors) {
+          console.error("[Credits] GraphQL errors:", graphqlData.errors);
+          const errorMessage = graphqlData.errors.map((e: any) => e.message).join(", ");
           return json({ 
             success: false, 
-            error: "Managed Pricing is not properly configured. Please ensure Managed Pricing is enabled in the Partner Dashboard and the plans are correctly set up."
+            error: `Shopify API error: ${errorMessage}`,
           });
         }
-        
-        // If it's a redirect to Shopify's pricing page, return it directly
-        // For embedded apps, the Response should already handle exiting the iframe
-        if (billingResponse.status >= 300 && billingResponse.status < 400) {
-          console.log(`[Credits] Returning billing redirect Response directly (status ${billingResponse.status})`);
-          return billingResponse;
-        }
-      }
-      
-      // If we get here, something unexpected happened
-      console.error(`[Credits] billing.require() returned unexpected value:`, {
-        type: typeof billingResponse,
-        value: billingResponse,
-      });
-      return json({ 
-        success: false, 
-        error: "Unable to redirect to pricing page. Please ensure Managed Pricing is configured in the Partner Dashboard."
-      });
 
-      // This should never happen with Managed Pricing, but handle it gracefully
-      console.warn(`[Credits] billing.require() returned null/undefined - this is unexpected with Managed Pricing`);
-      return json({ 
-        success: false, 
-        error: "Unable to redirect to pricing page. The billing configuration may not be deployed. Please ensure Managed Pricing is configured in the Partner Dashboard and run 'npm run deploy' to sync your configuration."
-      });
-    } catch (error) {
-      // Log error for debugging
-      console.error("[Credits] Error in billing flow:", error);
-      return json({ 
-        success: false, 
-        error: error instanceof Error ? error.message : "Error redirecting to pricing page. Please try again." 
-      });
+        const purchaseData = graphqlData.data?.appPurchaseOneTimeCreate;
+        
+        if (!purchaseData) {
+          console.error("No purchase data returned in response:", graphqlData);
+          return json({ 
+            success: false, 
+            error: "Failed to create charge. Please check your Shopify permissions.",
+          });
+        }
+
+        if (purchaseData.userErrors && purchaseData.userErrors.length > 0) {
+          const errorMessage = purchaseData.userErrors.map((e: any) => e.message).join(", ");
+          console.error("User errors:", purchaseData.userErrors);
+          return json({ 
+            success: false, 
+            error: `Shopify API error: ${errorMessage}`,
+          });
+        }
+
+        if (!purchaseData.confirmationUrl) {
+          console.error("No confirmation URL returned:", purchaseData);
+          return json({ 
+            success: false, 
+            error: "Charge created but no confirmation URL available. Please try again.",
+          });
+        }
+
+        // Return confirmation URL for redirect to Shopify checkout
+        return json({ 
+          success: true, 
+          redirect: true,
+          checkoutUrl: purchaseData.confirmationUrl,
+          pack: pack.name, 
+          credits: pack.credits,
+          price: pack.price,
+        });
+      } catch (error) {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:224',message:'Catch block - error caught',data:{errorType:error?.constructor?.name,isResponse:error instanceof Response,isError:error instanceof Error,hasStatus:!!(error as any)?.status,status:(error as any)?.status,message:error instanceof Error ? error.message : String(error)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+        // #endregion
+        // Ne pas loguer l'objet Response directement - extraire seulement les infos nécessaires
+        if (error instanceof Response) {
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:227',message:'Error is Response object',data:{status:error.status,statusText:error.statusText,url:error.url,is401:error.status===401},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+          // #endregion
+          // Handle 401 Unauthorized in catch block
+          if (error.status === 401) {
+            const reauthUrl = error.headers.get('x-shopify-api-request-failure-reauthorize-url');
+            console.warn(`App purchase creation failed: ${error.status} ${error.statusText} - Authentication required`);
+            return json({ 
+              success: false, 
+              error: "Your session has expired. Please refresh the page to re-authenticate.",
+              requiresAuth: true,
+              reauthUrl: reauthUrl || null,
+            });
+          }
+          console.warn(`App purchase creation failed: ${error.status} ${error.statusText}`);
+          return json({ 
+            success: false, 
+            error: `Shopify API error (${error.status}): ${error.statusText}` 
+          });
+        }
+        // Check if error has Response-like properties (status, statusText)
+        const errorAny = error as any;
+        if (errorAny && typeof errorAny === 'object' && 'status' in errorAny && 'statusText' in errorAny) {
+          // Handle Response-like object
+          if (errorAny.status === 401) {
+            const reauthUrl = errorAny.headers?.get?.('x-shopify-api-request-failure-reauthorize-url') || 
+                             errorAny.headers?.['x-shopify-api-request-failure-reauthorize-url'];
+            console.warn(`Draft order creation failed: ${errorAny.status} ${errorAny.statusText} - Authentication required`);
+            return json({ 
+              success: false, 
+              error: "Your session has expired. Please refresh the page to re-authenticate.",
+              requiresAuth: true,
+              reauthUrl: reauthUrl || null,
+            });
+          }
+          console.warn(`Draft order creation failed: ${errorAny.status} ${errorAny.statusText}`);
+          return json({ 
+            success: false, 
+            error: `Shopify API error (${errorAny.status}): ${errorAny.statusText || 'Unknown error'}` 
+          });
+        }
+        // Log normal errors (not Response objects)
+        console.error("Error creating app purchase:", error instanceof Error ? error.message : String(error));
+        let errorMessage: string;
+        if (error instanceof Error) {
+          errorMessage = error.message;
+        } else if (error && typeof error === 'object' && 'message' in error) {
+          errorMessage = String(error.message);
+        } else {
+          errorMessage = "Unknown error occurred";
+        }
+        return json({ 
+          success: false, 
+          error: `Failed to create payment checkout: ${errorMessage}` 
+        });
+      }
+    }
+  } else if (intent === "custom-pack") {
+    const customCredits = parseInt(formData.get("customCredits") as string);
+    if (customCredits && customCredits >= 250) {
+      const pricePerCredit = 0.30;
+      const totalPrice = customCredits * pricePerCredit;
+
+      try {
+        // Build return URL - redirect back to credits page after payment
+        const baseUrl = new URL(request.url).origin;
+        const returnUrl = new URL("/app/credits", baseUrl);
+        returnUrl.searchParams.set("purchase", "success");
+        returnUrl.searchParams.set("pack", "custom");
+        returnUrl.searchParams.set("credits", String(customCredits));
+
+        console.log("[Credits] Creating custom one-time charge using REST API", { customCredits, totalPrice });
+
+        // Use Shopify GraphQL API to create a one-time charge for custom pack
+        const mutation = `
+          mutation appPurchaseOneTimeCreate($name: String!, $price: MoneyInput!, $returnUrl: URL!, $test: Boolean) {
+            appPurchaseOneTimeCreate(
+              name: $name
+              price: $price
+              returnUrl: $returnUrl
+              test: $test
+            ) {
+              confirmationUrl
+              userErrors {
+                field
+                message
+              }
+            }
+          }
+        `;
+
+        const variables = {
+          name: `Custom Pack - ${customCredits} Credits`,
+          price: {
+            amount: totalPrice.toFixed(2),
+            currencyCode: "EUR"
+          },
+          returnUrl: returnUrl.toString(),
+          test: process.env.NODE_ENV !== "production"
+        };
+
+        console.log("[Credits] Creating custom one-time charge using GraphQL", { customCredits, totalPrice, variables });
+
+        const customGraphqlResponse = await admin.graphql(mutation, {
+          variables
+        });
+
+        const customGraphqlData = await customGraphqlResponse.json() as any;
+
+        console.log("[Credits] Custom GraphQL response received", {
+          hasData: !!customGraphqlData,
+          hasErrors: !!customGraphqlData.errors,
+          data: customGraphqlData
+        });
+
+        if (customGraphqlData.errors) {
+          console.error("[Credits] Custom GraphQL errors:", customGraphqlData.errors);
+          const errorMessage = customGraphqlData.errors.map((e: any) => e.message).join(", ");
+          return json({ 
+            success: false, 
+            error: `Shopify API error: ${errorMessage}`,
+          });
+        }
+
+        const purchaseData = customGraphqlData.data?.appPurchaseOneTimeCreate;
+        
+        if (!purchaseData) {
+          console.error("No purchase data returned in response (custom):", customGraphqlData);
+          return json({ 
+            success: false, 
+            error: "Failed to create charge. Please check your Shopify permissions.",
+          });
+        }
+
+        if (purchaseData.userErrors && purchaseData.userErrors.length > 0) {
+          const errorMessage = purchaseData.userErrors.map((e: any) => e.message).join(", ");
+          console.error("User errors (custom):", purchaseData.userErrors);
+          return json({ 
+            success: false, 
+            error: `Shopify API error: ${errorMessage}`,
+          });
+        }
+
+        if (!purchaseData.confirmationUrl) {
+          console.error("No confirmation URL returned (custom):", purchaseData);
+          return json({ 
+            success: false, 
+            error: "Charge created but no confirmation URL available. Please try again.",
+          });
+        }
+
+        // Return confirmation URL for redirect to Shopify checkout
+        return json({ 
+          success: true, 
+          redirect: true,
+          checkoutUrl: purchaseData.confirmationUrl,
+          pack: "Custom", 
+          credits: customCredits,
+          price: totalPrice,
+        });
+      } catch (error) {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:399',message:'Catch block - custom error caught',data:{errorType:error?.constructor?.name,isResponse:error instanceof Response,isError:error instanceof Error,hasStatus:!!(error as any)?.status,status:(error as any)?.status,message:error instanceof Error ? error.message : String(error)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+        // #endregion
+        // Ne pas loguer l'objet Response directement - extraire seulement les infos nécessaires
+        if (error instanceof Response) {
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:402',message:'Custom error is Response object',data:{status:error.status,statusText:error.statusText,url:error.url,is401:error.status===401},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+          // #endregion
+          // Handle 401 Unauthorized in catch block
+          if (error.status === 401) {
+            const reauthUrl = error.headers.get('x-shopify-api-request-failure-reauthorize-url');
+            console.warn(`[Credits] Custom app purchase creation failed: ${error.status} ${error.statusText} - Authentication required`, { reauthUrl });
+            return json({ 
+              success: false, 
+              error: "Votre session a expiré. Veuillez rafraîchir la page pour vous ré-authentifier.",
+              requiresAuth: true,
+              reauthUrl: reauthUrl || null,
+            });
+          }
+          console.warn(`Custom app purchase creation failed: ${error.status} ${error.statusText}`);
+          return json({ 
+            success: false, 
+            error: `Shopify API error (${error.status}): ${error.statusText}` 
+          });
+        }
+        // Check if error has Response-like properties (status, statusText)
+        const errorAny = error as any;
+        if (errorAny && typeof errorAny === 'object' && 'status' in errorAny && 'statusText' in errorAny) {
+          // Handle Response-like object
+          if (errorAny.status === 401) {
+            const reauthUrl = errorAny.headers?.get?.('x-shopify-api-request-failure-reauthorize-url') || 
+                             errorAny.headers?.['x-shopify-api-request-failure-reauthorize-url'];
+            console.warn(`[Credits] Custom draft order creation failed: ${errorAny.status} ${errorAny.statusText} - Authentication required`, { reauthUrl });
+            return json({ 
+              success: false, 
+              error: "Votre session a expiré. Veuillez rafraîchir la page pour vous ré-authentifier.",
+              requiresAuth: true,
+              reauthUrl: reauthUrl || null,
+            });
+          }
+          console.warn(`Custom draft order creation failed: ${errorAny.status} ${errorAny.statusText}`);
+          return json({ 
+            success: false, 
+            error: `Shopify API error (${errorAny.status}): ${errorAny.statusText || 'Unknown error'}` 
+          });
+        }
+        // Log normal errors (not Response objects)
+        console.error("Error creating custom app purchase:", error instanceof Error ? error.message : String(error));
+        let errorMessage: string;
+        if (error instanceof Error) {
+          errorMessage = error.message;
+        } else if (error && typeof error === 'object' && 'message' in error) {
+          errorMessage = String(error.message);
+        } else {
+          errorMessage = "Unknown error occurred";
+        }
+        return json({
+          success: false,
+          error: `Failed to create payment checkout: ${errorMessage}`
+        });
+      }
+    } else {
+      return json({ success: false, error: "Minimum 250 credits required for custom pack" });
     }
   }
 
-  return json({ success: false, error: "Invalid intent" });
+    return json({ success: false, error: "Invalid purchase" });
   } catch (error) {
     // Gérer toutes les erreurs, y compris les Responses de redirection
-    // Log only in development
-    if (process.env.NODE_ENV !== "production") {
-      console.error("[Credits] Error in action:", error);
-    }
+    console.error("[Credits] Error in action:", error);
     
     // Si c'est une Response de redirection (auth requise)
     if (error instanceof Response) {
       if (error.status === 401 || error.status === 302) {
         const reauthUrl = error.headers.get('x-shopify-api-request-failure-reauthorize-url') || 
                          error.headers.get('location');
-        // Log only in development
-        if (process.env.NODE_ENV !== "production") {
-          console.error("[Credits] Authentication required (Response)", { status: error.status, reauthUrl });
-        }
+        console.error("[Credits] Authentication required (Response)", { status: error.status, reauthUrl });
         return json({ 
           success: false, 
-            error: "Your session has expired. Please refresh the page to re-authenticate.",
+          error: "Votre session a expiré. Veuillez rafraîchir la page pour vous ré-authentifier.",
           requiresAuth: true,
           reauthUrl: reauthUrl || null,
         });
@@ -471,7 +572,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       // Pour toute autre Response, retourner une erreur JSON
       return json({ 
         success: false, 
-            error: `Server error (${error.status}). Please try again.`,
+        error: `Erreur serveur (${error.status}). Veuillez réessayer.`,
         requiresAuth: error.status === 401 || error.status === 302,
       });
     }
@@ -479,109 +580,98 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     // Pour les autres erreurs
     return json({ 
       success: false, 
-            error: error instanceof Error ? error.message : "An error occurred. Please try again.",
+      error: error instanceof Error ? error.message : "Une erreur est survenue. Veuillez réessayer.",
       requiresAuth: false,
     });
   }
 };
 
 export default function Credits() {
+  console.log("[Credits] Component rendering");
+  
   const loaderData = useLoaderData<typeof loader>();
   const shop = (loaderData as any)?.shop || null;
   const error = (loaderData as any)?.error || null;
   const purchaseSuccess = (loaderData as any)?.purchaseSuccess || false;
-  const planActivated = (loaderData as any)?.planActivated || null;
-  const monthlyQuota = (loaderData as any)?.monthlyQuota || null;
+  const creditsAdded = (loaderData as any)?.creditsAdded || 0;
+  console.log("[Credits] Loader data:", { hasShop: !!shop, hasError: !!error, credits: shop?.credits, purchaseSuccess, creditsAdded });
   
   const fetcher = useFetcher<typeof action>();
   const revalidator = useRevalidator();
   const currentCredits = shop?.credits || 0;
-  
-  // Debug log to verify credits value
-  if (process.env.NODE_ENV !== "production") {
-    console.log(`[Credits Page] Credits display: shop?.credits=${shop?.credits}, currentCredits=${currentCredits}, shop object:`, {
-      credits: shop?.credits,
-      monthly_quota: shop?.monthly_quota,
-      monthly_quota_used: shop?.monthly_quota_used
-    });
-  }
+  const [customAmount, setCustomAmount] = useState("500");
   const [submittingPackId, setSubmittingPackId] = useState<string | null>(null);
-  const [showSuccessBanner, setShowSuccessBanner] = useState(true);
-  const [showErrorBanner, setShowErrorBanner] = useState(true);
   
+  // Utiliser useRef pour stocker une référence stable à revalidator
+  const revalidatorRef = useRef(revalidator);
+  revalidatorRef.current = revalidator;
+
   const isSubmitting = fetcher.state === "submitting";
+  console.log("[Credits] Component state initialized", { 
+    isSubmitting, 
+    fetcherState: fetcher.state,
+    fetcherData: fetcher.data,
+    submittingPackId 
+  });
 
-  // Determine which plan is currently active based on monthly_quota
-  const currentMonthlyQuota = shop?.monthly_quota || 0;
-  const getActivePlanId = () => {
-    if (!currentMonthlyQuota) return "free"; // Default to free if no quota
-    // Find the plan that matches the current monthly quota
-    const matchingPlan = PRICING_PLANS.find(plan => (plan as any).monthlyQuota === currentMonthlyQuota);
-    if (matchingPlan) return matchingPlan.id;
-    // Default to free
-    return "free";
-  };
-  const activePlanId = getActivePlanId();
-
-  // Flag to prevent multiple revalidations
-  const hasRevalidatedRef = useRef(false);
-
-  // Recharger les données après activation d'un plan (une seule fois)
+  // Rediriger vers le checkout Shopify après création de la commande
   useEffect(() => {
-    // Revalidate when purchase succeeds from Shopify redirect OR from action
-    if ((purchaseSuccess || fetcher.data?.success) && !hasRevalidatedRef.current) {
-      hasRevalidatedRef.current = true;
-      // Preserve scroll position
-      const scrollY = window.scrollY;
-      // Recharger les données après activation réussie
-      setTimeout(() => {
-        revalidator.revalidate();
-        // Restore scroll position after a short delay
-        setTimeout(() => {
-          window.scrollTo(0, scrollY);
-        }, 100);
-      }, 300);
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:559',message:'useEffect entry',data:{hasFetcherData:!!fetcher.data,success:fetcher.data?.success,redirect:(fetcher.data as any)?.redirect,hasCheckoutUrl:!!(fetcher.data as any)?.checkoutUrl,requiresAuth:(fetcher.data as any)?.requiresAuth,hasReauthUrl:!!(fetcher.data as any)?.reauthUrl},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'F'})}).catch(()=>{});
+    // #endregion
+    
+    let timeoutId: NodeJS.Timeout | null = null;
+    let isMounted = true;
+    
+    // Gérer la ré-authentification automatique
+    if ((fetcher.data as any)?.requiresAuth && (fetcher.data as any)?.reauthUrl) {
+      console.log("[Credits] Redirecting to reauth URL:", (fetcher.data as any).reauthUrl);
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:567',message:'Redirecting to reauth URL',data:{reauthUrl:(fetcher.data as any).reauthUrl},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'F'})}).catch(()=>{});
+      // #endregion
+      // Rediriger automatiquement vers la ré-authentification
+      if (isMounted) {
+        window.location.href = (fetcher.data as any).reauthUrl;
+      }
+      return;
     }
-    // Reset flag when fetcher changes
-    if (fetcher.state === "idle" && !fetcher.data?.success && !purchaseSuccess) {
-      hasRevalidatedRef.current = false;
+    
+    if (fetcher.data?.success && (fetcher.data as any)?.redirect && (fetcher.data as any)?.checkoutUrl) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:577',message:'Before window.location.href redirect to checkout',data:{checkoutUrl:(fetcher.data as any).checkoutUrl},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'B'})}).catch(()=>{});
+      // #endregion
+      // Rediriger vers le checkout Shopify
+      if (isMounted) {
+        window.location.href = (fetcher.data as any).checkoutUrl;
+      }
+    } else if (fetcher.data?.success && !(fetcher.data as any)?.redirect) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:585',message:'Before setTimeout for revalidate',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
+      // Si pas de redirection, recharger les données (ancien comportement)
+      timeoutId = setTimeout(() => {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:590',message:'setTimeout callback executing',data:{isMounted},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'C'})}).catch(()=>{});
+        // #endregion
+        if (isMounted) {
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:593',message:'Calling revalidator.revalidate via ref',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'C'})}).catch(()=>{});
+          // #endregion
+          revalidatorRef.current.revalidate();
+        }
+      }, 500);
     }
-  }, [fetcher.data?.success, fetcher.state, revalidator, purchaseSuccess]);
-
-  // Auto-dismiss success banner after 5 seconds (only trigger once)
-  const successBannerShownRef = useRef(false);
-  useEffect(() => {
-    const shouldShow = (purchaseSuccess || fetcher.data?.success) && (planActivated || (fetcher.data as any)?.planActivated);
-    if (shouldShow && !successBannerShownRef.current) {
-      setShowSuccessBanner(true);
-      successBannerShownRef.current = true;
-      const timer = setTimeout(() => {
-        setShowSuccessBanner(false);
-      }, 5000);
-      return () => clearTimeout(timer);
-    }
-    // Reset when conditions change
-    if (!shouldShow) {
-      successBannerShownRef.current = false;
-    }
-  }, [purchaseSuccess, fetcher.data?.success, planActivated]);
-
-  // Auto-dismiss error banner after 8 seconds (only trigger once per error)
-  const errorBannerShownRef = useRef<string | null>(null);
-  useEffect(() => {
-    const error = (fetcher.data as any)?.error;
-    if (error && errorBannerShownRef.current !== error) {
-      setShowErrorBanner(true);
-      errorBannerShownRef.current = error;
-      const timer = setTimeout(() => {
-        setShowErrorBanner(false);
-      }, 8000);
-      return () => clearTimeout(timer);
-    }
-    if (!error) {
-      errorBannerShownRef.current = null;
-    }
-  }, [(fetcher.data as any)?.error]);
+    
+    return () => {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:601',message:'useEffect cleanup - component unmounting',data:{hasTimeout:!!timeoutId},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'F'})}).catch(()=>{});
+      // #endregion
+      isMounted = false;
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [fetcher.data]); // Retirer revalidator des dépendances pour éviter les re-renders infinis
 
   // Reset submittingPackId when fetcher completes
   useEffect(() => {
@@ -590,25 +680,12 @@ export default function Credits() {
     }
   }, [fetcher.state, submittingPackId]);
 
-  // Handle redirect to Shopify payment page
-  useEffect(() => {
-    const confirmationUrl = (fetcher.data as any)?.confirmationUrl;
-    const shouldRedirect = (fetcher.data as any)?.redirect === true;
-    
-    if (confirmationUrl && shouldRedirect && fetcher.state === "idle") {
-      // Redirect to Shopify payment confirmation page
-      console.log("[Credits] Redirecting to Shopify payment page:", confirmationUrl);
-      // Use window.location.href for full page redirect (necessary for Shopify payment flow)
-      window.location.href = confirmationUrl;
-    } else if (shouldRedirect && !confirmationUrl && fetcher.state === "idle") {
-      // Log if we expected a redirect but didn't get a confirmation URL
-      console.error("[Credits] Expected redirect but no confirmationUrl received:", fetcher.data);
-    }
-  }, [fetcher.data, fetcher.state]);
-
   const handlePurchase = (packId: string) => {
+    console.log("[Credits] handlePurchase called", { packId, isSubmitting, submittingPackId, fetcherState: fetcher.state });
+    
     if (isSubmitting || submittingPackId !== null) {
-      return; // Purchase already in progress
+      console.warn("[Credits] Purchase already in progress, ignoring click");
+      return;
     }
     
     setSubmittingPackId(packId);
@@ -617,9 +694,23 @@ export default function Credits() {
     formData.append("intent", "purchase-credits");
     formData.append("packId", packId);
     
+    console.log("[Credits] Submitting purchase request", { packId });
     fetcher.submit(formData, { method: "post" });
   };
 
+  const handleCustomPurchase = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const credits = parseInt(formData.get("customCredits") as string);
+    
+    if (!credits || credits < 250) {
+      alert("Minimum 250 credits required for custom pack.");
+      return;
+    }
+    
+    formData.append("intent", "custom-pack");
+    fetcher.submit(formData, { method: "post" });
+  };
 
   return (
     <Page>
@@ -633,23 +724,30 @@ export default function Credits() {
           </div>
         )}
 
-        {(purchaseSuccess || fetcher.data?.success) && (planActivated || (fetcher.data as any)?.planActivated) && showSuccessBanner && (
+        {(purchaseSuccess || (fetcher.data?.success && !(fetcher.data as any)?.redirect)) && (
           <div style={{ marginBottom: "var(--spacing-lg)" }}>
-            <Banner tone="success" title="Subscription Activated!" onDismiss={() => setShowSuccessBanner(false)}>
-              {(fetcher.data as any)?.message || `Your subscription has been activated successfully! Monthly quota: ${(fetcher.data as any)?.monthlyQuota || monthlyQuota || shop?.monthly_quota || 0} try-ons/month.`}
+            <Banner tone="success" title="Succès !" onDismiss={() => {}}>
+              {creditsAdded || (fetcher.data as any)?.creditsAdded || (fetcher.data as any)?.credits || 0} crédits ajoutés à votre compte.
             </Banner>
           </div>
         )}
 
+        {fetcher.data?.success && (fetcher.data as any)?.redirect && (
+          <div style={{ marginBottom: "var(--spacing-lg)" }}>
+            <Banner tone="info" title="Redirection vers le paiement..." onDismiss={() => {}}>
+              Redirection vers le checkout Shopify...
+            </Banner>
+          </div>
+        )}
 
-        {(fetcher.data as any)?.error && showErrorBanner && (
+        {(fetcher.data as any)?.error && (
           <div style={{ marginBottom: "var(--spacing-lg)" }}>
             <Banner 
               tone="critical" 
-              title={(fetcher.data as any)?.requiresAuth ? "Authentication Required" : "Error"}
-              onDismiss={() => setShowErrorBanner(false)}
+              title={(fetcher.data as any)?.requiresAuth ? "Authentification requise" : "Erreur"}
+              onDismiss={() => {}}
               action={(fetcher.data as any)?.requiresAuth ? {
-                content: (fetcher.data as any)?.reauthUrl ? "Re-authenticate" : "Refresh page",
+                content: (fetcher.data as any)?.reauthUrl ? "Ré-authentifier" : "Rafraîchir la page",
                 onAction: () => {
                   if ((fetcher.data as any)?.reauthUrl) {
                     window.location.href = (fetcher.data as any).reauthUrl;
@@ -671,85 +769,35 @@ export default function Credits() {
           </p>
         </header>
 
-        {/* Subscription Logic Explanation */}
-        <div style={{ 
-          marginBottom: "var(--spacing-lg)", 
-          padding: "var(--spacing-lg)", 
-          background: "#f9fafb", 
-          borderRadius: "8px",
-          border: "1px solid #e5e7eb"
-        }}>
-          <h3 style={{ marginTop: 0, marginBottom: "var(--spacing-md)", fontSize: "16px", fontWeight: 600 }}>
-            How Subscription Works
-          </h3>
-          <div style={{ fontSize: "14px", color: "#4b5563", lineHeight: "1.6" }}>
-            <p style={{ marginBottom: "var(--spacing-sm)" }}>
-              <strong>First Purchase:</strong> When you purchase a plan, the credits are <strong>added to your existing credits</strong>. 
-              For example, if you have 2 credits and buy the Starter plan (50 credits), you'll have 52 credits total.
-            </p>
-            <p style={{ marginBottom: "var(--spacing-sm)" }}>
-              <strong>Monthly Renewal:</strong> At the beginning of each new month, your credits are automatically reset to the amount 
-              included in your active plan. If you have the Starter plan (50 credits/month), you'll receive 50 credits each month.
-            </p>
-            <p style={{ margin: 0 }}>
-              <strong>Note:</strong> Credits accumulate when you purchase a new plan, but renew monthly based on your active subscription plan.
-            </p>
-          </div>
-        </div>
-
         <div className="credits-balance">
           <div>
-            <div className="credits-amount">
-              {currentCredits}
-            </div>
-            <div className="credits-label">
-              Available Credits
-            </div>
-            <div style={{ marginTop: "8px", fontSize: "14px", color: "#6B7280" }}>
-              Plan: {PRICING_PLANS.find(p => p.id === activePlanId)?.name || "Free"}
-              {currentMonthlyQuota > 0 && (
-                <span> • {currentMonthlyQuota} credits/month</span>
-              )}
-            </div>
+            <div className="credits-amount">{currentCredits.toLocaleString("en-US")}</div>
+            <div className="credits-label">Credits available</div>
           </div>
         </div>
 
         <div className="pricing-grid">
-          {PRICING_PLANS.map((plan) => (
-            <div key={plan.id} className={`plan-card ${plan.highlight ? 'featured' : ''} ${plan.popular ? 'popular' : ''}`}>
-              {plan.badge && (
-                <div className="plan-badge">{plan.badge}</div>
+          {CREDIT_PACKS.map((pack) => (
+            <div key={pack.id} className={`plan-card ${pack.highlight ? 'featured' : ''}`}>
+              {pack.highlight && (
+                <div className="plan-badge">Most popular</div>
               )}
-              <div className="plan-name">{plan.name}</div>
+              <div className="plan-name">{pack.name}</div>
               <div className="plan-price">
-                {plan.price === 0 ? (
-                  <span>Free</span>
-                ) : (
-                  <>${plan.price.toFixed(2)} <span>/ month</span></>
-                )}
-              </div>
-              <div className="plan-credits">
-                <div className="plan-credits-amount">{(plan as any).monthlyQuota || plan.credits}</div>
-                <div className="plan-credits-label">try-ons/month</div>
+                €{pack.price.toFixed(2)} <span>/ one-time</span>
               </div>
               <div className="plan-features">
-                <div className="plan-feature">✓ {plan.description}</div>
-                <div className="plan-feature">✓ Monthly quota with automatic reset</div>
-                {(plan as any).hasWatermark && (
-                  <div className="plan-feature">✓ With watermark</div>
-                )}
-                {!(plan as any).hasWatermark && (
-                  <div className="plan-feature">✓ No watermark</div>
-                )}
-                <div className="plan-feature">✓ Hard cap to prevent overages</div>
+                <div className="plan-feature">{pack.credits} credits</div>
+                <div className="plan-feature">No expiration</div>
+                <div className="plan-feature">{pack.description}</div>
               </div>
               <div className="plan-cta">
                 <button 
                   className="plan-button"
-                  onClick={() => handlePurchase(plan.id)}
-                  disabled={isSubmitting || submittingPackId !== null || activePlanId === plan.id}
+                  onClick={() => handlePurchase(pack.id)}
+                  disabled={isSubmitting || submittingPackId !== null}
                 >
-                  {activePlanId === plan.id ? "Active" : (isSubmitting && submittingPackId === plan.id ? "Processing..." : "Purchase")}
+                  {isSubmitting && submittingPackId === pack.id ? "Processing..." : "Buy credits"}
                 </button>
               </div>
             </div>

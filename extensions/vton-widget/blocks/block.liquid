@@ -53,10 +53,6 @@
         // Extract product handle from URL (fallback for matching)
         const productHandle = extractProductHandle();
         
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'block.liquid:54',message:'Extracted product handle',data:{productId:productId,productHandle:productHandle,url:window.location.href,pathname:window.location.pathname},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-        // #endregion
-        
         console.log('[VTON] Initializing widget for product:', {
           shop: shop,
           productId: productId,
@@ -224,26 +220,16 @@
       }
       
       function extractProductHandle() {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'block.liquid:extractProductHandle:entry',message:'Extracting product handle',data:{pathname:window.location.pathname,hasShopify:!!window.Shopify,hasProduct:!!(window.Shopify&&window.Shopify.product)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-        // #endregion
-        
         // Try from URL (most reliable) - extract handle from /products/handle
         const urlMatch = window.location.pathname.match(/\/products\/([^\/\?]+)/);
         if (urlMatch) {
           const handle = urlMatch[1];
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'block.liquid:extractProductHandle:url',message:'Found handle from URL',data:{handle:handle,match:urlMatch[1]},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-          // #endregion
           console.log('[VTON] Extracted handle from URL:', handle);
           return handle;
         }
         // Try from Shopify object
         if (window.Shopify && window.Shopify.product) {
           if (window.Shopify.product.handle) {
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'block.liquid:extractProductHandle:shopify',message:'Found handle from Shopify object',data:{handle:window.Shopify.product.handle},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-            // #endregion
             console.log('[VTON] Extracted handle from window.Shopify.product.handle:', window.Shopify.product.handle);
             return window.Shopify.product.handle;
           }
@@ -264,29 +250,15 @@
             return handle;
           }
         }
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'block.liquid:extractProductHandle:null',message:'Could not extract handle',data:{pathname:window.location.pathname},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-        // #endregion
         console.warn('[VTON] Could not extract product handle');
         return null;
       }
       
       function checkStatus(shop, productId, productHandle) {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'block.liquid:checkStatus:entry',message:'Checking status with params',data:{shop:shop,productId:productId,productHandle:productHandle,hasHandle:!!productHandle},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-        // #endregion
-        
         // Construct absolute URL for app proxy
         let url = window.location.origin + '/apps/tryon/status?shop=' + encodeURIComponent(shop) + '&product_id=' + encodeURIComponent(productId);
         if (productHandle) {
           url += '&product_handle=' + encodeURIComponent(productHandle);
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'block.liquid:checkStatus:url',message:'URL with handle',data:{url:url,handle:productHandle},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-          // #endregion
-        } else {
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'block.liquid:checkStatus:noHandle',message:'URL without handle',data:{url:url},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-          // #endregion
         }
         
         return fetch(url, {
@@ -1482,16 +1454,10 @@
           signal: controller.signal
         }).then(function(response) {
           clearTimeout(timeoutId);
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'block.liquid:generateTryOn:response',message:'Received response',data:{status:response.status,statusText:response.statusText,ok:response.ok},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-          // #endregion
           
           console.log('[VTON] Response status:', response.status, response.statusText);
           if (!response.ok) {
             return response.text().then(function(text) {
-              // #region agent log
-              fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'block.liquid:generateTryOn:error',message:'Error response',data:{status:response.status,text:text},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-              // #endregion
               console.error('[VTON] Error response:', text);
               throw new Error('Generation failed: ' + response.status + ' - ' + text);
             });
