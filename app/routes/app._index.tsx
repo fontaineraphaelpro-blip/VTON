@@ -50,880 +50,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   return null;
 };
 
-export const action = async ({ request }: ActionFunctionArgs) => {
-  const { session, admin } = await authenticate.admin(request);
-  const shop = session.shop;
-  const formData = await request.formData();
-
-  const intent = formData.get("intent") as string;
-
-  // Action pour nettoyer les anciens script tags
-  if (intent === "cleanup-script-tags") {
-    try {
-      const scriptTagsQuery = `#graphql
-        query {
-          scriptTags(first: 50) {
-            edges {
-              node {
-                id
-                src
-              }
-            }
-          }
-        }
-      `;
-      
-      const scriptTagsResponse = await admin.graphql(scriptTagsQuery);
-      
-      if (scriptTagsResponse.ok) {
-        const scriptTagsData = await scriptTagsResponse.json() as any;
-        const existingScripts = scriptTagsData.data?.scriptTags?.edges || [];
-        
-        // Trouver tous les anciens script tags liés au widget
-        const oldScriptTags = existingScripts.filter((edge: any) => {
-          const src = edge.node.src || '';
-          return src.includes('widget') || 
-                 src.includes('tryon') || 
-                 src.includes('try-on') ||
-                 src.includes('vton') ||
-                 (src.includes('/apps/') && src.includes('widget'));
-        });
-        
-        let deletedCount = 0;
-        
-        // Supprimer chaque ancien script tag
-        for (const oldScript of oldScriptTags) {
-          try {
-            const deleteScriptTagMutation = `#graphql
-              mutation scriptTagDelete($id: ID!) {
-                scriptTagDelete(id: $id) {
-                  deletedScriptTagId
-                  userErrors {
-                    field
-                    message
-                  }
-                }
-              }
-            `;
-            
-            const deleteResult = await admin.graphql(deleteScriptTagMutation, {
-              variables: {
-                id: oldScript.node.id
-              }
-            });
-            
-            if (deleteResult.ok) {
-              const deleteData = await deleteResult.json().catch(() => null);
-              if (deleteData?.data?.scriptTagDelete?.deletedScriptTagId) {
-                deletedCount++;
-              }
-            }
-          } catch (deleteError) {
-            // Error deleting script tag - non-critical, continue
-          }
-        }
-        
-        return json({ 
-          success: true, 
-          deletedCount,
-          message: `Deleted ${deletedCount} old script tag(s)` 
-        });
-      }
-      
-      return json({ success: false, error: "Unable to retrieve script tags" });
-    } catch (error) {
-      // Log error only in development
-      if (process.env.NODE_ENV !== "production") {
-        console.error("Error cleaning up script tags:", error);
-      }
-      return json({ 
-        success: false, 
-        error: error instanceof Error ? error.message : "Unknown error" 
-      });
-    }
-  }
-
-  // Action normale pour sauvegarder la configuration
-  const widgetText = (formData.get("widgetText") as string) || "Try It On Now";
-  const widgetBg = (formData.get("widgetBg") as string) || "#000000";
-  const widgetColor = (formData.get("widgetColor") as string) || "#ffffff";
-  const maxTriesPerUserStr = formData.get("maxTriesPerUser") as string;
-  const maxTriesPerUser = maxTriesPerUserStr ? parseInt(maxTriesPerUserStr) : 5;
-  const isEnabled = formData.get("isEnabled") === "true";
-  const dailyLimitStr = formData.get("dailyLimit") as string;
-  const dailyLimit = dailyLimitStr ? parseInt(dailyLimitStr) : 100;
-  // ADDED: Monthly quota and quality mode
-  const monthlyQuotaStr = formData.get("monthlyQuota") as string;
-  const monthlyQuota = monthlyQuotaStr && monthlyQuotaStr.trim() !== "" ? parseInt(monthlyQuotaStr) : null;
-  const qualityMode = (formData.get("qualityMode") as string) || "balanced";
-
-    // Configuration saved (logged in database)
-
-  try {
-    await upsertShop(shop, {
-      widgetText,
-      widgetBg,
-      widgetColor,
-      maxTriesPerUser,
-      isEnabled,
-      dailyLimit,
-      monthlyQuota, // ADDED
-      qualityMode, // ADDED
-    });
-
-    return json({ success: true });
-  } catch (error) {
-    // Log error only in development
-    if (process.env.NODE_ENV !== "production") {
-      console.error("[Dashboard Action] Error saving configuration:", error);
-    }
-    return json({ 
-      success: false, 
-      error: error instanceof Error ? error.message : "Error saving configuration" 
-    });
-  }
-};
-                  id
-                  title
-                  handle
-                  variants(first: 100) {
-                    edges {
-                      node {
-                        id
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        `;
-        
-        console.log(`[Dashboard] Fetching all products from Shopify...`);
-        
-        const response = await admin.graphql(productQuery);
-        
-        console.log(`[Dashboard] GraphQL response status:`, response.ok, response.status);
-        
-        if (response.ok) {
-          const data = await response.json() as any;
-          
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:120',message:'GraphQL products query response received',data:{hasErrors:!!data.errors,errors:data.errors,hasData:!!data.data,hasProducts:!!data.data?.products,productsCount:data.data?.products?.edges?.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run3',hypothesisId:'E'})}).catch(()=>{});
-          // #endregion
-          
-          // Check for GraphQL errors first
-          if (data.errors) {
-            console.error(`[Dashboard] GraphQL errors:`, JSON.stringify(data.errors, null, 2));
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:125',message:'GraphQL errors detected',data:{errors:data.errors},timestamp:Date.now(),sessionId:'debug-session',runId:'run3',hypothesisId:'D'})}).catch(()=>{});
-            // #endregion
-          }
-          
-          if (data.data?.products?.edges) {
-            console.log(`[Dashboard] Received ${data.data.products.edges.length} products from GraphQL`);
-            
-            // Create a map of all products by ID (both GID and numeric) and variants
-            data.data.products.edges.forEach((edge: any) => {
-              const product = edge.node;
-              if (product && product.id && product.title) {
-                // Store both GID and numeric ID as keys
-                productNamesMap[product.id] = product.title;
-                const numericId = product.id.replace('gid://shopify/Product/', '');
-                productNamesMap[numericId] = product.title;
-                
-                // Also store by handle if available
-                if (product.handle) {
-                  productNamesMap[product.handle] = product.title;
-                }
-                
-                // Store variant IDs -> product title mapping (for matching variant IDs in logs)
-                if (product.variants?.edges) {
-                  product.variants.edges.forEach((variantEdge: any) => {
-                    const variant = variantEdge.node;
-                    if (variant && variant.id) {
-                      // Store variant GID -> product title
-                      productNamesMap[variant.id] = product.title;
-                      // Extract numeric ID from variant GID (format: gid://shopify/ProductVariant/123456)
-                      const variantGidMatch = variant.id.match(/^gid:\/\/shopify\/ProductVariant\/(\d+)$/);
-                      if (variantGidMatch) {
-                        const variantNumericId = variantGidMatch[1];
-                        productNamesMap[variantNumericId] = product.title;
-                        console.log(`[Dashboard] ✓ Stored variant mapping: ${variant.id} (numeric: ${variantNumericId}) -> ${product.title}`);
-                      }
-                    }
-                  });
-                }
-                
-                console.log(`[Dashboard] ✓ Stored product: ${product.id} (numeric: ${numericId}, handle: ${product.handle || 'N/A'}) -> ${product.title}`);
-                // #region agent log
-                fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:160',message:'Stored product in map',data:{gid:product.id,numericId,handle:product.handle,title:product.title,variantsCount:product.variants?.edges?.length||0},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'F'})}).catch(()=>{});
-                // #endregion
-              }
-            });
-            
-            // Now match the requested IDs
-            productIdsArray.forEach((requestedId) => {
-              const requestedGid = `gid://shopify/Product/${requestedId}`;
-              let title = productNamesMap[requestedGid] || productNamesMap[requestedId];
-              
-              // #region agent log
-              fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:175',message:'Trying to match requested ID',data:{requestedId,requestedGid,foundInMap:!!title,availableKeys:Object.keys(productNamesMap).slice(0,15)},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'F'})}).catch(()=>{});
-              // #endregion
-              
-              if (!title) {
-                console.warn(`[Dashboard] ✗ Product not found in products list: ${requestedId} (GID: ${requestedGid})`);
-                // #region agent log
-                fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:181',message:'Product not found in products list',data:{requestedId,requestedGid,availableIds:Object.keys(productNamesMap).slice(0,15),allAvailableKeys:Object.keys(productNamesMap)},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'F'})}).catch(()=>{});
-                // #endregion
-                
-                // Fallback 1: try to find product_title in logs with same ID
-                const logWithTitle = recentLogs.find((log: any) => {
-                  if (!log.product_id) return false;
-                  const logGidMatch = log.product_id.match(/^gid:\/\/shopify\/Product\/(\d+)$/);
-                  const logNumericId = logGidMatch ? logGidMatch[1] : log.product_id;
-                  return log.product_id === requestedGid || logNumericId === requestedId;
-                });
-                
-                // Fallback 2: if no title found, try to find logs with handles that match products
-                // Count how many logs have each handle/product_title
-                if (!logWithTitle?.product_title) {
-                  const handleCounts: Record<string, number> = {};
-                  recentLogs.forEach((log: any) => {
-                    // If log has a handle (not GID, not numeric)
-                    if (log.product_id && !log.product_id.startsWith('gid://') && !/^\d+$/.test(log.product_id)) {
-                      const handle = log.product_id;
-                      if (productNamesMap[handle]) {
-                        handleCounts[handle] = (handleCounts[handle] || 0) + 1;
-                      }
-                    }
-                  });
-                  
-                  // Find the most frequent handle that matches a product
-                  const mostFrequentHandle = Object.keys(handleCounts).sort((a, b) => handleCounts[b] - handleCounts[a])[0];
-                  if (mostFrequentHandle && productNamesMap[mostFrequentHandle]) {
-                    title = productNamesMap[mostFrequentHandle];
-                    console.log(`[Dashboard] Using most frequent handle as fallback: ${requestedId} -> ${title} (handle: ${mostFrequentHandle}, count: ${handleCounts[mostFrequentHandle]})`);
-                    // #region agent log
-                    fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:200',message:'Using most frequent handle as fallback',data:{requestedId,title,handle:mostFrequentHandle,count:handleCounts[mostFrequentHandle]},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'F'})}).catch(()=>{});
-                    // #endregion
-                  }
-                }
-                
-                // Fallback 3: use product_title from log if found
-                if (!title && logWithTitle?.product_title) {
-                  title = logWithTitle.product_title;
-                  console.log(`[Dashboard] Using product_title from log as fallback: ${requestedId} -> ${title}`);
-                  // #region agent log
-                  fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:210',message:'Successfully used product_title from log',data:{requestedId,title},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'F'})}).catch(()=>{});
-                  // #endregion
-                }
-                
-                // Store the title in map for future use
-                if (title) {
-                  productNamesMap[requestedGid] = title;
-                  productNamesMap[requestedId] = title;
-                }
-              }
-              
-              if (title) {
-                console.log(`[Dashboard] ✓ Matched product: ${requestedId} -> ${title}`);
-              }
-            });
-          } else {
-            console.warn(`[Dashboard] No products in GraphQL response, data structure:`, {
-              hasData: !!data.data,
-              hasProducts: !!data.data?.products,
-              dataKeys: data.data ? Object.keys(data.data) : [],
-              fullData: JSON.stringify(data, null, 2).substring(0, 1000)
-            });
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:170',message:'No products in GraphQL response',data:{hasData:!!data.data,hasProducts:!!data.data?.products,dataKeys:data.data?Object.keys(data.data):[],fullData:JSON.stringify(data,null,2).substring(0,1000)},timestamp:Date.now(),sessionId:'debug-session',runId:'run3',hypothesisId:'E'})}).catch(()=>{});
-            // #endregion
-          }
-        } else {
-          const errorText = await response.text().catch(() => "Unknown error");
-          console.error(`[Dashboard] Failed to fetch products:`, response.status, errorText);
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:175',message:'GraphQL request failed',data:{status:response.status,errorText:errorText.substring(0,500)},timestamp:Date.now(),sessionId:'debug-session',runId:'run3',hypothesisId:'D'})}).catch(()=>{});
-          // #endregion
-        }
-        
-        console.log(`[Dashboard] Product names map:`, productNamesMap);
-      } catch (error) {
-        console.error("Error fetching product names:", error);
-      }
-    } else {
-      console.log(`[Dashboard] No products to fetch (all have product_title or no product_id)`);
-    }
-    
-    // Enrich topProducts with product titles (use fetched names, fallback to existing product_title from logs)
-    const enrichedTopProducts = topProducts.map((product: any) => {
-      if (product.product_id) {
-        const gidMatch = product.product_id.match(/^gid:\/\/shopify\/Product\/(\d+)$/);
-        const numericId = gidMatch ? gidMatch[1] : product.product_id;
-        // Try to get title from fetched map first
-        let title = productNamesMap[product.product_id] || productNamesMap[numericId];
-        
-        // If not found, try to find a log with the same product_id and extract handle from URL or use product_title
-        if (!title) {
-          // Find logs with this product_id
-          const logsWithSameId = recentLogs.filter((log: any) => {
-            if (!log.product_id) return false;
-            const logGidMatch = log.product_id.match(/^gid:\/\/shopify\/Product\/(\d+)$/);
-            const logNumericId = logGidMatch ? logGidMatch[1] : log.product_id;
-            return log.product_id === product.product_id || logNumericId === numericId;
-          });
-          
-          // Try to find handle from logs (extract from URL if available)
-          for (const log of logsWithSameId) {
-            // Try to extract handle from product_id if it's a handle
-            if (!log.product_id.startsWith('gid://') && !/^\d+$/.test(log.product_id)) {
-              const handle = log.product_id;
-              if (productNamesMap[handle]) {
-                title = productNamesMap[handle];
-                console.log(`[Dashboard] Matched by handle from log: ${product.product_id} -> ${title}`);
-                break;
-              }
-            }
-            
-            // Use product_title from log if available
-            if (log.product_title) {
-              title = log.product_title;
-              console.log(`[Dashboard] Using product_title from log for topProduct: ${product.product_id} -> ${title}`);
-              break;
-            }
-          }
-        }
-        
-        // If still not found and product_id is a handle, try handles map
-        if (!title && productHandlesMap[product.product_id]) {
-          title = productHandlesMap[product.product_id];
-          console.log(`[Dashboard] Using product_title from handles map for topProduct: ${product.product_id} -> ${title}`);
-        }
-        
-        // If still not found, try to match by checking all products for similar IDs (maybe variant IDs)
-        if (!title) {
-          // The IDs in logs might be variant IDs, not product IDs
-          // Try to find products that might be related by checking if any product has a similar ID pattern
-          // For now, we'll use the first product_title from logs as a last resort
-          const firstLogWithTitle = recentLogs.find((log: any) => {
-            const logGidMatch = log.product_id.match(/^gid:\/\/shopify\/Product\/(\d+)$/);
-            const logNumericId = logGidMatch ? logGidMatch[1] : log.product_id;
-            // Check if this log's ID is close to the requested ID (might be same product, different variant)
-            return logNumericId === numericId || (log.product_title && logNumericId !== numericId);
-          });
-          if (firstLogWithTitle?.product_title) {
-            title = firstLogWithTitle.product_title;
-            console.log(`[Dashboard] Using product_title from similar log: ${product.product_id} -> ${title}`);
-          }
-        }
-        
-        // Always set product_title - use title if found, otherwise use numeric ID (more readable than full GID)
-        if (title) {
-          console.log(`[Dashboard] Enriched topProduct: ${product.product_id} -> ${title}`);
-          return { ...product, product_title: title };
-        } else {
-          // Use numeric ID as fallback (better than full GID)
-          console.log(`[Dashboard] No title found for topProduct, using numeric ID: ${product.product_id} -> Product #${numericId}`);
-          return { ...product, product_title: `Product #${numericId}` };
-        }
-      }
-      return product;
-    });
-    
-    // Enrich recentLogs with product titles (use handles for matching - more reliable)
-    const enrichedRecentLogs = recentLogs.map((log: any) => {
-      if (log.product_id || log.product_handle) {
-        let title: string | undefined;
-        
-        // Priority 1: Use product_handle to match with products (most reliable)
-        if (log.product_handle && productNamesMap[log.product_handle]) {
-          title = productNamesMap[log.product_handle];
-          console.log(`[Dashboard] Matched by handle: ${log.product_handle} -> ${title}`);
-        }
-        // Priority 2: Try product_id (GID or numeric) in fetched map
-        else if (log.product_id) {
-          const gidMatch = log.product_id.match(/^gid:\/\/shopify\/Product\/(\d+)$/);
-          const numericId = gidMatch ? gidMatch[1] : log.product_id;
-          title = productNamesMap[log.product_id] || productNamesMap[numericId];
-        }
-        
-        // Priority 3: Use product_handle from handles map (from other logs)
-        if (!title && log.product_handle && productHandlesMap[log.product_handle]) {
-          title = productHandlesMap[log.product_handle];
-          console.log(`[Dashboard] Using product_title from handles map: ${log.product_handle} -> ${title}`);
-        }
-        
-        // Priority 4: Use existing product_title from log
-        if (!title && log.product_title) {
-          title = log.product_title;
-          console.log(`[Dashboard] Using existing product_title from log: ${log.product_id || log.product_handle} -> ${title}`);
-        }
-        
-        // Always set product_title - use title if found, otherwise use numeric ID or handle
-        if (title) {
-          console.log(`[Dashboard] Enriched log: ${log.product_id || log.product_handle} -> ${title}`);
-          return { ...log, product_title: title };
-        } else {
-          // Use handle if available, otherwise numeric ID
-          const displayId = log.product_handle || (log.product_id ? (log.product_id.match(/^gid:\/\/shopify\/Product\/(\d+)$/)?.[1] || log.product_id) : 'Unknown');
-          console.log(`[Dashboard] No title found for log, using ID: ${log.product_id || log.product_handle} -> Product #${displayId}`);
-          return { ...log, product_title: `Product #${displayId}` };
-        }
-      }
-      return log;
-    });
-    
-    // Calculate total_tryons from logs if not set in shop record
-    let totalTryons = shopData?.total_tryons || 0;
-    if ((totalTryons === 0 || totalTryons === null) && shopData) {
-      try {
-        const tryonsResult = await query(
-          `SELECT COUNT(*) as count FROM tryon_logs WHERE shop = $1 AND success = true`,
-          [shop]
-        );
-        const calculatedTotal = parseInt(tryonsResult.rows[0]?.count || '0', 10);
-        if (calculatedTotal > 0) {
-          totalTryons = calculatedTotal;
-          // Update shop record with calculated value (async, don't block)
-          query(
-            `UPDATE shops SET total_tryons = $1 WHERE domain = $2`,
-            [calculatedTotal, shop]
-          ).catch(() => {
-            // Ignore update errors
-          });
-        }
-      } catch (error) {
-        // If calculation fails, use shop value
-        totalTryons = shopData?.total_tryons || 0;
-      }
-    }
-
-    // If shop doesn't exist yet, create it with free plan (4 credits/month)
-    if (!shopData) {
-      await upsertShop(shop, {
-        credits: 4, // Initialize credits for compatibility with old system
-        monthlyQuota: 4, // Initialize with free plan
-      });
-      // Re-fetch shop data after creation
-      const newShopData = await getShop(shop);
-      return json({
-        shop: newShopData,
-        recentLogs: [],
-        topProducts: [],
-        dailyStats: [],
-        monthlyUsage: 0,
-        totalTryons: 0,
-      });
-    }
-
-    // Installer automatiquement le script tag si pas déjà installé
-    try {
-      // Construire l'URL du script - utiliser l'URL de l'app directement (pas le store)
-      // Ajouter un paramètre de version pour forcer le rechargement après déploiement
-      const url = new URL(request.url);
-      const appUrl = process.env.SHOPIFY_APP_URL || process.env.APPLICATION_URL || url.origin;
-      // Utiliser un timestamp pour forcer la mise à jour à chaque déploiement
-      const widgetVersion = process.env.WIDGET_VERSION || `v${Date.now()}`;
-      const scriptTagUrl = `${appUrl}/apps/tryon/widget-v2.js?v=${widgetVersion}`;
-      
-      // Vérifier si le script tag existe déjà
-      const scriptTagsQuery = `#graphql
-        query {
-          scriptTags(first: 50) {
-            edges {
-              node {
-                id
-                src
-              }
-            }
-          }
-        }
-      `;
-      
-      let scriptTagsResponse;
-      try {
-        scriptTagsResponse = await admin.graphql(scriptTagsQuery);
-      } catch (graphqlError: any) {
-        // Check if it's a GraphQL error about access denied
-        if (graphqlError?.message?.includes('Access denied') || graphqlError?.message?.includes('scriptTags')) {
-          // Skip script tag installation - app doesn't have required permissions
-          scriptTagsResponse = null;
-        } else {
-          throw graphqlError; // Re-throw if it's not an access denied error
-        }
-      }
-      
-      if (!scriptTagsResponse) {
-        // Skip script tag installation if response is null (access denied)
-        // Continue without installing script tag
-      } else if (!scriptTagsResponse.ok) {
-        if (scriptTagsResponse.status === 302 || scriptTagsResponse.status === 401) {
-          // Skip script tag installation if auth is required
-        } else {
-          // Error logged silently - script tag installation is non-critical
-          await scriptTagsResponse.text().catch(() => null);
-        }
-        // Continue without installing script tag
-      } else {
-        let scriptTagsData: any;
-        try {
-          scriptTagsData = await scriptTagsResponse.json() as any;
-          // Check for GraphQL errors in the response body
-          if (scriptTagsData?.errors) {
-            const errorMessages = scriptTagsData.errors.map((e: any) => e.message || String(e)).join(", ");
-            if (errorMessages.includes('Access denied') || errorMessages.includes('scriptTags')) {
-              scriptTagsData = null; // Set to null to skip installation
-            } else {
-              // GraphQL error - log only in development
-              if (process.env.NODE_ENV !== "production") {
-                console.error("GraphQL errors in script tags query:", errorMessages);
-              }
-              scriptTagsData = null; // Set to null to skip installation
-            }
-          }
-        } catch (jsonError) {
-          // Log only in development
-          if (process.env.NODE_ENV !== "production") {
-            console.error("Failed to parse script tags response:", jsonError);
-          }
-          // Continue without installing script tag
-          scriptTagsData = null;
-        }
-        
-        if (scriptTagsData && scriptTagsData.data?.scriptTags) {
-          const existingScripts = scriptTagsData.data?.scriptTags?.edges || [];
-          
-          // Supprimer les anciens script tags qui pourraient interférer
-          // Supprimer widget.js (ancien) mais garder widget-v2.js (nouveau)
-          const oldScriptTags = existingScripts.filter((edge: any) => {
-            const src = edge.node.src || '';
-            // Supprimer l'ancien widget.js mais pas widget-v2.js
-            return (src.includes('/apps/tryon/widget.js') && !src.includes('widget-v2')) ||
-                   (src.includes('widget') && !src.includes('widget-v2') && !src.includes('/apps/tryon/')) ||
-                   src.includes('tryon') && !src.includes('widget-v2') ||
-                   src.includes('try-on') ||
-                   (src.includes('vton') && !src.includes('widget-v2'));
-          });
-          
-          // Supprimer les anciens script tags
-          for (const oldScript of oldScriptTags) {
-            try {
-              const deleteScriptTagMutation = `#graphql
-                mutation scriptTagDelete($id: ID!) {
-                  scriptTagDelete(id: $id) {
-                    deletedScriptTagId
-                    userErrors {
-                      field
-                      message
-                    }
-                  }
-                }
-              `;
-              
-              const deleteResult = await admin.graphql(deleteScriptTagMutation, {
-                variables: {
-                  id: oldScript.node.id
-                }
-              });
-              
-              if (deleteResult.ok) {
-                const deleteData = await deleteResult.json().catch(() => null);
-                // Script tag deleted successfully (silent in production)
-              }
-            } catch (deleteError) {
-              // Error deleting old script tag - non-critical, continue silently
-            }
-          }
-          
-          // Construire l'URL attendue avec l'URL de l'app
-          const appUrl = process.env.SHOPIFY_APP_URL || process.env.APPLICATION_URL || new URL(request.url).origin;
-          const widgetVersion = process.env.WIDGET_VERSION || `v${Date.now()}`;
-          const expectedScriptUrl = `${appUrl}/apps/tryon/widget-v2.js?v=${widgetVersion}`;
-          
-          // Vérifier si le nouveau script tag existe déjà (avec la bonne version et la bonne URL)
-          const scriptExists = existingScripts.some((edge: any) => {
-            const src = edge.node.src || '';
-            return src === expectedScriptUrl || (src.includes('/apps/tryon/widget-v2.js') && src.includes(`?v=${widgetVersion}`));
-          });
-          
-          // Supprimer TOUS les anciens script tags du widget (peu importe la version)
-          const allOldWidgetScripts = existingScripts.filter((edge: any) => {
-            const src = edge.node.src || '';
-            // Supprimer tous les script tags qui contiennent widget-v2 ou widget
-            return (src.includes('/apps/tryon/widget') || src.includes('widget-v2')) && src !== expectedScriptUrl;
-          });
-          
-          // Supprimer tous les anciens script tags du widget
-          for (const oldScript of allOldWidgetScripts) {
-            try {
-              const deleteScriptTagMutation = `#graphql
-                mutation scriptTagDelete($id: ID!) {
-                  scriptTagDelete(id: $id) {
-                    deletedScriptTagId
-                    userErrors {
-                      field
-                      message
-                    }
-                  }
-                }
-              `;
-              
-              const deleteResult = await admin.graphql(deleteScriptTagMutation, {
-                variables: {
-                  id: oldScript.node.id
-                }
-              });
-              
-              if (deleteResult.ok) {
-                const deleteData = await deleteResult.json().catch(() => null);
-                // Script tag deleted successfully (silent in production)
-              }
-            } catch (deleteError) {
-              // Error deleting old version script tag - non-critical, continue silently
-            }
-          }
-
-          if (!scriptExists) {
-            // Créer le script tag automatiquement
-            const createScriptTagMutation = `#graphql
-              mutation scriptTagCreate($input: ScriptTagInput!) {
-                scriptTagCreate(input: $input) {
-                  scriptTag {
-                    id
-                    src
-                  }
-                  userErrors {
-                    field
-                    message
-                  }
-                }
-              }
-            `;
-
-            const result = await admin.graphql(createScriptTagMutation, {
-              variables: {
-                input: {
-                  src: scriptTagUrl,
-                  displayScope: "ONLINE_STORE",
-                }
-              }
-            });
-            
-            // Check if response is OK
-            if (!result.ok) {
-              if (result.status === 302 || result.status === 401) {
-                // Authentication required - skip silently
-              } else {
-                // Log only in development
-                if (process.env.NODE_ENV !== "production") {
-                  const errorText = await result.text().catch(() => "Unknown error");
-                  console.error("Error creating script tag:", result.status, errorText);
-                }
-              }
-            } else {
-              let resultData;
-              try {
-                resultData = await result.json();
-              } catch (jsonError) {
-                // Log only in development
-                if (process.env.NODE_ENV !== "production") {
-                  console.error("Failed to parse script tag creation response:", jsonError);
-                }
-              }
-              
-              if (resultData) {
-                // Check for GraphQL errors
-                if ((resultData as any).errors) {
-                  // Log only in development
-                  if (process.env.NODE_ENV !== "production") {
-                    const errorMessages = (resultData as any).errors.map((e: any) => e.message || String(e)).join(", ");
-                    console.error("GraphQL errors creating script tag:", errorMessages);
-                  }
-                }
-                
-                // Check for user errors
-                if (resultData.data?.scriptTagCreate?.userErrors?.length > 0) {
-                  // Log only in development
-                  if (process.env.NODE_ENV !== "production") {
-                    console.error("Script tag user errors:", resultData.data.scriptTagCreate.userErrors);
-                  }
-                }
-                // Success - script tag installed (silent in production)
-              }
-            }
-          }
-        }
-      }
-    } catch (scriptError: any) {
-      // Log only in development - script tag installation is non-critical
-      if (process.env.NODE_ENV !== "production") {
-        if (scriptError instanceof Response) {
-          console.warn(`Script tag installation skipped: ${scriptError.status} ${scriptError.statusText}`);
-        } else {
-          console.error("Error installing script tag:", scriptError);
-        }
-      }
-      // Don't block page load if script tag installation fails
-    }
-
-    return json({
-      shop: shopData || null,
-      recentLogs: Array.isArray(enrichedRecentLogs) ? enrichedRecentLogs.slice(0, 5) : [],
-      topProducts: Array.isArray(enrichedTopProducts) ? enrichedTopProducts : [],
-      dailyStats: Array.isArray(dailyStats) ? dailyStats : [],
-      monthlyUsage: monthlyUsage || 0, // ADDED: Monthly usage count
-      totalTryons: totalTryons || 0, // ADDED: Total try-ons (calculated or from shop)
-    });
-  } catch (error) {
-    // Log error only in development
-    if (process.env.NODE_ENV !== "production") {
-      console.error("Dashboard loader error:", error);
-    }
-    return json({
-      shop: null,
-      recentLogs: [],
-      topProducts: [],
-      error: error instanceof Error ? error.message : "Unknown error",
-    });
-  }
-};
-
-export const action = async ({ request }: ActionFunctionArgs) => {
-  const { session, admin } = await authenticate.admin(request);
-  const shop = session.shop;
-  const formData = await request.formData();
-
-  const intent = formData.get("intent") as string;
-
-  // Action pour nettoyer les anciens script tags
-  if (intent === "cleanup-script-tags") {
-    try {
-      const scriptTagsQuery = `#graphql
-        query {
-          scriptTags(first: 50) {
-            edges {
-              node {
-                id
-                src
-              }
-            }
-          }
-        }
-      `;
-      
-      const scriptTagsResponse = await admin.graphql(scriptTagsQuery);
-      
-      if (scriptTagsResponse.ok) {
-        const scriptTagsData = await scriptTagsResponse.json() as any;
-        const existingScripts = scriptTagsData.data?.scriptTags?.edges || [];
-        
-        // Trouver tous les anciens script tags liés au widget
-        const oldScriptTags = existingScripts.filter((edge: any) => {
-          const src = edge.node.src || '';
-          return src.includes('widget') || 
-                 src.includes('tryon') || 
-                 src.includes('try-on') ||
-                 src.includes('vton') ||
-                 (src.includes('/apps/') && src.includes('widget'));
-        });
-        
-        let deletedCount = 0;
-        
-        // Supprimer chaque ancien script tag
-        for (const oldScript of oldScriptTags) {
-          try {
-            const deleteScriptTagMutation = `#graphql
-              mutation scriptTagDelete($id: ID!) {
-                scriptTagDelete(id: $id) {
-                  deletedScriptTagId
-                  userErrors {
-                    field
-                    message
-                  }
-                }
-              }
-            `;
-            
-            const deleteResult = await admin.graphql(deleteScriptTagMutation, {
-              variables: {
-                id: oldScript.node.id
-              }
-            });
-            
-            if (deleteResult.ok) {
-              const deleteData = await deleteResult.json().catch(() => null);
-              if (deleteData?.data?.scriptTagDelete?.deletedScriptTagId) {
-                deletedCount++;
-              }
-            }
-          } catch (deleteError) {
-            // Error deleting script tag - non-critical, continue
-          }
-        }
-        
-        return json({ 
-          success: true, 
-          deletedCount,
-          message: `Deleted ${deletedCount} old script tag(s)` 
-        });
-      }
-      
-      return json({ success: false, error: "Unable to retrieve script tags" });
-    } catch (error) {
-      // Log error only in development
-      if (process.env.NODE_ENV !== "production") {
-        console.error("Error cleaning up script tags:", error);
-      }
-      return json({ 
-        success: false, 
-        error: error instanceof Error ? error.message : "Unknown error" 
-      });
-    }
-  }
-
-  // Action normale pour sauvegarder la configuration
-  const widgetText = (formData.get("widgetText") as string) || "Try It On Now";
-  const widgetBg = (formData.get("widgetBg") as string) || "#000000";
-  const widgetColor = (formData.get("widgetColor") as string) || "#ffffff";
-  const maxTriesPerUserStr = formData.get("maxTriesPerUser") as string;
-  const maxTriesPerUser = maxTriesPerUserStr ? parseInt(maxTriesPerUserStr) : 5;
-  const isEnabled = formData.get("isEnabled") === "true";
-  const dailyLimitStr = formData.get("dailyLimit") as string;
-  const dailyLimit = dailyLimitStr ? parseInt(dailyLimitStr) : 100;
-  // ADDED: Monthly quota and quality mode
-  const monthlyQuotaStr = formData.get("monthlyQuota") as string;
-  const monthlyQuota = monthlyQuotaStr && monthlyQuotaStr.trim() !== "" ? parseInt(monthlyQuotaStr) : null;
-  const qualityMode = (formData.get("qualityMode") as string) || "balanced";
-
-    // Configuration saved (logged in database)
-
-  try {
-    await upsertShop(shop, {
-      widgetText,
-      widgetBg,
-      widgetColor,
-      maxTriesPerUser,
-      isEnabled,
-      dailyLimit,
-      monthlyQuota, // ADDED
-      qualityMode, // ADDED
-    });
-
-    return json({ success: true });
-  } catch (error) {
-    // Log error only in development
-    if (process.env.NODE_ENV !== "production") {
-      console.error("[Dashboard Action] Error saving configuration:", error);
-    }
-    return json({ 
-      success: false, 
-      error: error instanceof Error ? error.message : "Error saving configuration" 
-    });
-  }
-};
-
 export default function Dashboard() {
   const loaderData = useLoaderData<typeof loader>();
   const fetcher = useFetcher<typeof action>();
@@ -948,15 +74,6 @@ export default function Dashboard() {
   // Use credits directly (accumulation system)
   // Credits accumulate when purchasing plans and are deducted on each generation
   const credits = shop?.credits || 0;
-  
-  // Debug log to verify credits value
-  if (process.env.NODE_ENV !== "production") {
-    console.log(`[Dashboard] Credits display: shop?.credits=${shop?.credits}, credits=${credits}, shop object:`, {
-      credits: shop?.credits,
-      monthly_quota: shop?.monthly_quota,
-      monthly_quota_used: shop?.monthly_quota_used
-    });
-  }
   
   // Get total try-ons from loader data (calculated in loader) or fallback to shop value
   const totalTryons = typeof (loaderData as any).totalTryons === 'number' 
@@ -1357,3 +474,137 @@ export default function Dashboard() {
     </Page>
   );
 }
+
+export const action = async ({ request }: ActionFunctionArgs) => {
+  const { session, admin } = await authenticate.admin(request);
+  const shop = session.shop;
+  const formData = await request.formData();
+
+  const intent = formData.get("intent") as string;
+
+  // Action pour nettoyer les anciens script tags
+  if (intent === "cleanup-script-tags") {
+    try {
+      const scriptTagsQuery = `#graphql
+        query {
+          scriptTags(first: 50) {
+            edges {
+              node {
+                id
+                src
+              }
+            }
+          }
+        }
+      `;
+      
+      const scriptTagsResponse = await admin.graphql(scriptTagsQuery);
+      
+      if (scriptTagsResponse.ok) {
+        const scriptTagsData = await scriptTagsResponse.json() as any;
+        const existingScripts = scriptTagsData.data?.scriptTags?.edges || [];
+        
+        // Trouver tous les anciens script tags liés au widget
+        const oldScriptTags = existingScripts.filter((edge: any) => {
+          const src = edge.node.src || '';
+          return src.includes('widget') || 
+                 src.includes('tryon') || 
+                 src.includes('try-on') ||
+                 src.includes('vton') ||
+                 (src.includes('/apps/') && src.includes('widget'));
+        });
+        
+        let deletedCount = 0;
+        
+        // Supprimer chaque ancien script tag
+        for (const oldScript of oldScriptTags) {
+          try {
+            const deleteScriptTagMutation = `#graphql
+              mutation scriptTagDelete($id: ID!) {
+                scriptTagDelete(id: $id) {
+                  deletedScriptTagId
+                  userErrors {
+                    field
+                    message
+                  }
+                }
+              }
+            `;
+            
+            const deleteResult = await admin.graphql(deleteScriptTagMutation, {
+              variables: {
+                id: oldScript.node.id
+              }
+            });
+            
+            if (deleteResult.ok) {
+              const deleteData = await deleteResult.json().catch(() => null);
+              if (deleteData?.data?.scriptTagDelete?.deletedScriptTagId) {
+                deletedCount++;
+              }
+            }
+          } catch (deleteError) {
+            // Error deleting script tag - non-critical, continue
+          }
+        }
+        
+        return json({ 
+          success: true, 
+          deletedCount,
+          message: `Deleted ${deletedCount} old script tag(s)` 
+        });
+      }
+      
+      return json({ success: false, error: "Unable to retrieve script tags" });
+    } catch (error) {
+      // Log error only in development
+      if (process.env.NODE_ENV !== "production") {
+        console.error("Error cleaning up script tags:", error);
+      }
+      return json({ 
+        success: false, 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  }
+
+  // Action normale pour sauvegarder la configuration
+  const widgetText = (formData.get("widgetText") as string) || "Try It On Now";
+  const widgetBg = (formData.get("widgetBg") as string) || "#000000";
+  const widgetColor = (formData.get("widgetColor") as string) || "#ffffff";
+  const maxTriesPerUserStr = formData.get("maxTriesPerUser") as string;
+  const maxTriesPerUser = maxTriesPerUserStr ? parseInt(maxTriesPerUserStr) : 5;
+  const isEnabled = formData.get("isEnabled") === "true";
+  const dailyLimitStr = formData.get("dailyLimit") as string;
+  const dailyLimit = dailyLimitStr ? parseInt(dailyLimitStr) : 100;
+  // ADDED: Monthly quota and quality mode
+  const monthlyQuotaStr = formData.get("monthlyQuota") as string;
+  const monthlyQuota = monthlyQuotaStr && monthlyQuotaStr.trim() !== "" ? parseInt(monthlyQuotaStr) : null;
+  const qualityMode = (formData.get("qualityMode") as string) || "balanced";
+
+    // Configuration saved (logged in database)
+
+  try {
+    await upsertShop(shop, {
+      widgetText,
+      widgetBg,
+      widgetColor,
+      maxTriesPerUser,
+      isEnabled,
+      dailyLimit,
+      monthlyQuota, // ADDED
+      qualityMode, // ADDED
+    });
+
+    return json({ success: true });
+  } catch (error) {
+    // Log error only in development
+    if (process.env.NODE_ENV !== "production") {
+      console.error("[Dashboard Action] Error saving configuration:", error);
+    }
+    return json({ 
+      success: false, 
+      error: error instanceof Error ? error.message : "Error saving configuration" 
+    });
+  }
+};
