@@ -568,162 +568,22 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       });
     }
 
-    // Utiliser billing.request() pour obtenir une URL de paiement directe
-    // Cette méthode génère une confirmationUrl qui redirige directement vers le paiement
-    // 
-    // NOTE IMPORTANTE sur les Session Tokens Shopify:
-    // Les Session Tokens expirent rapidement (quelques minutes) dans les iframes.
-    // L'App Bridge devrait les rafraîchir automatiquement, mais si la session expire
-    // entre le moment où on obtient la session et l'appel à billing.request(),
-    // on obtient une erreur 401. Dans ce cas, on redirige vers la ré-authentification
-    // qui se fait automatiquement dans l'iframe et maintient l'authentification.
-    try {
-      // authenticate.admin() vérifie automatiquement le Session Token et le rafraîchit si nécessaire
-      // Si la session a expiré, authenticate.admin() lancera une Response de redirection
-      const { billing, session: billingSession } = await authenticate.admin(request);
-      
-      // Vérifier que la session est valide
-      if (!billingSession || !billingSession.shop || !billingSession.accessToken) {
-        console.error("[Credits] ❌ Invalid session before billing.request()", {
-          hasSession: !!billingSession,
-          hasShop: !!billingSession?.shop,
-          hasAccessToken: !!billingSession?.accessToken,
-        });
-        return json({ 
-          success: false, 
-          error: "Session invalide. Veuillez rafraîchir la page.",
-          requiresAuth: true,
-        });
-      }
-      
-      console.log("[Credits] ✅ Session valid before billing.request()", {
-        shop: billingSession.shop,
-        hasAccessToken: !!billingSession.accessToken,
-        isOnline: billingSession.isOnline,
-      });
-      
-      const url = new URL(request.url);
-      const returnUrl = `https://${url.host}/app/credits`;
-      
-      console.log("[Credits] Requesting billing for plan:", { 
-        planId, 
-        shop: billingSession.shop, 
-        returnUrl,
-        sessionValid: !!billingSession.accessToken,
-      });
-      
-      // billing.request() lance une exception avec une Response de redirection
-      // On doit capturer cette Response pour extraire l'URL de confirmation
-      try {
-        await billing.request({
-          plan: planId as any,
-          isTest: true, // Pour les boutiques de développement
-          returnUrl: returnUrl,
-        });
-        
-        // Si on arrive ici, billing.request() n'a pas lancé de redirection
-        // Ce cas ne devrait normalement pas arriver
-        throw new Error("billing.request() n'a pas généré de redirection");
-      } catch (billingRedirect: any) {
-        // billing.request() lance une Response de redirection
-        if (billingRedirect instanceof Response) {
-          // Vérifier si c'est une erreur d'authentification (401)
-          if (billingRedirect.status === 401) {
-            const reauthUrl = billingRedirect.headers.get("x-shopify-api-request-failure-reauthorize-url") || 
-                             billingRedirect.headers.get("location");
-            
-            if (reauthUrl) {
-              console.log("[Credits] ⚠️ Session expired during billing.request(), redirecting to reauth URL:", reauthUrl);
-              // Rediriger directement vers l'URL de ré-authentification dans l'iframe
-              // Cette URL contient déjà le plan sélectionné, donc après ré-auth, l'utilisateur sera redirigé vers le paiement
-              return json({ 
-                success: true, 
-                redirect: true,
-                checkoutUrl: reauthUrl,
-                message: "Ré-authentification requise...",
-                requiresAuth: true,
-              });
-            }
-            
-            // Si pas d'URL de ré-auth, retourner une erreur
-            return json({ 
-              success: false, 
-              error: "Erreur d'authentification. Veuillez rafraîchir la page.",
-              requiresAuth: true,
-            });
-          }
-          
-          // Si c'est une redirection de paiement (302 ou 200)
-          if (billingRedirect.status === 302 || billingRedirect.status === 200) {
-            const confirmationUrl = billingRedirect.headers.get("location") || 
-                                   billingRedirect.headers.get("x-shopify-api-redirect") ||
-                                   billingRedirect.url;
-            
-            if (confirmationUrl) {
-              console.log("[Credits] ✅ Billing confirmation URL received:", confirmationUrl);
-              return json({ 
-                success: true, 
-                redirect: true,
-                checkoutUrl: confirmationUrl,
-                message: "Redirection vers le paiement Shopify",
-              });
-            }
-          }
-          
-          // Autre status de Response
-          console.error("[Credits] Unexpected Response status:", billingRedirect.status);
-          return json({ 
-            success: false, 
-            error: `Erreur inattendue (status: ${billingRedirect.status})`,
-          });
-        }
-        
-        // Si ce n'est pas une Response, c'est une erreur
-        throw billingRedirect;
-      }
-    } catch (billingError: any) {
-      console.error("[Credits] Billing request error:", billingError);
-      
-      // Si l'erreur est une Response (redirection d'auth)
-      if (billingError instanceof Response) {
-        if (billingError.status === 401 || billingError.status === 302) {
-          const reauthUrl = billingError.headers.get('x-shopify-api-request-failure-reauthorize-url') || 
-                           billingError.headers.get('location');
-          console.log("[Credits] ⚠️ Authentication required (Response catch):", reauthUrl);
-          return json({ 
-            success: true, 
-            redirect: true,
-            checkoutUrl: reauthUrl || billingError.url,
-            requiresAuth: true,
-            message: "Ré-authentification requise...",
-          });
-        }
-      }
-      
-      // Si l'erreur est "Managed Pricing Apps cannot use the Billing API"
-      // On doit rediriger vers la page de pricing de l'Admin
-      if (billingError?.message?.includes("Managed Pricing") || 
-          billingError?.errorData?.some((e: any) => e.message?.includes("Managed Pricing"))) {
-        console.log("[Credits] Managed Pricing detected, redirecting to Admin pricing page");
-        
-        const appId = process.env.SHOPIFY_API_KEY || '85e1a9dba888450e33b84fbb067bc3a5';
-        const shopName = shop.replace('.myshopify.com', '');
-        const adminPricingUrl = `https://admin.shopify.com/store/${shopName}/settings/apps/app_installations/app/${appId}/pricing`;
-        
-        return json({ 
-          success: true, 
-          redirect: true,
-          checkoutUrl: adminPricingUrl,
-          message: "Redirection vers la page de pricing (Managed Pricing activé)",
-        });
-      }
-      
-      // Autre erreur
-      return json({ 
-        success: false, 
-        error: `Erreur lors de la création du paiement: ${billingError.message || "Erreur inconnue"}`,
-      });
-    }
+    // SOLUTION SIMPLE: Laisser billing.request() gérer la redirection automatiquement
+    // billing.request() lance une Response de redirection qui doit être propagée directement
+    // Remix et Shopify gèrent automatiquement cette redirection, pas besoin de la capturer
+    const { billing } = await authenticate.admin(request);
+    const url = new URL(request.url);
+    const returnUrl = `https://${url.host}/app/credits`;
+    
+    console.log("[Credits] Requesting billing for plan:", { planId, shop, returnUrl });
+    
+    // billing.request() va lancer une Response de redirection (302)
+    // On laisse Remix la propager automatiquement - c'est ça le truc !
+    return await billing.request({
+      plan: planId as any,
+      isTest: true, // Pour les boutiques de développement
+      returnUrl: returnUrl,
+    });
   }
   
   return json({ 
@@ -731,35 +591,18 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     error: "Action non reconnue",
   });
   } catch (error) {
-    // Gérer toutes les erreurs, y compris les Responses de redirection
-    console.error("[Credits] Error in action:", error);
-    
-    // Si c'est une Response de redirection (auth requise)
+    // Si c'est une Response (redirection de billing.request() ou ré-auth), la propager directement
+    // Remix et Shopify gèrent automatiquement ces redirections
     if (error instanceof Response) {
-      if (error.status === 401 || error.status === 302) {
-        const reauthUrl = error.headers.get('x-shopify-api-request-failure-reauthorize-url') || 
-                         error.headers.get('location');
-        console.error("[Credits] Authentication required (Response)", { status: error.status, reauthUrl });
-        return json({ 
-          success: false, 
-          error: "Votre session a expiré. Veuillez rafraîchir la page pour vous ré-authentifier.",
-          requiresAuth: true,
-          reauthUrl: reauthUrl || null,
-        });
-      }
-      // Pour toute autre Response, retourner une erreur JSON
-      return json({ 
-        success: false, 
-        error: `Erreur serveur (${error.status}). Veuillez réessayer.`,
-        requiresAuth: error.status === 401 || error.status === 302,
-      });
+      console.log("[Credits] Propagating Response from billing.request():", error.status);
+      throw error; // Remix gérera cette redirection automatiquement
     }
     
-    // Pour les autres erreurs
+    // Pour les autres erreurs, les logger et retourner une erreur JSON
+    console.error("[Credits] Error in action:", error);
     return json({ 
       success: false, 
       error: error instanceof Error ? error.message : "Une erreur est survenue. Veuillez réessayer.",
-      requiresAuth: false,
     });
   }
 };
@@ -792,99 +635,9 @@ export default function Credits() {
     submittingPackId 
   });
 
-  // Rediriger vers le checkout Shopify après création de la commande
-  useEffect(() => {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:559',message:'useEffect entry',data:{hasFetcherData:!!fetcher.data,success:fetcher.data?.success,redirect:(fetcher.data as any)?.redirect,hasCheckoutUrl:!!(fetcher.data as any)?.checkoutUrl,requiresAuth:(fetcher.data as any)?.requiresAuth,hasReauthUrl:!!(fetcher.data as any)?.reauthUrl},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'F'})}).catch(()=>{});
-    // #endregion
-    
-    let timeoutId: NodeJS.Timeout | null = null;
-    let isMounted = true;
-    
-    // Gérer la ré-authentification automatique
-    // IMPORTANT: La ré-authentification doit se faire au niveau du parent (Shopify Admin),
-    // pas dans l'iframe. On utilise window.top.location.href pour sortir de l'iframe.
-    if ((fetcher.data as any)?.requiresAuth && (fetcher.data as any)?.reauthUrl) {
-      console.log("[Credits] ⚠️ Session expired, redirecting parent window for re-authentication:", (fetcher.data as any).reauthUrl);
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:567',message:'Redirecting parent window to reauth URL',data:{reauthUrl:(fetcher.data as any).reauthUrl},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'F'})}).catch(()=>{});
-      // #endregion
-      // Rediriger la page PARENTE (Shopify Admin) vers la ré-authentification
-      // Cela permet à Shopify de gérer la ré-authentification correctement
-      if (isMounted) {
-        try {
-          // Essayer de rediriger le parent (sortir de l'iframe)
-          if (window.top && window.top !== window) {
-            window.top.location.href = (fetcher.data as any).reauthUrl;
-          } else {
-            // Si on n'est pas dans une iframe, utiliser window.location directement
-            window.location.href = (fetcher.data as any).reauthUrl;
-          }
-        } catch (e) {
-          // Si window.top n'est pas accessible (erreur CORS), fallback sur window.location
-          console.warn("[Credits] Cannot access window.top, using window.location as fallback");
-          window.location.href = (fetcher.data as any).reauthUrl;
-        }
-      }
-      return;
-    }
-    
-    // Gérer aussi le cas où requiresAuth est true mais pas de reauthUrl
-    // Dans ce cas, on rafraîchit simplement la page parente
-    if ((fetcher.data as any)?.requiresAuth && !(fetcher.data as any)?.reauthUrl) {
-      console.log("[Credits] ⚠️ Session expired, refreshing parent window");
-      if (isMounted) {
-        try {
-          if (window.top && window.top !== window) {
-            window.top.location.reload();
-          } else {
-            window.location.reload();
-          }
-        } catch (e) {
-          window.location.reload();
-        }
-      }
-      return;
-    }
-    
-    if (fetcher.data?.success && (fetcher.data as any)?.redirect && (fetcher.data as any)?.checkoutUrl) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:577',message:'Before redirect to checkout - staying in iframe',data:{checkoutUrl:(fetcher.data as any).checkoutUrl},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'B'})}).catch(()=>{});
-      // #endregion
-      // Rediriger vers le checkout Shopify DANS l'iframe pour garder l'authentification
-      // Utiliser window.location.href pour rester dans l'iframe
-      if (isMounted) {
-        console.log("[Credits] Redirecting to checkout URL in iframe:", (fetcher.data as any).checkoutUrl);
-        window.location.href = (fetcher.data as any).checkoutUrl;
-      }
-    } else if (fetcher.data?.success && !(fetcher.data as any)?.redirect) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:585',message:'Before setTimeout for revalidate',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'C'})}).catch(()=>{});
-      // #endregion
-      // Si pas de redirection, recharger les données (ancien comportement)
-      timeoutId = setTimeout(() => {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:590',message:'setTimeout callback executing',data:{isMounted},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'C'})}).catch(()=>{});
-        // #endregion
-        if (isMounted) {
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:593',message:'Calling revalidator.revalidate via ref',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'C'})}).catch(()=>{});
-          // #endregion
-          revalidatorRef.current.revalidate();
-        }
-      }, 500);
-    }
-    
-    return () => {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:601',message:'useEffect cleanup - component unmounting',data:{hasTimeout:!!timeoutId},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'F'})}).catch(()=>{});
-      // #endregion
-      isMounted = false;
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
-    };
-  }, [fetcher.data]); // Retirer revalidator des dépendances pour éviter les re-renders infinis
+  // Plus besoin de gérer les redirections manuellement !
+  // billing.request() propage directement la Response de redirection
+  // Remix gère automatiquement la redirection vers la page de paiement Shopify
 
   // Reset submittingPackId when fetcher completes
   useEffect(() => {
