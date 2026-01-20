@@ -127,12 +127,11 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
 export const action = async ({ request }: ActionFunctionArgs) => {
   try {
-    let admin, session, billing;
+    let admin, session;
     try {
       const authResult = await authenticate.admin(request);
       admin = authResult.admin;
       session = authResult.session;
-      billing = authResult.billing;
       
       // Logs de diagnostic CRITIQUES
       console.log("[Credits Action] ✅ Authentication successful:", {
@@ -551,10 +550,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       return json({ success: false, error: "Minimum 250 credits required for custom pack" });
     }
   } else if (intent === "purchase-subscription") {
-    // Gestion de l'achat d'abonnement (Starter, Pro, Studio) - Utilisation de l'API billing Remix
+    // Avec Managed Pricing, on NE PEUT PAS utiliser billing.request()
+    // On redirige vers le Dashboard Shopify où l'utilisateur peut s'abonner
     const planId = formData.get("planId") as string;
     
-    // Vérifier que le plan existe dans la configuration
     const validPlans = ["starter", "pro", "studio"];
     if (!validPlans.includes(planId)) {
       return json({ 
@@ -563,38 +562,16 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       });
     }
 
-    try {
-      const baseUrl = new URL(request.url).origin;
-      const returnUrl = new URL("/app/credits", baseUrl);
-      returnUrl.searchParams.set("subscription", "success");
-      returnUrl.searchParams.set("plan", planId);
-
-      console.log("[Credits] Requesting subscription using billing.request()", {
-        planId,
-        shop,
-        returnUrl: returnUrl.toString(),
-      });
-
-      // Utiliser billing.request() de Remix - gère automatiquement Managed Pricing
-      // Cette méthode retourne une Response de redirection que Remix gère automatiquement
-      return await billing.request({
-        plan: planId,
-        isTest: process.env.NODE_ENV !== "production",
-        returnUrl: returnUrl.toString(),
-      });
-    } catch (error) {
-      console.error("[Credits] Error requesting subscription:", error);
-      
-      // Si c'est une Response (redirection), la laisser passer
-      if (error instanceof Response) {
-        return error;
-      }
-      
-      return json({ 
-        success: false, 
-        error: error instanceof Error ? error.message : "Erreur lors de la demande d'abonnement.",
-      });
-    }
+    // Avec Managed Pricing, les abonnements sont gérés via le Dashboard Shopify
+    // On redirige vers la page de gestion des abonnements dans le Dashboard
+    const dashboardUrl = `https://${shop}/admin/settings/apps/${process.env.SHOPIFY_API_KEY || 'app'}/subscriptions`;
+    
+    return json({ 
+      success: true, 
+      redirect: true,
+      checkoutUrl: dashboardUrl,
+      message: "Redirection vers le Dashboard Shopify pour gérer votre abonnement",
+    });
   }
   
   return json({ 

@@ -19,66 +19,82 @@ import { getShop, upsertShop, getTryonLogs, getTopProducts, getTryonStatsByDay, 
 import { ensureTables } from "../lib/db-init.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { billing, session, admin } = await authenticate.admin(request);
+  const { session, admin } = await authenticate.admin(request);
   const shop = session.shop;
   const url = new URL(request.url);
   const returnUrl = `https://${url.host}/app`;
 
+  // Avec Managed Pricing, on NE PEUT PAS utiliser billing.require() ou billing.request()
+  // On vérifie les abonnements via GraphQL et on attribue le plan gratuit par défaut
   try {
-    // 1. Vérification : On cherche si un plan est actif (gratuit ou payant)
-    // Avec Managed Pricing, billing.require() vérifie automatiquement les plans configurés
-    await billing.require({
-      plans: ["free-installation-setup", "starter", "pro", "studio"] as any,
-      isTest: process.env.NODE_ENV !== "production",
-      onFailure: async () => {
-        console.log("⚠️ Aucun plan actif. Attribution automatique du plan gratuit en base de données...");
-
-        // 2. Attribution automatique du plan gratuit à l'installation
-        // Pour Managed Pricing, on ne crée PAS d'abonnement via GraphQL
-        // On enregistre simplement le plan gratuit en base de données
-        try {
-          const shopData = await getShop(shop);
-          
-          // Si le shop n'existe pas ou n'a pas de plan, on crée/update avec le plan gratuit
-          if (!shopData || !shopData.plan_name || shopData.plan_name !== "free-installation-setup") {
-            // Créer/mettre à jour le shop avec le plan gratuit
-            await upsertShop(shop, {
-              credits: 4, // 4 crédits pour le plan gratuit
-              monthlyQuota: 4,
-            });
-            
-            // Mettre à jour plan_name via requête SQL directe (colonne peut ne pas exister)
-            try {
-              await query(
-                `ALTER TABLE shops ADD COLUMN IF NOT EXISTS plan_name TEXT DEFAULT 'free-installation-setup'`
-              );
-              await query(
-                `UPDATE shops SET plan_name = $1 WHERE domain = $2`,
-                ["free-installation-setup", shop]
-              );
-            } catch (planError) {
-              // Si la colonne existe déjà ou autre erreur, on continue
-              console.log("ℹ️ Plan name update skipped:", planError);
+    // Vérifier les abonnements existants via GraphQL
+    const subscriptionQuery = `#graphql
+      query {
+        currentAppInstallation {
+          activeSubscriptions {
+            name
+            status
+            lineItems {
+              plan {
+                pricingDetails {
+                  ... on AppRecurringPricing {
+                    price {
+                      amount
+                      currencyCode
+                    }
+                    interval
+                  }
+                }
+              }
             }
-            
-            console.log("✅ Plan gratuit 'free-installation-setup' attribué automatiquement en base de données");
-          } else {
-            console.log("ℹ️ Plan gratuit déjà actif pour ce shop");
           }
-        } catch (dbError) {
-          console.error("❌ Erreur lors de l'attribution du plan gratuit en DB:", dbError);
-          // On continue quand même pour ne pas bloquer l'installation
         }
+      }
+    `;
+
+    let hasActiveSubscription = false;
+    try {
+      const subscriptionResponse = await admin.graphql(subscriptionQuery);
+      if (subscriptionResponse.ok) {
+        const subscriptionData = await subscriptionResponse.json() as any;
+        const subscriptions = subscriptionData?.data?.currentAppInstallation?.activeSubscriptions || [];
+        hasActiveSubscription = subscriptions.length > 0 && subscriptions.some((sub: any) => sub.status === "ACTIVE");
+      }
+    } catch (subError) {
+      console.log("ℹ️ Impossible de vérifier les abonnements, attribution du plan gratuit par défaut");
+    }
+
+    // Si aucun abonnement actif, attribuer le plan gratuit en base de données
+    if (!hasActiveSubscription) {
+      try {
+        const shopData = await getShop(shop);
         
-        // On continue sans bloquer - l'utilisateur a le plan gratuit par défaut
-        // billing.require() ne redirige pas si on retourne null dans onFailure
-        return null;
-      },
-    } as any);
+        if (!shopData || !shopData.plan_name || shopData.plan_name !== "free-installation-setup") {
+          await upsertShop(shop, {
+            credits: 4,
+            monthlyQuota: 4,
+          });
+          
+          try {
+            await query(
+              `ALTER TABLE shops ADD COLUMN IF NOT EXISTS plan_name TEXT DEFAULT 'free-installation-setup'`
+            );
+            await query(
+              `UPDATE shops SET plan_name = $1 WHERE domain = $2`,
+              ["free-installation-setup", shop]
+            );
+          } catch (planError) {
+            console.log("ℹ️ Plan name update skipped:", planError);
+          }
+          
+          console.log("✅ Plan gratuit attribué automatiquement");
+        }
+      } catch (dbError) {
+        console.error("❌ Erreur lors de l'attribution du plan gratuit:", dbError);
+      }
+    }
   } catch (error) {
-    // Si c'est une Response (redirection vers paiement), la laisser passer
-    if (error instanceof Response) return error;
-    console.error("❌ ERREUR LOADER BILLING :", error);
+    console.error("❌ Erreur lors de la vérification des abonnements:", error);
     // On continue quand même pour ne pas bloquer l'app
   }
 
