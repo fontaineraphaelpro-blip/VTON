@@ -572,23 +572,27 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       });
     }
 
-    // Avec Managed Pricing, on redirige vers la page de l'app dans l'App Store Shopify
-    // L'utilisateur pourra voir tous les plans et s'abonner directement depuis là
-    // Format de l'URL : https://apps.shopify.com/{app-handle}
-    // Pour trouver le handle de votre app, allez dans Partners Dashboard > Votre app > App Store listing
-    const appStoreUrl = `https://apps.shopify.com/virtual-try-on`; // À ajuster avec le handle réel de votre app
+    // Avec Managed Pricing, on redirige vers la page de l'app dans l'Admin Shopify
+    // Format de l'URL : https://admin.shopify.com/store/{shop}/settings/apps/{app_id}
+    // Cette page permet à l'utilisateur de voir et gérer ses abonnements directement depuis l'Admin
+    const appId = process.env.SHOPIFY_API_KEY || '85e1a9dba888450e33b84fbb067bc3a5';
+    // Extraire le nom du shop sans .myshopify.com
+    const shopName = shop.replace('.myshopify.com', '');
+    const adminAppUrl = `https://admin.shopify.com/store/${shopName}/settings/apps/${appId}`;
     
-    console.log("[Credits] Redirecting to Shopify App Store for subscription (Managed Pricing)", {
+    console.log("[Credits] Redirecting to Shopify Admin app settings page (Managed Pricing)", {
       planId,
       shop,
-      appStoreUrl,
+      shopName,
+      appId,
+      adminAppUrl,
     });
     
     return json({ 
       success: true, 
       redirect: true,
-      checkoutUrl: appStoreUrl,
-      message: "Redirection vers l'App Store Shopify pour sélectionner votre plan",
+      checkoutUrl: adminAppUrl,
+      message: "Redirection vers la page de gestion de l'app dans Shopify Admin",
     });
   }
   
