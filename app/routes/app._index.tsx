@@ -22,30 +22,73 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { billing, session, admin } = await authenticate.admin(request);
   const shop = session.shop;
   const url = new URL(request.url);
+  const returnUrl = `https://${url.host}/app`;
 
   try {
-    // Dans le .require(), on garde isTest: true pour dire "Vérifie aussi les plans de test"
+    // 1. On vérifie simplement si un plan est actif
     await billing.require({
       plans: ["starter", "pro", "studio"] as any,
-      isTest: true, 
+      isTest: true,
       onFailure: async () => {
-        console.log("⚠️ Redirection vers le plan Starter...");
+        console.log("⚠️ Aucun plan actif. Lancement du paiement manuel...");
+
+        // 2. BYPASS : On construit la demande manuellement pour éviter l'erreur "Billing API"
+        // On demande le plan "starter" sans spécifier le prix (car c'est du Managed Pricing)
+        const response = await admin.graphql(
+          `#graphql
+          mutation AppSubscriptionCreate($name: String!, $returnUrl: URL!, $test: Boolean, $lineItems: [AppSubscriptionLineItemInput!]!) {
+            appSubscriptionCreate(name: $name, returnUrl: $returnUrl, test: $test, lineItems: $lineItems) {
+              userErrors {
+                field
+                message
+              }
+              confirmationUrl
+              appSubscription {
+                id
+              }
+            }
+          }`,
+          {
+            variables: {
+              name: "Starter Plan",
+              returnUrl: returnUrl,
+              test: true, // Toujours true en Dev
+              lineItems: [
+                {
+                  plan: {
+                    appRecurringPricingDetails: {
+                      interval: "EVERY_30_DAYS"
+                    }
+                  }
+                }
+              ]
+            },
+          }
+        );
+
+        const responseJson = await response.json();
         
-        // CORRECTION : On retire isTest: true
-        // On laisse Shopify détecter automatiquement que c'est une boutique de dev
-        throw await (billing.request as any)({
-          plan: "starter", 
-          // isTest: true, <--- SUPPRIMÉ : Shopify gère automatiquement le mode test pour Managed Pricing
-          returnUrl: `https://${url.host}/app`, 
-        });
+        // Vérification des erreurs
+        const data = (responseJson as any).data?.appSubscriptionCreate;
+        if (data?.userErrors?.length > 0) {
+          console.error("❌ Erreur GraphQL:", data.userErrors);
+          throw new Error(data.userErrors[0].message);
+        }
+
+        // 3. Redirection manuelle vers la page de confirmation Shopify
+        if (data?.confirmationUrl) {
+          throw new Response(null, {
+            status: 302,
+            headers: { Location: data.confirmationUrl },
+          });
+        }
       },
     } as any);
   } catch (error) {
-    // Si Shopify renvoie une redirection (Response), on l'exécute
+    // Si c'est notre redirection (Response), on la laisse passer
     if (error instanceof Response) return error;
     
-    // Si c'est une autre erreur, on l'affiche
-    console.error("❌ ERREUR BILLING :", error);
+    console.error("❌ ERREUR CRITIQUE:", error);
     throw error;
   }
 
