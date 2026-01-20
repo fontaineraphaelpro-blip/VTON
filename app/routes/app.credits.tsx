@@ -659,13 +659,23 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     // billing.request() lance une Response de redirection qui doit être propagée directement
     // Remix et Shopify gèrent automatiquement cette redirection, pas besoin de la capturer
     const { billing } = await authenticate.admin(request);
-    const url = new URL(request.url);
-    const returnUrl = `https://${url.host}/app/credits`;
     
-    console.log("[Credits] Requesting billing for plan:", { planId, shop, returnUrl });
+    // Construire l'URL de retour complète pour que Shopify redirige vers l'app après paiement
+    // Utiliser SHOPIFY_APP_URL si disponible, sinon construire depuis request.url
+    const appUrl = process.env.SHOPIFY_APP_URL || process.env.APPLICATION_URL || new URL(request.url).origin;
+    const returnUrl = `${appUrl}/app/credits`;
+    
+    console.log("[Credits] Requesting billing for plan:", { 
+      planId, 
+      shop, 
+      returnUrl,
+      appUrl,
+      host: new URL(request.url).host 
+    });
     
     // billing.request() va lancer une Response de redirection (302)
     // On laisse Remix la propager automatiquement - c'est ça le truc !
+    // Après le paiement, Shopify redirigera automatiquement vers returnUrl
     return await billing.request({
       plan: planId as any,
       isTest: true, // Pour les boutiques de développement
