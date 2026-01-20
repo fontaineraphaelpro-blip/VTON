@@ -56,6 +56,13 @@ const CREDIT_PACKS = [
 ];
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
+  // Extract URL params BEFORE authentication (to preserve them if re-auth is needed)
+  const url = new URL(request.url);
+  const chargeId = url.searchParams.get("charge_id");
+  const purchaseSuccess = url.searchParams.get("purchase");
+  const packId = url.searchParams.get("pack");
+  const creditsParam = url.searchParams.get("credits");
+  
   try {
     const { admin, session } = await authenticate.admin(request);
     
@@ -72,10 +79,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     const shopData = await getShop(shop);
 
     // Handle return from Shopify payment (app purchase one-time charge)
-    const url = new URL(request.url);
-    const purchaseSuccess = url.searchParams.get("purchase");
-    const packId = url.searchParams.get("pack");
-    const creditsParam = url.searchParams.get("credits");
 
     if (purchaseSuccess === "success" && packId && creditsParam) {
       const creditsToAdd = parseInt(creditsParam);
@@ -180,10 +183,54 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       shop: shopData || null,
     });
   } catch (error) {
-    console.error("[Credits Loader] ❌ Error:", error);
-    // Si c'est une Response (redirection d'auth), la propager
+    // Si c'est une Response (redirection d'auth), la propager immédiatement
+    // authenticate.admin gère automatiquement la ré-authentification
     if (error instanceof Response) {
+      // Si on a des paramètres de paiement (charge_id, purchase, etc.), les préserver dans la redirection
+      if (error.status === 302 && (chargeId || purchaseSuccess)) {
+        const location = error.headers.get("location");
+        if (location) {
+          try {
+            const redirectUrl = new URL(location, request.url);
+            // Préserver tous les paramètres de paiement
+            if (chargeId) redirectUrl.searchParams.set("charge_id", chargeId);
+            if (purchaseSuccess) redirectUrl.searchParams.set("purchase", purchaseSuccess);
+            if (packId) redirectUrl.searchParams.set("pack", packId);
+            if (creditsParam) redirectUrl.searchParams.set("credits", creditsParam);
+            
+            // Si le redirectUrl a un paramètre return_to, préserver aussi les paramètres là-dedans
+            const returnTo = redirectUrl.searchParams.get("return_to");
+            if (returnTo) {
+              try {
+                const returnToUrl = new URL(returnTo);
+                if (chargeId) returnToUrl.searchParams.set("charge_id", chargeId);
+                if (purchaseSuccess) returnToUrl.searchParams.set("purchase", purchaseSuccess);
+                if (packId) returnToUrl.searchParams.set("pack", packId);
+                if (creditsParam) returnToUrl.searchParams.set("credits", creditsParam);
+                redirectUrl.searchParams.set("return_to", returnToUrl.toString());
+              } catch {
+                // Ignore if return_to is not a valid URL
+              }
+            }
+            
+            return new Response(null, {
+              status: 302,
+              headers: {
+                Location: redirectUrl.toString(),
+              },
+            });
+          } catch {
+            // Si l'URL de redirection n'est pas valide, utiliser l'originale
+            throw error;
+          }
+        }
+      }
       throw error;
+    }
+    
+    // Only log non-Response errors
+    if (process.env.NODE_ENV !== "production") {
+      console.error("[Credits Loader] ❌ Error:", error);
     }
     return json({
       shop: null,
