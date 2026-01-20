@@ -21,7 +21,7 @@ import {
 import { TitleBar } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
 import { ensureTables } from "../lib/db-init.server";
-import { getProductTryonCounts, setProductTryonSetting, getProductTryonSetting } from "../lib/services/db.service";
+import { getProductTryonCounts, setProductTryonSetting, getProductTryonSettingsBatch } from "../lib/services/db.service";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
@@ -137,13 +137,15 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       // Get try-on counts for all products
       tryonCounts = await getProductTryonCounts(shop, productIds).catch(() => ({}));
       
-      // Get product settings (try-on enabled/disabled)
-      for (const product of products) {
-        const setting = await getProductTryonSetting(shop, product.id).catch(() => null);
-        // Default to enabled if not set (null = enabled by default, admin can disable explicitly)
-        // true = explicitly enabled, false = explicitly disabled, null = enabled by default
-        productSettings[product.id] = setting !== false; // null or true means enabled, only false means disabled
-      }
+      // OPTIMIZED: Get product settings in batch (single query instead of N queries)
+      const productIds = products.map((p: any) => p.id);
+      const batchSettings = await getProductTryonSettingsBatch(shop, productIds).catch(() => ({}));
+      
+      // Convert to expected format (null or true means enabled, only false means disabled)
+      productIds.forEach(productId => {
+        const setting = batchSettings[productId];
+        productSettings[productId] = setting !== false; // null or true means enabled, only false means disabled
+      });
     } catch (dbError) {
       // Log only in development
       if (process.env.NODE_ENV !== "production") {
@@ -197,8 +199,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const productHandle = formData.get("productHandle") as string;
     const enabled = formData.get("enabled") === "true";
     
-    console.log(`[Products Action] Toggle try-on: shop=${shop}, productId=${productId}, productHandle=${productHandle}, enabled=${enabled}`);
-    
     if (!productId) {
       return json({ success: false, error: "Product ID is required" });
     }
@@ -206,7 +206,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     try {
       await ensureTables();
       await setProductTryonSetting(shop, productId, enabled, productHandle);
-      console.log(`[Products Action] Successfully saved: shop=${shop}, productId=${productId}, productHandle=${productHandle}, enabled=${enabled}`);
       return json({ success: true, productId, enabled });
     } catch (error) {
       // Log only in development
@@ -238,7 +237,6 @@ export default function Products() {
   // Show success banner when fetcher.data?.success changes
   useEffect(() => {
     if (fetcher.data?.success) {
-      console.log('[Products] Showing success banner');
       setShowSuccessBanner(true);
       // Auto-hide after 5 seconds
       const timer = setTimeout(() => {
@@ -254,7 +252,6 @@ export default function Products() {
   // Show error banner when fetcher.data?.error changes
   useEffect(() => {
     if ((fetcher.data as any)?.error) {
-      console.log('[Products] Showing error banner:', (fetcher.data as any).error);
       setShowErrorBanner(true);
       // Auto-hide after 7 seconds (errors stay a bit longer)
       const timer = setTimeout(() => {
@@ -278,7 +275,6 @@ export default function Products() {
     
     // ADDED: Handle toggle
     const handleToggle = (checked: boolean) => {
-      console.log(`[Products] Toggling try-on for product: id=${product.id}, handle=${product.handle}, enabled=${checked}`);
       const formData = new FormData();
       formData.append("intent", "toggle-product-tryon");
       formData.append("productId", product.id);

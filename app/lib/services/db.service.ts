@@ -332,158 +332,128 @@ export async function getTryonStatsByDay(shop: string, days: number = 30) {
  * Admin can then explicitly enable/disable individual products.
  */
 export async function getProductTryonSetting(shop: string, productId: string, productHandle?: string): Promise<boolean | null> {
-  // Normalize productId - try multiple formats
-  const formatsToTry: string[] = [productId]; // Start with original
-  
-  // If productId is numeric, add GID format
-  if (/^\d+$/.test(productId)) {
-    formatsToTry.push(`gid://shopify/Product/${productId}`);
+  // Use batch function for single product (more efficient)
+  const result = await getProductTryonSettingsBatch(shop, [productId]);
+  return result[productId] ?? null;
+}
+
+/**
+ * OPTIMIZED: Gets try-on settings for multiple products at once (batch query).
+ * Returns a map of product_id -> boolean | null (true=enabled, false=disabled, null=not set/default enabled).
+ */
+export async function getProductTryonSettingsBatch(shop: string, productIds: string[]): Promise<Record<string, boolean | null>> {
+  if (productIds.length === 0) {
+    return {};
   }
   
-  // If productId is GID format, extract numeric part
-  const gidMatch = productId.match(/^gid:\/\/shopify\/Product\/(\d+)$/);
-  if (gidMatch) {
-    formatsToTry.push(gidMatch[1]); // Add numeric ID
-  }
-  
-  // Also try URL-decoded version (in case it comes encoded)
-  try {
-    const decoded = decodeURIComponent(productId);
-    if (decoded !== productId) {
-      formatsToTry.push(decoded);
-      // If decoded is GID, also try numeric
-      const decodedGidMatch = decoded.match(/^gid:\/\/shopify\/Product\/(\d+)$/);
-      if (decodedGidMatch) {
-        formatsToTry.push(decodedGidMatch[1]);
-        formatsToTry.push(`gid://shopify/Product/${decodedGidMatch[1]}`);
-      }
+  // Normalize all product IDs to try multiple formats
+  const allFormatsToTry = new Set<string>();
+  productIds.forEach(productId => {
+    allFormatsToTry.add(productId);
+    // If numeric, add GID format
+    if (/^\d+$/.test(productId)) {
+      allFormatsToTry.add(`gid://shopify/Product/${productId}`);
     }
-  } catch (e) {
-    // Ignore decode errors
+    // If GID format, extract numeric part
+    const gidMatch = productId.match(/^gid:\/\/shopify\/Product\/(\d+)$/);
+    if (gidMatch) {
+      allFormatsToTry.add(gidMatch[1]);
+    }
+  });
+  
+  const formatsArray = Array.from(allFormatsToTry);
+  if (formatsArray.length === 0) {
+    return {};
   }
   
-  // Try all formats
-  for (const format of formatsToTry) {
-    const result = await query(
-      "SELECT tryon_enabled FROM product_settings WHERE shop = $1 AND product_id = $2",
-      [shop, format]
-    );
+  // Single query to get all settings matching any of the formats
+  const placeholders = formatsArray.map((_, i) => `$${i + 2}`).join(', ');
+  const result = await query(
+    `SELECT product_id, tryon_enabled, product_handle 
+     FROM product_settings 
+     WHERE shop = $1 AND product_id IN (${placeholders})`,
+    [shop, ...formatsArray]
+  );
+  
+  // Build map: normalize enabled values and match by all formats
+  const settingsMap: Record<string, boolean | null> = {};
+  const processedSettings = new Set<string>();
+  
+  result.rows.forEach((row: any) => {
+    const enabled = row.tryon_enabled;
+    const enabledBool = enabled === true || enabled === 'true' || enabled === 1;
+    const disabledBool = enabled === false || enabled === 'false' || enabled === 0;
     
-    if (result.rows.length > 0) {
-      const enabled = result.rows[0].tryon_enabled;
-      // Ensure we return a proper boolean (PostgreSQL might return string or other types)
-      const enabledBool = enabled === true || enabled === 'true' || enabled === 1;
-      const disabledBool = enabled === false || enabled === 'false' || enabled === 0;
+    const settingValue = disabledBool ? false : (enabledBool ? true : null);
+    
+    // Match this setting to all product IDs that could match
+    const storedProductId = row.product_id;
+    const numericFromStored = storedProductId.match(/\d+/)?.[0];
+    
+    productIds.forEach(productId => {
+      if (processedSettings.has(productId)) return; // Already set
       
-      if (disabledBool) {
-        console.log(`[DB] Found product setting: shop=${shop}, searched=${productId}, found=${format}, enabled=false (DISABLED)`);
-        return false;
-      } else if (enabledBool) {
-        console.log(`[DB] Found product setting: shop=${shop}, searched=${productId}, found=${format}, enabled=true (ENABLED)`);
-        return true;
-      } else {
-        console.log(`[DB] Found product setting: shop=${shop}, searched=${productId}, found=${format}, enabled=${enabled} (type: ${typeof enabled}) - treating as null`);
-        return null;
+      const numericFromProductId = productId.match(/\d+/)?.[0];
+      const gidMatch = productId.match(/^gid:\/\/shopify\/Product\/(\d+)$/);
+      const numericId = gidMatch ? gidMatch[1] : (numericFromProductId || productId);
+      
+      // Match by exact ID, GID format, numeric ID
+      if (storedProductId === productId || 
+          storedProductId === `gid://shopify/Product/${numericId}` ||
+          (numericFromStored && numericFromStored === numericId) ||
+          storedProductId === numericId) {
+        settingsMap[productId] = settingValue;
+        processedSettings.add(productId);
       }
-    }
-  }
+    });
+  });
   
-  // Also try to find by product handle if provided (most reliable for matching)
-  if (productHandle) {
+  // Try matching by handle if product_handle column exists and we still have unmatched products
+  const unmatchedIds = productIds.filter(id => !processedSettings.has(id));
+  if (unmatchedIds.length > 0) {
     try {
-      const handleResult = await query(
-        "SELECT tryon_enabled FROM product_settings WHERE shop = $1 AND product_handle = $2",
-        [shop, productHandle]
-      );
-      
-      if (handleResult.rows.length > 0) {
-        const enabled = handleResult.rows[0].tryon_enabled;
-        const enabledBool = enabled === true || enabled === 'true' || enabled === 1;
-        const disabledBool = enabled === false || enabled === 'false' || enabled === 0;
+      // Extract handles from productIds if they are handles
+      const handlesToTry = unmatchedIds.filter(id => !id.startsWith('gid://') && !/^\d+$/.test(id));
+      if (handlesToTry.length > 0) {
+        const handlePlaceholders = handlesToTry.map((_, i) => `$${i + 2}`).join(', ');
+        const handleResult = await query(
+          `SELECT product_id, tryon_enabled, product_handle 
+           FROM product_settings 
+           WHERE shop = $1 AND product_handle IN (${handlePlaceholders})`,
+          [shop, ...handlesToTry]
+        );
         
-        if (disabledBool) {
-          if (process.env.NODE_ENV !== "production") {
-            console.log(`[DB] Found product setting by handle: shop=${shop}, productHandle=${productHandle}, enabled=false (DISABLED)`);
-          }
-          return false;
-        } else if (enabledBool) {
-          if (process.env.NODE_ENV !== "production") {
-            console.log(`[DB] Found product setting by handle: shop=${shop}, productHandle=${productHandle}, enabled=true (ENABLED)`);
-          }
-          return true;
-        }
-      } else {
-        if (process.env.NODE_ENV !== "production") {
-          console.log(`[DB] No setting found by handle: shop=${shop}, productHandle=${productHandle}`);
-        }
+        handleResult.rows.forEach((row: any) => {
+          const enabled = row.tryon_enabled;
+          const enabledBool = enabled === true || enabled === 'true' || enabled === 1;
+          const disabledBool = enabled === false || enabled === 'false' || enabled === 0;
+          const settingValue = disabledBool ? false : (enabledBool ? true : null);
+          
+          unmatchedIds.forEach(productId => {
+            if (processedSettings.has(productId)) return;
+            if (row.product_handle === productId) {
+              settingsMap[productId] = settingValue;
+              processedSettings.add(productId);
+            }
+          });
+        });
       }
     } catch (error: any) {
-      // Column might not exist yet - ignore and continue with other methods
-      if (error.message?.includes('product_handle') || error.message?.includes('column')) {
-        if (process.env.NODE_ENV !== "production") {
-          console.log(`[DB] product_handle column might not exist yet, skipping handle search`);
-        }
-      } else {
+      // Column might not exist yet - ignore
+      if (!error.message?.includes('product_handle') && !error.message?.includes('column')) {
         throw error;
       }
     }
-  } else {
-    console.log(`[DB] No productHandle provided, cannot search by handle`);
   }
   
-  // Also try to find by extracting numeric IDs and matching them
-  // Sometimes Shopify uses different GID formats for the same product
-  const numericIdFromSearched = productId.match(/\d+/)?.[0];
-  if (numericIdFromSearched) {
-    // Try to find any setting with the same numeric ID (even if GID format differs)
-    const allSettings = await query(
-      "SELECT product_id, product_handle, tryon_enabled FROM product_settings WHERE shop = $1",
-      [shop]
-    );
-    
-    for (const row of allSettings.rows) {
-      const storedProductId = row.product_id;
-      const numericIdFromStored = storedProductId.match(/\d+/)?.[0];
-      
-      // If numeric IDs match, it's the same product (even if GID format differs)
-      if (numericIdFromStored === numericIdFromSearched) {
-        const enabled = row.tryon_enabled;
-        const enabledBool = enabled === true || enabled === 'true' || enabled === 1;
-        const disabledBool = enabled === false || enabled === 'false' || enabled === 0;
-        
-        if (disabledBool) {
-          console.log(`[DB] Found product setting by numeric ID match: shop=${shop}, searched=${productId} (numeric: ${numericIdFromSearched}), found=${storedProductId} (numeric: ${numericIdFromStored}), enabled=false (DISABLED)`);
-          return false;
-        } else if (enabledBool) {
-          console.log(`[DB] Found product setting by numeric ID match: shop=${shop}, searched=${productId} (numeric: ${numericIdFromSearched}), found=${storedProductId} (numeric: ${numericIdFromStored}), enabled=true (ENABLED)`);
-          return true;
-        }
-      }
+  // All products without explicit settings default to null (enabled by default)
+  productIds.forEach(id => {
+    if (!(id in settingsMap)) {
+      settingsMap[id] = null;
     }
-    
-    // If no match by numeric ID, try to match by handle if we have all settings
-    // This helps when IDs are different but handle is the same
-    if (!productHandle && allSettings.rows.length > 0) {
-      // Try to extract handle from URL or other sources and match
-      // For now, we'll log all settings to help debug
-      console.log(`[DB] No match found by numeric ID. Searched productId=${productId} (numeric: ${numericIdFromSearched}, handle: ${productHandle}, tried formats: ${formatsToTry.join(', ')}). All stored IDs:`, 
-        allSettings.rows.map((r: any) => `${r.product_id} (numeric: ${r.product_id.match(/\d+/)?.[0]}, handle: ${r.product_handle || 'null'})=${r.tryon_enabled}`));
-    } else {
-      // Debug: show all settings if no match
-      console.log(`[DB] No match found by numeric ID. Searched productId=${productId} (numeric: ${numericIdFromSearched}, handle: ${productHandle}, tried formats: ${formatsToTry.join(', ')}). All stored IDs:`, 
-        allSettings.rows.map((r: any) => `${r.product_id} (numeric: ${r.product_id.match(/\d+/)?.[0]}, handle: ${r.product_handle || 'null'})=${r.tryon_enabled}`));
-    }
-  } else {
-    // Debug: show all settings if no numeric ID found
-    const allSettings = await query(
-      "SELECT product_id, product_handle, tryon_enabled FROM product_settings WHERE shop = $1 LIMIT 10",
-      [shop]
-    );
-    console.log(`[DB] No match found. Searched productId=${productId} (handle: ${productHandle}, tried formats: ${formatsToTry.join(', ')}). Sample stored IDs:`, 
-      allSettings.rows.map((r: any) => `${r.product_id} (handle: ${r.product_handle})=${r.tryon_enabled}`));
-  }
+  });
   
-  return null; // Not set - defaults to enabled (all products enabled by default, admin can disable individually)
+  return settingsMap;
 }
 
 /**
@@ -617,13 +587,8 @@ export async function getProductTryonStatus(shop: string, productId: string, pro
   // Admin can then explicitly disable products they don't want
   const productEnabled = productSetting !== false; // null or true means enabled, only false means disabled
   
-  // Log for debugging (always log in production too for now to debug)
-  console.log(`[getProductTryonStatus] shop=${shop}, productId=${productId}, productSetting=${productSetting}, productEnabled=${productEnabled}, shopEnabled=${shopEnabled}`);
-  
   // Final enabled status: both shop and product must be enabled
   const enabled = shopEnabled && productEnabled;
-  
-  console.log(`[getProductTryonStatus] Final result: enabled=${enabled} (shopEnabled=${shopEnabled} && productEnabled=${productEnabled})`);
   
   // Get widget settings (only if enabled)
   // Use widget_text, widget_bg, widget_color to match what the client widget expects

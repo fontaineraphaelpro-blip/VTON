@@ -59,16 +59,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
     const { admin, session } = await authenticate.admin(request);
     
-    // Logs de diagnostic CRITIQUES
-    console.log("[Credits Loader] Session check:", {
-      shop: session?.shop || "NULL",
-      hasAccessToken: !!session?.accessToken,
-      isOnline: session?.isOnline,
-      userId: (session as any)?.userId,
-    });
-    
     if (!session || !session.shop) {
-      console.error("[Credits Loader] ❌ Session invalide - shop is null!");
       return json({
         shop: null,
         error: "Session invalide. Veuillez rafraîchir la page.",
@@ -93,12 +84,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         const newCredits = (shopData.credits || 0) + creditsToAdd;
         await upsertShop(shop, { credits: newCredits });
         
-        console.log(`[Credits] Auto-credited ${creditsToAdd} credits for pack ${packId}`, {
-          shop,
-          oldCredits: shopData.credits,
-          newCredits,
-        });
-
         // Reload shop data after crediting
         const updatedShopData = await getShop(shop);
         return json({
@@ -149,11 +134,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       // Si un abonnement actif est trouvé, mettre à jour les crédits et le plan
       if (activeSubscription) {
         const planName = activeSubscription.name.toLowerCase().replace(/\s+/g, '-');
-        console.log("[Credits] Active subscription found:", { 
-          planName, 
-          status: activeSubscription.status,
-          subscriptionId: activeSubscription.id 
-        });
 
         // Définir les crédits mensuels selon le plan
         const planCredits: Record<string, number> = {
@@ -220,26 +200,12 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       admin = authResult.admin;
       session = authResult.session;
       
-      // Logs de diagnostic CRITIQUES
-      console.log("[Credits Action] ✅ Authentication successful:", {
-        shop: session?.shop || "NULL",
-        hasAccessToken: !!session?.accessToken,
-        isOnline: session?.isOnline,
-        userId: (session as any)?.userId,
-        hasAdmin: !!admin,
-      });
-      
     } catch (authError) {
       // Si authenticate.admin lance une Response (redirection), la gérer
       if (authError instanceof Response) {
         if (authError.status === 401 || authError.status === 302) {
           const reauthUrl = authError.headers.get('x-shopify-api-request-failure-reauthorize-url') || 
                            authError.headers.get('location');
-          console.error("[Credits Action] ❌ Authentication required (401/302):", { 
-            status: authError.status, 
-            reauthUrl,
-            headers: Object.fromEntries(authError.headers.entries()),
-          });
           return json({ 
             success: false, 
             error: "Votre session a expiré. Veuillez rafraîchir la page pour vous ré-authentifier.",
@@ -248,7 +214,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           });
         }
         // Pour toute autre Response, retourner une erreur JSON
-        console.error("[Credits Action] ❌ Authentication error:", authError.status);
         return json({ 
           success: false, 
           error: `Erreur d'authentification (${authError.status}). Veuillez rafraîchir la page.`,
@@ -256,17 +221,11 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         });
       }
       // Pour les autres erreurs, les propager
-      console.error("[Credits Action] ❌ Authentication error (non-Response):", authError);
       throw authError;
     }
     
     // Vérifier que la session est valide
     if (!session || !session.shop) {
-      console.error("[Credits Action] ❌ Invalid session - shop is null!", {
-        hasSession: !!session,
-        shop: session?.shop,
-        accessToken: session?.accessToken ? "EXISTS" : "MISSING",
-      });
       return json({ 
         success: false, 
         error: "Session invalide. Veuillez rafraîchir la page.",
@@ -275,7 +234,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     }
     
     if (!admin) {
-      console.error("[Credits Action] ❌ Admin client is missing!");
       return json({ 
         success: false, 
         error: "Client GraphQL non disponible. Veuillez rafraîchir la page.",
@@ -286,8 +244,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const shop = session.shop;
     const formData = await request.formData();
     const intent = formData.get("intent");
-    
-    console.log("[Credits] Action called", { intent, shop });
 
   if (intent === "purchase-credits") {
     const packId = formData.get("packId") as string;
@@ -302,14 +258,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         returnUrl.searchParams.set("purchase", "success");
         returnUrl.searchParams.set("pack", pack.id);
         returnUrl.searchParams.set("credits", String(pack.credits));
-
-        console.log("[Credits Action] Creating one-time charge using REST API for pack", {
-          packId: pack.id,
-          packName: pack.name,
-          price: pack.price,
-          shop,
-          returnUrl: returnUrl.toString(),
-        });
 
         // Use Shopify GraphQL API to create a one-time charge (recommended method)
         const mutation = `
@@ -339,29 +287,13 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           test: process.env.NODE_ENV !== "production"
         };
 
-        console.log("[Credits Action] Creating one-time charge using GraphQL", {
-          packId: pack.id,
-          packName: pack.name,
-          price: pack.price,
-          shop,
-          returnUrl: returnUrl.toString(),
-          variables
-        });
-
         const graphqlResponse = await admin.graphql(mutation, {
           variables
         });
 
         const graphqlData = await graphqlResponse.json() as any;
 
-        console.log("[Credits Action] GraphQL response received", {
-          hasData: !!graphqlData,
-          hasErrors: !!graphqlData.errors,
-          data: graphqlData
-        });
-
         if (graphqlData.errors) {
-          console.error("[Credits] GraphQL errors:", graphqlData.errors);
           const errorMessage = graphqlData.errors.map((e: any) => e.message).join(", ");
           return json({ 
             success: false, 
@@ -372,7 +304,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         const purchaseData = graphqlData.data?.appPurchaseOneTimeCreate;
         
         if (!purchaseData) {
-          console.error("No purchase data returned in response:", graphqlData);
           return json({ 
             success: false, 
             error: "Failed to create charge. Please check your Shopify permissions.",
@@ -381,7 +312,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
         if (purchaseData.userErrors && purchaseData.userErrors.length > 0) {
           const errorMessage = purchaseData.userErrors.map((e: any) => e.message).join(", ");
-          console.error("User errors:", purchaseData.userErrors);
           return json({ 
             success: false, 
             error: `Shopify API error: ${errorMessage}`,
@@ -389,7 +319,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         }
 
         if (!purchaseData.confirmationUrl) {
-          console.error("No confirmation URL returned:", purchaseData);
           return json({ 
             success: false, 
             error: "Charge created but no confirmation URL available. Please try again.",
@@ -406,18 +335,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           price: pack.price,
         });
       } catch (error) {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:224',message:'Catch block - error caught',data:{errorType:error?.constructor?.name,isResponse:error instanceof Response,isError:error instanceof Error,hasStatus:!!(error as any)?.status,status:(error as any)?.status,message:error instanceof Error ? error.message : String(error)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-        // #endregion
-        // Ne pas loguer l'objet Response directement - extraire seulement les infos nécessaires
+        // Handle Response (redirection/auth)
         if (error instanceof Response) {
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:227',message:'Error is Response object',data:{status:error.status,statusText:error.statusText,url:error.url,is401:error.status===401},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-          // #endregion
-          // Handle 401 Unauthorized in catch block
           if (error.status === 401) {
             const reauthUrl = error.headers.get('x-shopify-api-request-failure-reauthorize-url');
-            console.warn(`App purchase creation failed: ${error.status} ${error.statusText} - Authentication required`);
             return json({ 
               success: false, 
               error: "Your session has expired. Please refresh the page to re-authenticate.",
@@ -425,20 +346,17 @@ export const action = async ({ request }: ActionFunctionArgs) => {
               reauthUrl: reauthUrl || null,
             });
           }
-          console.warn(`App purchase creation failed: ${error.status} ${error.statusText}`);
           return json({ 
             success: false, 
             error: `Shopify API error (${error.status}): ${error.statusText}` 
           });
         }
-        // Check if error has Response-like properties (status, statusText)
+        // Check if error has Response-like properties
         const errorAny = error as any;
         if (errorAny && typeof errorAny === 'object' && 'status' in errorAny && 'statusText' in errorAny) {
-          // Handle Response-like object
           if (errorAny.status === 401) {
             const reauthUrl = errorAny.headers?.get?.('x-shopify-api-request-failure-reauthorize-url') || 
                              errorAny.headers?.['x-shopify-api-request-failure-reauthorize-url'];
-            console.warn(`Draft order creation failed: ${errorAny.status} ${errorAny.statusText} - Authentication required`);
             return json({ 
               success: false, 
               error: "Your session has expired. Please refresh the page to re-authenticate.",
@@ -446,14 +364,11 @@ export const action = async ({ request }: ActionFunctionArgs) => {
               reauthUrl: reauthUrl || null,
             });
           }
-          console.warn(`Draft order creation failed: ${errorAny.status} ${errorAny.statusText}`);
           return json({ 
             success: false, 
             error: `Shopify API error (${errorAny.status}): ${errorAny.statusText || 'Unknown error'}` 
           });
         }
-        // Log normal errors (not Response objects)
-        console.error("Error creating app purchase:", error instanceof Error ? error.message : String(error));
         let errorMessage: string;
         if (error instanceof Error) {
           errorMessage = error.message;
@@ -481,8 +396,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         returnUrl.searchParams.set("purchase", "success");
         returnUrl.searchParams.set("pack", "custom");
         returnUrl.searchParams.set("credits", String(customCredits));
-
-        console.log("[Credits] Creating custom one-time charge using REST API", { customCredits, totalPrice });
 
         // Use Shopify GraphQL API to create a one-time charge for custom pack
         const mutation = `
@@ -665,14 +578,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const appUrl = process.env.SHOPIFY_APP_URL || process.env.APPLICATION_URL || new URL(request.url).origin;
     const returnUrl = `${appUrl}/app/credits`;
     
-    console.log("[Credits] Requesting billing for plan:", { 
-      planId, 
-      shop, 
-      returnUrl,
-      appUrl,
-      host: new URL(request.url).host 
-    });
-    
     // billing.request() va lancer une Response de redirection (302)
     // On laisse Remix la propager automatiquement - c'est ça le truc !
     // Après le paiement, Shopify redirigera automatiquement vers returnUrl
@@ -691,12 +596,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     // Si c'est une Response (redirection de billing.request() ou ré-auth), la propager directement
     // Remix et Shopify gèrent automatiquement ces redirections
     if (error instanceof Response) {
-      console.log("[Credits] Propagating Response from billing.request():", error.status);
       throw error; // Remix gérera cette redirection automatiquement
     }
-    
-    // Pour les autres erreurs, les logger et retourner une erreur JSON
-    console.error("[Credits] Error in action:", error);
     return json({ 
       success: false, 
       error: error instanceof Error ? error.message : "Une erreur est survenue. Veuillez réessayer.",
@@ -705,8 +606,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 };
 
 export default function Credits() {
-  console.log("[Credits] Component rendering");
-  
   const loaderData = useLoaderData<typeof loader>();
   const shop = (loaderData as any)?.shop || null;
   const error = (loaderData as any)?.error || null;
@@ -714,7 +613,6 @@ export default function Credits() {
   const creditsAdded = (loaderData as any)?.creditsAdded || 0;
   const subscriptionUpdated = (loaderData as any)?.subscriptionUpdated || false;
   const planName = (loaderData as any)?.planName || null;
-  console.log("[Credits] Loader data:", { hasShop: !!shop, hasError: !!error, credits: shop?.credits, purchaseSuccess, creditsAdded, subscriptionUpdated, planName });
   
   const fetcher = useFetcher<typeof action>();
   const revalidator = useRevalidator();
@@ -727,12 +625,6 @@ export default function Credits() {
   revalidatorRef.current = revalidator;
 
   const isSubmitting = fetcher.state === "submitting";
-  console.log("[Credits] Component state initialized", { 
-    isSubmitting, 
-    fetcherState: fetcher.state,
-    fetcherData: fetcher.data,
-    submittingPackId 
-  });
 
   // Plus besoin de gérer les redirections manuellement !
   // billing.request() propage directement la Response de redirection
@@ -746,10 +638,7 @@ export default function Credits() {
   }, [fetcher.state, submittingPackId]);
 
   const handlePurchase = (packId: string) => {
-    console.log("[Credits] handlePurchase called", { packId, isSubmitting, submittingPackId, fetcherState: fetcher.state });
-    
     if (isSubmitting || submittingPackId !== null) {
-      console.warn("[Credits] Purchase already in progress, ignoring click");
       return;
     }
     
@@ -759,7 +648,6 @@ export default function Credits() {
     formData.append("intent", "purchase-credits");
     formData.append("packId", packId);
     
-    console.log("[Credits] Submitting purchase request", { packId });
     fetcher.submit(formData, { method: "post" });
   };
 
@@ -778,10 +666,7 @@ export default function Credits() {
   };
 
   const handleSubscriptionPurchase = (planId: string) => {
-    console.log("[Credits] handleSubscriptionPurchase called", { planId, isSubmitting });
-    
     if (isSubmitting || submittingPackId !== null) {
-      console.warn("[Credits] Purchase already in progress, ignoring click");
       return;
     }
     
@@ -791,7 +676,6 @@ export default function Credits() {
     formData.append("intent", "purchase-subscription");
     formData.append("planId", planId);
     
-    console.log("[Credits] Submitting subscription purchase request", { planId });
     fetcher.submit(formData, { method: "post" });
   };
 

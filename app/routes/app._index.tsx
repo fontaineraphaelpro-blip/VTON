@@ -147,186 +147,57 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       }
     });
 
-    // Fetch all products from Shopify if we have IDs to fetch
+    // OPTIMIZED: Fetch only the specific products we need using nodes(ids) instead of all 250 products
     if (productIdsArray.length > 0) {
       try {
-        const productQuery = `#graphql
-          query {
-            products(first: 250) {
-              edges {
-                node {
+        // Convert numeric IDs to GIDs
+        const productGids = productIdsArray.map(id => `gid://shopify/Product/${id}`);
+        
+        // Fetch in batches of 10 (Shopify's nodes query limit)
+        for (let i = 0; i < productGids.length; i += 10) {
+          const batch = productGids.slice(i, i + 10);
+          const productQuery = `#graphql
+            query getProducts($ids: [ID!]!) {
+              nodes(ids: $ids) {
+                ... on Product {
                   id
                   title
                   handle
-                  variants(first: 100) {
-                    edges {
-                      node {
-                        id
-                      }
-                    }
-                  }
                 }
               }
             }
-          }
-        `;
-        
-        console.log(`[Dashboard] Fetching all products from Shopify...`);
-        
-        const response = await admin.graphql(productQuery);
-        
-        console.log(`[Dashboard] GraphQL response status:`, response.ok, response.status);
-        
-        if (response.ok) {
-          const data = await response.json() as any;
+          `;
           
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:120',message:'GraphQL products query response received',data:{hasErrors:!!data.errors,errors:data.errors,hasData:!!data.data,hasProducts:!!data.data?.products,productsCount:data.data?.products?.edges?.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run3',hypothesisId:'E'})}).catch(()=>{});
-          // #endregion
+          const response = await admin.graphql(productQuery, {
+            variables: { ids: batch }
+          });
           
-          // Check for GraphQL errors first
-          if (data.errors) {
-            console.error(`[Dashboard] GraphQL errors:`, JSON.stringify(data.errors, null, 2));
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:125',message:'GraphQL errors detected',data:{errors:data.errors},timestamp:Date.now(),sessionId:'debug-session',runId:'run3',hypothesisId:'D'})}).catch(()=>{});
-            // #endregion
-          }
-          
-          if (data.data?.products?.edges) {
-            console.log(`[Dashboard] Received ${data.data.products.edges.length} products from GraphQL`);
+          if (response.ok) {
+            const data = await response.json() as any;
             
-            // Create a map of all products by ID (both GID and numeric) and variants
-            data.data.products.edges.forEach((edge: any) => {
-              const product = edge.node;
-              if (product && product.id && product.title) {
-                // Store both GID and numeric ID as keys
-                productNamesMap[product.id] = product.title;
-                const numericId = product.id.replace('gid://shopify/Product/', '');
-                productNamesMap[numericId] = product.title;
-                
-                // Also store by handle if available
-                if (product.handle) {
-                  productNamesMap[product.handle] = product.title;
-                }
-                
-                // Store variant IDs -> product title mapping (for matching variant IDs in logs)
-                if (product.variants?.edges) {
-                  product.variants.edges.forEach((variantEdge: any) => {
-                    const variant = variantEdge.node;
-                    if (variant && variant.id) {
-                      // Store variant GID -> product title
-                      productNamesMap[variant.id] = product.title;
-                      // Extract numeric ID from variant GID (format: gid://shopify/ProductVariant/123456)
-                      const variantGidMatch = variant.id.match(/^gid:\/\/shopify\/ProductVariant\/(\d+)$/);
-                      if (variantGidMatch) {
-                        const variantNumericId = variantGidMatch[1];
-                        productNamesMap[variantNumericId] = product.title;
-                        console.log(`[Dashboard] ✓ Stored variant mapping: ${variant.id} (numeric: ${variantNumericId}) -> ${product.title}`);
-                      }
-                    }
-                  });
-                }
-                
-                console.log(`[Dashboard] ✓ Stored product: ${product.id} (numeric: ${numericId}, handle: ${product.handle || 'N/A'}) -> ${product.title}`);
-                // #region agent log
-                fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:160',message:'Stored product in map',data:{gid:product.id,numericId,handle:product.handle,title:product.title,variantsCount:product.variants?.edges?.length||0},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'F'})}).catch(()=>{});
-                // #endregion
-              }
-            });
-            
-            // Now match the requested IDs
-            productIdsArray.forEach((requestedId) => {
-              const requestedGid = `gid://shopify/Product/${requestedId}`;
-              let title = productNamesMap[requestedGid] || productNamesMap[requestedId];
-              
-              // #region agent log
-              fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:175',message:'Trying to match requested ID',data:{requestedId,requestedGid,foundInMap:!!title,availableKeys:Object.keys(productNamesMap).slice(0,15)},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'F'})}).catch(()=>{});
-              // #endregion
-              
-              if (!title) {
-                console.warn(`[Dashboard] ✗ Product not found in products list: ${requestedId} (GID: ${requestedGid})`);
-                // #region agent log
-                fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:181',message:'Product not found in products list',data:{requestedId,requestedGid,availableIds:Object.keys(productNamesMap).slice(0,15),allAvailableKeys:Object.keys(productNamesMap)},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'F'})}).catch(()=>{});
-                // #endregion
-                
-                // Fallback 1: try to find product_title in logs with same ID
-                const logWithTitle = recentLogs.find((log: any) => {
-                  if (!log.product_id) return false;
-                  const logGidMatch = log.product_id.match(/^gid:\/\/shopify\/Product\/(\d+)$/);
-                  const logNumericId = logGidMatch ? logGidMatch[1] : log.product_id;
-                  return log.product_id === requestedGid || logNumericId === requestedId;
-                });
-                
-                // Fallback 2: if no title found, try to find logs with handles that match products
-                // Count how many logs have each handle/product_title
-                if (!logWithTitle?.product_title) {
-                  const handleCounts: Record<string, number> = {};
-                  recentLogs.forEach((log: any) => {
-                    // If log has a handle (not GID, not numeric)
-                    if (log.product_id && !log.product_id.startsWith('gid://') && !/^\d+$/.test(log.product_id)) {
-                      const handle = log.product_id;
-                      if (productNamesMap[handle]) {
-                        handleCounts[handle] = (handleCounts[handle] || 0) + 1;
-                      }
-                    }
-                  });
+            if (data.data?.nodes) {
+              data.data.nodes.forEach((product: any) => {
+                if (product && product.id && product.title) {
+                  // Store both GID and numeric ID as keys
+                  productNamesMap[product.id] = product.title;
+                  const numericId = product.id.replace('gid://shopify/Product/', '');
+                  productNamesMap[numericId] = product.title;
                   
-                  // Find the most frequent handle that matches a product
-                  const mostFrequentHandle = Object.keys(handleCounts).sort((a, b) => handleCounts[b] - handleCounts[a])[0];
-                  if (mostFrequentHandle && productNamesMap[mostFrequentHandle]) {
-                    title = productNamesMap[mostFrequentHandle];
-                    console.log(`[Dashboard] Using most frequent handle as fallback: ${requestedId} -> ${title} (handle: ${mostFrequentHandle}, count: ${handleCounts[mostFrequentHandle]})`);
-                    // #region agent log
-                    fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:200',message:'Using most frequent handle as fallback',data:{requestedId,title,handle:mostFrequentHandle,count:handleCounts[mostFrequentHandle]},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'F'})}).catch(()=>{});
-                    // #endregion
+                  // Also store by handle if available
+                  if (product.handle) {
+                    productNamesMap[product.handle] = product.title;
                   }
                 }
-                
-                // Fallback 3: use product_title from log if found
-                if (!title && logWithTitle?.product_title) {
-                  title = logWithTitle.product_title;
-                  console.log(`[Dashboard] Using product_title from log as fallback: ${requestedId} -> ${title}`);
-                  // #region agent log
-                  fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:210',message:'Successfully used product_title from log',data:{requestedId,title},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'F'})}).catch(()=>{});
-                  // #endregion
-                }
-                
-                // Store the title in map for future use
-                if (title) {
-                  productNamesMap[requestedGid] = title;
-                  productNamesMap[requestedId] = title;
-                }
-              }
-              
-              if (title) {
-                console.log(`[Dashboard] ✓ Matched product: ${requestedId} -> ${title}`);
-              }
-            });
-          } else {
-            console.warn(`[Dashboard] No products in GraphQL response, data structure:`, {
-              hasData: !!data.data,
-              hasProducts: !!data.data?.products,
-              dataKeys: data.data ? Object.keys(data.data) : [],
-              fullData: JSON.stringify(data, null, 2).substring(0, 1000)
-            });
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:170',message:'No products in GraphQL response',data:{hasData:!!data.data,hasProducts:!!data.data?.products,dataKeys:data.data?Object.keys(data.data):[],fullData:JSON.stringify(data,null,2).substring(0,1000)},timestamp:Date.now(),sessionId:'debug-session',runId:'run3',hypothesisId:'E'})}).catch(()=>{});
-            // #endregion
+              });
+            }
           }
-        } else {
-          const errorText = await response.text().catch(() => "Unknown error");
-          console.error(`[Dashboard] Failed to fetch products:`, response.status, errorText);
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:175',message:'GraphQL request failed',data:{status:response.status,errorText:errorText.substring(0,500)},timestamp:Date.now(),sessionId:'debug-session',runId:'run3',hypothesisId:'D'})}).catch(()=>{});
-          // #endregion
         }
-        
-        console.log(`[Dashboard] Product names map:`, productNamesMap);
       } catch (error) {
-        console.error("Error fetching product names:", error);
+        // Silently fail - use fallback titles from logs
+        if (process.env.NODE_ENV !== "production") {
+          console.error("Error fetching product names:", error);
+        }
       }
-    } else {
-      console.log(`[Dashboard] No products to fetch (all have product_title or no product_id)`);
     }
     
     // Enrich topProducts with product titles (use fetched names, fallback to existing product_title from logs)
@@ -354,7 +225,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
               const handle = log.product_id;
               if (productNamesMap[handle]) {
                 title = productNamesMap[handle];
-                console.log(`[Dashboard] Matched by handle from log: ${product.product_id} -> ${title}`);
                 break;
               }
             }
@@ -362,7 +232,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             // Use product_title from log if available
             if (log.product_title) {
               title = log.product_title;
-              console.log(`[Dashboard] Using product_title from log for topProduct: ${product.product_id} -> ${title}`);
               break;
             }
           }
@@ -371,7 +240,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         // If still not found and product_id is a handle, try handles map
         if (!title && productHandlesMap[product.product_id]) {
           title = productHandlesMap[product.product_id];
-          console.log(`[Dashboard] Using product_title from handles map for topProduct: ${product.product_id} -> ${title}`);
         }
         
         // If still not found, try to match by checking all products for similar IDs (maybe variant IDs)
@@ -387,17 +255,14 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
           });
           if (firstLogWithTitle?.product_title) {
             title = firstLogWithTitle.product_title;
-            console.log(`[Dashboard] Using product_title from similar log: ${product.product_id} -> ${title}`);
           }
         }
         
         // Always set product_title - use title if found, otherwise use numeric ID (more readable than full GID)
         if (title) {
-          console.log(`[Dashboard] Enriched topProduct: ${product.product_id} -> ${title}`);
           return { ...product, product_title: title };
         } else {
           // Use numeric ID as fallback (better than full GID)
-          console.log(`[Dashboard] No title found for topProduct, using numeric ID: ${product.product_id} -> Product #${numericId}`);
           return { ...product, product_title: `Product #${numericId}` };
         }
       }
@@ -412,7 +277,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         // Priority 1: Use product_handle to match with products (most reliable)
         if (log.product_handle && productNamesMap[log.product_handle]) {
           title = productNamesMap[log.product_handle];
-          console.log(`[Dashboard] Matched by handle: ${log.product_handle} -> ${title}`);
         }
         // Priority 2: Try product_id (GID or numeric) in fetched map
         else if (log.product_id) {
@@ -424,23 +288,19 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         // Priority 3: Use product_handle from handles map (from other logs)
         if (!title && log.product_handle && productHandlesMap[log.product_handle]) {
           title = productHandlesMap[log.product_handle];
-          console.log(`[Dashboard] Using product_title from handles map: ${log.product_handle} -> ${title}`);
         }
         
         // Priority 4: Use existing product_title from log
         if (!title && log.product_title) {
           title = log.product_title;
-          console.log(`[Dashboard] Using existing product_title from log: ${log.product_id || log.product_handle} -> ${title}`);
         }
         
         // Always set product_title - use title if found, otherwise use numeric ID or handle
         if (title) {
-          console.log(`[Dashboard] Enriched log: ${log.product_id || log.product_handle} -> ${title}`);
           return { ...log, product_title: title };
         } else {
           // Use handle if available, otherwise numeric ID
           const displayId = log.product_handle || (log.product_id ? (log.product_id.match(/^gid:\/\/shopify\/Product\/(\d+)$/)?.[1] || log.product_id) : 'Unknown');
-          console.log(`[Dashboard] No title found for log, using ID: ${log.product_id || log.product_handle} -> Product #${displayId}`);
           return { ...log, product_title: `Product #${displayId}` };
         }
       }
