@@ -19,84 +19,170 @@ import { getShop, upsertShop, getTryonLogs, getTopProducts, getTryonStatsByDay, 
 import { ensureTables } from "../lib/db-init.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { admin, session, billing } = await authenticate.admin(request);
-  const shop = session.shop;
-
-  // Note: Billing verification is handled in app.credits.tsx when user tries to purchase
-  // We don't block access to the dashboard here to allow users to view their data
-  // and navigate to the credits page to subscribe if needed
+  const { billing } = await authenticate.admin(request);
+  const url = new URL(request.url);
 
   try {
-    await ensureTables();
+    // On vérifie si l'un des plans est actif
+    await billing.require({
+      plans: ["starter", "pro", "studio"],
+      isTest: true, // CRITIQUE : Force le mode test pour la vérification
+      onFailure: async () => {
+        // Si aucun plan, on déclenche le paiement pour le plan "starter"
+        console.log("Tentative de redirection vers le paiement TEST...");
+        
+        return await billing.request({
+          plan: "starter",
+          isTest: true, // CRITIQUE : Dit à Shopify que c'est un faux paiement
+          returnUrl: `https://${url.host}/app`, // URL de retour explicite
+        });
+      },
+    });
+  } catch (error) {
+    // Si l'erreur est une Response (redirection), on la laisse passer
+    if (error instanceof Response) return error;
+    
+    // Sinon on log l'erreur réelle
+    console.error("ERREUR CRITIQUE BILLING :", error);
+    throw error;
+  }
 
-    const [shopData, recentLogs, topProducts, dailyStats, monthlyUsage] = await Promise.all([
-      getShop(shop),
-      getTryonLogs(shop, { limit: 10, offset: 0 }).catch(() => []),
-      getTopProducts(shop, 5).catch(() => []),
-      getTryonStatsByDay(shop, 30).catch(() => []),
-      getMonthlyTryonUsage(shop).catch(() => 0), // ADDED: Get monthly usage
-    ]);
-    
-    // Fetch product names from Shopify for ALL products (even if they have product_title, to ensure accuracy)
-    const productIdsToFetch = new Set<string>();
-    
-    // Collect product IDs from topProducts (fetch all to ensure we have the latest names)
-    topProducts.forEach((product: any) => {
-      if (product.product_id) {
-        // Extract numeric ID from GID if needed
-        const gidMatch = product.product_id.match(/^gid:\/\/shopify\/Product\/(\d+)$/);
-        if (gidMatch) {
-          productIdsToFetch.add(gidMatch[1]);
-        } else if (/^\d+$/.test(product.product_id)) {
-          productIdsToFetch.add(product.product_id);
+  return null;
+};
+
+export const action = async ({ request }: ActionFunctionArgs) => {
+  const { session, admin } = await authenticate.admin(request);
+  const shop = session.shop;
+  const formData = await request.formData();
+
+  const intent = formData.get("intent") as string;
+
+  // Action pour nettoyer les anciens script tags
+  if (intent === "cleanup-script-tags") {
+    try {
+      const scriptTagsQuery = `#graphql
+        query {
+          scriptTags(first: 50) {
+            edges {
+              node {
+                id
+                src
+              }
+            }
+          }
         }
-      }
-    });
-    
-    // Collect product IDs from recentLogs (fetch all to ensure we have the latest names)
-    recentLogs.forEach((log: any) => {
-      if (log.product_id) {
-        const gidMatch = log.product_id.match(/^gid:\/\/shopify\/Product\/(\d+)$/);
-        if (gidMatch) {
-          productIdsToFetch.add(gidMatch[1]);
-        } else if (/^\d+$/.test(log.product_id)) {
-          productIdsToFetch.add(log.product_id);
-        }
-      }
-    });
-    
-    // Fetch product names from Shopify
-    const productNamesMap: Record<string, string> = {};
-    if (process.env.NODE_ENV !== "production") {
-      console.log(`[Dashboard] Products to fetch: ${productIdsToFetch.size}`, Array.from(productIdsToFetch));
-    }
-    
-    // Also collect product handles from logs for matching (more reliable than IDs)
-    const productHandlesMap: Record<string, string> = {};
-    recentLogs.forEach((log: any) => {
-      // Use product_handle if available (new logs)
-      if (log.product_handle && log.product_title) {
-        productHandlesMap[log.product_handle] = log.product_title;
-      }
-      // Fallback: if product_id is a handle (old logs)
-      else if (log.product_id && log.product_title && !log.product_id.startsWith('gid://') && !/^\d+$/.test(log.product_id)) {
-        productHandlesMap[log.product_id] = log.product_title;
-      }
-    });
-    
-    if (productIdsToFetch.size > 0) {
-      try {
-        const productIdsArray = Array.from(productIdsToFetch);
-        if (process.env.NODE_ENV !== "production") {
-          console.log(`[Dashboard] Fetching ${productIdsArray.length} product names from Shopify...`);
+      `;
+      
+      const scriptTagsResponse = await admin.graphql(scriptTagsQuery);
+      
+      if (scriptTagsResponse.ok) {
+        const scriptTagsData = await scriptTagsResponse.json() as any;
+        const existingScripts = scriptTagsData.data?.scriptTags?.edges || [];
+        
+        // Trouver tous les anciens script tags liés au widget
+        const oldScriptTags = existingScripts.filter((edge: any) => {
+          const src = edge.node.src || '';
+          return src.includes('widget') || 
+                 src.includes('tryon') || 
+                 src.includes('try-on') ||
+                 src.includes('vton') ||
+                 (src.includes('/apps/') && src.includes('widget'));
+        });
+        
+        let deletedCount = 0;
+        
+        // Supprimer chaque ancien script tag
+        for (const oldScript of oldScriptTags) {
+          try {
+            const deleteScriptTagMutation = `#graphql
+              mutation scriptTagDelete($id: ID!) {
+                scriptTagDelete(id: $id) {
+                  deletedScriptTagId
+                  userErrors {
+                    field
+                    message
+                  }
+                }
+              }
+            `;
+            
+            const deleteResult = await admin.graphql(deleteScriptTagMutation, {
+              variables: {
+                id: oldScript.node.id
+              }
+            });
+            
+            if (deleteResult.ok) {
+              const deleteData = await deleteResult.json().catch(() => null);
+              if (deleteData?.data?.scriptTagDelete?.deletedScriptTagId) {
+                deletedCount++;
+              }
+            }
+          } catch (deleteError) {
+            // Error deleting script tag - non-critical, continue
+          }
         }
         
-        // Use products query with variants to match variant IDs in logs
-        const productQuery = `#graphql
-          query getProducts {
-            products(first: 250) {
-              edges {
-                node {
+        return json({ 
+          success: true, 
+          deletedCount,
+          message: `Deleted ${deletedCount} old script tag(s)` 
+        });
+      }
+      
+      return json({ success: false, error: "Unable to retrieve script tags" });
+    } catch (error) {
+      // Log error only in development
+      if (process.env.NODE_ENV !== "production") {
+        console.error("Error cleaning up script tags:", error);
+      }
+      return json({ 
+        success: false, 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  }
+
+  // Action normale pour sauvegarder la configuration
+  const widgetText = (formData.get("widgetText") as string) || "Try It On Now";
+  const widgetBg = (formData.get("widgetBg") as string) || "#000000";
+  const widgetColor = (formData.get("widgetColor") as string) || "#ffffff";
+  const maxTriesPerUserStr = formData.get("maxTriesPerUser") as string;
+  const maxTriesPerUser = maxTriesPerUserStr ? parseInt(maxTriesPerUserStr) : 5;
+  const isEnabled = formData.get("isEnabled") === "true";
+  const dailyLimitStr = formData.get("dailyLimit") as string;
+  const dailyLimit = dailyLimitStr ? parseInt(dailyLimitStr) : 100;
+  // ADDED: Monthly quota and quality mode
+  const monthlyQuotaStr = formData.get("monthlyQuota") as string;
+  const monthlyQuota = monthlyQuotaStr && monthlyQuotaStr.trim() !== "" ? parseInt(monthlyQuotaStr) : null;
+  const qualityMode = (formData.get("qualityMode") as string) || "balanced";
+
+    // Configuration saved (logged in database)
+
+  try {
+    await upsertShop(shop, {
+      widgetText,
+      widgetBg,
+      widgetColor,
+      maxTriesPerUser,
+      isEnabled,
+      dailyLimit,
+      monthlyQuota, // ADDED
+      qualityMode, // ADDED
+    });
+
+    return json({ success: true });
+  } catch (error) {
+    // Log error only in development
+    if (process.env.NODE_ENV !== "production") {
+      console.error("[Dashboard Action] Error saving configuration:", error);
+    }
+    return json({ 
+      success: false, 
+      error: error instanceof Error ? error.message : "Error saving configuration" 
+    });
+  }
+};
                   id
                   title
                   handle
@@ -122,17 +208,20 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         if (response.ok) {
           const data = await response.json() as any;
           
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:120',message:'GraphQL products query response received',data:{hasErrors:!!data.errors,errors:data.errors,hasData:!!data.data,hasProducts:!!data.data?.products,productsCount:data.data?.products?.edges?.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run3',hypothesisId:'E'})}).catch(()=>{});
+          // #endregion
+          
           // Check for GraphQL errors first
           if (data.errors) {
-            if (process.env.NODE_ENV !== "production") {
-              console.error(`[Dashboard] GraphQL errors:`, JSON.stringify(data.errors, null, 2));
-            }
+            console.error(`[Dashboard] GraphQL errors:`, JSON.stringify(data.errors, null, 2));
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:125',message:'GraphQL errors detected',data:{errors:data.errors},timestamp:Date.now(),sessionId:'debug-session',runId:'run3',hypothesisId:'D'})}).catch(()=>{});
+            // #endregion
           }
           
           if (data.data?.products?.edges) {
-            if (process.env.NODE_ENV !== "production") {
-              console.log(`[Dashboard] Received ${data.data.products.edges.length} products from GraphQL`);
-            }
+            console.log(`[Dashboard] Received ${data.data.products.edges.length} products from GraphQL`);
             
             // Create a map of all products by ID (both GID and numeric) and variants
             data.data.products.edges.forEach((edge: any) => {
@@ -160,17 +249,16 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                       if (variantGidMatch) {
                         const variantNumericId = variantGidMatch[1];
                         productNamesMap[variantNumericId] = product.title;
-                        if (process.env.NODE_ENV !== "production") {
-                          console.log(`[Dashboard] ✓ Stored variant mapping: ${variant.id} (numeric: ${variantNumericId}) -> ${product.title}`);
-                        }
+                        console.log(`[Dashboard] ✓ Stored variant mapping: ${variant.id} (numeric: ${variantNumericId}) -> ${product.title}`);
                       }
                     }
                   });
                 }
                 
-                if (process.env.NODE_ENV !== "production") {
-                  console.log(`[Dashboard] ✓ Stored product: ${product.id} (numeric: ${numericId}, handle: ${product.handle || 'N/A'}) -> ${product.title}`);
-                }
+                console.log(`[Dashboard] ✓ Stored product: ${product.id} (numeric: ${numericId}, handle: ${product.handle || 'N/A'}) -> ${product.title}`);
+                // #region agent log
+                fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:160',message:'Stored product in map',data:{gid:product.id,numericId,handle:product.handle,title:product.title,variantsCount:product.variants?.edges?.length||0},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'F'})}).catch(()=>{});
+                // #endregion
               }
             });
             
@@ -179,10 +267,15 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
               const requestedGid = `gid://shopify/Product/${requestedId}`;
               let title = productNamesMap[requestedGid] || productNamesMap[requestedId];
               
+              // #region agent log
+              fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:175',message:'Trying to match requested ID',data:{requestedId,requestedGid,foundInMap:!!title,availableKeys:Object.keys(productNamesMap).slice(0,15)},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'F'})}).catch(()=>{});
+              // #endregion
+              
               if (!title) {
-                if (process.env.NODE_ENV !== "production") {
-                  console.warn(`[Dashboard] ✗ Product not found in products list: ${requestedId} (GID: ${requestedGid})`);
-                }
+                console.warn(`[Dashboard] ✗ Product not found in products list: ${requestedId} (GID: ${requestedGid})`);
+                // #region agent log
+                fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:181',message:'Product not found in products list',data:{requestedId,requestedGid,availableIds:Object.keys(productNamesMap).slice(0,15),allAvailableKeys:Object.keys(productNamesMap)},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'F'})}).catch(()=>{});
+                // #endregion
                 
                 // Fallback 1: try to find product_title in logs with same ID
                 const logWithTitle = recentLogs.find((log: any) => {
@@ -210,18 +303,20 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                   const mostFrequentHandle = Object.keys(handleCounts).sort((a, b) => handleCounts[b] - handleCounts[a])[0];
                   if (mostFrequentHandle && productNamesMap[mostFrequentHandle]) {
                     title = productNamesMap[mostFrequentHandle];
-                    if (process.env.NODE_ENV !== "production") {
-                      console.log(`[Dashboard] Using most frequent handle as fallback: ${requestedId} -> ${title} (handle: ${mostFrequentHandle}, count: ${handleCounts[mostFrequentHandle]})`);
-                    }
+                    console.log(`[Dashboard] Using most frequent handle as fallback: ${requestedId} -> ${title} (handle: ${mostFrequentHandle}, count: ${handleCounts[mostFrequentHandle]})`);
+                    // #region agent log
+                    fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:200',message:'Using most frequent handle as fallback',data:{requestedId,title,handle:mostFrequentHandle,count:handleCounts[mostFrequentHandle]},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'F'})}).catch(()=>{});
+                    // #endregion
                   }
                 }
                 
                 // Fallback 3: use product_title from log if found
                 if (!title && logWithTitle?.product_title) {
                   title = logWithTitle.product_title;
-                  if (process.env.NODE_ENV !== "production") {
-                    console.log(`[Dashboard] Using product_title from log as fallback: ${requestedId} -> ${title}`);
-                  }
+                  console.log(`[Dashboard] Using product_title from log as fallback: ${requestedId} -> ${title}`);
+                  // #region agent log
+                  fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:210',message:'Successfully used product_title from log',data:{requestedId,title},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'F'})}).catch(()=>{});
+                  // #endregion
                 }
                 
                 // Store the title in map for future use
@@ -231,39 +326,35 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                 }
               }
               
-              if (title && process.env.NODE_ENV !== "production") {
+              if (title) {
                 console.log(`[Dashboard] ✓ Matched product: ${requestedId} -> ${title}`);
               }
             });
           } else {
-            if (process.env.NODE_ENV !== "production") {
-              console.warn(`[Dashboard] No products in GraphQL response, data structure:`, {
-                hasData: !!data.data,
-                hasProducts: !!data.data?.products,
-                dataKeys: data.data ? Object.keys(data.data) : [],
-                fullData: JSON.stringify(data, null, 2).substring(0, 1000)
-              });
-            }
+            console.warn(`[Dashboard] No products in GraphQL response, data structure:`, {
+              hasData: !!data.data,
+              hasProducts: !!data.data?.products,
+              dataKeys: data.data ? Object.keys(data.data) : [],
+              fullData: JSON.stringify(data, null, 2).substring(0, 1000)
+            });
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:170',message:'No products in GraphQL response',data:{hasData:!!data.data,hasProducts:!!data.data?.products,dataKeys:data.data?Object.keys(data.data):[],fullData:JSON.stringify(data,null,2).substring(0,1000)},timestamp:Date.now(),sessionId:'debug-session',runId:'run3',hypothesisId:'E'})}).catch(()=>{});
+            // #endregion
           }
         } else {
           const errorText = await response.text().catch(() => "Unknown error");
-          if (process.env.NODE_ENV !== "production") {
-            console.error(`[Dashboard] Failed to fetch products:`, response.status, errorText);
-          }
+          console.error(`[Dashboard] Failed to fetch products:`, response.status, errorText);
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:175',message:'GraphQL request failed',data:{status:response.status,errorText:errorText.substring(0,500)},timestamp:Date.now(),sessionId:'debug-session',runId:'run3',hypothesisId:'D'})}).catch(()=>{});
+          // #endregion
         }
         
-        if (process.env.NODE_ENV !== "production") {
-          console.log(`[Dashboard] Product names map:`, productNamesMap);
-        }
+        console.log(`[Dashboard] Product names map:`, productNamesMap);
       } catch (error) {
-        if (process.env.NODE_ENV !== "production") {
-          console.error("Error fetching product names:", error);
-        }
+        console.error("Error fetching product names:", error);
       }
     } else {
-      if (process.env.NODE_ENV !== "production") {
-        console.log(`[Dashboard] No products to fetch (all have product_title or no product_id)`);
-      }
+      console.log(`[Dashboard] No products to fetch (all have product_title or no product_id)`);
     }
     
     // Enrich topProducts with product titles (use fetched names, fallback to existing product_title from logs)
