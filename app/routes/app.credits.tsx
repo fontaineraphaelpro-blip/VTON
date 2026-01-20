@@ -571,14 +571,23 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     }
 
     // Avec Managed Pricing, les abonnements sont gérés via le Dashboard Shopify
-    // On redirige vers la page de gestion des abonnements dans le Dashboard
-    const dashboardUrl = `https://${shop}/admin/settings/apps/${process.env.SHOPIFY_API_KEY || 'app'}/subscriptions`;
+    // On redirige vers la page de paiement/abonnements de l'app dans le Dashboard Shopify
+    // L'URL doit pointer vers la page des abonnements de l'app dans le admin Shopify
+    const appId = process.env.SHOPIFY_API_KEY || '';
+    // URL vers la page de gestion des abonnements de l'app dans Shopify Admin
+    const subscriptionUrl = `https://${shop}/admin/settings/apps/${appId}/subscriptions`;
+    
+    console.log("[Credits] Redirecting to Shopify subscription page", {
+      shop,
+      planId,
+      subscriptionUrl,
+    });
     
     return json({ 
       success: true, 
       redirect: true,
-      checkoutUrl: dashboardUrl,
-      message: "Redirection vers le Dashboard Shopify pour gérer votre abonnement",
+      checkoutUrl: subscriptionUrl,
+      message: "Redirection vers la page de paiement Shopify",
     });
   }
   
@@ -672,11 +681,24 @@ export default function Credits() {
     
     if (fetcher.data?.success && (fetcher.data as any)?.redirect && (fetcher.data as any)?.checkoutUrl) {
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:577',message:'Before window.location.href redirect to checkout',data:{checkoutUrl:(fetcher.data as any).checkoutUrl},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'B'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:577',message:'Before redirect to checkout - breaking out of iframe',data:{checkoutUrl:(fetcher.data as any).checkoutUrl},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'B'})}).catch(()=>{});
       // #endregion
-      // Rediriger vers le checkout Shopify
+      // Rediriger vers le checkout Shopify EN DEHORS de l'iframe
+      // Utiliser window.top pour sortir de l'iframe et rediriger la fenêtre parente (Shopify)
       if (isMounted) {
-        window.location.href = (fetcher.data as any).checkoutUrl;
+        try {
+          // Essayer d'abord avec window.top pour sortir de l'iframe
+          if (window.top && window.top !== window) {
+            window.top.location.href = (fetcher.data as any).checkoutUrl;
+          } else {
+            // Fallback : ouvrir dans un nouvel onglet si on ne peut pas accéder à window.top
+            window.open((fetcher.data as any).checkoutUrl, '_blank');
+          }
+        } catch (e) {
+          // Si window.top est bloqué (cross-origin), ouvrir dans un nouvel onglet
+          console.log("[Credits] Cannot access window.top, opening in new tab");
+          window.open((fetcher.data as any).checkoutUrl, '_blank');
+        }
       }
     } else if (fetcher.data?.success && !(fetcher.data as any)?.redirect) {
       // #region agent log
