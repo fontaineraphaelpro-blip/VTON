@@ -138,7 +138,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       tryonCounts = await getProductTryonCounts(shop, productIds).catch(() => ({}));
       
       // OPTIMIZED: Get product settings in batch (single query instead of N queries)
-      const productIds = products.map((p: any) => p.id);
       const batchSettings = await getProductTryonSettingsBatch(shop, productIds).catch(() => ({}));
       
       // Convert to expected format (null or true means enabled, only false means disabled)
