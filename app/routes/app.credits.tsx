@@ -570,12 +570,47 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
     // Utiliser billing.request() pour obtenir une URL de paiement directe
     // Cette méthode génère une confirmationUrl qui redirige directement vers le paiement
+    // 
+    // NOTE IMPORTANTE sur les Session Tokens Shopify:
+    // Les Session Tokens expirent rapidement (quelques minutes) dans les iframes.
+    // L'App Bridge devrait les rafraîchir automatiquement, mais si la session expire
+    // entre le moment où on obtient la session et l'appel à billing.request(),
+    // on obtient une erreur 401. Dans ce cas, on redirige vers la ré-authentification
+    // qui se fait automatiquement dans l'iframe et maintient l'authentification.
     try {
-      const { billing } = await authenticate.admin(request);
+      // authenticate.admin() vérifie automatiquement le Session Token et le rafraîchit si nécessaire
+      // Si la session a expiré, authenticate.admin() lancera une Response de redirection
+      const { billing, session: billingSession } = await authenticate.admin(request);
+      
+      // Vérifier que la session est valide
+      if (!billingSession || !billingSession.shop || !billingSession.accessToken) {
+        console.error("[Credits] ❌ Invalid session before billing.request()", {
+          hasSession: !!billingSession,
+          hasShop: !!billingSession?.shop,
+          hasAccessToken: !!billingSession?.accessToken,
+        });
+        return json({ 
+          success: false, 
+          error: "Session invalide. Veuillez rafraîchir la page.",
+          requiresAuth: true,
+        });
+      }
+      
+      console.log("[Credits] ✅ Session valid before billing.request()", {
+        shop: billingSession.shop,
+        hasAccessToken: !!billingSession.accessToken,
+        isOnline: billingSession.isOnline,
+      });
+      
       const url = new URL(request.url);
       const returnUrl = `https://${url.host}/app/credits`;
       
-      console.log("[Credits] Requesting billing for plan:", { planId, shop, returnUrl });
+      console.log("[Credits] Requesting billing for plan:", { 
+        planId, 
+        shop: billingSession.shop, 
+        returnUrl,
+        sessionValid: !!billingSession.accessToken,
+      });
       
       // billing.request() lance une exception avec une Response de redirection
       // On doit capturer cette Response pour extraire l'URL de confirmation
@@ -598,8 +633,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
                              billingRedirect.headers.get("location");
             
             if (reauthUrl) {
-              console.log("[Credits] Authentication required (401), redirecting to reauth URL:", reauthUrl);
+              console.log("[Credits] ⚠️ Session expired during billing.request(), redirecting to reauth URL:", reauthUrl);
               // Rediriger directement vers l'URL de ré-authentification dans l'iframe
+              // Cette URL contient déjà le plan sélectionné, donc après ré-auth, l'utilisateur sera redirigé vers le paiement
               return json({ 
                 success: true, 
                 redirect: true,
@@ -624,7 +660,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
                                    billingRedirect.url;
             
             if (confirmationUrl) {
-              console.log("[Credits] Billing confirmation URL received:", confirmationUrl);
+              console.log("[Credits] ✅ Billing confirmation URL received:", confirmationUrl);
               return json({ 
                 success: true, 
                 redirect: true,
@@ -647,6 +683,22 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       }
     } catch (billingError: any) {
       console.error("[Credits] Billing request error:", billingError);
+      
+      // Si l'erreur est une Response (redirection d'auth)
+      if (billingError instanceof Response) {
+        if (billingError.status === 401 || billingError.status === 302) {
+          const reauthUrl = billingError.headers.get('x-shopify-api-request-failure-reauthorize-url') || 
+                           billingError.headers.get('location');
+          console.log("[Credits] ⚠️ Authentication required (Response catch):", reauthUrl);
+          return json({ 
+            success: true, 
+            redirect: true,
+            checkoutUrl: reauthUrl || billingError.url,
+            requiresAuth: true,
+            message: "Ré-authentification requise...",
+          });
+        }
+      }
       
       // Si l'erreur est "Managed Pricing Apps cannot use the Billing API"
       // On doit rediriger vers la page de pricing de l'Admin
