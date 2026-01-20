@@ -23,29 +23,37 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const shop = session.shop;
   const url = new URL(request.url);
 
+  // Vérification du billing - Gestion spéciale pour Managed Pricing Apps
+  // Les apps avec Managed Pricing ne peuvent pas utiliser billing.request()
+  // Shopify gère automatiquement les abonnements via le Dashboard
   try {
-    // On vérifie si l'un des plans est actif
+    // On vérifie si N'IMPORTE QUEL plan est actif (gratuit ou payant)
     await billing.require({
-      plans: ["starter", "pro", "studio"] as any,
-      isTest: true, // CRITIQUE : Force le mode test pour la vérification
+      plans: ["free-installation-setup", "starter", "pro", "studio"] as any,
+      isTest: true, // OBLIGATOIRE : Dit à Shopify de vérifier les abonnements de test
       onFailure: async () => {
-        // Si aucun plan, on déclenche le paiement pour le plan "starter"
-        console.log("Tentative de redirection vers le paiement TEST...");
-        
-        return await (billing.request as any)({
-          plan: "starter",
-          isTest: true, // CRITIQUE : Dit à Shopify que c'est un faux paiement
-          returnUrl: `https://${url.host}/app`, // URL de retour explicite
-        });
+        // Pour les apps avec Managed Pricing, on ne peut PAS utiliser billing.request()
+        // L'utilisateur doit s'abonner via le Dashboard Shopify
+        // On permet l'accès avec le plan gratuit par défaut pour l'installation
+        console.log("Aucun plan actif détecté. Accès avec plan gratuit par défaut (Managed Pricing).");
+        // On continue sans bloquer - l'utilisateur pourra s'abonner via le Dashboard
+        return null;
       },
     } as any);
-  } catch (error) {
-    // Si l'erreur est une Response (redirection), on la laisse passer
+  } catch (error: any) {
+    // Si c'est une redirection (la page de paiement), on laisse faire
     if (error instanceof Response) return error;
     
-    // Sinon on log l'erreur réelle
-    console.error("ERREUR CRITIQUE BILLING :", error);
-    throw error;
+    // Si l'erreur indique que l'app utilise Managed Pricing, on permet l'accès
+    if (error?.message?.includes("Managed Pricing") || 
+        error?.errorData?.some((e: any) => e?.message?.includes("Managed Pricing"))) {
+      console.log("App avec Managed Pricing détectée. Accès autorisé avec plan gratuit par défaut.");
+      // On continue sans bloquer - l'utilisateur pourra s'abonner via le Dashboard Shopify
+    } else {
+      console.error("ERREUR BILLING :", error);
+      // Pour les autres erreurs, on continue quand même pour ne pas bloquer l'app
+      // L'utilisateur pourra s'abonner via le Dashboard si nécessaire
+    }
   }
 
   try {

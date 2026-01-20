@@ -25,20 +25,25 @@ const shopify = shopifyApp({
     ? { customShopDomains: [process.env.SHOP_CUSTOM_DOMAIN] }
     : {}),
   billing: {
-    starter: {
+    "free-installation-setup": {
+      amount: 0.0,
+      currencyCode: "USD",
+      interval: BillingInterval.Every30Days as any,
+    },
+    "starter": {
       amount: 29.0,
       currencyCode: "USD",
-      interval: BillingInterval.Every30Days,
+      interval: BillingInterval.Every30Days as any,
     },
-    pro: {
+    "pro": {
       amount: 99.0,
       currencyCode: "USD",
-      interval: BillingInterval.Every30Days,
+      interval: BillingInterval.Every30Days as any,
     },
-    studio: {
+    "studio": {
       amount: 399.0,
       currencyCode: "USD",
-      interval: BillingInterval.Every30Days,
+      interval: BillingInterval.Every30Days as any,
     },
   },
 });
