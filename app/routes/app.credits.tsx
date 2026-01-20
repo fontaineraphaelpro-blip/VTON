@@ -550,10 +550,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       return json({ success: false, error: "Minimum 250 credits required for custom pack" });
     }
   } else if (intent === "purchase-subscription") {
-    // AVEC MANAGED PRICING : On NE PEUT PAS utiliser appSubscriptionCreate (même via GraphQL)
-    // Shopify bloque complètement cette mutation avec l'erreur "Managed Pricing Apps cannot use the Billing API"
-    // La seule solution est de rediriger vers la page de l'app dans l'App Store Shopify
-    // où l'utilisateur peut voir et sélectionner les plans configurés dans le Dashboard Partners
     const planId = formData.get("planId") as string;
     
     const validPlans = ["free-installation-setup", "starter", "pro", "studio"];
@@ -572,28 +568,75 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       });
     }
 
-    // Avec Managed Pricing, on redirige vers la page de pricing de l'app dans l'Admin Shopify
-    // Format de l'URL : https://admin.shopify.com/store/{shop}/settings/apps/app_installations/app/{app_id}/pricing
-    // Cette page permet à l'utilisateur de voir et gérer ses abonnements directement depuis l'Admin
-    const appId = process.env.SHOPIFY_API_KEY || '85e1a9dba888450e33b84fbb067bc3a5';
-    // Extraire le nom du shop sans .myshopify.com
-    const shopName = shop.replace('.myshopify.com', '');
-    const adminPricingUrl = `https://admin.shopify.com/store/${shopName}/settings/apps/app_installations/app/${appId}/pricing`;
-    
-    console.log("[Credits] Redirecting to Shopify Admin pricing page (Managed Pricing)", {
-      planId,
-      shop,
-      shopName,
-      appId,
-      adminPricingUrl,
-    });
-    
-    return json({ 
-      success: true, 
-      redirect: true,
-      checkoutUrl: adminPricingUrl,
-      message: "Redirection vers la page de pricing dans Shopify Admin",
-    });
+    // Utiliser billing.request() pour obtenir une URL de paiement directe
+    // Cette méthode génère une confirmationUrl qui redirige directement vers le paiement
+    try {
+      const { billing } = await authenticate.admin(request);
+      const url = new URL(request.url);
+      const returnUrl = `https://${url.host}/app/credits`;
+      
+      console.log("[Credits] Requesting billing for plan:", { planId, shop, returnUrl });
+      
+      // billing.request() lance une exception avec une Response de redirection
+      // On doit capturer cette Response pour extraire l'URL de confirmation
+      try {
+        await billing.request({
+          plan: planId as any,
+          isTest: true, // Pour les boutiques de développement
+          returnUrl: returnUrl,
+        });
+        
+        // Si on arrive ici, billing.request() n'a pas lancé de redirection
+        // Ce cas ne devrait normalement pas arriver
+        throw new Error("billing.request() n'a pas généré de redirection");
+      } catch (billingRedirect: any) {
+        // billing.request() lance une Response de redirection
+        if (billingRedirect instanceof Response) {
+          const confirmationUrl = billingRedirect.headers.get("location") || 
+                                 billingRedirect.headers.get("x-shopify-api-redirect") ||
+                                 billingRedirect.url;
+          
+          if (confirmationUrl) {
+            console.log("[Credits] Billing confirmation URL received:", confirmationUrl);
+            return json({ 
+              success: true, 
+              redirect: true,
+              checkoutUrl: confirmationUrl,
+              message: "Redirection vers le paiement Shopify",
+            });
+          }
+        }
+        
+        // Si ce n'est pas une Response, c'est une erreur
+        throw billingRedirect;
+      }
+    } catch (billingError: any) {
+      console.error("[Credits] Billing request error:", billingError);
+      
+      // Si l'erreur est "Managed Pricing Apps cannot use the Billing API"
+      // On doit rediriger vers la page de pricing de l'Admin
+      if (billingError?.message?.includes("Managed Pricing") || 
+          billingError?.errorData?.some((e: any) => e.message?.includes("Managed Pricing"))) {
+        console.log("[Credits] Managed Pricing detected, redirecting to Admin pricing page");
+        
+        const appId = process.env.SHOPIFY_API_KEY || '85e1a9dba888450e33b84fbb067bc3a5';
+        const shopName = shop.replace('.myshopify.com', '');
+        const adminPricingUrl = `https://admin.shopify.com/store/${shopName}/settings/apps/app_installations/app/${appId}/pricing`;
+        
+        return json({ 
+          success: true, 
+          redirect: true,
+          checkoutUrl: adminPricingUrl,
+          message: "Redirection vers la page de pricing (Managed Pricing activé)",
+        });
+      }
+      
+      // Autre erreur
+      return json({ 
+        success: false, 
+        error: `Erreur lors de la création du paiement: ${billingError.message || "Erreur inconnue"}`,
+      });
+    }
   }
   
   return json({ 
