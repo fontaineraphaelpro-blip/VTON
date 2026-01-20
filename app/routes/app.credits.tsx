@@ -554,11 +554,19 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     // On redirige vers le Dashboard Shopify où l'utilisateur peut s'abonner
     const planId = formData.get("planId") as string;
     
-    const validPlans = ["starter", "pro", "studio"];
+    const validPlans = ["free-installation-setup", "starter", "pro", "studio"];
     if (!validPlans.includes(planId)) {
       return json({ 
         success: false, 
         error: "Plan d'abonnement invalide",
+      });
+    }
+
+    // Le plan gratuit est déjà attribué automatiquement, pas besoin de redirection
+    if (planId === "free-installation-setup") {
+      return json({ 
+        success: true, 
+        message: "Le plan gratuit est déjà actif",
       });
     }
 
@@ -756,10 +764,36 @@ export default function Credits() {
     fetcher.submit(formData, { method: "post" });
   };
 
+  // Plans d'abonnement correspondant au Dashboard Shopify Partners
   const subscriptionPlans = [
-    { id: "starter", name: "Starter", price: 29.0, description: "Parfait pour démarrer" },
-    { id: "pro", name: "Pro", price: 99.0, description: "Pour les professionnels", popular: true },
-    { id: "studio", name: "Studio", price: 399.0, description: "Pour les studios créatifs" },
+    { 
+      id: "free-installation-setup", 
+      name: "Free Installation Setup", 
+      price: 0.0, 
+      description: "Plan gratuit - 4 crédits par mois",
+      popular: false 
+    },
+    { 
+      id: "starter", 
+      name: "Starter", 
+      price: 29.0, 
+      description: "Parfait pour démarrer votre boutique",
+      popular: false 
+    },
+    { 
+      id: "pro", 
+      name: "Pro", 
+      price: 99.0, 
+      description: "Pour les professionnels en croissance",
+      popular: true 
+    },
+    { 
+      id: "studio", 
+      name: "Studio", 
+      price: 399.0, 
+      description: "Pour les studios créatifs et les grandes boutiques",
+      popular: false 
+    },
   ];
 
   return (
@@ -826,42 +860,12 @@ export default function Credits() {
           </div>
         </div>
 
-        <div className="pricing-grid">
-          {CREDIT_PACKS.map((pack) => (
-            <div key={pack.id} className={`plan-card ${pack.highlight ? 'featured' : ''}`}>
-              {pack.highlight && (
-                <div className="plan-badge">Most popular</div>
-              )}
-              <div className="plan-name">{pack.name}</div>
-              <div className="plan-price">
-                €{pack.price.toFixed(2)} <span>/ one-time</span>
-              </div>
-              <div className="plan-features">
-                <div className="plan-feature">{pack.credits} credits</div>
-                <div className="plan-feature">No expiration</div>
-                <div className="plan-feature">{pack.description}</div>
-              </div>
-              <div className="plan-cta">
-                <button 
-                  className="plan-button"
-                  onClick={() => handlePurchase(pack.id)}
-                  disabled={isSubmitting || submittingPackId !== null}
-                >
-                  {isSubmitting && submittingPackId === pack.id ? "Processing..." : "Buy credits"}
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <Divider />
-
         <div style={{ marginTop: "var(--spacing-xl)" }}>
           <h2 style={{ fontSize: "24px", fontWeight: "600", marginBottom: "var(--spacing-md)" }}>
-            Abonnements mensuels
+            Plans d'abonnement
           </h2>
           <p style={{ color: "var(--text-secondary)", marginBottom: "var(--spacing-lg)" }}>
-            Choisissez un plan d'abonnement pour un accès illimité
+            Choisissez un plan d'abonnement mensuel pour accéder à toutes les fonctionnalités
           </p>
           <div className="pricing-grid">
             {subscriptionPlans.map((plan) => (
@@ -875,7 +879,7 @@ export default function Credits() {
                 </div>
                 <div className="plan-features">
                   <div className="plan-feature">{plan.description}</div>
-                  <div className="plan-feature">Abonnement récurrent</div>
+                  <div className="plan-feature">Abonnement récurrent mensuel</div>
                   <div className="plan-feature">Annulable à tout moment</div>
                 </div>
                 <div className="plan-cta">
