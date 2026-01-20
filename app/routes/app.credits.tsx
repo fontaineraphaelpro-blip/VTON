@@ -802,14 +802,38 @@ export default function Credits() {
     let isMounted = true;
     
     // Gérer la ré-authentification automatique
+    // IMPORTANT: La ré-authentification doit se faire au niveau du parent (Shopify Admin),
+    // pas dans l'iframe. On utilise window.top.location.href pour sortir de l'iframe.
     if ((fetcher.data as any)?.requiresAuth && (fetcher.data as any)?.reauthUrl) {
-      console.log("[Credits] Redirecting to reauth URL:", (fetcher.data as any).reauthUrl);
+      console.log("[Credits] ⚠️ Session expired, redirecting parent window for re-authentication:", (fetcher.data as any).reauthUrl);
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:567',message:'Redirecting to reauth URL',data:{reauthUrl:(fetcher.data as any).reauthUrl},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'F'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:567',message:'Redirecting parent window to reauth URL',data:{reauthUrl:(fetcher.data as any).reauthUrl},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'F'})}).catch(()=>{});
       // #endregion
-      // Rediriger automatiquement vers la ré-authentification
+      // Rediriger la page PARENTE (Shopify Admin) vers la ré-authentification
+      // Cela permet à Shopify de gérer la ré-authentification correctement
       if (isMounted) {
-        window.location.href = (fetcher.data as any).reauthUrl;
+        try {
+          // Essayer de rediriger le parent (sortir de l'iframe)
+          window.top.location.href = (fetcher.data as any).reauthUrl;
+        } catch (e) {
+          // Si window.top n'est pas accessible (erreur CORS), fallback sur window.location
+          console.warn("[Credits] Cannot access window.top, using window.location as fallback");
+          window.location.href = (fetcher.data as any).reauthUrl;
+        }
+      }
+      return;
+    }
+    
+    // Gérer aussi le cas où requiresAuth est true mais pas de reauthUrl
+    // Dans ce cas, on rafraîchit simplement la page parente
+    if ((fetcher.data as any)?.requiresAuth && !(fetcher.data as any)?.reauthUrl) {
+      console.log("[Credits] ⚠️ Session expired, refreshing parent window");
+      if (isMounted) {
+        try {
+          window.top.location.reload();
+        } catch (e) {
+          window.location.reload();
+        }
       }
       return;
     }
@@ -980,9 +1004,19 @@ export default function Credits() {
                 content: (fetcher.data as any)?.reauthUrl ? "Ré-authentifier" : "Rafraîchir la page",
                 onAction: () => {
                   if ((fetcher.data as any)?.reauthUrl) {
-                    window.location.href = (fetcher.data as any).reauthUrl;
+                    // Rediriger la page parente (sortir de l'iframe) pour la ré-authentification
+                    try {
+                      window.top.location.href = (fetcher.data as any).reauthUrl;
+                    } catch (e) {
+                      window.location.href = (fetcher.data as any).reauthUrl;
+                    }
                   } else {
-                    window.location.reload();
+                    // Rafraîchir la page parente
+                    try {
+                      window.top.location.reload();
+                    } catch (e) {
+                      window.location.reload();
+                    }
                   }
                 },
               } : undefined}
