@@ -550,8 +550,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       return json({ success: false, error: "Minimum 250 credits required for custom pack" });
     }
   } else if (intent === "purchase-subscription") {
-    // Avec Managed Pricing, on NE PEUT PAS utiliser billing.request()
-    // On redirige vers le Dashboard Shopify où l'utilisateur peut s'abonner
+    // Avec Managed Pricing, on utilise GraphQL pour obtenir l'URL de confirmation
+    // Shopify gérera automatiquement le prix depuis le Dashboard
     const planId = formData.get("planId") as string;
     
     const validPlans = ["free-installation-setup", "starter", "pro", "studio"];
@@ -570,25 +570,111 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       });
     }
 
-    // Avec Managed Pricing, les abonnements sont gérés via le Dashboard Shopify
-    // On redirige vers la page de paiement/abonnements de l'app dans le Dashboard Shopify
-    // L'URL doit pointer vers la page des abonnements de l'app dans le admin Shopify
-    const appId = process.env.SHOPIFY_API_KEY || '';
-    // URL vers la page de gestion des abonnements de l'app dans Shopify Admin
-    const subscriptionUrl = `https://${shop}/admin/settings/apps/${appId}/subscriptions`;
-    
-    console.log("[Credits] Redirecting to Shopify subscription page", {
-      shop,
-      planId,
-      subscriptionUrl,
-    });
-    
-    return json({ 
-      success: true, 
-      redirect: true,
-      checkoutUrl: subscriptionUrl,
-      message: "Redirection vers la page de paiement Shopify",
-    });
+    try {
+      const baseUrl = new URL(request.url).origin;
+      const returnUrl = new URL("/app/credits", baseUrl);
+      returnUrl.searchParams.set("subscription", "success");
+      returnUrl.searchParams.set("plan", planId);
+
+      console.log("[Credits] Creating subscription request via GraphQL for Managed Pricing", {
+        planId,
+        shop,
+        returnUrl: returnUrl.toString(),
+      });
+
+      // Avec Managed Pricing, on utilise appSubscriptionCreate
+      // Le prix doit être présent dans la mutation (requis par GraphQL)
+      // mais Shopify utilisera automatiquement les prix du Dashboard Partners
+      const mutation = `#graphql
+        mutation AppSubscriptionCreate($name: String!, $lineItems: [AppSubscriptionLineItemInput!]!, $returnUrl: URL!, $test: Boolean) {
+          appSubscriptionCreate(name: $name, lineItems: $lineItems, returnUrl: $returnUrl, test: $test) {
+            userErrors {
+              field
+              message
+            }
+            confirmationUrl
+            appSubscription {
+              id
+            }
+          }
+        }
+      `;
+
+      // Récupérer le prix depuis la config (nécessaire pour GraphQL même si Shopify l'ignore avec Managed Pricing)
+      const planPrices: Record<string, number> = {
+        "starter": 29.0,
+        "pro": 99.0,
+        "studio": 399.0,
+      };
+      const planPrice = planPrices[planId] || 0;
+
+      const variables = {
+        name: planId.charAt(0).toUpperCase() + planId.slice(1), // "starter" -> "Starter"
+        returnUrl: returnUrl.toString(),
+        test: process.env.NODE_ENV !== "production",
+        lineItems: [
+          {
+            plan: {
+              appRecurringPricingDetails: {
+                price: { amount: planPrice, currencyCode: "USD" },
+                interval: "EVERY_30_DAYS"
+              }
+            }
+          }
+        ]
+      };
+
+      const graphqlResponse = await admin.graphql(mutation, { variables });
+      const graphqlData = await graphqlResponse.json() as any;
+
+      if (graphqlData.errors) {
+        const errorMessage = graphqlData.errors.map((e: any) => e.message).join(", ");
+        console.error("[Credits] GraphQL errors:", graphqlData.errors);
+        return json({ 
+          success: false, 
+          error: `Shopify API error: ${errorMessage}`,
+        });
+      }
+
+      const subscriptionData = graphqlData.data?.appSubscriptionCreate;
+      
+      if (subscriptionData?.userErrors?.length > 0) {
+        const errorMessage = subscriptionData.userErrors.map((e: any) => e.message).join(", ");
+        console.error("[Credits] User errors:", subscriptionData.userErrors);
+        return json({ 
+          success: false, 
+          error: `Shopify API error: ${errorMessage}`,
+        });
+      }
+
+      if (!subscriptionData?.confirmationUrl) {
+        console.error("[Credits] No confirmation URL returned:", subscriptionData);
+        return json({ 
+          success: false, 
+          error: "Impossible d'obtenir l'URL de paiement. Veuillez réessayer.",
+        });
+      }
+
+      console.log("[Credits] Subscription confirmation URL obtained:", subscriptionData.confirmationUrl);
+
+      return json({ 
+        success: true, 
+        redirect: true,
+        checkoutUrl: subscriptionData.confirmationUrl,
+        plan: planId,
+      });
+    } catch (error) {
+      console.error("[Credits] Error creating subscription request:", error);
+      
+      if (error instanceof Response) {
+        return error;
+      }
+      
+      return json({ 
+        success: false, 
+        error: error instanceof Error ? error.message : "Erreur lors de la création de la demande d'abonnement.",
+      });
+    }
   }
   
   return json({ 
