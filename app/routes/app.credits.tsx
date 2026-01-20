@@ -702,7 +702,9 @@ export default function Credits() {
   const error = (loaderData as any)?.error || null;
   const purchaseSuccess = (loaderData as any)?.purchaseSuccess || false;
   const creditsAdded = (loaderData as any)?.creditsAdded || 0;
-  console.log("[Credits] Loader data:", { hasShop: !!shop, hasError: !!error, credits: shop?.credits, purchaseSuccess, creditsAdded });
+  const subscriptionUpdated = (loaderData as any)?.subscriptionUpdated || false;
+  const planName = (loaderData as any)?.planName || null;
+  console.log("[Credits] Loader data:", { hasShop: !!shop, hasError: !!error, credits: shop?.credits, purchaseSuccess, creditsAdded, subscriptionUpdated, planName });
   
   const fetcher = useFetcher<typeof action>();
   const revalidator = useRevalidator();
@@ -831,6 +833,14 @@ export default function Credits() {
           <div style={{ marginBottom: "var(--spacing-lg)" }}>
             <Banner tone="success" title="Succès !" onDismiss={() => {}}>
               {creditsAdded || (fetcher.data as any)?.creditsAdded || (fetcher.data as any)?.credits || 0} crédits ajoutés à votre compte.
+            </Banner>
+          </div>
+        )}
+
+        {subscriptionUpdated && planName && (
+          <div style={{ marginBottom: "var(--spacing-lg)" }}>
+            <Banner tone="success" title="Abonnement activé !" onDismiss={() => {}}>
+              Votre abonnement <strong>{planName}</strong> a été activé avec succès. Vos crédits mensuels ont été mis à jour.
             </Banner>
           </div>
         )}
