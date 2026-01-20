@@ -20,32 +20,75 @@ import { ensureTables } from "../lib/db-init.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { billing, session, admin } = await authenticate.admin(request);
-  const { shop } = session;
+  const shop = session.shop;
   const url = new URL(request.url);
+  const returnUrl = `https://${url.host}/app`;
 
   try {
-    // Check if any plan is active
-    // We cast to 'any' to avoid TypeScript strictness issues during this debug phase
+    // 1. Vérification : On cherche si un plan est actif
+    // Note : Le cast 'as any' évite les erreurs de type strictes temporaires
     await billing.require({
       plans: ["starter", "pro", "studio"] as any,
       isTest: true,
       onFailure: async () => {
-        console.log("⚠️ No active plan. Redirecting to payment...");
-        
-        // We put isTest: true back because without it on a Dev store, 
-        // Shopify might block the "real" charge attempt.
-        throw await (billing.request as any)({
-          plan: "starter", 
-          isTest: true, 
-          returnUrl: `https://${url.host}/app`, 
-        });
+        console.log("⚠️ Aucun plan actif. Tentative de souscription manuelle...");
+
+        // 2. MUTATION MANUELLE
+        // On construit la requête pour qu'elle corresponde EXACTEMENT au Dashboard
+        const response = await admin.graphql(
+          `#graphql
+          mutation AppSubscriptionCreate($name: String!, $lineItems: [AppSubscriptionLineItemInput!]!, $returnUrl: URL!, $test: Boolean) {
+            appSubscriptionCreate(name: $name, lineItems: $lineItems, returnUrl: $returnUrl, test: $test) {
+              userErrors {
+                field
+                message
+              }
+              confirmationUrl
+              appSubscription {
+                id
+              }
+            }
+          }`,
+          {
+            variables: {
+              name: "Starter", // <--- LE SECRET EST ICI : "Starter" avec Majuscule comme dans le Dashboard
+              returnUrl: returnUrl,
+              test: true, // Toujours true en Dev
+              lineItems: [
+                {
+                  plan: {
+                    appRecurringPricingDetails: {
+                      price: { amount: 29.0, currencyCode: "USD" }, // On remet le prix pour satisfaire le schéma
+                      interval: "EVERY_30_DAYS"
+                    }
+                  }
+                }
+              ]
+            },
+          }
+        );
+
+        const responseJson = await response.json();
+        const data = (responseJson as any).data?.appSubscriptionCreate;
+
+        // Gestion des erreurs GraphQL
+        if (data?.userErrors?.length > 0) {
+          console.error("❌ Erreur GraphQL détaillée:", JSON.stringify(data.userErrors, null, 2));
+          throw new Error(data.userErrors[0].message);
+        }
+
+        // 3. Redirection vers la page de validation Shopify
+        if (data?.confirmationUrl) {
+          throw new Response(null, {
+            status: 302,
+            headers: { Location: data.confirmationUrl },
+          });
+        }
       },
     } as any);
   } catch (error) {
-    // If it is a Response (Redirect), let it pass
-    if (error instanceof Response) return error;
-    
-    console.error("❌ BILLING ERROR:", error);
+    if (error instanceof Response) return error; // Laisser passer la redirection
+    console.error("❌ ERREUR LOADER :", error);
     throw error;
   }
 
