@@ -814,7 +814,12 @@ export default function Credits() {
       if (isMounted) {
         try {
           // Essayer de rediriger le parent (sortir de l'iframe)
-          window.top.location.href = (fetcher.data as any).reauthUrl;
+          if (window.top && window.top !== window) {
+            window.top.location.href = (fetcher.data as any).reauthUrl;
+          } else {
+            // Si on n'est pas dans une iframe, utiliser window.location directement
+            window.location.href = (fetcher.data as any).reauthUrl;
+          }
         } catch (e) {
           // Si window.top n'est pas accessible (erreur CORS), fallback sur window.location
           console.warn("[Credits] Cannot access window.top, using window.location as fallback");
@@ -830,7 +835,11 @@ export default function Credits() {
       console.log("[Credits] ⚠️ Session expired, refreshing parent window");
       if (isMounted) {
         try {
-          window.top.location.reload();
+          if (window.top && window.top !== window) {
+            window.top.location.reload();
+          } else {
+            window.location.reload();
+          }
         } catch (e) {
           window.location.reload();
         }
@@ -1006,14 +1015,22 @@ export default function Credits() {
                   if ((fetcher.data as any)?.reauthUrl) {
                     // Rediriger la page parente (sortir de l'iframe) pour la ré-authentification
                     try {
-                      window.top.location.href = (fetcher.data as any).reauthUrl;
+                      if (window.top && window.top !== window) {
+                        window.top.location.href = (fetcher.data as any).reauthUrl;
+                      } else {
+                        window.location.href = (fetcher.data as any).reauthUrl;
+                      }
                     } catch (e) {
                       window.location.href = (fetcher.data as any).reauthUrl;
                     }
                   } else {
                     // Rafraîchir la page parente
                     try {
-                      window.top.location.reload();
+                      if (window.top && window.top !== window) {
+                        window.top.location.reload();
+                      } else {
+                        window.location.reload();
+                      }
                     } catch (e) {
                       window.location.reload();
                     }
