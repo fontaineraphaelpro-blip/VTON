@@ -16,8 +16,7 @@ import {
   Divider,
   Badge,
 } from "@shopify/polaris";
-import { TitleBar, useAppBridge } from "@shopify/app-bridge-react";
-import { Redirect as AppBridgeRedirect } from "@shopify/app-bridge/actions";
+import { TitleBar } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
 import { getShop, upsertShop } from "../lib/services/db.service";
 import { ensureTables } from "../lib/db-init.server";
@@ -643,7 +642,6 @@ export default function Credits() {
   
   const fetcher = useFetcher<typeof action>();
   const revalidator = useRevalidator();
-  const app = useAppBridge();
   const currentCredits = shop?.credits || 0;
   const [customAmount, setCustomAmount] = useState("500");
   const [submittingPackId, setSubmittingPackId] = useState<string | null>(null);
@@ -687,28 +685,20 @@ export default function Credits() {
       fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:577',message:'Before redirect to checkout - breaking out of iframe',data:{checkoutUrl:(fetcher.data as any).checkoutUrl},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'B'})}).catch(()=>{});
       // #endregion
       // Rediriger vers le checkout Shopify EN DEHORS de l'iframe
-      // Utiliser App Bridge Redirect pour forcer la redirection de la fenêtre parente
+      // Utiliser window.top pour sortir de l'iframe et rediriger la fenêtre parente
       if (isMounted) {
         try {
-          const redirect = AppBridgeRedirect.create(app);
-          // Utiliser REMOTE pour rediriger vers une URL externe (page de paiement Shopify)
-          redirect.dispatch(AppBridgeRedirect.Action.REMOTE, {
-            url: (fetcher.data as any).checkoutUrl,
-            newContext: true, // Force l'ouverture en dehors de l'iframe
-          });
-        } catch (e) {
-          // Fallback : utiliser window.top si App Bridge échoue
-          console.log("[Credits] App Bridge redirect failed, using window.top:", e);
-          try {
-            if (window.top && window.top !== window) {
-              window.top.location.href = (fetcher.data as any).checkoutUrl;
-            } else {
-              window.open((fetcher.data as any).checkoutUrl, '_blank');
-            }
-          } catch (fallbackError) {
-            console.log("[Credits] window.top also failed, opening in new tab");
+          // Essayer d'abord avec window.top pour sortir de l'iframe
+          if (window.top && window.top !== window) {
+            window.top.location.href = (fetcher.data as any).checkoutUrl;
+          } else {
+            // Fallback : ouvrir dans un nouvel onglet si on ne peut pas accéder à window.top
             window.open((fetcher.data as any).checkoutUrl, '_blank');
           }
+        } catch (e) {
+          // Si window.top est bloqué (cross-origin), ouvrir dans un nouvel onglet
+          console.log("[Credits] Cannot access window.top, opening in new tab:", e);
+          window.open((fetcher.data as any).checkoutUrl, '_blank');
         }
       }
     } else if (fetcher.data?.success && !(fetcher.data as any)?.redirect) {
