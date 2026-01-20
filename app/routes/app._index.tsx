@@ -20,75 +20,32 @@ import { ensureTables } from "../lib/db-init.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { billing, session, admin } = await authenticate.admin(request);
-  const shop = session.shop;
+  const { shop } = session;
   const url = new URL(request.url);
-  const returnUrl = `https://${url.host}/app`;
 
   try {
-    // 1. On vérifie simplement si un plan est actif
+    // Check if any plan is active
+    // We cast to 'any' to avoid TypeScript strictness issues during this debug phase
     await billing.require({
       plans: ["starter", "pro", "studio"] as any,
       isTest: true,
       onFailure: async () => {
-        console.log("⚠️ Aucun plan actif. Lancement du paiement manuel...");
-
-        // 2. BYPASS : On construit la demande manuellement pour éviter l'erreur "Billing API"
-        // On demande le plan "starter" sans spécifier le prix (car c'est du Managed Pricing)
-        const response = await admin.graphql(
-          `#graphql
-          mutation AppSubscriptionCreate($name: String!, $returnUrl: URL!, $test: Boolean, $lineItems: [AppSubscriptionLineItemInput!]!) {
-            appSubscriptionCreate(name: $name, returnUrl: $returnUrl, test: $test, lineItems: $lineItems) {
-              userErrors {
-                field
-                message
-              }
-              confirmationUrl
-              appSubscription {
-                id
-              }
-            }
-          }`,
-          {
-            variables: {
-              name: "Starter Plan",
-              returnUrl: returnUrl,
-              test: true, // Toujours true en Dev
-              lineItems: [
-                {
-                  plan: {
-                    appRecurringPricingDetails: {
-                      interval: "EVERY_30_DAYS"
-                    }
-                  }
-                }
-              ]
-            },
-          }
-        );
-
-        const responseJson = await response.json();
+        console.log("⚠️ No active plan. Redirecting to payment...");
         
-        // Vérification des erreurs
-        const data = (responseJson as any).data?.appSubscriptionCreate;
-        if (data?.userErrors?.length > 0) {
-          console.error("❌ Erreur GraphQL:", data.userErrors);
-          throw new Error(data.userErrors[0].message);
-        }
-
-        // 3. Redirection manuelle vers la page de confirmation Shopify
-        if (data?.confirmationUrl) {
-          throw new Response(null, {
-            status: 302,
-            headers: { Location: data.confirmationUrl },
-          });
-        }
+        // We put isTest: true back because without it on a Dev store, 
+        // Shopify might block the "real" charge attempt.
+        throw await (billing.request as any)({
+          plan: "starter", 
+          isTest: true, 
+          returnUrl: `https://${url.host}/app`, 
+        });
       },
     } as any);
   } catch (error) {
-    // Si c'est notre redirection (Response), on la laisse passer
+    // If it is a Response (Redirect), let it pass
     if (error instanceof Response) return error;
     
-    console.error("❌ ERREUR CRITIQUE:", error);
+    console.error("❌ BILLING ERROR:", error);
     throw error;
   }
 
