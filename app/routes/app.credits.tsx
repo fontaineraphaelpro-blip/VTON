@@ -551,8 +551,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       return json({ success: false, error: "Minimum 250 credits required for custom pack" });
     }
   } else if (intent === "purchase-subscription") {
-    // Avec Managed Pricing, on utilise GraphQL pour obtenir l'URL de confirmation
-    // Shopify gérera automatiquement le prix depuis le Dashboard
+    // AVEC MANAGED PRICING : On NE PEUT PAS utiliser appSubscriptionCreate (même via GraphQL)
+    // Shopify bloque complètement cette mutation avec l'erreur "Managed Pricing Apps cannot use the Billing API"
+    // La seule solution est de rediriger vers la page de l'app dans l'App Store Shopify
+    // où l'utilisateur peut voir et sélectionner les plans configurés dans le Dashboard Partners
     const planId = formData.get("planId") as string;
     
     const validPlans = ["free-installation-setup", "starter", "pro", "studio"];
@@ -563,7 +565,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       });
     }
 
-    // Le plan gratuit est déjà attribué automatiquement, pas besoin de redirection
+    // Le plan gratuit est déjà attribué automatiquement
     if (planId === "free-installation-setup") {
       return json({ 
         success: true, 
@@ -571,119 +573,24 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       });
     }
 
-    try {
-      const baseUrl = new URL(request.url).origin;
-      const returnUrl = new URL("/app/credits", baseUrl);
-      returnUrl.searchParams.set("subscription", "success");
-      returnUrl.searchParams.set("plan", planId);
-
-      console.log("[Credits] Creating subscription request via GraphQL for Managed Pricing", {
-        planId,
-        shop,
-        returnUrl: returnUrl.toString(),
-      });
-
-      // Avec Managed Pricing, on utilise appSubscriptionCreate
-      // Le prix doit être présent dans la mutation (requis par GraphQL)
-      // mais Shopify utilisera automatiquement les prix du Dashboard Partners
-      const mutation = `#graphql
-        mutation AppSubscriptionCreate($name: String!, $lineItems: [AppSubscriptionLineItemInput!]!, $returnUrl: URL!, $test: Boolean) {
-          appSubscriptionCreate(name: $name, lineItems: $lineItems, returnUrl: $returnUrl, test: $test) {
-            userErrors {
-              field
-              message
-            }
-            confirmationUrl
-            appSubscription {
-              id
-            }
-          }
-        }
-      `;
-
-      // Récupérer le prix depuis la config (nécessaire pour GraphQL même si Shopify l'ignore avec Managed Pricing)
-      const planPrices: Record<string, number> = {
-        "starter": 29.0,
-        "pro": 99.0,
-        "studio": 399.0,
-      };
-      const planPrice = planPrices[planId] || 0;
-
-      // Les noms de plans doivent correspondre EXACTEMENT au Dashboard Shopify Partners
-      const planNames: Record<string, string> = {
-        "starter": "Starter",
-        "pro": "Pro",
-        "studio": "Studio",
-      };
-      const planName = planNames[planId] || planId;
-
-      const variables = {
-        name: planName,
-        returnUrl: returnUrl.toString(),
-        test: process.env.NODE_ENV !== "production",
-        lineItems: [
-          {
-            plan: {
-              appRecurringPricingDetails: {
-                price: { amount: planPrice, currencyCode: "USD" },
-                interval: "EVERY_30_DAYS"
-              }
-            }
-          }
-        ]
-      };
-
-      const graphqlResponse = await admin.graphql(mutation, { variables });
-      const graphqlData = await graphqlResponse.json() as any;
-
-      if (graphqlData.errors) {
-        const errorMessage = graphqlData.errors.map((e: any) => e.message).join(", ");
-        console.error("[Credits] GraphQL errors:", graphqlData.errors);
-        return json({ 
-          success: false, 
-          error: `Shopify API error: ${errorMessage}`,
-        });
-      }
-
-      const subscriptionData = graphqlData.data?.appSubscriptionCreate;
-      
-      if (subscriptionData?.userErrors?.length > 0) {
-        const errorMessage = subscriptionData.userErrors.map((e: any) => e.message).join(", ");
-        console.error("[Credits] User errors:", subscriptionData.userErrors);
-        return json({ 
-          success: false, 
-          error: `Shopify API error: ${errorMessage}`,
-        });
-      }
-
-      if (!subscriptionData?.confirmationUrl) {
-        console.error("[Credits] No confirmation URL returned:", subscriptionData);
-        return json({ 
-          success: false, 
-          error: "Impossible d'obtenir l'URL de paiement. Veuillez réessayer.",
-        });
-      }
-
-      console.log("[Credits] Subscription confirmation URL obtained:", subscriptionData.confirmationUrl);
-
-      return json({ 
-        success: true, 
-        redirect: true,
-        checkoutUrl: subscriptionData.confirmationUrl,
-        plan: planId,
-      });
-    } catch (error) {
-      console.error("[Credits] Error creating subscription request:", error);
-      
-      if (error instanceof Response) {
-        return error;
-      }
-      
-      return json({ 
-        success: false, 
-        error: error instanceof Error ? error.message : "Erreur lors de la création de la demande d'abonnement.",
-      });
-    }
+    // Avec Managed Pricing, on redirige vers la page de l'app dans l'App Store Shopify
+    // L'utilisateur pourra voir tous les plans et s'abonner directement depuis là
+    // Format de l'URL : https://apps.shopify.com/{app-handle}
+    // Pour trouver le handle de votre app, allez dans Partners Dashboard > Votre app > App Store listing
+    const appStoreUrl = `https://apps.shopify.com/virtual-try-on`; // À ajuster avec le handle réel de votre app
+    
+    console.log("[Credits] Redirecting to Shopify App Store for subscription (Managed Pricing)", {
+      planId,
+      shop,
+      appStoreUrl,
+    });
+    
+    return json({ 
+      success: true, 
+      redirect: true,
+      checkoutUrl: appStoreUrl,
+      message: "Redirection vers l'App Store Shopify pour sélectionner votre plan",
+    });
   }
   
   return json({ 
