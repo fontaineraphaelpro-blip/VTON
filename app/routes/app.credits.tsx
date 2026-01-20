@@ -592,52 +592,19 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       } catch (billingRedirect: any) {
         // billing.request() lance une Response de redirection
         if (billingRedirect instanceof Response) {
-          // Vérifier si c'est une erreur d'authentification (401)
-          if (billingRedirect.status === 401) {
-            const reauthUrl = billingRedirect.headers.get("x-shopify-api-request-failure-reauthorize-url") || 
-                             billingRedirect.headers.get("location");
-            
-            if (reauthUrl) {
-              console.log("[Credits] Authentication required, redirecting to reauth URL:", reauthUrl);
-              return json({ 
-                success: false, 
-                error: "Votre session a expiré. Redirection vers la ré-authentification...",
-                requiresAuth: true,
-                reauthUrl: reauthUrl,
-              });
-            }
-            
-            // Si pas d'URL de ré-auth, retourner une erreur
+          const confirmationUrl = billingRedirect.headers.get("location") || 
+                                 billingRedirect.headers.get("x-shopify-api-redirect") ||
+                                 billingRedirect.url;
+          
+          if (confirmationUrl) {
+            console.log("[Credits] Billing confirmation URL received:", confirmationUrl);
             return json({ 
-              success: false, 
-              error: "Erreur d'authentification. Veuillez rafraîchir la page.",
-              requiresAuth: true,
+              success: true, 
+              redirect: true,
+              checkoutUrl: confirmationUrl,
+              message: "Redirection vers le paiement Shopify",
             });
           }
-          
-          // Si c'est une redirection de paiement (302 ou autre)
-          if (billingRedirect.status === 302 || billingRedirect.status === 200) {
-            const confirmationUrl = billingRedirect.headers.get("location") || 
-                                   billingRedirect.headers.get("x-shopify-api-redirect") ||
-                                   billingRedirect.url;
-            
-            if (confirmationUrl) {
-              console.log("[Credits] Billing confirmation URL received:", confirmationUrl);
-              return json({ 
-                success: true, 
-                redirect: true,
-                checkoutUrl: confirmationUrl,
-                message: "Redirection vers le paiement Shopify",
-              });
-            }
-          }
-          
-          // Autre status de Response
-          console.error("[Credits] Unexpected Response status:", billingRedirect.status);
-          return json({ 
-            success: false, 
-            error: `Erreur inattendue (status: ${billingRedirect.status})`,
-          });
         }
         
         // Si ce n'est pas une Response, c'est une erreur
@@ -762,24 +729,13 @@ export default function Credits() {
     
     if (fetcher.data?.success && (fetcher.data as any)?.redirect && (fetcher.data as any)?.checkoutUrl) {
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:577',message:'Before redirect to checkout - breaking out of iframe',data:{checkoutUrl:(fetcher.data as any).checkoutUrl},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'B'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:577',message:'Before redirect to checkout - staying in iframe',data:{checkoutUrl:(fetcher.data as any).checkoutUrl},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'B'})}).catch(()=>{});
       // #endregion
-      // Rediriger vers le checkout Shopify EN DEHORS de l'iframe
-      // Utiliser window.top pour sortir de l'iframe et rediriger la fenêtre parente
+      // Rediriger vers le checkout Shopify DANS l'iframe pour garder l'authentification
+      // Utiliser window.location.href pour rester dans l'iframe
       if (isMounted) {
-        try {
-          // Essayer d'abord avec window.top pour sortir de l'iframe
-          if (window.top && window.top !== window) {
-            window.top.location.href = (fetcher.data as any).checkoutUrl;
-          } else {
-            // Fallback : ouvrir dans un nouvel onglet si on ne peut pas accéder à window.top
-            window.open((fetcher.data as any).checkoutUrl, '_blank');
-          }
-        } catch (e) {
-          // Si window.top est bloqué (cross-origin), ouvrir dans un nouvel onglet
-          console.log("[Credits] Cannot access window.top, opening in new tab:", e);
-          window.open((fetcher.data as any).checkoutUrl, '_blank');
-        }
+        console.log("[Credits] Redirecting to checkout URL in iframe:", (fetcher.data as any).checkoutUrl);
+        window.location.href = (fetcher.data as any).checkoutUrl;
       }
     } else if (fetcher.data?.success && !(fetcher.data as any)?.redirect) {
       // #region agent log
