@@ -25,71 +25,93 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const returnUrl = `https://${url.host}/app`;
 
   try {
-    // 1. Vérification : On cherche si un plan est actif
-    // Note : Le cast 'as any' évite les erreurs de type strictes temporaires
+    // 1. Vérification : On cherche si un plan est actif (gratuit ou payant)
     await billing.require({
-      plans: ["starter", "pro", "studio"] as any,
+      plans: ["free-installation-setup", "starter", "pro", "studio"] as any,
       isTest: true,
       onFailure: async () => {
-        console.log("⚠️ Aucun plan actif. Tentative de souscription manuelle...");
+        console.log("⚠️ Aucun plan actif. Attribution automatique du plan gratuit...");
 
-        // 2. MUTATION MANUELLE
-        // On construit la requête pour qu'elle corresponde EXACTEMENT au Dashboard
-        const response = await admin.graphql(
-          `#graphql
-          mutation AppSubscriptionCreate($name: String!, $lineItems: [AppSubscriptionLineItemInput!]!, $returnUrl: URL!, $test: Boolean) {
-            appSubscriptionCreate(name: $name, lineItems: $lineItems, returnUrl: $returnUrl, test: $test) {
-              userErrors {
-                field
-                message
+        // 2. Attribution automatique du plan gratuit à l'installation
+        try {
+          const response = await admin.graphql(
+            `#graphql
+            mutation AppSubscriptionCreate($name: String!, $lineItems: [AppSubscriptionLineItemInput!]!, $returnUrl: URL!, $test: Boolean) {
+              appSubscriptionCreate(name: $name, lineItems: $lineItems, returnUrl: $returnUrl, test: $test) {
+                userErrors {
+                  field
+                  message
+                }
+                confirmationUrl
+                appSubscription {
+                  id
+                }
               }
-              confirmationUrl
-              appSubscription {
-                id
-              }
-            }
-          }`,
-          {
-            variables: {
-              name: "Starter", // <--- LE SECRET EST ICI : "Starter" avec Majuscule comme dans le Dashboard
-              returnUrl: returnUrl,
-              test: true, // Toujours true en Dev
-              lineItems: [
-                {
-                  plan: {
-                    appRecurringPricingDetails: {
-                      price: { amount: 29.0, currencyCode: "USD" }, // On remet le prix pour satisfaire le schéma
-                      interval: "EVERY_30_DAYS"
+            }`,
+            {
+              variables: {
+                name: "Free Installation Setup", // Plan gratuit
+                returnUrl: returnUrl,
+                test: true,
+                lineItems: [
+                  {
+                    plan: {
+                      appRecurringPricingDetails: {
+                        price: { amount: 0.0, currencyCode: "USD" }, // Plan gratuit
+                        interval: "EVERY_30_DAYS"
+                      }
                     }
                   }
-                }
-              ]
-            },
+                ]
+              },
+            }
+          );
+
+          const responseJson = await response.json();
+          const data = (responseJson as any).data?.appSubscriptionCreate;
+
+          // Gestion des erreurs GraphQL
+          if (data?.userErrors?.length > 0) {
+            console.error("❌ Erreur GraphQL:", JSON.stringify(data.userErrors, null, 2));
+            // Si l'erreur est Managed Pricing, on continue quand même (plan gratuit par défaut)
+            if (data.userErrors.some((e: any) => e.message?.includes("Managed Pricing"))) {
+              console.log("ℹ️ Managed Pricing détecté. Accès autorisé avec plan gratuit par défaut.");
+              return null; // On continue sans bloquer
+            }
+            throw new Error(data.userErrors[0].message);
           }
-        );
 
-        const responseJson = await response.json();
-        const data = (responseJson as any).data?.appSubscriptionCreate;
+          // Si confirmation nécessaire, rediriger
+          if (data?.confirmationUrl) {
+            throw new Response(null, {
+              status: 302,
+              headers: { Location: data.confirmationUrl },
+            });
+          }
 
-        // Gestion des erreurs GraphQL
-        if (data?.userErrors?.length > 0) {
-          console.error("❌ Erreur GraphQL détaillée:", JSON.stringify(data.userErrors, null, 2));
-          throw new Error(data.userErrors[0].message);
+          console.log("✅ Plan gratuit attribué automatiquement");
+        } catch (subscriptionError: any) {
+          // Si c'est une redirection, la laisser passer
+          if (subscriptionError instanceof Response) throw subscriptionError;
+          
+          // Si erreur Managed Pricing, on continue avec plan gratuit par défaut
+          if (subscriptionError?.message?.includes("Managed Pricing")) {
+            console.log("ℹ️ Managed Pricing. Accès autorisé avec plan gratuit par défaut.");
+            return null;
+          }
+          
+          console.error("❌ Erreur lors de l'attribution du plan gratuit:", subscriptionError);
+          // On continue quand même pour ne pas bloquer l'installation
         }
-
-        // 3. Redirection vers la page de validation Shopify
-        if (data?.confirmationUrl) {
-          throw new Response(null, {
-            status: 302,
-            headers: { Location: data.confirmationUrl },
-          });
-        }
+        
+        // On continue sans bloquer - l'utilisateur a le plan gratuit par défaut
+        return null;
       },
     } as any);
   } catch (error) {
     if (error instanceof Response) return error; // Laisser passer la redirection
     console.error("❌ ERREUR LOADER :", error);
-    throw error;
+    // On continue quand même pour ne pas bloquer l'app
   }
 
   try {

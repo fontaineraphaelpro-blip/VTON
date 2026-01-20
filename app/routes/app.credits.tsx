@@ -583,7 +583,116 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       error: error instanceof Error ? error.message : "Une erreur est survenue. Veuillez réessayer.",
       requiresAuth: false,
     });
+  } else if (intent === "purchase-subscription") {
+    // Gestion de l'achat d'abonnement (Starter, Pro, Studio)
+    const planId = formData.get("planId") as string;
+    const subscriptionPlans: Record<string, { name: string; price: number }> = {
+      "starter": { name: "Starter", price: 29.0 },
+      "pro": { name: "Pro", price: 99.0 },
+      "studio": { name: "Studio", price: 399.0 },
+    };
+
+    const plan = subscriptionPlans[planId];
+    if (!plan) {
+      return json({ 
+        success: false, 
+        error: "Plan d'abonnement invalide",
+      });
+    }
+
+    try {
+      const baseUrl = new URL(request.url).origin;
+      const returnUrl = new URL("/app/credits", baseUrl);
+      returnUrl.searchParams.set("subscription", "success");
+      returnUrl.searchParams.set("plan", planId);
+
+      console.log("[Credits] Creating subscription using GraphQL", {
+        planId,
+        planName: plan.name,
+        price: plan.price,
+        shop,
+        returnUrl: returnUrl.toString(),
+      });
+
+      // Créer un abonnement récurrent via GraphQL
+      const mutation = `
+        mutation AppSubscriptionCreate($name: String!, $lineItems: [AppSubscriptionLineItemInput!]!, $returnUrl: URL!, $test: Boolean) {
+          appSubscriptionCreate(name: $name, lineItems: $lineItems, returnUrl: $returnUrl, test: $test) {
+            userErrors {
+              field
+              message
+            }
+            confirmationUrl
+            appSubscription {
+              id
+            }
+          }
+        }
+      `;
+
+      const variables = {
+        name: plan.name,
+        returnUrl: returnUrl.toString(),
+        test: process.env.NODE_ENV !== "production",
+        lineItems: [
+          {
+            plan: {
+              appRecurringPricingDetails: {
+                price: { amount: plan.price, currencyCode: "USD" },
+                interval: "EVERY_30_DAYS"
+              }
+            }
+          }
+        ]
+      };
+
+      const graphqlResponse = await admin.graphql(mutation, { variables });
+      const graphqlData = await graphqlResponse.json() as any;
+
+      if (graphqlData.errors) {
+        const errorMessage = graphqlData.errors.map((e: any) => e.message).join(", ");
+        return json({ 
+          success: false, 
+          error: `Shopify API error: ${errorMessage}`,
+        });
+      }
+
+      const subscriptionData = graphqlData.data?.appSubscriptionCreate;
+      
+      if (subscriptionData?.userErrors?.length > 0) {
+        const errorMessage = subscriptionData.userErrors.map((e: any) => e.message).join(", ");
+        return json({ 
+          success: false, 
+          error: `Shopify API error: ${errorMessage}`,
+        });
+      }
+
+      if (!subscriptionData?.confirmationUrl) {
+        return json({ 
+          success: false, 
+          error: "Abonnement créé mais aucune URL de confirmation disponible.",
+        });
+      }
+
+      return json({ 
+        success: true, 
+        redirect: true,
+        checkoutUrl: subscriptionData.confirmationUrl,
+        plan: plan.name,
+      });
+    } catch (error) {
+      console.error("Error creating subscription:", error);
+      return json({ 
+        success: false, 
+        error: error instanceof Error ? error.message : "Erreur lors de la création de l'abonnement.",
+      });
+    }
   }
+  
+  return json({ 
+    success: false, 
+    error: "Action non reconnue",
+  });
 };
 
 export default function Credits() {
@@ -712,6 +821,30 @@ export default function Credits() {
     fetcher.submit(formData, { method: "post" });
   };
 
+  const handleSubscriptionPurchase = (planId: string) => {
+    console.log("[Credits] handleSubscriptionPurchase called", { planId, isSubmitting });
+    
+    if (isSubmitting || submittingPackId !== null) {
+      console.warn("[Credits] Purchase already in progress, ignoring click");
+      return;
+    }
+    
+    setSubmittingPackId(planId);
+    
+    const formData = new FormData();
+    formData.append("intent", "purchase-subscription");
+    formData.append("planId", planId);
+    
+    console.log("[Credits] Submitting subscription purchase request", { planId });
+    fetcher.submit(formData, { method: "post" });
+  };
+
+  const subscriptionPlans = [
+    { id: "starter", name: "Starter", price: 29.0, description: "Parfait pour démarrer" },
+    { id: "pro", name: "Pro", price: 99.0, description: "Pour les professionnels", popular: true },
+    { id: "studio", name: "Studio", price: 399.0, description: "Pour les studios créatifs" },
+  ];
+
   return (
     <Page>
       <TitleBar title="Credits - VTON Magic" />
@@ -802,6 +935,44 @@ export default function Credits() {
               </div>
             </div>
           ))}
+        </div>
+
+        <Divider />
+
+        <div style={{ marginTop: "var(--spacing-xl)" }}>
+          <h2 style={{ fontSize: "24px", fontWeight: "600", marginBottom: "var(--spacing-md)" }}>
+            Abonnements mensuels
+          </h2>
+          <p style={{ color: "var(--text-secondary)", marginBottom: "var(--spacing-lg)" }}>
+            Choisissez un plan d'abonnement pour un accès illimité
+          </p>
+          <div className="pricing-grid">
+            {subscriptionPlans.map((plan) => (
+              <div key={plan.id} className={`plan-card ${plan.popular ? 'featured' : ''}`}>
+                {plan.popular && (
+                  <div className="plan-badge">Most popular</div>
+                )}
+                <div className="plan-name">{plan.name}</div>
+                <div className="plan-price">
+                  ${plan.price.toFixed(2)} <span>/ month</span>
+                </div>
+                <div className="plan-features">
+                  <div className="plan-feature">{plan.description}</div>
+                  <div className="plan-feature">Abonnement récurrent</div>
+                  <div className="plan-feature">Annulable à tout moment</div>
+                </div>
+                <div className="plan-cta">
+                  <button 
+                    className="plan-button"
+                    onClick={() => handleSubscriptionPurchase(plan.id)}
+                    disabled={isSubmitting || submittingPackId !== null}
+                  >
+                    {isSubmitting && submittingPackId === plan.id ? "Processing..." : "S'abonner"}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </Page>
