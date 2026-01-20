@@ -24,19 +24,18 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
 
   try {
-    // On vérifie si un des plans payants est actif
-    // Note : On retire "free-installation-setup" de la liste requise pour forcer le check
+    // Dans le .require(), on garde isTest: true pour dire "Vérifie aussi les plans de test"
     await billing.require({
       plans: ["starter", "pro", "studio"] as any,
-      isTest: true,
+      isTest: true, 
       onFailure: async () => {
-        console.log("⚠️ Redirection vers le paiement TEST (Plan Starter)...");
+        console.log("⚠️ Redirection vers le plan Starter...");
         
-        // C'est ici que ça bloquait.
-        // On lance la redirection vers la page de paiement.
+        // CORRECTION : On retire isTest: true
+        // On laisse Shopify détecter automatiquement que c'est une boutique de dev
         throw await (billing.request as any)({
           plan: "starter", 
-          isTest: true, // INDISPENSABLE : Génère une charge fictive
+          // isTest: true, <--- SUPPRIMÉ : Shopify gère automatiquement le mode test pour Managed Pricing
           returnUrl: `https://${url.host}/app`, 
         });
       },
