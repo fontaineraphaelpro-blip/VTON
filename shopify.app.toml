@@ -1,15 +1,18 @@
 # This file stores configurations for your Shopify app.
 
 # App Identity
-# IMPORTANT: Replace these values with your actual app credentials from Shopify Partners
-client_id = "your-client-id-here"  # Your SHOPIFY_API_KEY from environment variables
-name = "Virtual Try-On Shopify App"
-application_url = "https://your-app-url.ngrok.io"  # Your SHOPIFY_APP_URL from environment variables
+client_id = "85e1a9dba888450e33b84fbb067bc3a5"
+name = "Virtual Try-On"
+application_url = "https://vton-production-890a.up.railway.app"
 embedded = true
 
 # Access Scopes
 [access_scopes]
 scopes = "write_products"
+
+# Authentication
+[auth]
+redirect_urls = ["https://vton-production-890a.up.railway.app/auth/callback"]
 
 [webhooks]
 api_version = "2024-10"
@@ -46,11 +49,18 @@ api_version = "2024-10"
   # uri = "/webhooks/shop/redact"
   # compliance_topics = ["shop/redact"]
 
-[subscriptions.starter]
-plans = [{ name = "Starter", amount = 29.0, currency_code = "USD", interval = "EVERY_30_DAYS" }]
+[subscriptions]
+  [subscriptions.starter]
+  plans = [
+    { name = "Starter", amount = 29.0, currency_code = "USD", interval = "EVERY_30_DAYS" }
+  ]
 
-[subscriptions.pro]
-plans = [{ name = "Pro", amount = 99.0, currency_code = "USD", interval = "EVERY_30_DAYS" }]
+  [subscriptions.pro]
+  plans = [
+    { name = "Pro", amount = 99.0, currency_code = "USD", interval = "EVERY_30_DAYS" }
+  ]
 
-[subscriptions.studio]
-plans = [{ name = "Enterprise", amount = 399.0, currency_code = "USD", interval = "EVERY_30_DAYS" }]
+  [subscriptions.studio]
+  plans = [
+    { name = "Studio", amount = 399.0, currency_code = "USD", interval = "EVERY_30_DAYS" }
+  ]
