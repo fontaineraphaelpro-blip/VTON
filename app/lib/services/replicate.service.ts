@@ -114,13 +114,25 @@ export async function generateTryOn(
         const buffer = Buffer.from(base64Data, "base64");
         
         // Upload to Replicate files - files.create() expects a Buffer directly
+        console.log("[Replicate] Uploading buffer, size:", buffer.length, "bytes");
         const file = await replicate.files.create(buffer);
         
-        if (!file || !file.url) {
-          throw new Error("Replicate files.create() did not return a valid file URL");
+        console.log("[Replicate] File upload response:", JSON.stringify(file, null, 2));
+        
+        // Handle different response formats from Replicate
+        let uploadedUrl: string | undefined;
+        if (typeof file === "string") {
+          uploadedUrl = file;
+        } else if (file && typeof file === "object") {
+          uploadedUrl = file.url || file.uri || (file as any).URL;
         }
         
-        personInput = file.url;
+        if (!uploadedUrl || typeof uploadedUrl !== "string") {
+          console.error("[Replicate] Invalid file response:", file);
+          throw new Error(`Replicate files.create() did not return a valid file URL. Response: ${JSON.stringify(file)}`);
+        }
+        
+        personInput = uploadedUrl;
         console.log("[Replicate] Person image uploaded:", personInput);
       } catch (uploadError) {
         console.error("[Replicate] Failed to upload person image:", uploadError);
@@ -140,13 +152,25 @@ export async function generateTryOn(
         const buffer = Buffer.from(base64Data, "base64");
         
         // Upload to Replicate files - files.create() expects a Buffer directly
+        console.log("[Replicate] Uploading buffer, size:", buffer.length, "bytes");
         const file = await replicate.files.create(buffer);
         
-        if (!file || !file.url) {
-          throw new Error("Replicate files.create() did not return a valid file URL");
+        console.log("[Replicate] File upload response:", JSON.stringify(file, null, 2));
+        
+        // Handle different response formats from Replicate
+        let uploadedUrl: string | undefined;
+        if (typeof file === "string") {
+          uploadedUrl = file;
+        } else if (file && typeof file === "object") {
+          uploadedUrl = file.url || file.uri || (file as any).URL;
         }
         
-        garmentInput = file.url;
+        if (!uploadedUrl || typeof uploadedUrl !== "string") {
+          console.error("[Replicate] Invalid file response:", file);
+          throw new Error(`Replicate files.create() did not return a valid file URL. Response: ${JSON.stringify(file)}`);
+        }
+        
+        garmentInput = uploadedUrl;
         console.log("[Replicate] Garment image uploaded:", garmentInput);
       } catch (uploadError) {
         console.error("[Replicate] Failed to upload garment image:", uploadError);
