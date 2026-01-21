@@ -56,26 +56,27 @@ const CREDIT_PACKS = [
 ];
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  // Extract URL params BEFORE authentication (to preserve them if re-auth is needed)
+  // 1. RECUPERATION DES PARAMS (AVANT TOUT)
   const url = new URL(request.url);
+  const shop = url.searchParams.get("shop");
   const chargeId = url.searchParams.get("charge_id");
   const purchaseSuccess = url.searchParams.get("purchase");
   const packId = url.searchParams.get("pack");
   const creditsParam = url.searchParams.get("credits");
-  const shopParam = url.searchParams.get("shop");
   
-  // --- CORRECTIF: Intercepter les retours de paiement avec shop + charge_id ---
-  // Si on revient d'un paiement (on a shop + charge_id) mais qu'on est "top level" (hors iframe)
-  // On redirige manuellement vers /auth avec le shop pour relancer l'OAuth
-  if (shopParam && chargeId) {
-    // Construire l'URL de retour avec tous les paramètres importants (y compris shop)
-    const returnUrl = `/app/credits?charge_id=${encodeURIComponent(chargeId)}&shop=${encodeURIComponent(shopParam)}`;
-    // Rediriger vers /auth avec shop et return_to pour que l'OAuth fonctionne
-    // /auth utilisera authenticate.admin() qui détectera le paramètre shop et lancera l'OAuth
-    return redirect(`/auth?shop=${encodeURIComponent(shopParam)}&return_to=${encodeURIComponent(returnUrl)}`);
+  // 2. BLOC DE SAUVETAGE (DOIT ETRE ICI, TOUT EN HAUT, AVANT LE TRY)
+  // Si on revient de Shopify après paiement, on a perdu la session.
+  // On redirige vers /auth pour que Shopify la restaure via OAuth.
+  // IMPORTANT: Ce bloc DOIT être exécuté AVANT authenticate.admin() pour éviter la redirection vers /auth/login
+  if (shop && chargeId) {
+    const returnUrl = `/app/credits?charge_id=${encodeURIComponent(chargeId)}&shop=${encodeURIComponent(shop)}`;
+    return redirect(`/auth?shop=${encodeURIComponent(shop)}&return_to=${encodeURIComponent(returnUrl)}`);
   }
-  // --- FIN CORRECTIF ---
   
+  // 3. AUTHENTIFICATION SHOPIFY
+  // Si le code arrive ici sans session, authenticate.admin va lancer une erreur 
+  // et rediriger vers /auth/login (ce qui cause l'écran noir).
+  // C'est pour ça que l'étape 2 doit être avant.
   try {
     // authenticate.admin will automatically handle re-authentication if needed
     // It will redirect to /auth which will handle OAuth flow and return to the original URL
