@@ -681,13 +681,36 @@ export async function getProductTryonStatus(shop: string, productId: string, pro
   // Check product-level enablement (pass handle for better matching)
   const productSetting = await getProductTryonSetting(shop, productId, productHandle);
   
+  // ALSO do a direct DB query to verify what's actually stored
+  // This helps debug if the matching logic is working correctly
+  const directQuery = await query(
+    `SELECT product_id, tryon_enabled, product_handle 
+     FROM product_settings 
+     WHERE shop = $1 
+     AND (
+       product_id = $2 
+       OR product_id = $3 
+       OR product_id = $4
+       ${productHandle ? `OR product_handle = $5` : ''}
+     )`,
+    productHandle 
+      ? [shop, productId, productId.match(/^gid:\/\/shopify\/Product\/(\d+)$/)?.[1] || '', `gid://shopify/Product/${productId.match(/^gid:\/\/shopify\/Product\/(\d+)$/)?.[1] || productId.replace(/[^\d]/g, '')}`, productHandle]
+      : [shop, productId, productId.match(/^gid:\/\/shopify\/Product\/(\d+)$/)?.[1] || '', `gid://shopify/Product/${productId.match(/^gid:\/\/shopify\/Product\/(\d+)$/)?.[1] || productId.replace(/[^\d]/g, '')}`]
+  );
+  
   // Log for debugging (ALWAYS log to help debug product enablement issues)
   console.log(`[getProductTryonStatus] Product setting check:`, {
     shop,
     productId,
     productHandle,
     productSetting,
-    productSettingType: typeof productSetting
+    productSettingType: typeof productSetting,
+    directQueryResults: directQuery.rows.map((r: any) => ({
+      product_id: r.product_id,
+      tryon_enabled: r.tryon_enabled,
+      tryon_enabled_type: typeof r.tryon_enabled,
+      product_handle: r.product_handle
+    }))
   });
   
   // IMPORTANT: 
