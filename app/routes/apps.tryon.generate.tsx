@@ -67,6 +67,7 @@ function extractShopFromProxy(queryParams: URLSearchParams): string {
 
 /**
  * Converts base64 data URL to a regular URL or returns as-is if already a URL
+ * Replicate API accepts data URLs, so we can use them directly
  */
 function convertBase64ToUrl(base64Data: string): string {
   // If it's already a URL, return as-is
@@ -74,15 +75,13 @@ function convertBase64ToUrl(base64Data: string): string {
     return base64Data;
   }
   
-  // If it's a data URL, extract the base64 part
+  // If it's a data URL, return as-is (Replicate accepts data URLs)
   if (base64Data.startsWith("data:image/")) {
-    // For Replicate, we can use the data URL directly or convert to a temporary URL
-    // Replicate accepts data URLs, so we can return it as-is
     return base64Data;
   }
   
   // If it's just base64 without data: prefix, add it
-  if (!base64Data.includes(",")) {
+  if (!base64Data.includes(",") && !base64Data.includes(":")) {
     return `data:image/jpeg;base64,${base64Data}`;
   }
   
