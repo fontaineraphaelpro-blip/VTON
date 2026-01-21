@@ -196,11 +196,12 @@ export async function generateTryOn(
     // and uses size (must be "2K", "4K", or "custom"), width, height, aspect_ratio, max_images, sequential_image_generation
     console.log("Creating prediction with Replicate...");
     
-    // Use "custom" size with 1024x1024 for faster generation (~30 seconds)
+    // Use "custom" size with 2048x2048 (minimum required: 3,686,400 pixels)
+    // 2048x2048 = 4,194,304 pixels, which meets the requirement
     // The model only accepts "2K", "4K", or "custom" for size parameter
     const size: "2K" | "4K" | "custom" = "custom";
-    const width = 1024; // Good balance between speed and quality
-    const height = 1024; // Square aspect ratio
+    const width = 2048; // Minimum size required by the model
+    const height = 2048; // Square aspect ratio
     
     const prediction = await replicate.predictions.create({
       model: MODEL_ID,
