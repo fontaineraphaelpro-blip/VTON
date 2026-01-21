@@ -1,5 +1,5 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
-import { json } from "@remix-run/node";
+import { json, redirect } from "@remix-run/node";
 import { useLoaderData, useFetcher, useRevalidator } from "@remix-run/react";
 import { useState, useEffect, useRef } from "react";
 import {
@@ -62,6 +62,18 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const purchaseSuccess = url.searchParams.get("purchase");
   const packId = url.searchParams.get("pack");
   const creditsParam = url.searchParams.get("credits");
+  const shopParam = url.searchParams.get("shop");
+  
+  // --- CORRECTIF: Intercepter les retours de paiement avec shop + charge_id ---
+  // Si on revient d'un paiement (on a shop + charge_id) mais qu'on est "top level" (hors iframe)
+  // On redirige manuellement vers /auth avec le shop pour relancer l'OAuth
+  if (shopParam && chargeId) {
+    // Construire l'URL de retour avec tous les paramètres importants
+    const returnUrl = `/app/credits?charge_id=${encodeURIComponent(chargeId)}`;
+    // Rediriger vers /auth avec shop et return_to pour que l'OAuth fonctionne
+    return redirect(`/auth?shop=${encodeURIComponent(shopParam)}&return_to=${encodeURIComponent(returnUrl)}`);
+  }
+  // --- FIN CORRECTIF ---
   
   try {
     // authenticate.admin will automatically handle re-authentication if needed
