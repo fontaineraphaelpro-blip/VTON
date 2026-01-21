@@ -219,6 +219,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         // Continue - will show normal page even if subscription check fails
       }
     }
+    }
 
     // Packs one-time supprimés - seulement les abonnements sont disponibles
 
