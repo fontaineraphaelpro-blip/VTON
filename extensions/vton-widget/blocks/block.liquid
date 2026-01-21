@@ -818,6 +818,7 @@
                 <div id="vton-upload-area" class="vton-upload-area" onclick="window.vtonWidgetInstance.triggerFileInput()">
                   <input type="file" id="vton-file-input" accept="image/*" style="display: none;" onchange="window.vtonWidgetInstance.handleFileChange(event)" />
                   <p>Click to upload your photo</p>
+                  <p style="font-size: 12px; color: #666; margin-top: 8px; font-weight: normal;">📸 <strong>Please use a clear front-facing photo</strong><br/>Otherwise generation will take longer</p>
                 </div>
                 <p class="vton-privacy-notice">🔒 No personal data is stored. Your photos are processed securely and deleted after generation.</p>
                 <button id="vton-generate-btn" class="vton-generate-btn" style="background: ${buttonBg}; color: ${buttonColor};" onclick="window.vtonWidgetInstance.generate()" disabled>
