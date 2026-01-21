@@ -1617,9 +1617,17 @@
             }
             
             if (!response.ok) {
-              return response.text().then(function(text) {
-                console.error('[VTON] Error response:', text);
-                throw new Error('Generation failed: ' + response.status + ' - ' + text);
+              return response.json().then(function(errorData) {
+                console.error('[VTON] Error response:', errorData);
+                // Extract error message from response
+                const errorMessage = errorData?.error || errorData?.message || 'Generation failed: ' + response.status;
+                throw new Error(errorMessage);
+              }).catch(function(parseError) {
+                // If JSON parsing fails, try to get text
+                return response.text().then(function(text) {
+                  console.error('[VTON] Error response (text):', text);
+                  throw new Error(text || 'Generation failed: ' + response.status);
+                });
               });
             }
             return response.json();
