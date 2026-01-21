@@ -4,7 +4,7 @@
  * ==========================================
  * 
  * Service for interacting with Replicate API (try-on generation).
- * OPTIMIZED: Uses reduced resolution (512x512) and quality settings for faster processing and lower costs.
+ * Uses bytedance/seedream-4.5 model optimized for fast generation (~30 seconds).
  */
 
 import Replicate from "replicate";
@@ -13,11 +13,11 @@ import Replicate from "replicate";
 // CONFIGURATION
 // ==========================================
 
-const MODEL_ID = "google/nano-banana-pro";
+const MODEL_ID = "bytedance/seedream-4.5";
 
 // Prompt for garment transfer task
 const GARMENT_TRANSFER_PROMPT = 
-  "This is NOT a redesign task. It is a garment transfer task. Use the clothing from the second image exactly as-is with zero creative interpretation. The output must look like the REAL clothing item was physically worn by the person. No invented graphics, no color changes, no simplification.";
+  " This is NOT a redesign task.\n\nIt is a garment transfer task.\n\nUse the clothing from the second image exactly as-is with zero creative interpretation.\n\nThe output must look like the REAL clothing item was physically worn by the person.\n\nNo invented graphics, no color changes, no simplification. ";
 
 // OPTIMIZED: Reduced image sizes for faster processing
 // Input and output resolutions are reduced to speed up processing and lower costs
@@ -48,8 +48,8 @@ const replicate = new Replicate({
 // ==========================================
 
 /**
- * Generates a virtual try-on using google/nano-banana-pro with garment transfer prompt.
- * OPTIMIZED: Uses lowest resolution (512) and JPEG format for fastest processing.
+ * Generates a virtual try-on using bytedance/seedream-4.5 with garment transfer prompt.
+ * Optimized for fast generation (~30 seconds) with 1K resolution.
  * 
  * @param personImage - Person image (URL or base64 data URL)
  * @param garmentImage - Garment image (URL or base64 data URL)

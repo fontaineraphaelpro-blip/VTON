@@ -832,7 +832,7 @@
                   </div>
                   <div class="vton-progress-info" style="display: flex; justify-content: space-between; align-items: center; margin: 8px 0;">
                     <span id="vton-progress-text" class="vton-progress-text">0%</span>
-                    <span id="vton-timer-value" class="vton-timer-value" style="font-size: 13px; color: #666;">0s • ~40s left</span>
+                    <span id="vton-timer-value" class="vton-timer-value" style="font-size: 13px; color: #666;">0s • ~30s left</span>
                   </div>
                   <div class="vton-steps">
                     <div id="vton-step-1" class="vton-step active">1. Analyzing</div>
@@ -841,7 +841,7 @@
                     <div id="vton-step-4" class="vton-step">4. Finalizing</div>
                   </div>
                   <p class="vton-tip" style="font-size: 12px; color: #666; margin: 12px 0 8px 0; font-style: italic; transition: opacity 0.3s ease; min-height: 18px;">💡 Tip: Make sure your photo has good lighting for best results!</p>
-                  <p class="vton-loading-subtext" style="margin: 8px 0;">⏱️ Usually takes 30-40 seconds • Your result will be worth the wait!</p>
+                  <p class="vton-loading-subtext" style="margin: 8px 0;">⏱️ Usually takes ~30 seconds • Your result will be worth the wait!</p>
                   <p class="vton-privacy-notice" style="margin: 8px 0;">🔒 No personal data is stored. Your photos are processed securely and deleted after generation.</p>
                 </div>
                 <div id="vton-result" class="vton-result"></div>
@@ -1258,10 +1258,10 @@
         timerInterval = setInterval(function() {
           if (startTime && timerValue) {
             const elapsed = Math.floor((Date.now() - startTime) / 1000);
-            const estimatedTotal = 40; // Average 40 seconds
+            const estimatedTotal = 30; // Average 30 seconds
             const remaining = Math.max(0, estimatedTotal - elapsed);
             
-            if (remaining > 0 && elapsed < 45) {
+            if (remaining > 0 && elapsed < 35) {
               timerValue.textContent = elapsed + 's • ~' + remaining + 's left';
             } else {
               timerValue.textContent = elapsed + 's';
