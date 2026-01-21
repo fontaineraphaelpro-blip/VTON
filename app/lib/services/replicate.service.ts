@@ -213,53 +213,31 @@ export async function generateTryOn(
     console.log("Using prompt:", GARMENT_TRANSFER_PROMPT);
     console.log("Quality mode:", qualityMode, "Config:", config);
     
-    // Always use predictions.create() and poll for results
-    // This is more reliable than replicate.run() for this model
+    // google/nano-banana-pro expects image_input as an array with [person_image, garment_image]
+    // and uses aspect_ratio, resolution, output_format, safety_filter_level
     console.log("Creating prediction with Replicate...");
     
-    let prediction;
-    try {
-      // Try with image/image2 parameters first (most common for google/nano-banana-pro)
-      prediction = await replicate.predictions.create({
-        model: MODEL_ID,
-        input: {
-          image: personInput,
-          image2: garmentInput,
-          prompt: GARMENT_TRANSFER_PROMPT,
-          width: config.width,
-          height: config.height,
-          num_inference_steps: config.numInferenceSteps,
-          guidance_scale: config.guidanceScale,
-        },
-      });
-      console.log("Prediction created with image/image2 parameters");
-    } catch (error: any) {
-      console.warn("First attempt failed, trying alternative parameter names:", error.message);
-      try {
-        prediction = await replicate.predictions.create({
-          model: MODEL_ID,
-          input: {
-            person_image: personInput,
-            garment_image: garmentInput,
-            prompt: GARMENT_TRANSFER_PROMPT,
-            width: config.width,
-            height: config.height,
-          },
-        });
-        console.log("Prediction created with person_image/garment_image parameters");
-      } catch (error2: any) {
-        console.warn("Second attempt failed, trying with image1/image2:", error2.message);
-        prediction = await replicate.predictions.create({
-          model: MODEL_ID,
-          input: {
-            image1: personInput,
-            image2: garmentInput,
-            prompt: GARMENT_TRANSFER_PROMPT,
-          },
-        });
-        console.log("Prediction created with image1/image2 parameters");
-      }
+    // Map quality mode to resolution
+    let resolution: "512" | "1K" | "2K" = "1K";
+    if (qualityMode === "speed") {
+      resolution = "512";
+    } else if (qualityMode === "quality") {
+      resolution = "2K";
     }
+    
+    const prediction = await replicate.predictions.create({
+      model: MODEL_ID,
+      input: {
+        image_input: [personInput, garmentInput], // Array with [person, garment]
+        prompt: GARMENT_TRANSFER_PROMPT,
+        aspect_ratio: "1:1",
+        resolution: resolution,
+        output_format: "png",
+        safety_filter_level: "block_only_high",
+      },
+    });
+    
+    console.log("Prediction created with image_input array format");
     
     console.log("Created prediction:", prediction.id, "Status:", prediction.status);
     
