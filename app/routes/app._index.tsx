@@ -1,5 +1,5 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
-import { json, defer } from "@remix-run/node";
+import { json, defer, redirect } from "@remix-run/node";
 import { useLoaderData, useFetcher, useRevalidator, Link } from "@remix-run/react";
 import { useEffect, useState } from "react";
 import {
@@ -22,6 +22,14 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session, admin } = await authenticate.admin(request);
   const shop = session.shop;
   const url = new URL(request.url);
+  
+  // Si on vient d'un paiement (charge_id présent), rediriger vers /app/credits
+  // pour que la mise à jour de l'abonnement soit traitée là-bas avec la session réhydratée
+  const chargeId = url.searchParams.get("charge_id");
+  if (chargeId) {
+    return redirect(`/app/credits?charge_id=${encodeURIComponent(chargeId)}`);
+  }
+  
   const returnUrl = `https://${url.host}/app`;
 
   // Avec Managed Pricing, on NE PEUT PAS utiliser billing.require() ou billing.request()
