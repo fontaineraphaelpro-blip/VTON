@@ -336,8 +336,36 @@ export async function getTryonStatsByDay(shop: string, days: number = 30) {
  */
 export async function getProductTryonSetting(shop: string, productId: string, productHandle?: string): Promise<boolean | null> {
   // Use batch function for single product (more efficient)
+  // But we also need to check by handle if provided
   const result = await getProductTryonSettingsBatch(shop, [productId]);
-  return result[productId] ?? null;
+  let setting = result[productId] ?? null;
+  
+  // If not found by ID and we have a handle, try by handle
+  if (setting === null && productHandle) {
+    try {
+      const handleResult = await query(
+        `SELECT tryon_enabled 
+         FROM product_settings 
+         WHERE shop = $1 AND product_handle = $2 
+         LIMIT 1`,
+        [shop, productHandle]
+      );
+      
+      if (handleResult.rows.length > 0) {
+        const enabled = handleResult.rows[0].tryon_enabled;
+        const enabledBool = enabled === true || enabled === 'true' || enabled === 1;
+        const disabledBool = enabled === false || enabled === 'false' || enabled === 0;
+        setting = disabledBool ? false : (enabledBool ? true : null);
+      }
+    } catch (error: any) {
+      // Column might not exist - ignore
+      if (!error.message?.includes('product_handle') && !error.message?.includes('column')) {
+        throw error;
+      }
+    }
+  }
+  
+  return setting;
 }
 
 /**
@@ -687,26 +715,31 @@ export async function getProductTryonStatus(shop: string, productId: string, pro
   const numericId = gidMatch ? gidMatch[1] : (productId.match(/\d+/)?.[0] || productId);
   const gidFormat = gidMatch ? productId : `gid://shopify/Product/${numericId}`;
   
-  const directQuery = await query(
-    `SELECT product_id, tryon_enabled, product_handle 
+  // Build parameters array dynamically
+  const queryParams: any[] = [shop, productId, numericId, gidFormat];
+  let querySql = `SELECT product_id, tryon_enabled, product_handle 
      FROM product_settings 
      WHERE shop = $1 
      AND (
        product_id = $2 
        OR product_id = $3 
-       OR product_id = $4
-       ${productHandle ? `OR product_handle = $5` : ''}
-     )`,
-    productHandle 
-      ? [shop, productId, numericId, gidFormat, productHandle]
-      : [shop, productId, numericId, gidFormat]
-  );
+       OR product_id = $4`;
+  
+  if (productHandle) {
+    queryParams.push(productHandle);
+    querySql += ` OR product_handle = $5`;
+  }
+  querySql += `)`;
+  
+  const directQuery = await query(querySql, queryParams);
   
   // Log for debugging (ALWAYS log to help debug product enablement issues)
   console.log(`[getProductTryonStatus] Product setting check:`, {
     shop,
     productId,
     productHandle,
+    numericId,
+    gidFormat,
     productSetting,
     productSettingType: typeof productSetting,
     directQueryResults: directQuery.rows.map((r: any) => ({
@@ -714,7 +747,8 @@ export async function getProductTryonStatus(shop: string, productId: string, pro
       tryon_enabled: r.tryon_enabled,
       tryon_enabled_type: typeof r.tryon_enabled,
       product_handle: r.product_handle
-    }))
+    })),
+    directQueryCount: directQuery.rows.length
   });
   
   // IMPORTANT: 
