@@ -68,9 +68,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   // Si on revient d'un paiement (on a shop + charge_id) mais qu'on est "top level" (hors iframe)
   // On redirige manuellement vers /auth avec le shop pour relancer l'OAuth
   if (shopParam && chargeId) {
-    // Construire l'URL de retour avec tous les paramètres importants
-    const returnUrl = `/app/credits?charge_id=${encodeURIComponent(chargeId)}`;
+    // Construire l'URL de retour avec tous les paramètres importants (y compris shop)
+    const returnUrl = `/app/credits?charge_id=${encodeURIComponent(chargeId)}&shop=${encodeURIComponent(shopParam)}`;
     // Rediriger vers /auth avec shop et return_to pour que l'OAuth fonctionne
+    // /auth utilisera authenticate.admin() qui détectera le paramètre shop et lancera l'OAuth
     return redirect(`/auth?shop=${encodeURIComponent(shopParam)}&return_to=${encodeURIComponent(returnUrl)}`);
   }
   // --- FIN CORRECTIF ---
