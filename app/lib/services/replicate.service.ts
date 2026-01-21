@@ -192,23 +192,27 @@ export async function generateTryOn(
     console.log("Using prompt:", GARMENT_TRANSFER_PROMPT);
     console.log("Using optimized config:", config);
     
-    // google/nano-banana-pro expects image_input as an array with [person_image, garment_image]
-    // and uses aspect_ratio, resolution, output_format, safety_filter_level
+    // bytedance/seedream-4.5 expects image_input as an array with [person_image, garment_image]
+    // and uses size, width, height, aspect_ratio, max_images, sequential_image_generation
     console.log("Creating prediction with Replicate...");
     
-    // Use "512" resolution (lowest, fastest) and JPEG format for optimal speed
-    const resolution: "512" | "1K" | "2K" = "512";
-    const outputFormat = "jpeg";
+    // Use "1K" size for faster generation (good balance between speed and quality)
+    // Can use "512" for even faster, but 1K is good balance
+    const size: "512" | "1K" | "2K" = "1K";
+    const width = size === "2K" ? 2048 : size === "1K" ? 1024 : 512;
+    const height = width; // Square aspect ratio
     
     const prediction = await replicate.predictions.create({
       model: MODEL_ID,
       input: {
-        image_input: [personInput, garmentInput], // Array with [person, garment]
+        size: size,
+        width: width,
+        height: height,
         prompt: GARMENT_TRANSFER_PROMPT,
+        max_images: 10,
+        image_input: [personInput, garmentInput], // Array with [person, garment]
         aspect_ratio: "1:1",
-        resolution: resolution,
-        output_format: outputFormat,
-        safety_filter_level: "block_only_high",
+        sequential_image_generation: "disabled",
       },
     });
     
