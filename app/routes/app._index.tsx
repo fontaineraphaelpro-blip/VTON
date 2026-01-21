@@ -1,5 +1,5 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
-import { json } from "@remix-run/node";
+import { json, defer } from "@remix-run/node";
 import { useLoaderData, useFetcher, useRevalidator, Link } from "@remix-run/react";
 import { useEffect, useState } from "react";
 import {
@@ -101,11 +101,17 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
     await ensureTables();
 
+    // OPTIMIZED: Load critical data immediately
     const shopData = await getShop(shop);
-    const recentLogs = await getTryonLogs(shop, { limit: 50 });
-    const topProducts = await getTopProducts(shop, 10);
-    const dailyStats = await getTryonStatsByDay(shop, 30);
-    const monthlyUsage = await getMonthlyTryonUsage(shop);
+    
+    // OPTIMIZED: Start all queries in parallel (they run concurrently)
+    // This is faster than awaiting them sequentially
+    const [recentLogs, topProducts, dailyStats, monthlyUsage] = await Promise.all([
+      getTryonLogs(shop, { limit: 50 }),
+      getTopProducts(shop, 10),
+      getTryonStatsByDay(shop, 30),
+      getMonthlyTryonUsage(shop),
+    ]);
 
     // Build product handles map from logs (for fallback matching)
     const productHandlesMap: Record<string, string> = {};

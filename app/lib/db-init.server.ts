@@ -22,8 +22,14 @@ const pool = connectionString
     })
   : null;
 
+// Cache pour éviter de vérifier les tables à chaque requête
+let tablesEnsured = false;
+let tablesEnsuring = false; // Flag pour éviter les appels concurrents
+const ensureTablesPromise: Promise<void> | null = null;
+
 /**
  * Ensures all business tables exist.
+ * OPTIMIZED: Utilise un cache en mémoire pour éviter les vérifications répétées.
  */
 export async function ensureTables() {
   if (!pool) {
@@ -33,6 +39,24 @@ export async function ensureTables() {
     }
     return;
   }
+
+  // Si les tables sont déjà vérifiées, retourner immédiatement
+  if (tablesEnsured) {
+    return;
+  }
+
+  // Si une vérification est en cours, attendre qu'elle se termine
+  if (tablesEnsuring) {
+    // Attendre un peu et réessayer
+    await new Promise(resolve => setTimeout(resolve, 50));
+    if (tablesEnsured) return;
+    // Si toujours en cours, attendre encore un peu
+    await new Promise(resolve => setTimeout(resolve, 100));
+    if (tablesEnsured) return;
+  }
+
+  // Marquer comme en cours
+  tablesEnsuring = true;
 
   try {
     // Create shops table
@@ -132,15 +156,24 @@ export async function ensureTables() {
       }
     }
 
+    // Marquer comme terminé
+    tablesEnsured = true;
+    
     // Log only in development
     if (process.env.NODE_ENV !== "production") {
       console.log("✅ Business tables initialized");
     }
   } catch (error) {
+    // En cas d'erreur, réinitialiser le flag pour permettre une nouvelle tentative
+    tablesEnsuring = false;
+    
     // Log error only in development
     if (process.env.NODE_ENV !== "production") {
       console.error("❌ Error initializing business tables:", error);
     }
     throw error;
+  } finally {
+    // Toujours réinitialiser le flag "en cours"
+    tablesEnsuring = false;
   }
 }

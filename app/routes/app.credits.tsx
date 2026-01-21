@@ -443,22 +443,13 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           test: process.env.NODE_ENV !== "production"
         };
 
-        console.log("[Credits] Creating custom one-time charge using GraphQL", { customCredits, totalPrice, variables });
-
         const customGraphqlResponse = await admin.graphql(mutation, {
           variables
         });
 
         const customGraphqlData = await customGraphqlResponse.json() as any;
 
-        console.log("[Credits] Custom GraphQL response received", {
-          hasData: !!customGraphqlData,
-          hasErrors: !!customGraphqlData.errors,
-          data: customGraphqlData
-        });
-
         if (customGraphqlData.errors) {
-          console.error("[Credits] Custom GraphQL errors:", customGraphqlData.errors);
           const errorMessage = customGraphqlData.errors.map((e: any) => e.message).join(", ");
           return json({ 
             success: false, 
@@ -469,7 +460,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         const purchaseData = customGraphqlData.data?.appPurchaseOneTimeCreate;
         
         if (!purchaseData) {
-          console.error("No purchase data returned in response (custom):", customGraphqlData);
           return json({ 
             success: false, 
             error: "Failed to create charge. Please check your Shopify permissions.",
@@ -478,7 +468,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
         if (purchaseData.userErrors && purchaseData.userErrors.length > 0) {
           const errorMessage = purchaseData.userErrors.map((e: any) => e.message).join(", ");
-          console.error("User errors (custom):", purchaseData.userErrors);
           return json({ 
             success: false, 
             error: `Shopify API error: ${errorMessage}`,
@@ -486,7 +475,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         }
 
         if (!purchaseData.confirmationUrl) {
-          console.error("No confirmation URL returned (custom):", purchaseData);
           return json({ 
             success: false, 
             error: "Charge created but no confirmation URL available. Please try again.",
@@ -503,18 +491,11 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           price: totalPrice,
         });
       } catch (error) {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:399',message:'Catch block - custom error caught',data:{errorType:error?.constructor?.name,isResponse:error instanceof Response,isError:error instanceof Error,hasStatus:!!(error as any)?.status,status:(error as any)?.status,message:error instanceof Error ? error.message : String(error)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-        // #endregion
         // Ne pas loguer l'objet Response directement - extraire seulement les infos nécessaires
         if (error instanceof Response) {
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.credits.tsx:402',message:'Custom error is Response object',data:{status:error.status,statusText:error.statusText,url:error.url,is401:error.status===401},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-          // #endregion
           // Handle 401 Unauthorized in catch block
           if (error.status === 401) {
             const reauthUrl = error.headers.get('x-shopify-api-request-failure-reauthorize-url');
-            console.warn(`[Credits] Custom app purchase creation failed: ${error.status} ${error.statusText} - Authentication required`, { reauthUrl });
             return json({ 
               success: false, 
               error: "Votre session a expiré. Veuillez rafraîchir la page pour vous ré-authentifier.",
@@ -522,7 +503,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
               reauthUrl: reauthUrl || null,
             });
           }
-          console.warn(`Custom app purchase creation failed: ${error.status} ${error.statusText}`);
           return json({ 
             success: false, 
             error: `Shopify API error (${error.status}): ${error.statusText}` 
@@ -535,7 +515,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           if (errorAny.status === 401) {
             const reauthUrl = errorAny.headers?.get?.('x-shopify-api-request-failure-reauthorize-url') || 
                              errorAny.headers?.['x-shopify-api-request-failure-reauthorize-url'];
-            console.warn(`[Credits] Custom draft order creation failed: ${errorAny.status} ${errorAny.statusText} - Authentication required`, { reauthUrl });
             return json({ 
               success: false, 
               error: "Votre session a expiré. Veuillez rafraîchir la page pour vous ré-authentifier.",
@@ -543,14 +522,11 @@ export const action = async ({ request }: ActionFunctionArgs) => {
               reauthUrl: reauthUrl || null,
             });
           }
-          console.warn(`Custom draft order creation failed: ${errorAny.status} ${errorAny.statusText}`);
           return json({ 
             success: false, 
             error: `Shopify API error (${errorAny.status}): ${errorAny.statusText || 'Unknown error'}` 
           });
         }
-        // Log normal errors (not Response objects)
-        console.error("Error creating custom app purchase:", error instanceof Error ? error.message : String(error));
         let errorMessage: string;
         if (error instanceof Error) {
           errorMessage = error.message;
