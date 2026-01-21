@@ -183,7 +183,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       const allSubscriptions = subscriptionData?.data?.currentAppInstallation?.activeSubscriptions || [];
       
       // Accepter les abonnements de test (utilisés en développement/test)
-      const allowTestSubscriptions = process.env.NODE_ENV !== "production";
+      // Forcer true pour l'instant car les abonnements de test sont utilisés même en "production" sur Railway
+      const allowTestSubscriptions = true; // process.env.NODE_ENV !== "production";
       console.log(`[Credits] 🔧 allowTestSubscriptions=${allowTestSubscriptions}, NODE_ENV=${process.env.NODE_ENV}`);
       
       let activeSubscription = allSubscriptions.find((sub: any) => {

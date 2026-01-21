@@ -75,7 +75,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         
         // Accepter les abonnements de test (utilisés en développement/test)
         // En production, les abonnements réels ne sont pas en test, donc ça marche aussi
-        const allowTestSubscriptions = process.env.NODE_ENV !== "production";
+        // Forcer true pour l'instant car les abonnements de test sont utilisés même en "production" sur Railway
+        const allowTestSubscriptions = true; // process.env.NODE_ENV !== "production";
         console.log(`[Dashboard] 🔧 allowTestSubscriptions=${allowTestSubscriptions}, NODE_ENV=${process.env.NODE_ENV}`);
         
         // Chercher d'abord un abonnement ACTIVE
