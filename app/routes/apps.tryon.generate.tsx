@@ -10,7 +10,7 @@
  * This endpoint is public but verifies Shopify HMAC signature for security.
  */
 
-import type { ActionFunctionArgs } from "@remix-run/node";
+import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import crypto from "crypto";
 import { generateTryOn } from "../lib/services/replicate.service";
