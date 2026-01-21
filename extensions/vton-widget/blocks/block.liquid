@@ -8,6 +8,21 @@
     (function() {
       'use strict';
       
+      // App URL - try to get from meta tag or use default
+      // This should be configured in Shopify App Proxy settings
+      const APP_URL = (function() {
+        // Try to get from meta tag first
+        const appUrlMeta = document.querySelector('meta[name="vton-app-url"]');
+        if (appUrlMeta) {
+          return appUrlMeta.getAttribute('content');
+        }
+        // Fallback: Try to detect from current domain or use default Railway URL
+        // For production, this should be set via App Proxy configuration
+        return 'https://vton-production-890a.up.railway.app';
+      })();
+      
+      console.log('[VTON] App URL configured:', APP_URL);
+      
       // Wait for DOM to be ready and Shopify object to be available
       function waitForShopify() {
         if (window.Shopify && window.Shopify.product) {
@@ -279,23 +294,55 @@
       }
       
       function checkStatus(shop, productId, productHandle) {
-        // Construct absolute URL for app proxy
-        let url = window.location.origin + '/apps/tryon/status?shop=' + encodeURIComponent(shop) + '&product_id=' + encodeURIComponent(productId);
+        // Try App Proxy first (if configured), then fallback to direct app URL
+        // App Proxy URL: https://store.myshopify.com/apps/tryon/status
+        // Direct URL: https://app-url.com/apps/tryon/status
+        
+        // Try App Proxy first
+        let appProxyUrl = window.location.origin + '/apps/tryon/status?shop=' + encodeURIComponent(shop) + '&product_id=' + encodeURIComponent(productId);
         if (productHandle) {
-          url += '&product_handle=' + encodeURIComponent(productHandle);
+          appProxyUrl += '&product_handle=' + encodeURIComponent(productHandle);
         }
         
-        return fetch(url, {
+        // Fallback: Try to get app URL from meta tag or use a known pattern
+        // For Railway deployments, the URL pattern is usually: https://app-name.up.railway.app
+        // We'll try App Proxy first, and if it fails, we'll need to use the direct URL
+        // Note: The app URL should be configured in Shopify App Proxy settings
+        
+        return fetch(appProxyUrl, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json'
           }
         }).then(function(response) {
           if (!response.ok) {
+            // If App Proxy fails (404), try direct URL as fallback
+            if (response.status === 404) {
+              console.warn('[VTON] ⚠️ App Proxy not available (404), trying direct URL...');
+              
+              // Use the configured app URL as fallback
+              const directUrl = APP_URL + '/apps/tryon/status?shop=' + encodeURIComponent(shop) + '&product_id=' + encodeURIComponent(productId);
+              const finalUrl = productHandle ? directUrl + '&product_handle=' + encodeURIComponent(productHandle) : directUrl;
+              
+              console.log('[VTON] 🔄 Trying direct URL:', finalUrl);
+              
+              return fetch(finalUrl, {
+                method: 'GET',
+                headers: {
+                  'Content-Type': 'application/json'
+                }
+              }).then(function(directResponse) {
+                if (!directResponse.ok) {
+                  throw new Error('Status check failed: ' + directResponse.status);
+                }
+                return directResponse.json();
+              });
+            }
             throw new Error('Status check failed: ' + response.status);
           }
           return response.json();
         }).catch(function(error) {
+          console.error('[VTON] ❌ Status check error:', error);
           throw error;
         });
       }
@@ -1100,7 +1147,9 @@
       
       function trackAddToCart(state) {
         // Track the add to cart event for analytics
-          const url = window.location.origin + '/apps/tryon/atc?shop=' + encodeURIComponent(state.shop) + '&product_id=' + encodeURIComponent(state.productId);
+          // Try App Proxy first, fallback to direct URL
+          const atcUrl = window.location.origin + '/apps/tryon/atc?shop=' + encodeURIComponent(state.shop) + '&product_id=' + encodeURIComponent(state.productId);
+          const url = atcUrl; // Will be updated if App Proxy fails
           fetch(url, {
             method: 'POST',
             headers: {
@@ -1337,6 +1386,7 @@
             return;
           }
           
+          // Try App Proxy first, fallback to direct URL
           const statusUrl = window.location.origin + '/apps/tryon/job/' + jobId + '?shop=' + encodeURIComponent(state.shop);
           
           fetch(statusUrl)
@@ -1495,7 +1545,9 @@
         startLoadingMessages(shadowRoot);
         
         // Construct absolute URL for app proxy
-        const url = window.location.origin + '/apps/tryon/generate?shop=' + encodeURIComponent(state.shop) + '&product_id=' + encodeURIComponent(state.productId);
+        // Try App Proxy first, fallback to direct URL
+        const generateUrl = window.location.origin + '/apps/tryon/generate?shop=' + encodeURIComponent(state.shop) + '&product_id=' + encodeURIComponent(state.productId);
+        const url = generateUrl; // Will be updated if App Proxy fails
         
         // Create AbortController for timeout handling (90 seconds - plus que 60)
         const controller = new AbortController();
