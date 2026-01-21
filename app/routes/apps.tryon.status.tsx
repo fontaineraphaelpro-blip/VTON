@@ -196,7 +196,18 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       productEnabled: status.productEnabled,
     });
 
-    // 6. Return status
+    // 6. Return status with CORS headers for storefront requests
+    const origin = request.headers.get("origin") || "";
+    const referer = request.headers.get("referer") || "";
+    const isFromShopifyStorefront = origin.includes(".myshopify.com") || referer.includes(".myshopify.com");
+    
+    const headers = new Headers();
+    if (isFromShopifyStorefront) {
+      headers.set("Access-Control-Allow-Origin", origin || "*");
+      headers.set("Access-Control-Allow-Methods", "GET, OPTIONS");
+      headers.set("Access-Control-Allow-Headers", "Content-Type");
+    }
+    
     return json({
       enabled: status.enabled,
       shop_enabled: status.shopEnabled,
@@ -204,7 +215,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       product_id: productId,
       shop: shop,
       widget_settings: status.widgetSettings, // Only set if enabled, null otherwise
-    });
+    }, { headers });
   } catch (error) {
     // Log error for debugging (only in development)
     if (process.env.NODE_ENV !== "production") {
