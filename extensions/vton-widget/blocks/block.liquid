@@ -1739,12 +1739,17 @@
           const errorElement = shadowRoot.getElementById('vton-error');
           if (errorElement) {
             errorElement.classList.add('active');
-            // Check if it's a timeout error
-            if (err.name === 'AbortError' || err.message?.includes('timeout') || err.message?.includes('504')) {
-              errorElement.textContent = 'Generation is taking longer than expected. Please wait a moment and check back, or try again.';
-            } else {
-              errorElement.textContent = 'An error occurred. Please try again.';
+            // Extract error message from the error object
+            let errorMessage = 'An error occurred. Please try again.';
+            
+            if (err.message) {
+              // Use the error message from the backend if available
+              errorMessage = err.message;
+            } else if (err.name === 'AbortError' || err.message?.includes('timeout') || err.message?.includes('504')) {
+              errorMessage = 'Generation is taking longer than expected. Please wait a moment and check back, or try again.';
             }
+            
+            errorElement.textContent = errorMessage;
           }
           if (generateBtn) generateBtn.disabled = false;
         });
