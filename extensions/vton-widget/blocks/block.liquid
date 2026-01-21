@@ -61,27 +61,51 @@
         });
         
         // Check status and initialize widget
+        console.log('[VTON] 🔍 Starting status check...', {
+          shop: shop,
+          productId: productId,
+          productHandle: productHandle,
+          timestamp: new Date().toISOString()
+        });
+        
         checkStatus(shop, productId, productHandle).then(function(status) {
-          console.log('[VTON] Status check result:', {
+          console.log('[VTON] ✅ Status check result:', {
             shop: shop,
             productId: productId,
             enabled: status?.enabled,
             shop_enabled: status?.shop_enabled,
             product_enabled: status?.product_enabled,
-            widget_settings: status?.widget_settings
+            widget_settings: status?.widget_settings,
+            has_widget_settings: !!status?.widget_settings
           });
+          
           if (status && status.enabled === true) {
-            console.log('[VTON] Widget will be displayed - try-on is enabled');
+            console.log('[VTON] ✅ Widget will be displayed - try-on is enabled');
+            console.log('[VTON] 📋 Widget settings:', status.widget_settings || {});
             initializeWidget(shop, productId, status.widget_settings || {});
           } else {
-            console.log('[VTON] Widget NOT displayed - try-on is disabled. Status:', {
+            console.warn('[VTON] ⚠️ Widget NOT displayed - try-on is disabled. Status:', {
               enabled: status?.enabled,
               shop_enabled: status?.shop_enabled,
-              product_enabled: status?.product_enabled
+              product_enabled: status?.product_enabled,
+              reason: !status 
+                ? 'No status returned' 
+                : !status.enabled 
+                  ? `Shop enabled: ${status.shop_enabled}, Product enabled: ${status.product_enabled}`
+                  : 'Unknown reason'
             });
+            console.warn('[VTON] 💡 To enable the widget:');
+            console.warn('[VTON]   1. Go to your app dashboard');
+            console.warn('[VTON]   2. Make sure "Enable app on store" is checked');
+            console.warn('[VTON]   3. Check that the product is not explicitly disabled in the Products page');
           }
         }).catch(function(error) {
-          console.error('[VTON] Failed to check status:', error);
+          console.error('[VTON] ❌ Failed to check status:', error);
+          console.error('[VTON] Error details:', {
+            message: error?.message,
+            stack: error?.stack,
+            url: window.location.href
+          });
         });
       }
       
@@ -303,15 +327,25 @@
       }
       
       function initializeWidget(shop, productId, widgetSettings) {
+        console.log('[VTON] 🚀 Initializing widget...', {
+          shop: shop,
+          productId: productId,
+          widgetSettings: widgetSettings
+        });
+        
         // Find product form container
         const productForm = document.querySelector('form[action*="/cart/add"]');
         if (!productForm || !productForm.parentNode) {
-          console.warn('[VTON] Product form not found');
+          console.error('[VTON] ❌ Product form not found. The widget requires a form with action="/cart/add" on the product page.');
+          console.error('[VTON] 💡 Make sure you are on a product page with an "Add to Cart" button.');
           return;
         }
         
+        console.log('[VTON] ✅ Product form found:', productForm);
+        
         // Check if widget already exists
         if (document.getElementById('vton-widget-container')) {
+          console.warn('[VTON] ⚠️ Widget container already exists, skipping initialization');
           return;
         }
         
@@ -342,6 +376,12 @@
         
         // Render widget
         renderWidget(shadowRoot, state);
+        
+        console.log('[VTON] ✅ Widget initialized and rendered successfully!', {
+          containerId: container.id,
+          productId: productId,
+          productImageUrl: productImageUrl
+        });
         
         // Make widget accessible globally for event handlers
         window.vtonWidgetInstance = {

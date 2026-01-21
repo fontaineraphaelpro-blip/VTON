@@ -140,8 +140,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       console.log(`[Dashboard] 💾 Synchronisation de la base de données: plan=${currentActivePlan}, crédits=${monthlyCredits}`);
       
       try {
+        // Mettre à jour à la fois monthlyQuota ET credits pour refléter le plan actif
         await upsertShop(shop, {
           monthlyQuota: monthlyCredits,
+          credits: monthlyCredits, // Ajouter les crédits correspondant au plan
         });
         
         await query(
@@ -152,7 +154,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
           [currentActivePlan, shop]
         );
         
-        console.log(`[Dashboard] ✅ Base de données synchronisée avec succès`);
+        console.log(`[Dashboard] ✅ Base de données synchronisée avec succès: monthlyQuota=${monthlyCredits}, credits=${monthlyCredits}`);
       } catch (syncError) {
         console.error(`[Dashboard] ❌ Erreur lors de la synchronisation:`, syncError);
       }
@@ -196,7 +198,16 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     await ensureTables();
 
     // OPTIMIZED: Load critical data immediately
-    const shopData = await getShop(shop);
+    let shopData = await getShop(shop);
+    
+    // S'assurer que le widget est activé par défaut si is_enabled n'est pas défini ou est null
+    if (shopData && (shopData.is_enabled === null || shopData.is_enabled === undefined)) {
+      console.log(`[Dashboard] 🔧 Activation automatique du widget pour ${shop} (is_enabled n'était pas défini)`);
+      await upsertShop(shop, {
+        isEnabled: true,
+      });
+      shopData = await getShop(shop);
+    }
     
     // OPTIMIZED: Start all queries in parallel (they run concurrently)
     // This is faster than awaiting them sequentially
@@ -437,6 +448,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       await upsertShop(shop, {
         credits: 4, // Initialize credits for compatibility with old system
         monthlyQuota: 4, // Initialize with free plan
+        isEnabled: true, // Widget activé par défaut pour les nouveaux shops
       });
       // Re-fetch shop data after creation
       const newShopData = await getShop(shop);
@@ -450,255 +462,12 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       });
     }
 
-    // Installer automatiquement le script tag si pas déjà installé
-    try {
-      // Construire l'URL du script - utiliser l'URL de l'app directement (pas le store)
-      // Ajouter un paramètre de version pour forcer le rechargement après déploiement
-      const url = new URL(request.url);
-      const appUrl = process.env.SHOPIFY_APP_URL || process.env.APPLICATION_URL || url.origin;
-      // Utiliser un timestamp pour forcer la mise à jour à chaque déploiement
-      const widgetVersion = process.env.WIDGET_VERSION || `v${Date.now()}`;
-      const scriptTagUrl = `${appUrl}/apps/tryon/widget-v2.js?v=${widgetVersion}`;
-      
-      // Vérifier si le script tag existe déjà
-      const scriptTagsQuery = `#graphql
-        query {
-          scriptTags(first: 50) {
-            edges {
-              node {
-                id
-                src
-              }
-            }
-          }
-        }
-      `;
-      
-      let scriptTagsResponse;
-      try {
-        scriptTagsResponse = await admin.graphql(scriptTagsQuery);
-      } catch (graphqlError: any) {
-        // Check if it's a GraphQL error about access denied
-        if (graphqlError?.message?.includes('Access denied') || graphqlError?.message?.includes('scriptTags')) {
-          // Skip script tag installation - app doesn't have required permissions
-          scriptTagsResponse = null;
-        } else {
-          throw graphqlError; // Re-throw if it's not an access denied error
-        }
-      }
-      
-      if (!scriptTagsResponse) {
-        // Skip script tag installation if response is null (access denied)
-        // Continue without installing script tag
-      } else if (!scriptTagsResponse.ok) {
-        if (scriptTagsResponse.status === 302 || scriptTagsResponse.status === 401) {
-          // Skip script tag installation if auth is required
-        } else {
-          // Error logged silently - script tag installation is non-critical
-          await scriptTagsResponse.text().catch(() => null);
-        }
-        // Continue without installing script tag
-      } else {
-        let scriptTagsData: any;
-        try {
-          scriptTagsData = await scriptTagsResponse.json() as any;
-          // Check for GraphQL errors in the response body
-          if (scriptTagsData?.errors) {
-            const errorMessages = scriptTagsData.errors.map((e: any) => e.message || String(e)).join(", ");
-            if (errorMessages.includes('Access denied') || errorMessages.includes('scriptTags')) {
-              scriptTagsData = null; // Set to null to skip installation
-            } else {
-              // GraphQL error - log only in development
-              if (process.env.NODE_ENV !== "production") {
-                console.error("GraphQL errors in script tags query:", errorMessages);
-              }
-              scriptTagsData = null; // Set to null to skip installation
-            }
-          }
-        } catch (jsonError) {
-          // Log only in development
-          if (process.env.NODE_ENV !== "production") {
-            console.error("Failed to parse script tags response:", jsonError);
-          }
-          // Continue without installing script tag
-          scriptTagsData = null;
-        }
-        
-        if (scriptTagsData && scriptTagsData.data?.scriptTags) {
-          const existingScripts = scriptTagsData.data?.scriptTags?.edges || [];
-          
-          // Supprimer les anciens script tags qui pourraient interférer
-          // Supprimer widget.js (ancien) mais garder widget-v2.js (nouveau)
-          const oldScriptTags = existingScripts.filter((edge: any) => {
-            const src = edge.node.src || '';
-            // Supprimer l'ancien widget.js mais pas widget-v2.js
-            return (src.includes('/apps/tryon/widget.js') && !src.includes('widget-v2')) ||
-                   (src.includes('widget') && !src.includes('widget-v2') && !src.includes('/apps/tryon/')) ||
-                   src.includes('tryon') && !src.includes('widget-v2') ||
-                   src.includes('try-on') ||
-                   (src.includes('vton') && !src.includes('widget-v2'));
-          });
-          
-          // Supprimer les anciens script tags
-          for (const oldScript of oldScriptTags) {
-            try {
-              const deleteScriptTagMutation = `#graphql
-                mutation scriptTagDelete($id: ID!) {
-                  scriptTagDelete(id: $id) {
-                    deletedScriptTagId
-                    userErrors {
-                      field
-                      message
-                    }
-                  }
-                }
-              `;
-              
-              const deleteResult = await admin.graphql(deleteScriptTagMutation, {
-                variables: {
-                  id: oldScript.node.id
-                }
-              });
-              
-              if (deleteResult.ok) {
-                const deleteData = await deleteResult.json().catch(() => null);
-                // Script tag deleted successfully (silent in production)
-              }
-            } catch (deleteError) {
-              // Error deleting old script tag - non-critical, continue silently
-            }
-          }
-          
-          // Construire l'URL attendue avec l'URL de l'app
-          const appUrl = process.env.SHOPIFY_APP_URL || process.env.APPLICATION_URL || new URL(request.url).origin;
-          const widgetVersion = process.env.WIDGET_VERSION || `v${Date.now()}`;
-          const expectedScriptUrl = `${appUrl}/apps/tryon/widget-v2.js?v=${widgetVersion}`;
-          
-          // Vérifier si le nouveau script tag existe déjà (avec la bonne version et la bonne URL)
-          const scriptExists = existingScripts.some((edge: any) => {
-            const src = edge.node.src || '';
-            return src === expectedScriptUrl || (src.includes('/apps/tryon/widget-v2.js') && src.includes(`?v=${widgetVersion}`));
-          });
-          
-          // Supprimer TOUS les anciens script tags du widget (peu importe la version)
-          const allOldWidgetScripts = existingScripts.filter((edge: any) => {
-            const src = edge.node.src || '';
-            // Supprimer tous les script tags qui contiennent widget-v2 ou widget
-            return (src.includes('/apps/tryon/widget') || src.includes('widget-v2')) && src !== expectedScriptUrl;
-          });
-          
-          // Supprimer tous les anciens script tags du widget
-          for (const oldScript of allOldWidgetScripts) {
-            try {
-              const deleteScriptTagMutation = `#graphql
-                mutation scriptTagDelete($id: ID!) {
-                  scriptTagDelete(id: $id) {
-                    deletedScriptTagId
-                    userErrors {
-                      field
-                      message
-                    }
-                  }
-                }
-              `;
-              
-              const deleteResult = await admin.graphql(deleteScriptTagMutation, {
-                variables: {
-                  id: oldScript.node.id
-                }
-              });
-              
-              if (deleteResult.ok) {
-                const deleteData = await deleteResult.json().catch(() => null);
-                // Script tag deleted successfully (silent in production)
-              }
-            } catch (deleteError) {
-              // Error deleting old version script tag - non-critical, continue silently
-            }
-          }
-
-          if (!scriptExists) {
-            // Créer le script tag automatiquement
-            const createScriptTagMutation = `#graphql
-              mutation scriptTagCreate($input: ScriptTagInput!) {
-                scriptTagCreate(input: $input) {
-                  scriptTag {
-                    id
-                    src
-                  }
-                  userErrors {
-                    field
-                    message
-                  }
-                }
-              }
-            `;
-
-            const result = await admin.graphql(createScriptTagMutation, {
-              variables: {
-                input: {
-                  src: scriptTagUrl,
-                  displayScope: "ONLINE_STORE",
-                }
-              }
-            });
-            
-            // Check if response is OK
-            if (!result.ok) {
-              if (result.status === 302 || result.status === 401) {
-                // Authentication required - skip silently
-              } else {
-                // Log only in development
-                if (process.env.NODE_ENV !== "production") {
-                  const errorText = await result.text().catch(() => "Unknown error");
-                  console.error("Error creating script tag:", result.status, errorText);
-                }
-              }
-            } else {
-              let resultData;
-              try {
-                resultData = await result.json();
-              } catch (jsonError) {
-                // Log only in development
-                if (process.env.NODE_ENV !== "production") {
-                  console.error("Failed to parse script tag creation response:", jsonError);
-                }
-              }
-              
-              if (resultData) {
-                // Check for GraphQL errors
-                if ((resultData as any).errors) {
-                  // Log only in development
-                  if (process.env.NODE_ENV !== "production") {
-                    const errorMessages = (resultData as any).errors.map((e: any) => e.message || String(e)).join(", ");
-                    console.error("GraphQL errors creating script tag:", errorMessages);
-                  }
-                }
-                
-                // Check for user errors
-                if (resultData.data?.scriptTagCreate?.userErrors?.length > 0) {
-                  // Log only in development
-                  if (process.env.NODE_ENV !== "production") {
-                    console.error("Script tag user errors:", resultData.data.scriptTagCreate.userErrors);
-                  }
-                }
-                // Success - script tag installed (silent in production)
-              }
-            }
-          }
-        }
-      }
-    } catch (scriptError: any) {
-      // Log only in development - script tag installation is non-critical
-      if (process.env.NODE_ENV !== "production") {
-        if (scriptError instanceof Response) {
-          console.warn(`Script tag installation skipped: ${scriptError.status} ${scriptError.statusText}`);
-        } else {
-          console.error("Error installing script tag:", scriptError);
-        }
-      }
-      // Don't block page load if script tag installation fails
-    }
+    // NOTE: Le widget utilise maintenant l'App Embed Block (block.liquid) et non plus les script tags
+    // L'installation doit être faite manuellement dans le thème Shopify :
+    // 1. Aller dans Online Store > Themes > Customize
+    // 2. Sélectionner un template de produit
+    // 3. Ajouter une section "App embeds" ou "Apps"
+    // 4. Activer le widget "Virtual Try-On Widget"
 
     return json({
       shop: shopData || null,
@@ -984,12 +753,34 @@ export default function Dashboard() {
         </header>
 
         {/* Alerts compactes en haut */}
-        {(error || fetcher.data?.success || credits < 50) && (
+        {(error || fetcher.data?.success || credits < 50 || !isEnabled) && (
           <div style={{ marginBottom: "var(--spacing-lg)" }}>
             <BlockStack gap="300">
               {error && (
                 <Banner tone="critical" title="Error">
                   {error}
+                </Banner>
+              )}
+              {!isEnabled && (
+                <Banner tone="warning" title="Widget is Disabled">
+                  <p>
+                    The Virtual Try-On widget is currently <strong>disabled</strong> on your store. 
+                    To make it visible on product pages:
+                  </p>
+                  <ol style={{ marginTop: "8px", marginLeft: "20px" }}>
+                    <li>Enable the widget below by checking "Enable app on store"</li>
+                    <li>Make sure the App Embed Block is installed in your theme:
+                      <ul style={{ marginTop: "4px", marginLeft: "20px" }}>
+                        <li>Go to <strong>Online Store → Themes → Customize</strong></li>
+                        <li>Select a product template</li>
+                        <li>Add an "App embeds" section</li>
+                        <li>Enable "Virtual Try-On Widget"</li>
+                      </ul>
+                    </li>
+                  </ol>
+                  <p style={{ marginTop: "8px", fontSize: "12px", color: "var(--text-secondary)" }}>
+                    If the widget still doesn't appear, check the browser console (F12) on a product page for diagnostic logs.
+                  </p>
                 </Banner>
               )}
               {fetcher.data?.success && (fetcher.data as any).deletedCount !== undefined && (

@@ -30,6 +30,15 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
     await ensureTables();
     let shopData = await getShop(shop);
+    
+    // S'assurer que le widget est activé par défaut si is_enabled n'est pas défini
+    if (shopData && (shopData.is_enabled === null || shopData.is_enabled === undefined)) {
+      console.log(`[Credits] 🔧 Activation automatique du widget pour ${shop} (is_enabled n'était pas défini)`);
+      await upsertShop(shop, {
+        isEnabled: true,
+      });
+      shopData = await getShop(shop);
+    }
 
     // Traiter le retour de paiement si charge_id présent
     if (chargeId) {
@@ -119,9 +128,13 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
             const monthlyCredits = planCredits[planName] || planCredits["free-installation-setup"];
             
+            // Mettre à jour à la fois monthlyQuota ET credits pour refléter le plan acheté
             await upsertShop(shop, {
               monthlyQuota: monthlyCredits,
+              credits: monthlyCredits, // Ajouter les crédits correspondant au plan
             });
+            
+            console.log(`[Credits] 💰 Crédits mis à jour: plan=${planName}, monthlyQuota=${monthlyCredits}, credits=${monthlyCredits}`);
 
             try {
               await query(`ALTER TABLE shops ADD COLUMN IF NOT EXISTS plan_name TEXT`);
@@ -236,15 +249,17 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         const monthlyCredits = planCredits[currentActivePlan] || planCredits["free-installation-setup"];
         
         try {
+          // Mettre à jour à la fois monthlyQuota ET credits pour refléter le plan actif
           await upsertShop(shop, {
             monthlyQuota: monthlyCredits,
+            credits: monthlyCredits, // Ajouter les crédits correspondant au plan
           });
           
           await query(`ALTER TABLE shops ADD COLUMN IF NOT EXISTS plan_name TEXT`);
           await query(`UPDATE shops SET plan_name = $1 WHERE domain = $2`, [currentActivePlan, shop]);
           
           shopData = await getShop(shop);
-          console.log(`[Credits] ✅ Base de données synchronisée: plan=${currentActivePlan}`);
+          console.log(`[Credits] ✅ Base de données synchronisée: plan=${currentActivePlan}, monthlyQuota=${monthlyCredits}, credits=${monthlyCredits}`);
         } catch (syncError) {
           console.error(`[Credits] ❌ Erreur lors de la synchronisation:`, syncError);
         }

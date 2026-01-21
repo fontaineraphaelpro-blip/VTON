@@ -155,6 +155,16 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     // 4. Ensure database tables exist
     try {
       await ensureTables();
+      
+      // S'assurer que le widget est activé par défaut si is_enabled n'est pas défini
+      const { getShop, upsertShop } = await import("../lib/services/db.service");
+      const shopRecord = await getShop(shop);
+      if (shopRecord && (shopRecord.is_enabled === null || shopRecord.is_enabled === undefined)) {
+        console.log(`[Status] 🔧 Activation automatique du widget pour ${shop} (is_enabled n'était pas défini)`);
+        await upsertShop(shop, {
+          isEnabled: true,
+        });
+      }
     } catch (error) {
       // Continue anyway, tables might already exist
       // Error is logged by database service if needed

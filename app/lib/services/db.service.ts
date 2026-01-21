@@ -148,9 +148,11 @@ export async function upsertShop(domain: string, data: {
   } else {
     // Create new shop - automatically initialize with free plan (4 credits/month)
     const defaultMonthlyQuota = data.monthlyQuota !== undefined ? data.monthlyQuota : 4;
+    // Widget activé par défaut pour les nouveaux shops
+    const isEnabled = data.isEnabled !== undefined ? data.isEnabled : true;
     await query(
-      `INSERT INTO shops (domain, access_token, credits, widget_text, widget_bg, widget_color, max_tries_per_user, monthly_quota)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      `INSERT INTO shops (domain, access_token, credits, widget_text, widget_bg, widget_color, max_tries_per_user, monthly_quota, is_enabled)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
       [
         domain,
         data.accessToken || "",
@@ -160,6 +162,7 @@ export async function upsertShop(domain: string, data: {
         data.widgetColor || "#ffffff",
         data.maxTriesPerUser || 5,
         defaultMonthlyQuota, // Default to 4 (free plan) for new shops
+        isEnabled, // Widget activé par défaut
       ]
     );
   }
@@ -576,7 +579,9 @@ export async function getProductTryonStatus(shop: string, productId: string, pro
   }
   
   // Check shop-level enablement
-  const shopEnabled = shopRecord.is_enabled !== false; // Default to true if not set
+  // Si is_enabled est null/undefined, considérer comme activé (par défaut)
+  // Si is_enabled est explicitement false, alors désactivé
+  const shopEnabled = shopRecord.is_enabled !== false; // Default to true if not set (null/undefined = true)
   
   // Check product-level enablement (pass handle for better matching)
   const productSetting = await getProductTryonSetting(shop, productId, productHandle);
