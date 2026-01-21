@@ -35,8 +35,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
     // Fetch product names from Shopify for ALL products (even if they have product_title, to ensure accuracy)
     const productIdsToFetch = new Set<string>();
+    const productHandlesToFetch = new Set<string>();
     
-    // Collect product IDs from logs (fetch all to ensure we have the latest names)
+    // Collect product IDs and handles from logs
     logs.forEach((log: any) => {
       if (log.product_id) {
         const gidMatch = log.product_id.match(/^gid:\/\/shopify\/Product\/(\d+)$/);
@@ -46,10 +47,15 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
           productIdsToFetch.add(log.product_id);
         }
       }
+      if (log.product_handle) {
+        productHandlesToFetch.add(log.product_handle);
+      }
     });
     
-    // Fetch product names from Shopify
+    // Fetch product names from Shopify by ID
     const productNamesMap: Record<string, string> = {};
+    const productHandlesMap: Record<string, string> = {}; // handle -> title
+    
     if (productIdsToFetch.size > 0) {
       try {
         const productIdsArray = Array.from(productIdsToFetch);
@@ -62,6 +68,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                 ... on Product {
                   id
                   title
+                  handle
                 }
               }
             }
@@ -77,36 +84,107 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             if (data.data?.nodes) {
               data.data.nodes.forEach((node: any) => {
                 if (node && node.id && node.title) {
-                  // Store both GID and numeric ID as keys
+                  // Store by GID format
+                  productNamesMap[node.id] = node.title;
+                  // Store by numeric ID
+                  const numericId = node.id.replace('gid://shopify/Product/', '');
+                  productNamesMap[numericId] = node.title;
+                  // Store by handle if available
+                  if (node.handle) {
+                    productHandlesMap[node.handle] = node.title;
+                  }
+                }
+              });
+            }
+          } else {
+            const errorText = await response.text();
+            console.error("[History] GraphQL error:", errorText);
+          }
+        }
+      } catch (error) {
+        console.error("[History] Error fetching product names:", error);
+      }
+    }
+    
+    // Also fetch products by handle if we have handles
+    if (productHandlesToFetch.size > 0) {
+      try {
+        const handlesArray = Array.from(productHandlesToFetch);
+        // Fetch in batches (Shopify Admin API limit is 250, but let's use 10 for safety)
+        for (let i = 0; i < handlesArray.length; i += 10) {
+          const batch = handlesArray.slice(i, i + 10);
+          const handleQuery = `#graphql
+            query getProductsByHandle($handles: [String!]!) {
+              products(first: 10, query: $handles) {
+                edges {
+                  node {
+                    id
+                    title
+                    handle
+                  }
+                }
+              }
+            }
+          `;
+          
+          // Build query string for handles
+          const handleQueryString = batch.map(h => `handle:${h}`).join(" OR ");
+          
+          const response = await admin.graphql(handleQuery, {
+            variables: { handles: handleQueryString }
+          });
+          
+          if (response.ok) {
+            const data = await response.json() as any;
+            if (data.data?.products?.edges) {
+              data.data.products.edges.forEach((edge: any) => {
+                const node = edge.node;
+                if (node && node.title && node.handle) {
+                  productHandlesMap[node.handle] = node.title;
+                  // Also store by ID
                   productNamesMap[node.id] = node.title;
                   const numericId = node.id.replace('gid://shopify/Product/', '');
                   productNamesMap[numericId] = node.title;
-                  productNamesMap[node.id] = node.title; // Also store GID format
                 }
               });
             }
           }
         }
       } catch (error) {
-        // Log error but don't block page load
-        if (process.env.NODE_ENV !== "production") {
-          console.error("Error fetching product names:", error);
-        }
+        // Handle query not supported, try alternative approach
+        console.warn("[History] Could not fetch products by handle:", error);
       }
     }
     
-    // Enrich logs with product titles (always use fetched names if available)
+    // Enrich logs with product titles
     const enrichedLogs = logs.map((log: any) => {
-      if (log.product_id) {
+      let title: string | undefined;
+      
+      // Priority 1: Use product_handle to match (most reliable)
+      if (log.product_handle && productHandlesMap[log.product_handle]) {
+        title = productHandlesMap[log.product_handle];
+      }
+      // Priority 2: Try product_id (GID or numeric) in fetched map
+      else if (log.product_id) {
         const gidMatch = log.product_id.match(/^gid:\/\/shopify\/Product\/(\d+)$/);
         const numericId = gidMatch ? gidMatch[1] : log.product_id;
-        const title = productNamesMap[log.product_id] || productNamesMap[numericId];
-        // Always use fetched title if available, otherwise use existing product_title
-        if (title) {
-          return { ...log, product_title: title };
-        }
+        title = productNamesMap[log.product_id] || productNamesMap[numericId];
       }
-      return log;
+      
+      // Priority 3: Use existing product_title from log
+      if (!title && log.product_title) {
+        title = log.product_title;
+      }
+      
+      // Always set product_title - use title if found, otherwise use handle or formatted ID
+      if (title) {
+        return { ...log, product_title: title };
+      } else {
+        // Fallback: use handle if available, otherwise format ID nicely
+        const displayText = log.product_handle || 
+          (log.product_id ? (log.product_id.match(/^gid:\/\/shopify\/Product\/(\d+)$/)?.[1] || log.product_id.replace('gid://shopify/Product/', '')) : 'Unknown');
+        return { ...log, product_title: log.product_handle ? `Product: ${displayText}` : `Product #${displayText}` };
+      }
     });
 
     return json({
