@@ -1149,17 +1149,39 @@
       
       function trackAddToCart(state) {
         // Track the add to cart event for analytics
-          // Try App Proxy first, fallback to direct URL
-          const atcUrl = window.location.origin + '/apps/tryon/atc?shop=' + encodeURIComponent(state.shop) + '&product_id=' + encodeURIComponent(state.productId);
-          const url = atcUrl; // Will be updated if App Proxy fails
-          fetch(url, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            }
-          }).catch(function(err) {
-            console.error('[VTON] Failed to track Add to Cart:', err);
-          });
+        // Try App Proxy first, fallback to direct URL
+        const APP_URL = '{{ shop.metafields.vton.app_url | default: "https://vton-production-890a.up.railway.app" }}';
+        let atcUrl = window.location.origin + '/apps/tryon/atc?shop=' + encodeURIComponent(state.shop) + '&product_id=' + encodeURIComponent(state.productId);
+        let useAppProxy = true;
+        
+        fetch(atcUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }).then(function(response) {
+          // If App Proxy failed with 404, try direct URL as fallback
+          if (useAppProxy && response.status === 404) {
+            console.warn('[VTON] ⚠️ App Proxy not available (404) for ATC tracking, trying direct URL...');
+            useAppProxy = false;
+            const directUrl = APP_URL + '/apps/tryon/atc?shop=' + encodeURIComponent(state.shop) + '&product_id=' + encodeURIComponent(state.productId);
+            return fetch(directUrl, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              }
+            });
+          }
+          return response;
+        }).then(function(response) {
+          if (response.ok) {
+            console.log('[VTON] ✅ Add to Cart tracked successfully');
+          } else {
+            console.warn('[VTON] ⚠️ Add to Cart tracking returned status:', response.status);
+          }
+        }).catch(function(err) {
+          console.error('[VTON] ❌ Failed to track Add to Cart:', err);
+        });
       }
       
       // Loading messages that rotate during generation

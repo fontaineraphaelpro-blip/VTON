@@ -714,6 +714,15 @@ export default function Dashboard() {
     }
   }, [fetcher.data?.success, revalidator]);
 
+  // Auto-refresh dashboard every 30 seconds to update stats (try-ons, add to cart, etc.)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      revalidator.revalidate();
+    }, 30000); // Refresh every 30 seconds
+
+    return () => clearInterval(interval);
+  }, [revalidator]);
+
   const stats = [
     { 
       label: "Available Credits", 
