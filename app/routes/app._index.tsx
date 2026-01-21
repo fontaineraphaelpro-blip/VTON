@@ -32,16 +32,19 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   
   const returnUrl = `https://${url.host}/app`;
 
-  // Avec Managed Pricing, on NE PEUT PAS utiliser billing.require() ou billing.request()
-  // On vérifie les abonnements via GraphQL et on attribue le plan gratuit par défaut
+  // IMPORTANT: Synchroniser toujours la base de données avec les abonnements Shopify
+  // Cela garantit que la base de données est à jour même sans charge_id
   try {
     // Vérifier les abonnements existants via GraphQL
     const subscriptionQuery = `#graphql
       query {
         currentAppInstallation {
           activeSubscriptions {
+            id
             name
             status
+            test
+            createdAt
             lineItems {
               plan {
                 pricingDetails {
@@ -60,20 +63,86 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       }
     `;
 
-    let hasActiveSubscription = false;
+    let currentActivePlan: string | null = null;
+    let shouldUpdateDb = false;
+    
     try {
       const subscriptionResponse = await admin.graphql(subscriptionQuery);
       if (subscriptionResponse.ok) {
         const subscriptionData = await subscriptionResponse.json() as any;
-        const subscriptions = subscriptionData?.data?.currentAppInstallation?.activeSubscriptions || [];
-        hasActiveSubscription = subscriptions.length > 0 && subscriptions.some((sub: any) => sub.status === "ACTIVE");
+        const allSubscriptions = subscriptionData?.data?.currentAppInstallation?.activeSubscriptions || [];
+        
+        // Chercher d'abord un abonnement ACTIVE
+        let activeSubscription = allSubscriptions.find((sub: any) => 
+          sub.status === "ACTIVE" && !sub.test
+        );
+        
+        // Si aucun ACTIVE, chercher un abonnement PENDING ou ACCEPTED (après achat récent)
+        if (!activeSubscription) {
+          const sortedSubscriptions = allSubscriptions
+            .filter((sub: any) => !sub.test && (sub.status === "PENDING" || sub.status === "ACCEPTED" || sub.status === "ACTIVE"))
+            .sort((a: any, b: any) => {
+              const dateA = new Date(a.createdAt || 0).getTime();
+              const dateB = new Date(b.createdAt || 0).getTime();
+              return dateB - dateA;
+            });
+          
+          activeSubscription = sortedSubscriptions[0];
+        }
+
+        if (activeSubscription) {
+          // Normalize plan name (e.g., "Starter" -> "starter")
+          const detectedPlanName = activeSubscription.name.toLowerCase().replace(/\s+/g, '-');
+          currentActivePlan = detectedPlanName;
+          
+          // Récupérer les données actuelles du shop
+          const shopData = await getShop(shop);
+          const dbPlanName = shopData?.plan_name;
+          
+          // Vérifier si la base de données doit être mise à jour
+          if (dbPlanName !== detectedPlanName) {
+            console.log(`[Dashboard] 🔄 Synchronisation nécessaire: plan DB="${dbPlanName}", plan Shopify="${detectedPlanName}"`);
+            shouldUpdateDb = true;
+          }
+        }
       }
     } catch (subError) {
-      console.log("ℹ️ Impossible de vérifier les abonnements, attribution du plan gratuit par défaut");
+      console.log("ℹ️ Impossible de vérifier les abonnements:", subError);
     }
 
-    // Si aucun abonnement actif, attribuer le plan gratuit en base de données
-    if (!hasActiveSubscription) {
+    // Synchroniser la base de données si nécessaire
+    if (shouldUpdateDb && currentActivePlan) {
+      const planCredits: Record<string, number> = {
+        "free-installation-setup": 4,
+        "starter": 50,
+        "pro": 200,
+        "studio": 1000,
+      };
+
+      const monthlyCredits = planCredits[currentActivePlan] || planCredits["free-installation-setup"];
+      console.log(`[Dashboard] 💾 Synchronisation de la base de données: plan=${currentActivePlan}, crédits=${monthlyCredits}`);
+      
+      try {
+        await upsertShop(shop, {
+          monthlyQuota: monthlyCredits,
+        });
+        
+        await query(
+          `ALTER TABLE shops ADD COLUMN IF NOT EXISTS plan_name TEXT`
+        );
+        await query(
+          `UPDATE shops SET plan_name = $1 WHERE domain = $2`,
+          [currentActivePlan, shop]
+        );
+        
+        console.log(`[Dashboard] ✅ Base de données synchronisée avec succès`);
+      } catch (syncError) {
+        console.error(`[Dashboard] ❌ Erreur lors de la synchronisation:`, syncError);
+      }
+    }
+
+    // Si aucun abonnement actif, attribuer le plan gratuit par défaut
+    if (!currentActivePlan) {
       try {
         const shopData = await getShop(shop);
         

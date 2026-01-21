@@ -68,7 +68,13 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     // Grâce à la route intermédiaire auth.billing-callback, la session existera ici
     const { admin, session, billing } = await authenticate.admin(request);
     
+    console.log(`[Credits] 🔐 Authentification - session:`, session ? { shop: session.shop, id: session.id } : 'null');
+    
     if (!session || !session.shop) {
+      console.error(`[Credits] ❌ Session invalide - URL: ${request.url}, Headers:`, {
+        cookie: request.headers.get('cookie'),
+        authorization: request.headers.get('authorization'),
+      });
       return json({
         shop: null,
         error: "Session invalide. Veuillez rafraîchir la page.",
