@@ -1,6 +1,7 @@
 // Fichier: app/routes/auth.billing-callback.tsx
 // Route publique intermédiaire pour gérer le retour de paiement Shopify
 // Cette route ne nécessite PAS d'authentification - c'est une "Exit Hatch"
+// IMPORTANT: On redirige vers /app (pas /app/credits) pour que la session soit réhydratée
 import { type LoaderFunctionArgs, redirect } from "@remix-run/node";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -14,10 +15,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     return new Response("Paramètres manquants", { status: 400 });
   }
 
-  // C'est ici la clé : On redirige vers /auth pour forcer la création de session
-  // et on dit à /auth de nous renvoyer vers /app/credits APRES l'authentification
-  const finalDestination = `/app/credits?charge_id=${encodeURIComponent(chargeId)}&shop=${encodeURIComponent(shop)}`;
-  
-  return redirect(`/auth?shop=${encodeURIComponent(shop)}&return_to=${encodeURIComponent(finalDestination)}`);
+  // SOLUTION PROPRE: Rediriger vers /app (pas /app/credits) pour que la session soit réhydratée
+  // /app gérera l'authentification, puis on pourra traiter le charge_id dans /app/credits
+  // On passe le charge_id en paramètre pour que /app puisse le transmettre à /app/credits
+  return redirect(`/auth?shop=${encodeURIComponent(shop)}&return_to=${encodeURIComponent(`/app?charge_id=${encodeURIComponent(chargeId)}`)}`);
 };
 
