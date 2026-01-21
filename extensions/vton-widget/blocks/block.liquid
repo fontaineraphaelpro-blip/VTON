@@ -357,8 +357,28 @@
         container.id = 'vton-widget-container';
         container.setAttribute('data-vton-widget', 'true');
         
-        // Insert after product form
-        productForm.parentNode.insertBefore(container, productForm.nextSibling);
+        // Trouver le bouton "Add to Cart" / "Acheter" pour insérer le widget juste après
+        const addToCartButton = productForm.querySelector('button[type="submit"], button[name="add"], [data-add-to-cart], .btn--add-to-cart, .add-to-cart, .product-form__cart-submit, .product-form__submit');
+        
+        if (addToCartButton && addToCartButton.parentNode) {
+          // Insérer juste après le bouton "Acheter"
+          // Si le bouton est dans un wrapper (div), insérer après le wrapper
+          const buttonWrapper = addToCartButton.closest('.product-form__cart-submit-wrapper, .product-form__submit-wrapper, .product-form__cart, .product-form__buttons, .product-form__actions, div');
+          
+          if (buttonWrapper && buttonWrapper !== productForm) {
+            // Insérer après le wrapper du bouton
+            buttonWrapper.parentNode.insertBefore(container, buttonWrapper.nextSibling);
+            console.log('[VTON] ✅ Widget inséré après le wrapper du bouton "Acheter"');
+          } else {
+            // Insérer après le bouton directement
+            addToCartButton.parentNode.insertBefore(container, addToCartButton.nextSibling);
+            console.log('[VTON] ✅ Widget inséré juste après le bouton "Acheter"');
+          }
+        } else {
+          // Fallback: Insérer après le formulaire si le bouton n'est pas trouvé
+          productForm.parentNode.insertBefore(container, productForm.nextSibling);
+          console.log('[VTON] ⚠️ Bouton "Acheter" non trouvé, widget inséré après le formulaire');
+        }
         
         // Create shadow DOM
         const shadowRoot = container.attachShadow({ mode: 'closed' });
@@ -422,8 +442,9 @@
         shadowRoot.innerHTML = `
           <style>
             .vton-widget-container {
-              margin: 20px 0;
+              margin: 12px 0 0 0;
               width: 100%;
+              display: block;
             }
             .vton-button {
               width: 100%;
@@ -668,7 +689,7 @@
             }
             @media (max-width: 640px) {
               .vton-widget-container {
-                margin: 16px 0;
+                margin: 12px 0 0 0;
               }
               .vton-button {
                 padding: 12px 20px;
