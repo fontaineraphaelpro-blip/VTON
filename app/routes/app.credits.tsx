@@ -602,6 +602,21 @@ export default function Credits() {
           </div>
         )}
 
+        {/* Information sur le système de crédits */}
+        <div style={{ marginBottom: "var(--spacing-lg)" }}>
+          <Banner tone="info" title="💡 Comment fonctionnent les crédits ?">
+            <div style={{ lineHeight: "1.6" }}>
+              <p style={{ margin: "0 0 8px 0" }}>
+                Les crédits sont réinitialisés automatiquement chaque mois en fonction de votre plan d'abonnement.
+              </p>
+              <p style={{ margin: "8px 0 0 0" }}>
+                <strong>Important :</strong> Les crédits non utilisés ne sont pas reportés au mois suivant. 
+                Chaque mois, votre solde est remis à zéro et vous recevez un nouveau quota de crédits selon votre plan actif.
+              </p>
+            </div>
+          </Banner>
+        </div>
+
         <header className="app-header">
           <h1 className="app-title">Credits</h1>
           <p className="app-subtitle">
