@@ -683,6 +683,10 @@ export async function getProductTryonStatus(shop: string, productId: string, pro
   
   // ALSO do a direct DB query to verify what's actually stored
   // This helps debug if the matching logic is working correctly
+  const gidMatch = productId.match(/^gid:\/\/shopify\/Product\/(\d+)$/);
+  const numericId = gidMatch ? gidMatch[1] : (productId.match(/\d+/)?.[0] || productId);
+  const gidFormat = gidMatch ? productId : `gid://shopify/Product/${numericId}`;
+  
   const directQuery = await query(
     `SELECT product_id, tryon_enabled, product_handle 
      FROM product_settings 
@@ -694,8 +698,8 @@ export async function getProductTryonStatus(shop: string, productId: string, pro
        ${productHandle ? `OR product_handle = $5` : ''}
      )`,
     productHandle 
-      ? [shop, productId, productId.match(/^gid:\/\/shopify\/Product\/(\d+)$/)?.[1] || '', `gid://shopify/Product/${productId.match(/^gid:\/\/shopify\/Product\/(\d+)$/)?.[1] || productId.replace(/[^\d]/g, '')}`, productHandle]
-      : [shop, productId, productId.match(/^gid:\/\/shopify\/Product\/(\d+)$/)?.[1] || '', `gid://shopify/Product/${productId.match(/^gid:\/\/shopify\/Product\/(\d+)$/)?.[1] || productId.replace(/[^\d]/g, '')}`]
+      ? [shop, productId, numericId, gidFormat, productHandle]
+      : [shop, productId, numericId, gidFormat]
   );
   
   // Log for debugging (ALWAYS log to help debug product enablement issues)
