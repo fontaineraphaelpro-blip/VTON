@@ -142,9 +142,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
           // Définir les crédits mensuels selon le plan
           const planCredits: Record<string, number> = {
             "free-installation-setup": 4,
-            "starter": 100,
-            "pro": 500,
-            "studio": 2000,
+            "starter": 50,      // 29€ → 50 générations
+            "pro": 200,          // 99€ → 200 générations
+            "studio": 1000,      // 399€ → 1000 générations
           };
 
           const monthlyCredits = planCredits[planName] || planCredits["free-installation-setup"];
