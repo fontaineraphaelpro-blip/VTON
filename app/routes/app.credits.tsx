@@ -78,7 +78,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     const shop = session.shop;
 
     await ensureTables();
-    const shopData = await getShop(shop);
+    let shopData = await getShop(shop);
 
     // Handle return from Shopify payment - check charge_id first (subscription payments)
     // charge_id indicates a subscription payment return
@@ -150,8 +150,20 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
           const subscriptionResponse = await currentAdmin.graphql(subscriptionQuery);
           const subscriptionData = await subscriptionResponse.json() as any;
           
-          const allSubscriptions = subscriptionData?.data?.currentAppInstallation?.activeSubscriptions || [];
-          console.log(`[Credits] 📋 Abonnements trouvés: ${allSubscriptions.length}`, allSubscriptions.map((s: any) => ({ name: s.name, status: s.status, test: s.test })));
+          let allSubscriptions = subscriptionData?.data?.currentAppInstallation?.activeSubscriptions || [];
+          console.log(`[Credits] 📋 Abonnements trouvés (première tentative): ${allSubscriptions.length}`, allSubscriptions.map((s: any) => ({ name: s.name, status: s.status, test: s.test, createdAt: s.createdAt })));
+          
+          // Si aucun abonnement trouvé, attendre un peu et réessayer (l'abonnement peut être en cours de création)
+          if (allSubscriptions.length === 0) {
+            console.log(`[Credits] ⏳ Aucun abonnement trouvé, attente de 2 secondes avant réessai...`);
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            // Réessayer la requête
+            const retryResponse = await currentAdmin.graphql(subscriptionQuery);
+            const retryData = await retryResponse.json() as any;
+            allSubscriptions = retryData?.data?.currentAppInstallation?.activeSubscriptions || [];
+            console.log(`[Credits] 📋 Abonnements trouvés (après réessai): ${allSubscriptions.length}`, allSubscriptions.map((s: any) => ({ name: s.name, status: s.status, test: s.test, createdAt: s.createdAt })));
+          }
           
           // Chercher l'abonnement le plus récent (créé récemment) qui n'est pas en test
           // Il peut être ACTIVE, PENDING, ou autre selon le timing
@@ -202,13 +214,13 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             }
 
             // Recharger les données du shop après mise à jour
-        const updatedShopData = await getShop(shop);
+            const updatedShopData = await getShop(shop);
             console.log(`[Credits] ✅ Données du shop rechargées:`, updatedShopData ? { monthlyQuota: updatedShopData.monthlyQuota, planName: (updatedShopData as any).plan_name } : 'null');
             
             // IMPORTANT: Retourner aussi le currentActivePlan mis à jour
             // pour que l'UI affiche correctement le plan actuel
-        return json({
-          shop: updatedShopData || null,
+            return json({
+              shop: updatedShopData || null,
               subscriptionUpdated: true,
               planName: planName,
               subscriptionActivated: true,
@@ -234,8 +246,11 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
     // Packs one-time supprimés - seulement les abonnements sont disponibles
 
-    // Check for active subscriptions to determine current plan
+    // IMPORTANT: Synchroniser toujours la base de données avec les abonnements Shopify
+    // Cela garantit que la base de données est à jour même sans charge_id
     let currentActivePlan: string | null = null;
+    let shouldUpdateDb = false;
+    
     try {
       const subscriptionQuery = `#graphql
         query {
@@ -290,14 +305,70 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
       if (activeSubscription) {
         // Normalize plan name (e.g., "Starter" -> "starter")
-        currentActivePlan = activeSubscription.name.toLowerCase().replace(/\s+/g, '-');
+        const detectedPlanName = activeSubscription.name.toLowerCase().replace(/\s+/g, '-');
+        currentActivePlan = detectedPlanName;
+        
+        // Vérifier si la base de données doit être mise à jour
+        const dbPlanName = shopData?.plan_name;
+        if (dbPlanName !== detectedPlanName) {
+          console.log(`[Credits] 🔄 Synchronisation nécessaire: plan DB="${dbPlanName}", plan Shopify="${detectedPlanName}"`);
+          shouldUpdateDb = true;
+        }
+      } else {
+        // Aucun abonnement actif trouvé, utiliser le plan gratuit par défaut
+        if (!shopData?.plan_name || shopData.plan_name !== "free-installation-setup") {
+          console.log(`[Credits] 🔄 Aucun abonnement actif, attribution du plan gratuit`);
+          currentActivePlan = "free-installation-setup";
+          shouldUpdateDb = true;
+        } else {
+          currentActivePlan = shopData.plan_name;
+        }
+      }
+      
+      // Mettre à jour la base de données si nécessaire
+      if (shouldUpdateDb && currentActivePlan) {
+        const planCredits: Record<string, number> = {
+          "free-installation-setup": 4,
+          "starter": 50,
+          "pro": 200,
+          "studio": 1000,
+        };
+
+        const monthlyCredits = planCredits[currentActivePlan] || planCredits["free-installation-setup"];
+        console.log(`[Credits] 💾 Synchronisation de la base de données: plan=${currentActivePlan}, crédits=${monthlyCredits}`);
+        
+        try {
+          // Mettre à jour monthlyQuota et plan_name
+          await upsertShop(shop, {
+            monthlyQuota: monthlyCredits,
+          });
+          
+          // Mettre à jour plan_name
+          await query(
+            `ALTER TABLE shops ADD COLUMN IF NOT EXISTS plan_name TEXT`
+          );
+          await query(
+            `UPDATE shops SET plan_name = $1 WHERE domain = $2`,
+            [currentActivePlan, shop]
+          );
+          
+          // Recharger les données du shop après mise à jour
+          const updatedShopData = await getShop(shop);
+          shopData = updatedShopData;
+          console.log(`[Credits] ✅ Base de données synchronisée avec succès`);
+        } catch (syncError) {
+          console.error(`[Credits] ❌ Erreur lors de la synchronisation:`, syncError);
+        }
       }
     } catch (subscriptionError) {
-      // Continue even if subscription check fails - will show all plans as available
+      console.error(`[Credits] ❌ Erreur lors de la vérification des abonnements:`, subscriptionError);
+      // Fallback: utiliser plan_name de la base de données
+      if (shopData?.plan_name) {
+        currentActivePlan = shopData.plan_name;
+      }
     }
 
     // FALLBACK: Utiliser plan_name de la base de données si aucun abonnement Shopify trouvé
-    // C'est important car après un achat, l'abonnement peut prendre du temps à devenir ACTIVE
     if (!currentActivePlan && shopData?.plan_name) {
       currentActivePlan = shopData.plan_name;
     }
