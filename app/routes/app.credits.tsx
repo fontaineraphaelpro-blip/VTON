@@ -773,6 +773,17 @@ export default function Credits() {
     }
   }, [fetcher.state, submittingPackId]);
 
+  // Recharger la page après mise à jour d'abonnement pour afficher le plan actuel
+  useEffect(() => {
+    if (subscriptionUpdated && planName) {
+      // Attendre un peu pour que la base de données soit mise à jour
+      const timer = setTimeout(() => {
+        revalidator.revalidate();
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [subscriptionUpdated, planName, revalidator]);
+
   const handlePurchase = (packId: string) => {
     if (isSubmitting || submittingPackId !== null) {
       return;
@@ -1007,6 +1018,89 @@ export default function Credits() {
               );
             })}
           </div>
+        </div>
+
+        {/* Section Packs de crédits */}
+        <div style={{ marginTop: "var(--spacing-xl)" }}>
+          <h2 style={{ fontSize: "24px", fontWeight: "600", marginBottom: "var(--spacing-md)" }}>
+            Packs de crédits
+          </h2>
+          <p style={{ color: "var(--text-secondary)", marginBottom: "var(--spacing-lg)" }}>
+            Achetez des crédits supplémentaires pour vos générations
+          </p>
+          <div className="pricing-grid">
+            {CREDIT_PACKS.map((pack) => {
+              const isSubmittingPack = isSubmitting && submittingPackId === pack.id;
+              
+              return (
+                <div key={pack.id} className={`plan-card ${pack.popular ? 'featured' : ''}`}>
+                  {pack.popular && (
+                    <div className="plan-badge">Most popular</div>
+                  )}
+                  <div className="plan-name">{pack.name}</div>
+                  <div className="plan-price">
+                    ${pack.price.toFixed(2)}
+                  </div>
+                  <div className="plan-features">
+                    <div className="plan-feature" style={{ fontSize: "18px", fontWeight: "600", color: "#008060" }}>
+                      {pack.credits} crédits
+                    </div>
+                    <div className="plan-feature">{pack.description}</div>
+                    <div className="plan-feature">${pack.pricePerCredit.toFixed(2)} par crédit</div>
+                  </div>
+                  <div className="plan-cta">
+                    <button 
+                      className="plan-button"
+                      onClick={() => handlePurchase(pack.id)}
+                      disabled={isSubmitting || submittingPackId !== null}
+                    >
+                      {isSubmittingPack ? "Processing..." : "Acheter"}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Section Pack personnalisé */}
+        <div style={{ marginTop: "var(--spacing-xl)" }}>
+          <h2 style={{ fontSize: "24px", fontWeight: "600", marginBottom: "var(--spacing-md)" }}>
+            Pack personnalisé
+          </h2>
+          <p style={{ color: "var(--text-secondary)", marginBottom: "var(--spacing-lg)" }}>
+            Commandez un nombre personnalisé de crédits (minimum 250)
+          </p>
+          <form onSubmit={handleCustomPurchase}>
+            <div style={{ display: "flex", gap: "var(--spacing-md)", alignItems: "flex-end", maxWidth: "500px" }}>
+              <div style={{ flex: 1 }}>
+                <TextField
+                  label="Nombre de crédits"
+                  type="number"
+                  value={customAmount}
+                  onChange={(value) => setCustomAmount(value)}
+                  min={250}
+                  step={1}
+                  autoComplete="off"
+                />
+              </div>
+              <div>
+                <Button 
+                  submit 
+                  variant="primary"
+                  disabled={isSubmitting || !customAmount || parseInt(customAmount) < 250}
+                  loading={isSubmitting}
+                >
+                  Acheter
+                </Button>
+              </div>
+            </div>
+            {customAmount && parseInt(customAmount) >= 250 && (
+              <p style={{ marginTop: "var(--spacing-sm)", color: "var(--text-secondary)", fontSize: "14px" }}>
+                Prix: ${(parseFloat(customAmount) * 0.26).toFixed(2)} ({parseInt(customAmount)} crédits × $0.26)
+              </p>
+            )}
+          </form>
         </div>
       </div>
     </Page>
