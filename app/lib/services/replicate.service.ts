@@ -68,19 +68,29 @@ export async function generateTryOn(
     throw new Error("REPLICATE_API_TOKEN is not configured. Please set it in your environment variables.");
   }
 
-  const qualityMode = options?.qualityMode || "balanced";
+  // Default to "speed" for faster generation
+  const qualityMode = options?.qualityMode || "speed";
   
   // Adjust parameters based on quality mode
   let config = { ...OPTIMIZED_CONFIG };
   
   if (qualityMode === "speed") {
-    // Fastest: Lower resolution and quality
+    // Fastest: Lowest resolution possible (512 is minimum for nano-banana-pro)
     config = {
-      width: 384,
-      height: 384,
+      width: 512,
+      height: 512,
       quality: 75,
       numInferenceSteps: 15,
       guidanceScale: 7.0,
+    };
+  } else if (qualityMode === "balanced") {
+    // Balanced: Medium resolution
+    config = {
+      width: 512,
+      height: 512,
+      quality: 85,
+      numInferenceSteps: 20,
+      guidanceScale: 7.5,
     };
   } else if (qualityMode === "quality") {
     // Best quality: Higher resolution but still optimized
@@ -92,7 +102,6 @@ export async function generateTryOn(
       guidanceScale: 8.0,
     };
   }
-  // balanced uses OPTIMIZED_CONFIG defaults (512x512)
 
   try {
     // Convert data URLs to Replicate file URLs if needed
@@ -218,12 +227,21 @@ export async function generateTryOn(
     console.log("Creating prediction with Replicate...");
     
     // Map quality mode to resolution
-    let resolution: "512" | "1K" | "2K" = "1K";
+    // Use "512" for speed (lowest resolution, fastest generation)
+    // Use "1K" for balanced (good quality/speed balance)
+    // Use "2K" for quality (highest resolution, slower)
+    let resolution: "512" | "1K" | "2K" = "512"; // Default to lowest for speed
     if (qualityMode === "speed") {
       resolution = "512";
+    } else if (qualityMode === "balanced") {
+      resolution = "1K";
     } else if (qualityMode === "quality") {
       resolution = "2K";
     }
+    
+    // Use JPEG instead of PNG for faster processing and smaller file size
+    // JPEG is faster to process and generates smaller files
+    const outputFormat = qualityMode === "speed" ? "jpeg" : "png";
     
     const prediction = await replicate.predictions.create({
       model: MODEL_ID,
@@ -232,7 +250,7 @@ export async function generateTryOn(
         prompt: GARMENT_TRANSFER_PROMPT,
         aspect_ratio: "1:1",
         resolution: resolution,
-        output_format: "png",
+        output_format: outputFormat,
         safety_filter_level: "block_only_high",
       },
     });
@@ -241,13 +259,15 @@ export async function generateTryOn(
     
     console.log("Created prediction:", prediction.id, "Status:", prediction.status);
     
-    // Poll for completion (max 120 seconds for image generation)
+    // Poll for completion with shorter intervals for speed mode
+    // Reduced polling interval for faster response (1.5s instead of 2s)
     let pollCount = 0;
     const maxPolls = 120;
+    const pollInterval = qualityMode === "speed" ? 1500 : 2000; // 1.5s for speed, 2s for others
     let output: any = null;
     
     while ((prediction.status === "starting" || prediction.status === "processing") && pollCount < maxPolls) {
-      await new Promise(resolve => setTimeout(resolve, 2000)); // Poll every 2 seconds
+      await new Promise(resolve => setTimeout(resolve, pollInterval));
       const updated = await replicate.predictions.get(prediction.id);
       prediction.status = updated.status;
       prediction.output = updated.output;
