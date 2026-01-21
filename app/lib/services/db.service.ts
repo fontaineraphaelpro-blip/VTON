@@ -463,11 +463,10 @@ export async function getProductTryonSettingsBatch(shop: string, productIds: str
  * ADDED: Sets product try-on enabled/disabled state.
  */
 export async function setProductTryonSetting(shop: string, productId: string, enabled: boolean, productHandle?: string) {
-  if (process.env.NODE_ENV !== "production") {
-    console.log(`[DB] Setting product try-on: shop=${shop}, productId=${productId}, productHandle=${productHandle}, enabled=${enabled}`);
-  }
+  console.log(`[DB] Setting product try-on: shop=${shop}, productId=${productId}, productHandle=${productHandle}, enabled=${enabled}`);
   
-  const result = await query(
+  // Save with the exact ID provided first (most important)
+  await query(
     `INSERT INTO product_settings (shop, product_id, product_handle, tryon_enabled, updated_at)
      VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
      ON CONFLICT (shop, product_id) 
@@ -475,15 +474,48 @@ export async function setProductTryonSetting(shop: string, productId: string, en
     [shop, productId, productHandle || null, enabled]
   );
   
-  // Verify the setting was saved correctly
-  if (process.env.NODE_ENV !== "production") {
-    const verify = await query(
-      "SELECT tryon_enabled FROM product_settings WHERE shop = $1 AND product_id = $2",
-      [shop, productId]
-    );
-    if (verify.rows.length > 0) {
-      console.log(`[DB] Verified saved setting: shop=${shop}, productId=${productId}, saved=${verify.rows[0].tryon_enabled}`);
+  // Also save with alternative formats to ensure we can retrieve it regardless of format used
+  const formatsToSave: string[] = [];
+  
+  // If numeric, also save as GID
+  if (/^\d+$/.test(productId)) {
+    formatsToSave.push(`gid://shopify/Product/${productId}`);
+  }
+  
+  // If GID format, extract numeric and save numeric version too
+  const gidMatch = productId.match(/^gid:\/\/shopify\/Product\/(\d+)$/);
+  if (gidMatch) {
+    formatsToSave.push(gidMatch[1]);
+  }
+  
+  // Save with alternative formats (if different from original)
+  for (const idFormat of formatsToSave) {
+    if (idFormat !== productId) {
+      try {
+        await query(
+          `INSERT INTO product_settings (shop, product_id, product_handle, tryon_enabled, updated_at)
+           VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
+           ON CONFLICT (shop, product_id) 
+           DO UPDATE SET tryon_enabled = $4, product_handle = COALESCE($3, product_settings.product_handle), updated_at = CURRENT_TIMESTAMP`,
+          [shop, idFormat, productHandle || null, enabled]
+        );
+        console.log(`[DB] Also saved with alternative format: ${idFormat}`);
+      } catch (error) {
+        // Ignore errors for alternative formats (they're just for redundancy)
+        console.warn(`[DB] Could not save with alternative format ${idFormat}:`, error);
+      }
     }
+  }
+  
+  // Verify the setting was saved correctly
+  const verify = await query(
+    "SELECT product_id, tryon_enabled FROM product_settings WHERE shop = $1 AND product_id = $2",
+    [shop, productId]
+  );
+  if (verify.rows.length > 0) {
+    console.log(`[DB] ✅ Verified saved setting: shop=${shop}, productId=${productId}, saved=${verify.rows[0].tryon_enabled}, row_id=${verify.rows[0].product_id}`);
+  } else {
+    console.error(`[DB] ❌ Could not verify saved setting - no row found for shop=${shop}, productId=${productId}`);
   }
 }
 
@@ -585,12 +617,35 @@ export async function getProductTryonStatus(shop: string, productId: string, pro
   
   // Check product-level enablement (pass handle for better matching)
   const productSetting = await getProductTryonSetting(shop, productId, productHandle);
+  
+  // Log for debugging
+  if (process.env.NODE_ENV !== "production") {
+    console.log(`[getProductTryonStatus] Product setting check:`, {
+      shop,
+      productId,
+      productHandle,
+      productSetting,
+      productSettingType: typeof productSetting
+    });
+  }
+  
   // IMPORTANT: 
   // - If productSetting is explicitly true, product is enabled
   // - If productSetting is explicitly false, product is disabled
   // - If productSetting is null (not set), default to ENABLED (all products enabled by default at installation)
   // Admin can then explicitly disable products they don't want
   const productEnabled = productSetting !== false; // null or true means enabled, only false means disabled
+  
+  // Log final product enabled status
+  if (process.env.NODE_ENV !== "production") {
+    console.log(`[getProductTryonStatus] Product enabled result:`, {
+      productSetting,
+      productEnabled,
+      productSettingIsFalse: productSetting === false,
+      productSettingIsNull: productSetting === null,
+      productSettingIsTrue: productSetting === true
+    });
+  }
   
   // Final enabled status: both shop and product must be enabled
   const enabled = shopEnabled && productEnabled;
