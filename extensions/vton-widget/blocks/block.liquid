@@ -438,7 +438,8 @@
           productImageUrl: productImageUrl,
           userPhoto: null,
           resultImageUrl: null,
-          modalOpen: false
+          modalOpen: false,
+          isGenerating: false // Flag to prevent double submission
         };
         
         // Render widget
@@ -1523,6 +1524,13 @@
         if (!state.userPhoto || !state.productId) {
           return;
         }
+        
+        // Prevent double submission
+        if (state.isGenerating) {
+          console.warn('[VTON] Generation already in progress, ignoring duplicate request');
+          return;
+        }
+        state.isGenerating = true;
         
         const loading = shadowRoot.getElementById('vton-loading');
         const generateBtn = shadowRoot.getElementById('vton-generate-btn');

@@ -95,12 +95,62 @@ export async function generateTryOn(
   // balanced uses OPTIMIZED_CONFIG defaults (512x512)
 
   try {
-    // Convert URLs to proper format if needed
+    // Convert data URLs to Replicate file URLs if needed
+    // Replicate doesn't accept data URLs directly - we need to upload them first
     let personInput: string = personImageUrl;
     let garmentInput: string = garmentImageUrl;
 
+    console.log("[Replicate] Processing images - person type:", personImageUrl.substring(0, 50), "garment type:", garmentImageUrl.substring(0, 50));
+    
+    // If person image is a data URL, upload it to Replicate files
+    if (personImageUrl.startsWith("data:image/")) {
+      console.log("[Replicate] Uploading person image (data URL) to Replicate files...");
+      try {
+        // Extract base64 data from data URL
+        const base64Data = personImageUrl.split(",")[1];
+        const buffer = Buffer.from(base64Data, "base64");
+        
+        // Upload to Replicate files
+        const file = await replicate.files.create({
+          name: "person.jpg",
+          data: buffer,
+          contentType: "image/jpeg",
+        });
+        
+        personInput = file.url;
+        console.log("[Replicate] Person image uploaded:", personInput);
+      } catch (uploadError) {
+        console.error("[Replicate] Failed to upload person image:", uploadError);
+        throw new Error(`Failed to upload person image: ${uploadError instanceof Error ? uploadError.message : "Unknown error"}`);
+      }
+    }
+    
+    // If garment image is a data URL, upload it to Replicate files
+    if (garmentImageUrl.startsWith("data:image/")) {
+      console.log("[Replicate] Uploading garment image (data URL) to Replicate files...");
+      try {
+        // Extract base64 data from data URL
+        const base64Data = garmentImageUrl.split(",")[1];
+        const buffer = Buffer.from(base64Data, "base64");
+        
+        // Upload to Replicate files
+        const file = await replicate.files.create({
+          name: "garment.jpg",
+          data: buffer,
+          contentType: "image/jpeg",
+        });
+        
+        garmentInput = file.url;
+        console.log("[Replicate] Garment image uploaded:", garmentInput);
+      } catch (uploadError) {
+        console.error("[Replicate] Failed to upload garment image:", uploadError);
+        throw new Error(`Failed to upload garment image: ${uploadError instanceof Error ? uploadError.message : "Unknown error"}`);
+      }
+    }
+
     console.log("Calling Replicate API with model:", MODEL_ID);
     console.log("Input types - person:", typeof personInput, "garment:", typeof garmentInput);
+    console.log("Person URL length:", personInput.length, "Garment URL length:", garmentInput.length);
     console.log("Using prompt:", GARMENT_TRANSFER_PROMPT);
     console.log("Quality mode:", qualityMode, "Config:", config);
     
@@ -111,8 +161,8 @@ export async function generateTryOn(
     try {
       output = await replicate.run(MODEL_ID, {
         input: {
-          image: personInput, // Person image
-          image2: garmentInput, // Garment image
+          image: personInput, // Person image (now a URL)
+          image2: garmentInput, // Garment image (now a URL)
           prompt: GARMENT_TRANSFER_PROMPT,
           // OPTIMIZED: Add resolution parameters if model supports them
           width: config.width,
