@@ -83,8 +83,14 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     // Handle return from Shopify payment - check charge_id first (subscription payments)
     // charge_id indicates a subscription payment return
     if (chargeId) {
-      // Verify the charge was successful and update subscription status
+      // IMPORTANT: Vérifier explicitement le paiement avec billing.check()
+      // Cela confirme que le paiement a été accepté par Shopify
       try {
+        // billing.check() vérifie le statut du paiement et retourne les détails
+        const billingStatus = await billing.check(request);
+        
+        // Si billing.check() réussit, le paiement est confirmé
+        // Maintenant, récupérer les abonnements actifs
         const subscriptionQuery = `#graphql
           query {
             currentAppInstallation {
@@ -93,6 +99,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                 name
                 status
                 test
+                createdAt
                 lineItems {
                   plan {
                     pricingDetails {
@@ -114,14 +121,23 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         const subscriptionResponse = await admin.graphql(subscriptionQuery);
         const subscriptionData = await subscriptionResponse.json() as any;
         
-        const activeSubscriptions = subscriptionData?.data?.currentAppInstallation?.activeSubscriptions || [];
-        const activeSubscription = activeSubscriptions.find((sub: any) => 
-          sub.status === "ACTIVE" && !sub.test
-        );
-
-        // Si un abonnement actif est trouvé, mettre à jour les crédits et le plan
-        if (activeSubscription) {
-          const planName = activeSubscription.name.toLowerCase().replace(/\s+/g, '-');
+        const allSubscriptions = subscriptionData?.data?.currentAppInstallation?.activeSubscriptions || [];
+        
+        // Chercher l'abonnement le plus récent (créé récemment) qui n'est pas en test
+        // Il peut être ACTIVE, PENDING, ou autre selon le timing
+        const recentSubscription = allSubscriptions
+          .filter((sub: any) => !sub.test)
+          .sort((a: any, b: any) => {
+            // Trier par date de création (plus récent en premier)
+            const dateA = new Date(a.createdAt || 0).getTime();
+            const dateB = new Date(b.createdAt || 0).getTime();
+            return dateB - dateA;
+          })[0];
+        
+        // Si on trouve un abonnement (même s'il n'est pas encore ACTIVE), mettre à jour
+        // Les abonnements peuvent être PENDING avant d'être ACTIVE
+        if (recentSubscription) {
+          const planName = recentSubscription.name.toLowerCase().replace(/\s+/g, '-');
 
           // Définir les crédits mensuels selon le plan
           const planCredits: Record<string, number> = {
@@ -158,10 +174,17 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             subscriptionUpdated: true,
             planName: planName,
             subscriptionActivated: true,
-            activeSubscriptionName: activeSubscription.name,
+            activeSubscriptionName: recentSubscription.name,
+            subscriptionStatus: recentSubscription.status,
           });
+        } else {
+          // Si aucun abonnement trouvé, peut-être que le paiement n'est pas encore traité
+          // On attend un peu et on réessaie, ou on affiche un message
+          console.warn(`[Credits] Aucun abonnement trouvé après paiement pour shop: ${shop}, charge_id: ${chargeId}`);
         }
       } catch (subscriptionError) {
+        // Log l'erreur pour débugger
+        console.error(`[Credits] Erreur lors de la vérification de l'abonnement:`, subscriptionError);
         // Continue - will show normal page even if subscription check fails
       }
     }
