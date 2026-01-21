@@ -116,6 +116,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
     // 4. Increment add to cart counter
     await upsertShop(shop, { incrementTotalAtc: true });
+    
+    // Log for debugging (help track if ATC tracking is working)
+    console.log(`[ATC Tracking] ✅ Incremented total_atc for shop: ${shop}`);
 
     // 5. Return success
     return json({ success: true });

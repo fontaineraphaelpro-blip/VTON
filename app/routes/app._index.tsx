@@ -312,73 +312,85 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     }
     
     // Enrich topProducts with product titles (use fetched names, fallback to existing product_title from logs)
-    const enrichedTopProducts = topProducts.map((product: any) => {
+    // IMPORTANT: Fetch product titles directly from tryon_logs first (most reliable since they're already stored)
+    const enrichedTopProducts = await Promise.all(topProducts.map(async (product: any) => {
       if (product.product_id) {
         const gidMatch = product.product_id.match(/^gid:\/\/shopify\/Product\/(\d+)$/);
         const numericId = gidMatch ? gidMatch[1] : product.product_id;
-        // Try to get title from fetched map first
-        let title = productNamesMap[product.product_id] || productNamesMap[numericId];
         
-        // If not found, try to find a log with the same product_id and extract handle from URL or use product_title
+        // PRIORITY 1: Try to get title from tryon_logs (most reliable - already stored in DB)
+        let title: string | undefined;
+        try {
+          const logResult = await query(
+            `SELECT product_title, product_handle 
+             FROM tryon_logs 
+             WHERE shop = $1 AND product_id IN ($2, $3, $4) AND product_title IS NOT NULL AND product_title != ''
+             ORDER BY created_at DESC 
+             LIMIT 1`,
+            [shop, product.product_id, numericId, gidMatch ? product.product_id : `gid://shopify/Product/${numericId}`]
+          );
+          if (logResult.rows.length > 0 && logResult.rows[0].product_title) {
+            title = logResult.rows[0].product_title;
+          }
+        } catch (err) {
+          // Ignore errors
+        }
+        
+        // PRIORITY 2: Try fetched names map (from GraphQL query above)
         if (!title) {
-          // Find logs with this product_id
+          title = productNamesMap[product.product_id] || productNamesMap[numericId];
+        }
+        
+        // PRIORITY 3: Try to find title from recentLogs
+        if (!title) {
           const logsWithSameId = recentLogs.filter((log: any) => {
-            if (!log.product_id) return false;
+            if (!log.product_id || !log.product_title) return false;
             const logGidMatch = log.product_id.match(/^gid:\/\/shopify\/Product\/(\d+)$/);
             const logNumericId = logGidMatch ? logGidMatch[1] : log.product_id;
             return log.product_id === product.product_id || logNumericId === numericId;
           });
           
-          // Try to find handle from logs (extract from URL if available)
-          for (const log of logsWithSameId) {
-            // Try to extract handle from product_id if it's a handle
-            if (!log.product_id.startsWith('gid://') && !/^\d+$/.test(log.product_id)) {
-              const handle = log.product_id;
-              if (productNamesMap[handle]) {
-                title = productNamesMap[handle];
-                break;
-              }
-            }
-            
-            // Use product_title from log if available
-            if (log.product_title) {
-              title = log.product_title;
-              break;
-            }
+          if (logsWithSameId.length > 0 && logsWithSameId[0].product_title) {
+            title = logsWithSameId[0].product_title;
           }
         }
         
-        // If still not found and product_id is a handle, try handles map
+        // PRIORITY 4: Try handles map
         if (!title && productHandlesMap[product.product_id]) {
           title = productHandlesMap[product.product_id];
         }
         
-        // If still not found, try to match by checking all products for similar IDs (maybe variant IDs)
+        // PRIORITY 5: Try product_handle from logs and match with productNamesMap
         if (!title) {
-          // The IDs in logs might be variant IDs, not product IDs
-          // Try to find products that might be related by checking if any product has a similar ID pattern
-          // For now, we'll use the first product_title from logs as a last resort
-          const firstLogWithTitle = recentLogs.find((log: any) => {
-            const logGidMatch = log.product_id.match(/^gid:\/\/shopify\/Product\/(\d+)$/);
-            const logNumericId = logGidMatch ? logGidMatch[1] : log.product_id;
-            // Check if this log's ID is close to the requested ID (might be same product, different variant)
-            return logNumericId === numericId || (log.product_title && logNumericId !== numericId);
-          });
-          if (firstLogWithTitle?.product_title) {
-            title = firstLogWithTitle.product_title;
+          try {
+            const handleResult = await query(
+              `SELECT product_handle 
+               FROM tryon_logs 
+               WHERE shop = $1 AND product_id IN ($2, $3, $4) AND product_handle IS NOT NULL 
+               LIMIT 1`,
+              [shop, product.product_id, numericId, gidMatch ? product.product_id : `gid://shopify/Product/${numericId}`]
+            );
+            if (handleResult.rows.length > 0 && handleResult.rows[0].product_handle) {
+              const handle = handleResult.rows[0].product_handle;
+              if (productNamesMap[handle]) {
+                title = productNamesMap[handle];
+              }
+            }
+          } catch (err) {
+            // Ignore errors
           }
         }
         
-        // Always set product_title - use title if found, otherwise use numeric ID (more readable than full GID)
-        if (title) {
+        // Always set product_title - use title if found, otherwise use numeric ID as fallback
+        if (title && title !== 'Product #' && !title.startsWith('Product #')) {
           return { ...product, product_title: title };
         } else {
-          // Use numeric ID as fallback (better than full GID)
+          // Use numeric ID as fallback (better than full GID) but try to avoid "Product #" format
           return { ...product, product_title: `Product #${numericId}` };
         }
       }
       return product;
-    });
+    }));
     
     // Enrich recentLogs with product titles (use handles for matching - more reliable)
     const enrichedRecentLogs = recentLogs.map((log: any) => {
