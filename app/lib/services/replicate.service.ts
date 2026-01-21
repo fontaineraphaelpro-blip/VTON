@@ -108,10 +108,17 @@ export async function generateTryOn(
       try {
         // Extract base64 data from data URL
         const base64Data = personImageUrl.split(",")[1];
+        if (!base64Data) {
+          throw new Error("Invalid data URL format - no base64 data found");
+        }
         const buffer = Buffer.from(base64Data, "base64");
         
         // Upload to Replicate files - files.create() expects a Buffer directly
         const file = await replicate.files.create(buffer);
+        
+        if (!file || !file.url) {
+          throw new Error("Replicate files.create() did not return a valid file URL");
+        }
         
         personInput = file.url;
         console.log("[Replicate] Person image uploaded:", personInput);
@@ -127,10 +134,17 @@ export async function generateTryOn(
       try {
         // Extract base64 data from data URL
         const base64Data = garmentImageUrl.split(",")[1];
+        if (!base64Data) {
+          throw new Error("Invalid data URL format - no base64 data found");
+        }
         const buffer = Buffer.from(base64Data, "base64");
         
         // Upload to Replicate files - files.create() expects a Buffer directly
         const file = await replicate.files.create(buffer);
+        
+        if (!file || !file.url) {
+          throw new Error("Replicate files.create() did not return a valid file URL");
+        }
         
         garmentInput = file.url;
         console.log("[Replicate] Garment image uploaded:", garmentInput);
@@ -140,9 +154,17 @@ export async function generateTryOn(
       }
     }
 
+    // Validate that both inputs are defined
+    if (!personInput || typeof personInput !== "string") {
+      throw new Error(`Invalid person image input: ${personInput}`);
+    }
+    if (!garmentInput || typeof garmentInput !== "string") {
+      throw new Error(`Invalid garment image input: ${garmentInput}`);
+    }
+
     console.log("Calling Replicate API with model:", MODEL_ID);
     console.log("Input types - person:", typeof personInput, "garment:", typeof garmentInput);
-    console.log("Person URL length:", personInput.length, "Garment URL length:", garmentInput.length);
+    console.log("Person URL length:", personInput?.length || 0, "Garment URL length:", garmentInput?.length || 0);
     console.log("Using prompt:", GARMENT_TRANSFER_PROMPT);
     console.log("Quality mode:", qualityMode, "Config:", config);
     
