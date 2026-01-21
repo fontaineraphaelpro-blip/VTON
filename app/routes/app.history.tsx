@@ -237,18 +237,28 @@ export default function History() {
     { label: "Average Latency", value: `${avgLatency} sec`, icon: "" },
   ];
 
-  const rows = logs.map((log: any) => [
-    formatDate(log.created_at),
-    log.product_title || log.product_id || "-",
-    log.customer_id || log.customer_ip || "-",
+  const rows = logs.map((log: any) => {
+    // Ensure we never display raw GID - always use product_title or format nicely
+    let productDisplay = log.product_title || "-";
+    if (!log.product_title && log.product_id) {
+      // Format ID nicely if no title
+      const numericId = log.product_id.match(/^gid:\/\/shopify\/Product\/(\d+)$/)?.[1] || log.product_id;
+      productDisplay = log.product_handle ? `Product: ${log.product_handle}` : `Product #${numericId}`;
+    }
+    
+    return [
+      formatDate(log.created_at),
+      productDisplay,
+      log.customer_id || log.customer_ip || "-",
     <Badge key={`badge-${log.id}`} tone={log.success ? "success" : "critical"}>
       {log.success ? "Success" : "Error"}
     </Badge>,
     <Text key={`latency-${log.id}`} tone={log.latency_ms && log.latency_ms > 3000 ? "critical" : "subdued"}>
       {formatLatency(log.latency_ms)}
     </Text>,
-    log.error_message || "-",
-  ]);
+      log.error_message || "-",
+    ];
+  });
 
   return (
     <Page>
