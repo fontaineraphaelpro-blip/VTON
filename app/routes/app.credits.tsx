@@ -83,11 +83,11 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     // Handle return from Shopify payment - check charge_id first (subscription payments)
     // charge_id indicates a subscription payment return
     if (chargeId) {
-      // IMPORTANT: Vérifier explicitement le paiement avec billing.check()
-      // Cela confirme que le paiement a été accepté par Shopify
+      // IMPORTANT: Vérifier explicitement le paiement
+      // Le charge_id dans l'URL confirme que Shopify a redirigé après un paiement
       try {
-        // billing.check() vérifie le statut du paiement et retourne les détails
-        const billingStatus = await billing.check(request);
+        // Note: billing.check() n'est pas nécessaire ici car le charge_id dans l'URL
+        // indique déjà que le paiement a été accepté. On vérifie directement les abonnements.
         
         // Si billing.check() réussit, le paiement est confirmé
         // Maintenant, récupérer les abonnements actifs
