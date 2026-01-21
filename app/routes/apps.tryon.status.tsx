@@ -186,7 +186,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       );
     }
 
-    // Log for debugging
+    // Log for debugging (ALWAYS log this to help debug product enablement issues)
     console.log("[Status] Product try-on status check:", {
       shop,
       productId,

@@ -382,12 +382,27 @@ export async function getProductTryonSettingsBatch(shop: string, productIds: str
   const settingsMap: Record<string, boolean | null> = {};
   const processedSettings = new Set<string>();
   
+  console.log(`[getProductTryonSettingsBatch] Looking for settings. Input productIds:`, productIds);
+  console.log(`[getProductTryonSettingsBatch] Query will search for formats:`, formatsArray);
+  console.log(`[getProductTryonSettingsBatch] Found ${result.rows.length} matching rows in DB`);
+  
   result.rows.forEach((row: any) => {
     const enabled = row.tryon_enabled;
     const enabledBool = enabled === true || enabled === 'true' || enabled === 1;
     const disabledBool = enabled === false || enabled === 'false' || enabled === 0;
     
     const settingValue = disabledBool ? false : (enabledBool ? true : null);
+    
+    console.log(`[getProductTryonSettingsBatch] Processing row:`, {
+      storedProductId: row.product_id,
+      storedHandle: row.product_handle,
+      enabledRaw: enabled,
+      enabledType: typeof enabled,
+      enabledBool,
+      disabledBool,
+      settingValue,
+      settingValueType: typeof settingValue
+    });
     
     // Match this setting to all product IDs that could match
     const storedProductId = row.product_id;
@@ -401,15 +416,26 @@ export async function getProductTryonSettingsBatch(shop: string, productIds: str
       const numericId = gidMatch ? gidMatch[1] : (numericFromProductId || productId);
       
       // Match by exact ID, GID format, numeric ID
-      if (storedProductId === productId || 
-          storedProductId === `gid://shopify/Product/${numericId}` ||
-          (numericFromStored && numericFromStored === numericId) ||
-          storedProductId === numericId) {
+      const matchesExact = storedProductId === productId;
+      const matchesGID = storedProductId === `gid://shopify/Product/${numericId}`;
+      const matchesNumeric = numericFromStored && numericFromStored === numericId;
+      const matchesDirectNumeric = storedProductId === numericId;
+      
+      if (matchesExact || matchesGID || matchesNumeric || matchesDirectNumeric) {
+        console.log(`[getProductTryonSettingsBatch] ✅ MATCH FOUND:`, {
+          searchingFor: productId,
+          foundInDB: storedProductId,
+          matchType: matchesExact ? 'exact' : (matchesGID ? 'GID' : (matchesNumeric ? 'numeric' : 'directNumeric')),
+          settingValue
+        });
         settingsMap[productId] = settingValue;
         processedSettings.add(productId);
       }
     });
   });
+  
+  console.log(`[getProductTryonSettingsBatch] After matching, settingsMap:`, settingsMap);
+  console.log(`[getProductTryonSettingsBatch] Processed settings:`, Array.from(processedSettings));
   
   // Try matching by handle if product_handle column exists and we still have unmatched products
   const unmatchedIds = productIds.filter(id => !processedSettings.has(id));
@@ -655,16 +681,14 @@ export async function getProductTryonStatus(shop: string, productId: string, pro
   // Check product-level enablement (pass handle for better matching)
   const productSetting = await getProductTryonSetting(shop, productId, productHandle);
   
-  // Log for debugging
-  if (process.env.NODE_ENV !== "production") {
-    console.log(`[getProductTryonStatus] Product setting check:`, {
-      shop,
-      productId,
-      productHandle,
-      productSetting,
-      productSettingType: typeof productSetting
-    });
-  }
+  // Log for debugging (ALWAYS log to help debug product enablement issues)
+  console.log(`[getProductTryonStatus] Product setting check:`, {
+    shop,
+    productId,
+    productHandle,
+    productSetting,
+    productSettingType: typeof productSetting
+  });
   
   // IMPORTANT: 
   // - If productSetting is explicitly true, product is enabled
@@ -673,16 +697,15 @@ export async function getProductTryonStatus(shop: string, productId: string, pro
   // Admin can then explicitly disable products they don't want
   const productEnabled = productSetting !== false; // null or true means enabled, only false means disabled
   
-  // Log final product enabled status
-  if (process.env.NODE_ENV !== "production") {
-    console.log(`[getProductTryonStatus] Product enabled result:`, {
-      productSetting,
-      productEnabled,
-      productSettingIsFalse: productSetting === false,
-      productSettingIsNull: productSetting === null,
-      productSettingIsTrue: productSetting === true
-    });
-  }
+  // Log final product enabled status (ALWAYS log)
+  console.log(`[getProductTryonStatus] Product enabled result:`, {
+    productSetting,
+    productEnabled,
+    productSettingIsFalse: productSetting === false,
+    productSettingIsNull: productSetting === null,
+    productSettingIsTrue: productSetting === true,
+    willBeEnabled: shopEnabled && productEnabled
+  });
   
   // Final enabled status: both shop and product must be enabled
   const enabled = shopEnabled && productEnabled;
