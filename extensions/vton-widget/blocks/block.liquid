@@ -1546,37 +1546,54 @@
         
         // Construct absolute URL for app proxy
         // Try App Proxy first, fallback to direct URL
-        const generateUrl = window.location.origin + '/apps/tryon/generate?shop=' + encodeURIComponent(state.shop) + '&product_id=' + encodeURIComponent(state.productId);
-        const url = generateUrl; // Will be updated if App Proxy fails
+        let generateUrl = window.location.origin + '/apps/tryon/generate?shop=' + encodeURIComponent(state.shop) + '&product_id=' + encodeURIComponent(state.productId);
+        let useAppProxy = true;
         
-        // Create AbortController for timeout handling (90 seconds - plus que 60)
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 90000); // 90 seconds timeout
-        
-        fetch(url, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            user_photo: state.userPhoto,
-            product_id: state.productId,
-            product_handle: state.productHandle,
-            product_image_url: state.productImageUrl
-          }),
-          signal: controller.signal
-        }).then(function(response) {
-          clearTimeout(timeoutId);
+        // Helper function to make the fetch request
+        function makeGenerateRequest(url) {
+          // Create AbortController for timeout handling (90 seconds - plus que 60)
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 90000); // 90 seconds timeout
           
-          console.log('[VTON] Response status:', response.status, response.statusText);
-          if (!response.ok) {
-            return response.text().then(function(text) {
-              console.error('[VTON] Error response:', text);
-              throw new Error('Generation failed: ' + response.status + ' - ' + text);
-            });
-          }
-          return response.json();
-        }).then(function(data) {
+          return fetch(url, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              user_photo: state.userPhoto,
+              product_id: state.productId,
+              product_handle: state.productHandle,
+              product_image_url: state.productImageUrl
+            }),
+            signal: controller.signal
+          }).then(function(response) {
+            clearTimeout(timeoutId);
+            
+            console.log('[VTON] Response status:', response.status, response.statusText);
+            
+            // If App Proxy failed with 404, try direct URL as fallback
+            if (useAppProxy && response.status === 404) {
+              console.warn('[VTON] ⚠️ App Proxy not available (404), trying direct URL...');
+              useAppProxy = false;
+              // Use the configured app URL as fallback
+              const directUrl = APP_URL + '/apps/tryon/generate?shop=' + encodeURIComponent(state.shop) + '&product_id=' + encodeURIComponent(state.productId);
+              console.log('[VTON] 🔄 Retrying with direct URL:', directUrl);
+              return makeGenerateRequest(directUrl);
+            }
+            
+            if (!response.ok) {
+              return response.text().then(function(text) {
+                console.error('[VTON] Error response:', text);
+                throw new Error('Generation failed: ' + response.status + ' - ' + text);
+              });
+            }
+            return response.json();
+          });
+        }
+        
+        // Start with App Proxy URL
+        makeGenerateRequest(generateUrl).then(function(data) {
           console.log('[VTON] Generation response data:', JSON.stringify(data, null, 2));
           
           // Extract result URL (synchronous mode - result_url should be present)
