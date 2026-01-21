@@ -602,9 +602,61 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     // Le plan gratuit est déjà attribué automatiquement
     if (planId === "free-installation-setup") {
       return json({ 
-        success: true, 
-        message: "Le plan gratuit est déjà actif",
+        success: false, 
+        error: "Le plan gratuit est déjà actif",
       });
+    }
+
+    // Vérifier si l'utilisateur possède déjà ce plan
+    try {
+      const subscriptionQuery = `#graphql
+        query {
+          currentAppInstallation {
+            activeSubscriptions {
+              id
+              name
+              status
+              test
+              lineItems {
+                plan {
+                  pricingDetails {
+                    ... on AppRecurringPricing {
+                      price {
+                        amount
+                        currencyCode
+                      }
+                      interval
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      `;
+
+      const subscriptionResponse = await admin.graphql(subscriptionQuery);
+      const subscriptionData = await subscriptionResponse.json() as any;
+      
+      const activeSubscriptions = subscriptionData?.data?.currentAppInstallation?.activeSubscriptions || [];
+      const activeSubscription = activeSubscriptions.find((sub: any) => 
+        sub.status === "ACTIVE" && !sub.test
+      );
+
+      if (activeSubscription) {
+        // Normalize plan name (e.g., "Starter" -> "starter")
+        const currentPlanName = activeSubscription.name.toLowerCase().replace(/\s+/g, '-');
+        
+        // Si l'utilisateur essaie d'acheter le plan qu'il possède déjà
+        if (currentPlanName === planId) {
+          return json({ 
+            success: false, 
+            error: `Vous possédez déjà l'abonnement "${activeSubscription.name}". Vous ne pouvez pas l'acheter à nouveau.`,
+          });
+        }
+      }
+    } catch (subscriptionCheckError) {
+      // Continue - if check fails, allow purchase attempt (will fail at Shopify level if duplicate)
     }
 
     // SOLUTION SIMPLE: Laisser billing.request() gérer la redirection automatiquement
