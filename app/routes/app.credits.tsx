@@ -735,10 +735,12 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     });
   }
   
+  // Si aucun intent reconnu
   return json({ 
     success: false, 
     error: "Action non reconnue",
   });
+  
   } catch (error) {
     // Si c'est une Response (redirection de billing.request() ou ré-auth), la propager directement
     // Remix et Shopify gèrent automatiquement ces redirections
