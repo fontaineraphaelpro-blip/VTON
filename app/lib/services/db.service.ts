@@ -583,6 +583,43 @@ export async function getMonthlyTryonUsage(shop: string): Promise<number> {
 }
 
 /**
+ * ADDED: Gets daily try-on usage count for a shop (today).
+ */
+export async function getDailyTryonUsage(shop: string): Promise<number> {
+  const result = await query(
+    `SELECT COUNT(*) as count 
+     FROM tryon_logs 
+     WHERE shop = $1 
+       AND success = true
+       AND DATE(created_at) = CURRENT_DATE`,
+    [shop]
+  );
+  
+  return result.rows.length > 0 ? parseInt(result.rows[0].count) : 0;
+}
+
+/**
+ * ADDED: Gets daily try-on usage count for a specific customer IP (today).
+ */
+export async function getCustomerDailyTryonUsage(shop: string, customerIp: string): Promise<number> {
+  if (!customerIp) {
+    return 0;
+  }
+  
+  const result = await query(
+    `SELECT COUNT(*) as count 
+     FROM tryon_logs 
+     WHERE shop = $1 
+       AND customer_ip = $2
+       AND success = true
+       AND DATE(created_at) = CURRENT_DATE`,
+    [shop, customerIp]
+  );
+  
+  return result.rows.length > 0 ? parseInt(result.rows[0].count) : 0;
+}
+
+/**
  * ADDED: Gets comprehensive try-on status for a product.
  * Returns both shop-level and product-level settings in one call.
  * Used by the public status endpoint for widgets.

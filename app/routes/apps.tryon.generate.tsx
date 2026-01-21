@@ -14,7 +14,7 @@ import type { ActionFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import crypto from "crypto";
 import { generateTryOn } from "../lib/services/replicate.service";
-import { getShop, upsertShop, createTryonLog, getMonthlyTryonUsage, query } from "../lib/services/db.service";
+import { getShop, upsertShop, createTryonLog, getMonthlyTryonUsage, getDailyTryonUsage, getCustomerDailyTryonUsage, query } from "../lib/services/db.service";
 import { ensureTables } from "../lib/db-init.server";
 
 const SHOPIFY_API_SECRET = process.env.SHOPIFY_API_SECRET || "";
@@ -219,6 +219,37 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           monthlyUsage,
           monthlyQuota 
         }, { status: 402 });
+      }
+    }
+
+    // Check daily limit (if set)
+    const dailyLimit = shopData.daily_limit;
+    if (dailyLimit && dailyLimit > 0) {
+      const dailyUsage = await getDailyTryonUsage(shop);
+      if (dailyUsage >= dailyLimit) {
+        return json({ 
+          error: "Daily limit exceeded. Please try again tomorrow.",
+          dailyUsage,
+          dailyLimit 
+        }, { status: 402 });
+      }
+    }
+
+    // Check max tries per user/day (if set)
+    const maxTriesPerUser = shopData.max_tries_per_user;
+    if (maxTriesPerUser && maxTriesPerUser > 0) {
+      const customerIp = request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "";
+      if (customerIp) {
+        // Extract first IP if comma-separated (x-forwarded-for can contain multiple IPs)
+        const firstIp = customerIp.split(",")[0].trim();
+        const customerDailyUsage = await getCustomerDailyTryonUsage(shop, firstIp);
+        if (customerDailyUsage >= maxTriesPerUser) {
+          return json({ 
+            error: `You have reached the maximum of ${maxTriesPerUser} try-on${maxTriesPerUser > 1 ? "s" : ""} per day. Please try again tomorrow.`,
+            customerDailyUsage,
+            maxTriesPerUser 
+          }, { status: 402 });
+        }
       }
     }
 
