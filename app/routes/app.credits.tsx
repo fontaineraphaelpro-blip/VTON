@@ -85,12 +85,12 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     if (chargeId) {
       // IMPORTANT: Vérifier explicitement le paiement
       // Le charge_id dans l'URL confirme que Shopify a redirigé après un paiement
+      // ATTENTION: La session peut être null juste après le paiement, on doit attendre un peu
       try {
-        // Note: billing.check() n'est pas nécessaire ici car le charge_id dans l'URL
-        // indique déjà que le paiement a été accepté. On vérifie directement les abonnements.
+        // Attendre un peu pour que la session soit complètement réhydratée
+        await new Promise(resolve => setTimeout(resolve, 1000));
         
-        // Si billing.check() réussit, le paiement est confirmé
-        // Maintenant, récupérer les abonnements actifs
+        // Récupérer les abonnements actifs
         const subscriptionQuery = `#graphql
           query {
             currentAppInstallation {
@@ -491,13 +491,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         });
       }
     }
-  } else if (intent === "custom-pack") {
-    return json({ 
-      success: false, 
-      error: "Les packs personnalisés ne sont plus disponibles. Veuillez utiliser un abonnement.",
-    });
-  }
-  
+  // Code des packs personnalisés supprimé - désactivé
   if (false && intent === "custom-pack") {
     const customCredits = parseInt(formData.get("customCredits") as string);
     if (customCredits && customCredits >= 250) {
