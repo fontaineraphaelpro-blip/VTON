@@ -492,6 +492,13 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       }
     }
   } else if (intent === "custom-pack") {
+    return json({ 
+      success: false, 
+      error: "Les packs personnalisés ne sont plus disponibles. Veuillez utiliser un abonnement.",
+    });
+  }
+  
+  if (false && intent === "custom-pack") {
     const customCredits = parseInt(formData.get("customCredits") as string);
     if (customCredits && customCredits >= 250) {
       const pricePerCredit = 0.30;
@@ -753,7 +760,6 @@ export default function Credits() {
   const fetcher = useFetcher<typeof action>();
   const revalidator = useRevalidator();
   const currentCredits = shop?.credits || 0;
-  const [customAmount, setCustomAmount] = useState("500");
   const [submittingPackId, setSubmittingPackId] = useState<string | null>(null);
   
   // Utiliser useRef pour stocker une référence stable à revalidator
@@ -761,10 +767,6 @@ export default function Credits() {
   revalidatorRef.current = revalidator;
 
   const isSubmitting = fetcher.state === "submitting";
-
-  // Plus besoin de gérer les redirections manuellement !
-  // billing.request() propage directement la Response de redirection
-  // Remix gère automatiquement la redirection vers la page de paiement Shopify
 
   // Reset submittingPackId when fetcher completes
   useEffect(() => {
@@ -784,33 +786,18 @@ export default function Credits() {
     }
   }, [subscriptionUpdated, planName, revalidator]);
 
-  const handlePurchase = (packId: string) => {
-    if (isSubmitting || submittingPackId !== null) {
-      return;
+  // Recharger automatiquement si charge_id est présent dans l'URL (retour de paiement)
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const chargeId = url.searchParams.get("charge_id");
+    if (chargeId && !subscriptionUpdated) {
+      // Attendre que la session soit réhydratée puis recharger
+      const timer = setTimeout(() => {
+        revalidator.revalidate();
+      }, 2000);
+      return () => clearTimeout(timer);
     }
-    
-    setSubmittingPackId(packId);
-    
-    const formData = new FormData();
-    formData.append("intent", "purchase-credits");
-    formData.append("packId", packId);
-    
-    fetcher.submit(formData, { method: "post" });
-  };
-
-  const handleCustomPurchase = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const formData = new FormData(event.currentTarget);
-    const credits = parseInt(formData.get("customCredits") as string);
-    
-    if (!credits || credits < 250) {
-      alert("Minimum 250 credits required for custom pack.");
-      return;
-    }
-    
-    formData.append("intent", "custom-pack");
-    fetcher.submit(formData, { method: "post" });
-  };
+  }, [revalidator, subscriptionUpdated]);
 
   const handleSubscriptionPurchase = (planId: string) => {
     if (isSubmitting || submittingPackId !== null) {
@@ -1020,88 +1007,6 @@ export default function Credits() {
           </div>
         </div>
 
-        {/* Section Packs de crédits */}
-        <div style={{ marginTop: "var(--spacing-xl)" }}>
-          <h2 style={{ fontSize: "24px", fontWeight: "600", marginBottom: "var(--spacing-md)" }}>
-            Packs de crédits
-          </h2>
-          <p style={{ color: "var(--text-secondary)", marginBottom: "var(--spacing-lg)" }}>
-            Achetez des crédits supplémentaires pour vos générations
-          </p>
-          <div className="pricing-grid">
-            {CREDIT_PACKS.map((pack) => {
-              const isSubmittingPack = isSubmitting && submittingPackId === pack.id;
-              
-              return (
-                <div key={pack.id} className={`plan-card ${pack.popular ? 'featured' : ''}`}>
-                  {pack.popular && (
-                    <div className="plan-badge">Most popular</div>
-                  )}
-                  <div className="plan-name">{pack.name}</div>
-                  <div className="plan-price">
-                    ${pack.price.toFixed(2)}
-                  </div>
-                  <div className="plan-features">
-                    <div className="plan-feature" style={{ fontSize: "18px", fontWeight: "600", color: "#008060" }}>
-                      {pack.credits} crédits
-                    </div>
-                    <div className="plan-feature">{pack.description}</div>
-                    <div className="plan-feature">${pack.pricePerCredit.toFixed(2)} par crédit</div>
-                  </div>
-                  <div className="plan-cta">
-                    <button 
-                      className="plan-button"
-                      onClick={() => handlePurchase(pack.id)}
-                      disabled={isSubmitting || submittingPackId !== null}
-                    >
-                      {isSubmittingPack ? "Processing..." : "Acheter"}
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Section Pack personnalisé */}
-        <div style={{ marginTop: "var(--spacing-xl)" }}>
-          <h2 style={{ fontSize: "24px", fontWeight: "600", marginBottom: "var(--spacing-md)" }}>
-            Pack personnalisé
-          </h2>
-          <p style={{ color: "var(--text-secondary)", marginBottom: "var(--spacing-lg)" }}>
-            Commandez un nombre personnalisé de crédits (minimum 250)
-          </p>
-          <form onSubmit={handleCustomPurchase}>
-            <div style={{ display: "flex", gap: "var(--spacing-md)", alignItems: "flex-end", maxWidth: "500px" }}>
-              <div style={{ flex: 1 }}>
-                <TextField
-                  label="Nombre de crédits"
-                  type="number"
-                  value={customAmount}
-                  onChange={(value) => setCustomAmount(value)}
-                  min={250}
-                  step={1}
-                  autoComplete="off"
-                />
-              </div>
-              <div>
-                <Button 
-                  submit 
-                  variant="primary"
-                  disabled={isSubmitting || !customAmount || parseInt(customAmount) < 250}
-                  loading={isSubmitting}
-                >
-                  Acheter
-                </Button>
-              </div>
-            </div>
-            {customAmount && parseInt(customAmount) >= 250 && (
-              <p style={{ marginTop: "var(--spacing-sm)", color: "var(--text-secondary)", fontSize: "14px" }}>
-                Prix: ${(parseFloat(customAmount) * 0.26).toFixed(2)} ({parseInt(customAmount)} crédits × $0.26)
-              </p>
-            )}
-          </form>
-        </div>
       </div>
     </Page>
   );
