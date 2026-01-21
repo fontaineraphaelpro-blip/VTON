@@ -220,23 +220,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       }
     }
 
-    // Handle return from Shopify payment (app purchase one-time charge)
-    if (purchaseSuccess === "success" && packId && creditsParam) {
-      const creditsToAdd = parseInt(creditsParam);
-      if (creditsToAdd > 0 && shopData) {
-        // Credit the tokens automatically
-        const newCredits = (shopData.credits || 0) + creditsToAdd;
-        await upsertShop(shop, { credits: newCredits });
-        
-        // Reload shop data after crediting
-        const updatedShopData = await getShop(shop);
-        return json({
-          shop: updatedShopData || null,
-          purchaseSuccess: true,
-          creditsAdded: creditsToAdd,
-        });
-      }
-    }
+    // Packs one-time supprimés - seulement les abonnements sont disponibles
 
     // Check for active subscriptions to determine current plan
     let currentActivePlan: string | null = null;
