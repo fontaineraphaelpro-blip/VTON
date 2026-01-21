@@ -120,27 +120,44 @@ export async function generateTryOn(
         console.log("[Replicate] File upload response:", JSON.stringify(file, null, 2));
         
         // Handle different response formats from Replicate
-        // Replicate returns: { urls: { get: "https://api.replicate.com/v1/files/..." } }
-        let uploadedUrl: string | undefined;
+        // Replicate returns: { id: "...", urls: { get: "https://api.replicate.com/v1/files/..." } }
+        // The "get" URL is an API endpoint, we need the public URL
+        let fileId: string | undefined;
         if (typeof file === "string") {
-          uploadedUrl = file;
+          fileId = file;
         } else if (file && typeof file === "object") {
-          // Try urls.get first (most common format)
-          if (file.urls && typeof file.urls === "object" && file.urls.get) {
-            uploadedUrl = file.urls.get;
-          } else {
-            // Fallback to other possible formats
-            uploadedUrl = file.url || file.uri || (file as any).URL;
+          // Extract file ID
+          fileId = (file as any).id || file.url || file.uri;
+        }
+        
+        if (!fileId || typeof fileId !== "string") {
+          console.error("[Replicate] Invalid file response - no ID found:", file);
+          throw new Error(`Replicate files.create() did not return a valid file ID. Response: ${JSON.stringify(file)}`);
+        }
+        
+        // Use the file ID directly - Replicate models accept file IDs
+        // The file ID format is typically just the ID string (not the full API URL)
+        // If the model doesn't accept IDs, we'll try the URLs.get URL
+        personInput = fileId;
+        console.log("[Replicate] Using file ID as input for person image:", personInput);
+        
+        // Also try to get the public URL as fallback
+        try {
+          const fileInfo = await replicate.files.get(fileId);
+          console.log("[Replicate] File info response:", JSON.stringify(fileInfo, null, 2));
+          
+          // Check if urls.get exists and is a public URL (not just an API endpoint)
+          if (fileInfo && typeof fileInfo === "object" && fileInfo.urls && fileInfo.urls.get) {
+            const urlGet = fileInfo.urls.get;
+            // If it's not an API endpoint (doesn't contain /v1/files/), use it as public URL
+            if (!urlGet.includes('/v1/files/')) {
+              personInput = urlGet;
+              console.log("[Replicate] Using public URL for person image:", personInput);
+            }
           }
+        } catch (getError) {
+          console.warn("[Replicate] Could not get file info, using file ID:", getError);
         }
-        
-        if (!uploadedUrl || typeof uploadedUrl !== "string") {
-          console.error("[Replicate] Invalid file response:", file);
-          throw new Error(`Replicate files.create() did not return a valid file URL. Response: ${JSON.stringify(file)}`);
-        }
-        
-        personInput = uploadedUrl;
-        console.log("[Replicate] Person image uploaded:", personInput);
       } catch (uploadError) {
         console.error("[Replicate] Failed to upload person image:", uploadError);
         throw new Error(`Failed to upload person image: ${uploadError instanceof Error ? uploadError.message : "Unknown error"}`);
@@ -165,27 +182,44 @@ export async function generateTryOn(
         console.log("[Replicate] File upload response:", JSON.stringify(file, null, 2));
         
         // Handle different response formats from Replicate
-        // Replicate returns: { urls: { get: "https://api.replicate.com/v1/files/..." } }
-        let uploadedUrl: string | undefined;
+        // Replicate returns: { id: "...", urls: { get: "https://api.replicate.com/v1/files/..." } }
+        // The "get" URL is an API endpoint, we need the public URL
+        let fileId: string | undefined;
         if (typeof file === "string") {
-          uploadedUrl = file;
+          fileId = file;
         } else if (file && typeof file === "object") {
-          // Try urls.get first (most common format)
-          if (file.urls && typeof file.urls === "object" && file.urls.get) {
-            uploadedUrl = file.urls.get;
-          } else {
-            // Fallback to other possible formats
-            uploadedUrl = file.url || file.uri || (file as any).URL;
+          // Extract file ID
+          fileId = (file as any).id || file.url || file.uri;
+        }
+        
+        if (!fileId || typeof fileId !== "string") {
+          console.error("[Replicate] Invalid file response - no ID found:", file);
+          throw new Error(`Replicate files.create() did not return a valid file ID. Response: ${JSON.stringify(file)}`);
+        }
+        
+        // Use the file ID directly - Replicate models accept file IDs
+        // The file ID format is typically just the ID string (not the full API URL)
+        // If the model doesn't accept IDs, we'll try the URLs.get URL
+        garmentInput = fileId;
+        console.log("[Replicate] Using file ID as input for garment image:", garmentInput);
+        
+        // Also try to get the public URL as fallback
+        try {
+          const fileInfo = await replicate.files.get(fileId);
+          console.log("[Replicate] File info response:", JSON.stringify(fileInfo, null, 2));
+          
+          // Check if urls.get exists and is a public URL (not just an API endpoint)
+          if (fileInfo && typeof fileInfo === "object" && fileInfo.urls && fileInfo.urls.get) {
+            const urlGet = fileInfo.urls.get;
+            // If it's not an API endpoint (doesn't contain /v1/files/), use it as public URL
+            if (!urlGet.includes('/v1/files/')) {
+              garmentInput = urlGet;
+              console.log("[Replicate] Using public URL for garment image:", garmentInput);
+            }
           }
+        } catch (getError) {
+          console.warn("[Replicate] Could not get file info, using file ID:", getError);
         }
-        
-        if (!uploadedUrl || typeof uploadedUrl !== "string") {
-          console.error("[Replicate] Invalid file response:", file);
-          throw new Error(`Replicate files.create() did not return a valid file URL. Response: ${JSON.stringify(file)}`);
-        }
-        
-        garmentInput = uploadedUrl;
-        console.log("[Replicate] Garment image uploaded:", garmentInput);
       } catch (uploadError) {
         console.error("[Replicate] Failed to upload garment image:", uploadError);
         throw new Error(`Failed to upload garment image: ${uploadError instanceof Error ? uploadError.message : "Unknown error"}`);

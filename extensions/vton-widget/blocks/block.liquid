@@ -1558,6 +1558,8 @@
         let useAppProxy = true;
         
         // Helper function to make the fetch request
+        // Use a closure variable to track if we've already tried the fallback
+        let hasTriedFallback = false;
         function makeGenerateRequest(url) {
           // Create AbortController for timeout handling (90 seconds - plus que 60)
           const controller = new AbortController();
@@ -1580,10 +1582,11 @@
             
             console.log('[VTON] Response status:', response.status, response.statusText);
             
-            // If App Proxy failed with 404, try direct URL as fallback
-            if (useAppProxy && response.status === 404) {
+            // If App Proxy failed with 404, try direct URL as fallback (only once)
+            if (useAppProxy && !hasTriedFallback && response.status === 404) {
               console.warn('[VTON] ⚠️ App Proxy not available (404), trying direct URL...');
               useAppProxy = false;
+              hasTriedFallback = true; // Prevent double fallback
               // Use the configured app URL as fallback
               const directUrl = APP_URL + '/apps/tryon/generate?shop=' + encodeURIComponent(state.shop) + '&product_id=' + encodeURIComponent(state.productId);
               console.log('[VTON] 🔄 Retrying with direct URL:', directUrl);
@@ -1597,6 +1600,17 @@
               });
             }
             return response.json();
+          }).catch(function(error) {
+            clearTimeout(timeoutId);
+            // If it's an abort error and we haven't tried fallback, try fallback first
+            if (error.name === 'AbortError' && useAppProxy && !hasTriedFallback) {
+              console.warn('[VTON] ⚠️ Request aborted, trying direct URL as fallback...');
+              useAppProxy = false;
+              hasTriedFallback = true;
+              const directUrl = APP_URL + '/apps/tryon/generate?shop=' + encodeURIComponent(state.shop) + '&product_id=' + encodeURIComponent(state.productId);
+              return makeGenerateRequest(directUrl);
+            }
+            throw error;
           });
         }
         
