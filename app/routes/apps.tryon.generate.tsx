@@ -89,26 +89,35 @@ function convertBase64ToUrl(base64Data: string): string {
 }
 
 /**
+ * Helper function to get CORS headers for Shopify storefront requests
+ */
+function getCorsHeaders(request: Request): Headers {
+  const origin = request.headers.get("origin") || "";
+  const referer = request.headers.get("referer") || "";
+  const isFromShopifyStorefront = origin.includes(".myshopify.com") || referer.includes(".myshopify.com");
+  
+  const headers = new Headers();
+  if (isFromShopifyStorefront) {
+    headers.set("Access-Control-Allow-Origin", origin || "*");
+    headers.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+    headers.set("Access-Control-Allow-Headers", "Content-Type");
+    headers.set("Access-Control-Max-Age", "86400"); // 24 hours
+  }
+  
+  return headers;
+}
+
+/**
  * Handle OPTIONS requests for CORS preflight
  */
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   if (request.method === "OPTIONS") {
-    const origin = request.headers.get("origin") || "";
-    const referer = request.headers.get("referer") || "";
-    const isFromShopifyStorefront = origin.includes(".myshopify.com") || referer.includes(".myshopify.com");
-    
-    const headers = new Headers();
-    if (isFromShopifyStorefront) {
-      headers.set("Access-Control-Allow-Origin", origin || "*");
-      headers.set("Access-Control-Allow-Methods", "POST, OPTIONS");
-      headers.set("Access-Control-Allow-Headers", "Content-Type");
-      headers.set("Access-Control-Max-Age", "86400"); // 24 hours
-    }
-    
+    const headers = getCorsHeaders(request);
     return new Response(null, { status: 204, headers });
   }
   
-  return json({ error: "Method not allowed" }, { status: 405 });
+  const headers = getCorsHeaders(request);
+  return json({ error: "Method not allowed" }, { status: 405, headers });
 };
 
 /**
@@ -132,6 +141,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 export const action = async ({ request }: ActionFunctionArgs) => {
   const startTime = Date.now();
   
+  // Get CORS headers early for all error responses
+  const corsHeaders = getCorsHeaders(request);
+  
   try {
     const url = new URL(request.url);
     const queryParams = url.searchParams;
@@ -154,7 +166,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       if (!isFromShopifyStorefront) {
         return json(
           { error: "Invalid signature - request not from Shopify" },
-          { status: 403 }
+          { status: 403, headers: corsHeaders }
         );
       }
     }
@@ -162,7 +174,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     // 2. Extract shop
     const shop = extractShopFromProxy(queryParams);
     if (!shop) {
-      return json({ error: "Shop parameter missing" }, { status: 400 });
+      return json({ error: "Shop parameter missing" }, { status: 400, headers: corsHeaders });
     }
 
     // 3. Parse request body
@@ -170,7 +182,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     try {
       body = await request.json();
     } catch (e) {
-      return json({ error: "Invalid JSON body" }, { status: 400 });
+      return json({ error: "Invalid JSON body" }, { status: 400, headers: corsHeaders });
     }
 
     const userPhoto = body.user_photo || body.person_image_base64;
@@ -179,11 +191,11 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const productHandle = body.product_handle;
 
     if (!userPhoto) {
-      return json({ error: "user_photo is required" }, { status: 400 });
+      return json({ error: "user_photo is required" }, { status: 400, headers: corsHeaders });
     }
 
     if (!productImageUrl) {
-      return json({ error: "product_image_url is required" }, { status: 400 });
+      return json({ error: "product_image_url is required" }, { status: 400, headers: corsHeaders });
     }
 
     // 4. Ensure database tables exist
@@ -192,12 +204,12 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     // 5. Check shop settings and credits
     const shopData = await getShop(shop);
     if (!shopData) {
-      return json({ error: "Shop not found" }, { status: 404 });
+      return json({ error: "Shop not found" }, { status: 404, headers: corsHeaders });
     }
 
     // Check if widget is enabled
     if (shopData.is_enabled === false) {
-      return json({ error: "Try-on is disabled for this shop" }, { status: 403 });
+      return json({ error: "Try-on is disabled for this shop" }, { status: 403, headers: corsHeaders });
     }
 
     // Check credits (if using credit system)
@@ -206,7 +218,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       return json({ 
         error: "Insufficient credits. Please purchase a subscription plan.",
         credits: credits 
-      }, { status: 402 });
+      }, { status: 402, headers: corsHeaders });
     }
 
     // Check monthly quota (if set)
@@ -218,7 +230,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           error: "Monthly quota exceeded. Please upgrade your plan.",
           monthlyUsage,
           monthlyQuota 
-        }, { status: 402 });
+        }, { status: 402, headers: corsHeaders });
       }
     }
 
@@ -231,7 +243,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           error: "Daily limit exceeded. Please try again tomorrow.",
           dailyUsage,
           dailyLimit 
-        }, { status: 402 });
+        }, { status: 402, headers: corsHeaders });
       }
     }
 
@@ -248,7 +260,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
             error: `You have reached the maximum of ${maxTriesPerUser} try-on${maxTriesPerUser > 1 ? "s" : ""} per day. Please try again tomorrow.`,
             customerDailyUsage,
             maxTriesPerUser 
-          }, { status: 402 });
+          }, { status: 402, headers: corsHeaders });
         }
       }
     }
@@ -307,17 +319,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       resultImageUrl: success ? resultUrl : undefined,
     });
 
-    // 12. Return result with CORS headers
-    const origin = request.headers.get("origin") || "";
-    const referer = request.headers.get("referer") || "";
-    const isFromShopifyStorefront = origin.includes(".myshopify.com") || referer.includes(".myshopify.com");
-    
-    const headers = new Headers();
-    if (isFromShopifyStorefront) {
-      headers.set("Access-Control-Allow-Origin", origin || "*");
-      headers.set("Access-Control-Allow-Methods", "POST, OPTIONS");
-      headers.set("Access-Control-Allow-Headers", "Content-Type");
-    }
+    // 12. Return result with CORS headers (already set above)
+    const headers = corsHeaders;
 
     if (success) {
       return json({
@@ -333,23 +336,13 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   } catch (error) {
     console.error("[Generate] Error in /apps/tryon/generate:", error);
     
-    const origin = request.headers.get("origin") || "";
-    const referer = request.headers.get("referer") || "";
-    const isFromShopifyStorefront = origin.includes(".myshopify.com") || referer.includes(".myshopify.com");
-    
-    const headers = new Headers();
-    if (isFromShopifyStorefront) {
-      headers.set("Access-Control-Allow-Origin", origin || "*");
-      headers.set("Access-Control-Allow-Methods", "POST, OPTIONS");
-      headers.set("Access-Control-Allow-Headers", "Content-Type");
-    }
-
+    // Use CORS headers that were set at the beginning
     return json(
       {
         error: "Failed to generate try-on",
         message: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500, headers }
+      { status: 500, headers: corsHeaders }
     );
   }
 };
