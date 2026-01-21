@@ -85,13 +85,33 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     if (chargeId) {
       // IMPORTANT: Vérifier explicitement le paiement
       // Le charge_id dans l'URL confirme que Shopify a redirigé après un paiement
-      // ATTENTION: La session peut être null juste après le paiement, on doit attendre un peu
+      // ATTENTION: La session peut être null juste après le paiement, on doit attendre et réessayer
       try {
-        // Attendre un peu pour que la session soit complètement réhydratée
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // Attendre que la session soit réhydratée (jusqu'à 3 tentatives)
+        let attempts = 0;
+        let currentSession = session;
+        while ((!currentSession || !currentSession.shop) && attempts < 3) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          attempts++;
+          // Réessayer l'authentification
+          try {
+            const authResult = await authenticate.admin(request);
+            currentSession = authResult.session;
+          } catch {
+            // Continue to next attempt
+          }
+        }
         
-        // Récupérer les abonnements actifs
-        const subscriptionQuery = `#graphql
+        // Si on n'a toujours pas de session après 3 tentatives, retourner une erreur
+        if (!currentSession || !currentSession.shop) {
+          console.warn(`[Credits] Session non disponible après ${attempts} tentatives pour charge_id: ${chargeId}`);
+          // Continuer quand même pour afficher la page normale
+        } else {
+          // Utiliser la session réhydratée
+          const shop = currentSession.shop;
+          
+          // Récupérer les abonnements actifs
+          const subscriptionQuery = `#graphql
           query {
             currentAppInstallation {
               activeSubscriptions {
