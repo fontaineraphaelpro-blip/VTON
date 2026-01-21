@@ -56,31 +56,17 @@ const CREDIT_PACKS = [
 ];
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  // 1. RECUPERATION DES PARAMS (AVANT TOUT)
+  // Extract URL params (charge_id, purchase, pack, credits)
   const url = new URL(request.url);
-  const shop = url.searchParams.get("shop");
   const chargeId = url.searchParams.get("charge_id");
   const purchaseSuccess = url.searchParams.get("purchase");
   const packId = url.searchParams.get("pack");
   const creditsParam = url.searchParams.get("credits");
   
-  // 2. BLOC DE SAUVETAGE (DOIT ETRE ICI, TOUT EN HAUT, AVANT LE TRY)
-  // Si on revient de Shopify après paiement, on a perdu la session.
-  // On redirige vers /auth pour que Shopify la restaure via OAuth.
-  // IMPORTANT: Ce bloc DOIT être exécuté AVANT authenticate.admin() pour éviter la redirection vers /auth/login
-  if (shop && chargeId) {
-    const returnUrl = `/app/credits?charge_id=${encodeURIComponent(chargeId)}&shop=${encodeURIComponent(shop)}`;
-    return redirect(`/auth?shop=${encodeURIComponent(shop)}&return_to=${encodeURIComponent(returnUrl)}`);
-  }
-  
-  // 3. AUTHENTIFICATION SHOPIFY
-  // Si le code arrive ici sans session, authenticate.admin va lancer une erreur 
-  // et rediriger vers /auth/login (ce qui cause l'écran noir).
-  // C'est pour ça que l'étape 2 doit être avant.
   try {
     // authenticate.admin will automatically handle re-authentication if needed
-    // It will redirect to /auth which will handle OAuth flow and return to the original URL
-    const { admin, session } = await authenticate.admin(request);
+    // Grâce à la route intermédiaire auth.billing-callback, la session existera ici
+    const { admin, session, billing } = await authenticate.admin(request);
     
     if (!session || !session.shop) {
       return json({
@@ -691,18 +677,18 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       // Continue - if check fails, allow purchase attempt (will fail at Shopify level if duplicate)
     }
 
-    // SOLUTION: Laisser billing.request() gérer la redirection automatiquement
-    // IMPORTANT: Le returnUrl DOIT inclure le paramètre shop pour que l'authentification fonctionne
+    // SOLUTION "Exit Hatch": Utiliser une route publique intermédiaire pour gérer le retour de paiement
+    // Cette route (auth.billing-callback) ne nécessite pas d'authentification et redirige vers /auth
     const { billing } = await authenticate.admin(request);
     
-    // Construire l'URL de retour complète avec le paramètre shop
-    // Le paramètre shop est ESSENTIEL pour que l'authentification fonctionne après le paiement
+    // Construire l'URL de retour vers la route publique intermédiaire
+    // Cette route recevra le charge_id de Shopify et redirigera vers /auth pour l'authentification
     const appUrl = process.env.SHOPIFY_APP_URL || process.env.APPLICATION_URL || new URL(request.url).origin;
-    const returnUrl = `${appUrl}/app/credits?shop=${encodeURIComponent(shop)}`;
+    const returnUrl = `${appUrl}/auth/billing-callback?shop=${encodeURIComponent(shop)}`;
     
     // billing.request() va lancer une Response de redirection (302)
-    // Après le paiement, Shopify redirigera vers returnUrl avec charge_id
-    // Le paramètre shop permettra à authenticate.admin() de savoir quelle boutique authentifier
+    // Après le paiement, Shopify redirigera vers /auth/billing-callback avec charge_id
+    // Cette route publique redirigera ensuite vers /auth pour l'authentification
     return await billing.request({
       plan: planId as any,
       isTest: true, // Pour les boutiques de développement
