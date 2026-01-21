@@ -184,9 +184,54 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       }
     }
 
+    // Check for active subscriptions to determine current plan
+    let currentActivePlan: string | null = null;
+    try {
+      const subscriptionQuery = `#graphql
+        query {
+          currentAppInstallation {
+            activeSubscriptions {
+              id
+              name
+              status
+              test
+              lineItems {
+                plan {
+                  pricingDetails {
+                    ... on AppRecurringPricing {
+                      price {
+                        amount
+                        currencyCode
+                      }
+                      interval
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      `;
+
+      const subscriptionResponse = await admin.graphql(subscriptionQuery);
+      const subscriptionData = await subscriptionResponse.json() as any;
+      
+      const activeSubscriptions = subscriptionData?.data?.currentAppInstallation?.activeSubscriptions || [];
+      const activeSubscription = activeSubscriptions.find((sub: any) => 
+        sub.status === "ACTIVE" && !sub.test
+      );
+
+      if (activeSubscription) {
+        // Normalize plan name (e.g., "Starter" -> "starter")
+        currentActivePlan = activeSubscription.name.toLowerCase().replace(/\s+/g, '-');
+      }
+    } catch (subscriptionError) {
+      // Continue even if subscription check fails - will show all plans as available
+    }
 
     return json({
       shop: shopData || null,
+      currentActivePlan: currentActivePlan, // Plan ID currently active (e.g., "starter", "pro")
     });
   } catch (error) {
     // Si c'est une Response (redirection d'auth), la propager directement
@@ -607,6 +652,7 @@ export default function Credits() {
   const creditsAdded = (loaderData as any)?.creditsAdded || 0;
   const subscriptionUpdated = (loaderData as any)?.subscriptionUpdated || false;
   const planName = (loaderData as any)?.planName || null;
+  const currentActivePlan = (loaderData as any)?.currentActivePlan || null; // Plan ID currently active
   
   const fetcher = useFetcher<typeof action>();
   const revalidator = useRevalidator();
@@ -803,31 +849,67 @@ export default function Credits() {
             Choisissez un plan d'abonnement mensuel pour accéder à toutes les fonctionnalités
           </p>
           <div className="pricing-grid">
-            {subscriptionPlans.map((plan) => (
-              <div key={plan.id} className={`plan-card ${plan.popular ? 'featured' : ''}`}>
-                {plan.popular && (
-                  <div className="plan-badge">Most popular</div>
-                )}
-                <div className="plan-name">{plan.name}</div>
-                <div className="plan-price">
-                  ${plan.price.toFixed(2)} <span>/ month</span>
+            {subscriptionPlans.map((plan) => {
+              const isCurrentPlan = currentActivePlan === plan.id;
+              const isFreePlan = plan.id === "free-installation-setup";
+              
+              return (
+                <div key={plan.id} className={`plan-card ${plan.popular ? 'featured' : ''} ${isCurrentPlan ? 'current-plan' : ''}`}>
+                  {plan.popular && (
+                    <div className="plan-badge">Most popular</div>
+                  )}
+                  {isCurrentPlan && (
+                    <div className="plan-badge" style={{ backgroundColor: '#008060', color: 'white' }}>
+                      Plan actuel
+                    </div>
+                  )}
+                  <div className="plan-name">{plan.name}</div>
+                  <div className="plan-price">
+                    ${plan.price.toFixed(2)} <span>/ month</span>
+                  </div>
+                  <div className="plan-features">
+                    <div className="plan-feature">{plan.description}</div>
+                    <div className="plan-feature">Abonnement récurrent mensuel</div>
+                    <div className="plan-feature">Annulable à tout moment</div>
+                  </div>
+                  <div className="plan-cta">
+                    {isCurrentPlan ? (
+                      <button 
+                        className="plan-button"
+                        disabled={true}
+                        style={{ 
+                          backgroundColor: '#008060', 
+                          color: 'white',
+                          cursor: 'not-allowed',
+                          opacity: 0.8
+                        }}
+                      >
+                        Plan actuel
+                      </button>
+                    ) : isFreePlan ? (
+                      <button 
+                        className="plan-button"
+                        disabled={true}
+                        style={{ 
+                          cursor: 'not-allowed',
+                          opacity: 0.6
+                        }}
+                      >
+                        Déjà inclus
+                      </button>
+                    ) : (
+                      <button 
+                        className="plan-button"
+                        onClick={() => handleSubscriptionPurchase(plan.id)}
+                        disabled={isSubmitting || submittingPackId !== null}
+                      >
+                        {isSubmitting && submittingPackId === plan.id ? "Processing..." : "S'abonner"}
+                      </button>
+                    )}
+                  </div>
                 </div>
-                <div className="plan-features">
-                  <div className="plan-feature">{plan.description}</div>
-                  <div className="plan-feature">Abonnement récurrent mensuel</div>
-                  <div className="plan-feature">Annulable à tout moment</div>
-                </div>
-                <div className="plan-cta">
-                  <button 
-                    className="plan-button"
-                    onClick={() => handleSubscriptionPurchase(plan.id)}
-                    disabled={isSubmitting || submittingPackId !== null}
-                  >
-                    {isSubmitting && submittingPackId === plan.id ? "Processing..." : "S'abonner"}
-                  </button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>
