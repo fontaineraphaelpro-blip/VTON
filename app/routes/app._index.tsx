@@ -638,6 +638,14 @@ export default function Dashboard() {
   const monthlyUsage = typeof (loaderData as any).monthlyUsage === 'number' ? (loaderData as any).monthlyUsage : 0;
   const error = (loaderData as any).error || null;
 
+  // State for managing notification visibility
+  const [showErrorBanner, setShowErrorBanner] = useState(error !== null);
+  const [showSuccessBanner, setShowSuccessBanner] = useState(false);
+  const [showDisabledBanner, setShowDisabledBanner] = useState(true);
+  const [showLowCreditsBanner, setShowLowCreditsBanner] = useState(true);
+  const [showQuotaExceededBanner, setShowQuotaExceededBanner] = useState(true);
+  const [showQuotaWarningBanner, setShowQuotaWarningBanner] = useState(true);
+
   // ADDED: Monthly quota and usage (for display only)
   const monthlyQuota = shop?.monthly_quota || null;
   const monthlyUsageCount = monthlyUsage || 0;
@@ -708,6 +716,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (fetcher.data?.success) {
+      setShowSuccessBanner(true);
       setTimeout(() => {
         revalidator.revalidate();
       }, 500);
@@ -762,16 +771,16 @@ export default function Dashboard() {
         </header>
 
         {/* Alerts compactes en haut */}
-        {(error || fetcher.data?.success || credits < 50 || !isEnabled) && (
+        {(showErrorBanner || fetcher.data?.success || showLowCreditsBanner || showDisabledBanner || showQuotaExceededBanner || showQuotaWarningBanner) && (
           <div style={{ marginBottom: "var(--spacing-lg)" }}>
             <BlockStack gap="300">
-              {error && (
-                <Banner tone="critical" title="Error">
+              {showErrorBanner && error && (
+                <Banner tone="critical" title="Error" onDismiss={() => setShowErrorBanner(false)}>
                   {error}
                 </Banner>
               )}
-              {!isEnabled && (
-                <Banner tone="warning" title="Widget is Disabled">
+              {showDisabledBanner && !isEnabled && (
+                <Banner tone="warning" title="Widget is Disabled" onDismiss={() => setShowDisabledBanner(false)}>
                   <p>
                     The Virtual Try-On widget is currently <strong>disabled</strong> on your store. 
                     To make it visible on product pages:
@@ -792,23 +801,25 @@ export default function Dashboard() {
                   </p>
                 </Banner>
               )}
-              {fetcher.data?.success && (fetcher.data as any).deletedCount !== undefined && (
-                <Banner tone="success">
+              {showSuccessBanner && fetcher.data?.success && (fetcher.data as any).deletedCount !== undefined && (
+                <Banner tone="success" onDismiss={() => setShowSuccessBanner(false)}>
                   {(fetcher.data as any).message || `Deleted ${(fetcher.data as any).deletedCount} old script tag(s)`}
                 </Banner>
               )}
-              {fetcher.data?.success && !(fetcher.data as any).deletedCount && (
-                <Banner tone="success">
+              {showSuccessBanner && fetcher.data?.success && !(fetcher.data as any).deletedCount && (
+                <Banner tone="success" onDismiss={() => setShowSuccessBanner(false)}>
                   Configuration saved successfully
                 </Banner>
               )}
               {(fetcher.data as any)?.error && (
-                <Banner tone="critical">
+                <Banner tone="critical" onDismiss={() => {
+                  fetcher.load('/app');
+                }}>
                   Error: {(fetcher.data as any).error}
                 </Banner>
               )}
-              {credits < 10 && (
-                <Banner tone="warning" title="Low Credits Balance">
+              {showLowCreditsBanner && credits < 10 && (
+                <Banner tone="warning" title="Low Credits Balance" onDismiss={() => setShowLowCreditsBanner(false)}>
                   <p>
                     You have <strong>{credits}</strong> credit{credits !== 1 ? "s" : ""} remaining. 
                     <Link to="/app/credits" style={{ marginLeft: "8px" }}>
@@ -818,16 +829,16 @@ export default function Dashboard() {
                 </Banner>
               )}
               {/* ADDED: Monthly quota warning */}
-              {quotaExceeded && (
-                <Banner tone="critical" title="Monthly Quota Exceeded">
+              {showQuotaExceededBanner && quotaExceeded && (
+                <Banner tone="critical" title="Monthly Quota Exceeded" onDismiss={() => setShowQuotaExceededBanner(false)}>
                   <p>
                     You have reached your monthly quota of <strong>{monthlyQuota}</strong> try-ons. 
                     {quotaPercentage && ` (${quotaPercentage}% used)`}
                   </p>
                 </Banner>
               )}
-              {monthlyQuota && !quotaExceeded && parseFloat(quotaPercentage || "0") > 80 && (
-                <Banner tone="warning" title="Approaching Monthly Quota">
+              {showQuotaWarningBanner && monthlyQuota && !quotaExceeded && parseFloat(quotaPercentage || "0") > 80 && (
+                <Banner tone="warning" title="Approaching Monthly Quota" onDismiss={() => setShowQuotaWarningBanner(false)}>
                   <p>
                     You have used <strong>{quotaPercentage}%</strong> of your monthly quota ({monthlyUsageCount} / {monthlyQuota} try-ons).
                   </p>

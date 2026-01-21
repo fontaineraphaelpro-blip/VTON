@@ -453,8 +453,20 @@ export default function Credits() {
   const fetcher = useFetcher<typeof action>();
   const currentCredits = shop?.credits || 0;
   const [submittingPackId, setSubmittingPackId] = useState<string | null>(null);
+  
+  // State for managing notification visibility
+  const [showErrorBanner, setShowErrorBanner] = useState(error !== null);
+  const [showSuccessBanner, setShowSuccessBanner] = useState(subscriptionUpdated && planName !== null);
+  const [showFetcherErrorBanner, setShowFetcherErrorBanner] = useState(false);
 
   const isSubmitting = fetcher.state === "submitting";
+  
+  // Update banner visibility when fetcher error appears
+  useEffect(() => {
+    if ((fetcher.data as any)?.error) {
+      setShowFetcherErrorBanner(true);
+    }
+  }, [(fetcher.data as any)?.error]);
 
   useEffect(() => {
     if (fetcher.state === "idle" && submittingPackId !== null) {
@@ -533,28 +545,31 @@ export default function Credits() {
     <Page>
       <TitleBar title="Credits - VTON Magic" />
       <div className="app-container">
-        {error && (
+        {showErrorBanner && error && (
           <div style={{ marginBottom: "var(--spacing-lg)" }}>
-            <Banner tone="critical" title="Erreur" onDismiss={() => {}}>
+            <Banner tone="critical" title="Erreur" onDismiss={() => setShowErrorBanner(false)}>
               {error}
             </Banner>
           </div>
         )}
 
-        {subscriptionUpdated && planName && (
+        {showSuccessBanner && subscriptionUpdated && planName && (
           <div style={{ marginBottom: "var(--spacing-lg)" }}>
-            <Banner tone="success" title="Abonnement activé !" onDismiss={() => {}}>
+            <Banner tone="success" title="Abonnement activé !" onDismiss={() => setShowSuccessBanner(false)}>
               Votre abonnement <strong>{planName}</strong> a été activé avec succès. Vos crédits mensuels ont été mis à jour.
             </Banner>
           </div>
         )}
 
-        {(fetcher.data as any)?.error && (
+        {showFetcherErrorBanner && (fetcher.data as any)?.error && (
           <div style={{ marginBottom: "var(--spacing-lg)" }}>
             <Banner 
               tone="critical" 
               title={(fetcher.data as any)?.requiresAuth ? "Authentification requise" : "Erreur"}
-              onDismiss={() => {}}
+              onDismiss={() => {
+                setShowFetcherErrorBanner(false);
+                fetcher.load('/app/credits');
+              }}
               action={(fetcher.data as any)?.requiresAuth ? {
                 content: (fetcher.data as any)?.reauthUrl ? "Ré-authentifier" : "Rafraîchir la page",
                 onAction: () => {

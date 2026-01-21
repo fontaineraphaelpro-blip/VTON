@@ -179,7 +179,10 @@ export default function History() {
         <Layout.Section>
           <BlockStack gap="600">
             {error && (
-              <Banner tone="critical" title="Error">
+              <Banner tone="critical" title="Error" onDismiss={() => {
+                // Error from loader, reload to clear
+                window.location.href = window.location.pathname;
+              }}>
                 Error loading history: {error}
               </Banner>
             )}
