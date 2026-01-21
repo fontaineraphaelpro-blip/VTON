@@ -121,43 +121,29 @@ export async function generateTryOn(
         
         // Handle different response formats from Replicate
         // Replicate returns: { id: "...", urls: { get: "https://api.replicate.com/v1/files/..." } }
-        // The "get" URL is an API endpoint, we need the public URL
-        let fileId: string | undefined;
+        // Use urls.get directly - Replicate can use this URL internally for model inputs
+        let uploadedUrl: string | undefined;
         if (typeof file === "string") {
-          fileId = file;
+          uploadedUrl = file;
         } else if (file && typeof file === "object") {
-          // Extract file ID
-          fileId = (file as any).id || file.url || file.uri;
-        }
-        
-        if (!fileId || typeof fileId !== "string") {
-          console.error("[Replicate] Invalid file response - no ID found:", file);
-          throw new Error(`Replicate files.create() did not return a valid file ID. Response: ${JSON.stringify(file)}`);
-        }
-        
-        // Use the file ID directly - Replicate models accept file IDs
-        // The file ID format is typically just the ID string (not the full API URL)
-        // If the model doesn't accept IDs, we'll try the URLs.get URL
-        personInput = fileId;
-        console.log("[Replicate] Using file ID as input for person image:", personInput);
-        
-        // Also try to get the public URL as fallback
-        try {
-          const fileInfo = await replicate.files.get(fileId);
-          console.log("[Replicate] File info response:", JSON.stringify(fileInfo, null, 2));
-          
-          // Check if urls.get exists and is a public URL (not just an API endpoint)
-          if (fileInfo && typeof fileInfo === "object" && fileInfo.urls && fileInfo.urls.get) {
-            const urlGet = fileInfo.urls.get;
-            // If it's not an API endpoint (doesn't contain /v1/files/), use it as public URL
-            if (!urlGet.includes('/v1/files/')) {
-              personInput = urlGet;
-              console.log("[Replicate] Using public URL for person image:", personInput);
-            }
+          // Extract URLs.get which is the URL Replicate can use
+          if (file.urls && typeof file.urls === "object" && file.urls.get) {
+            uploadedUrl = file.urls.get;
+          } else if ((file as any).url) {
+            uploadedUrl = (file as any).url;
+          } else if ((file as any).id) {
+            // Fallback: try using the ID (some models might accept it)
+            uploadedUrl = (file as any).id;
           }
-        } catch (getError) {
-          console.warn("[Replicate] Could not get file info, using file ID:", getError);
         }
+        
+        if (!uploadedUrl || typeof uploadedUrl !== "string") {
+          console.error("[Replicate] Invalid file response:", file);
+          throw new Error(`Replicate files.create() did not return a valid URL. Response: ${JSON.stringify(file)}`);
+        }
+        
+        personInput = uploadedUrl;
+        console.log("[Replicate] Using URL for person image:", personInput);
       } catch (uploadError) {
         console.error("[Replicate] Failed to upload person image:", uploadError);
         throw new Error(`Failed to upload person image: ${uploadError instanceof Error ? uploadError.message : "Unknown error"}`);
@@ -183,43 +169,29 @@ export async function generateTryOn(
         
         // Handle different response formats from Replicate
         // Replicate returns: { id: "...", urls: { get: "https://api.replicate.com/v1/files/..." } }
-        // The "get" URL is an API endpoint, we need the public URL
-        let fileId: string | undefined;
+        // Use urls.get directly - Replicate can use this URL internally for model inputs
+        let uploadedUrl: string | undefined;
         if (typeof file === "string") {
-          fileId = file;
+          uploadedUrl = file;
         } else if (file && typeof file === "object") {
-          // Extract file ID
-          fileId = (file as any).id || file.url || file.uri;
-        }
-        
-        if (!fileId || typeof fileId !== "string") {
-          console.error("[Replicate] Invalid file response - no ID found:", file);
-          throw new Error(`Replicate files.create() did not return a valid file ID. Response: ${JSON.stringify(file)}`);
-        }
-        
-        // Use the file ID directly - Replicate models accept file IDs
-        // The file ID format is typically just the ID string (not the full API URL)
-        // If the model doesn't accept IDs, we'll try the URLs.get URL
-        garmentInput = fileId;
-        console.log("[Replicate] Using file ID as input for garment image:", garmentInput);
-        
-        // Also try to get the public URL as fallback
-        try {
-          const fileInfo = await replicate.files.get(fileId);
-          console.log("[Replicate] File info response:", JSON.stringify(fileInfo, null, 2));
-          
-          // Check if urls.get exists and is a public URL (not just an API endpoint)
-          if (fileInfo && typeof fileInfo === "object" && fileInfo.urls && fileInfo.urls.get) {
-            const urlGet = fileInfo.urls.get;
-            // If it's not an API endpoint (doesn't contain /v1/files/), use it as public URL
-            if (!urlGet.includes('/v1/files/')) {
-              garmentInput = urlGet;
-              console.log("[Replicate] Using public URL for garment image:", garmentInput);
-            }
+          // Extract URLs.get which is the URL Replicate can use
+          if (file.urls && typeof file.urls === "object" && file.urls.get) {
+            uploadedUrl = file.urls.get;
+          } else if ((file as any).url) {
+            uploadedUrl = (file as any).url;
+          } else if ((file as any).id) {
+            // Fallback: try using the ID (some models might accept it)
+            uploadedUrl = (file as any).id;
           }
-        } catch (getError) {
-          console.warn("[Replicate] Could not get file info, using file ID:", getError);
         }
+        
+        if (!uploadedUrl || typeof uploadedUrl !== "string") {
+          console.error("[Replicate] Invalid file response:", file);
+          throw new Error(`Replicate files.create() did not return a valid URL. Response: ${JSON.stringify(file)}`);
+        }
+        
+        garmentInput = uploadedUrl;
+        console.log("[Replicate] Using URL for garment image:", garmentInput);
       } catch (uploadError) {
         console.error("[Replicate] Failed to upload garment image:", uploadError);
         throw new Error(`Failed to upload garment image: ${uploadError instanceof Error ? uploadError.message : "Unknown error"}`);
@@ -236,32 +208,36 @@ export async function generateTryOn(
 
     console.log("Calling Replicate API with model:", MODEL_ID);
     console.log("Input types - person:", typeof personInput, "garment:", typeof garmentInput);
-    console.log("Person URL length:", personInput?.length || 0, "Garment URL length:", garmentInput?.length || 0);
+    console.log("Person URL:", personInput?.substring(0, 100) + "...");
+    console.log("Garment URL:", garmentInput?.substring(0, 100) + "...");
     console.log("Using prompt:", GARMENT_TRANSFER_PROMPT);
     console.log("Quality mode:", qualityMode, "Config:", config);
     
-    // Use replicate.run which returns a Promise that resolves when the prediction completes
-    // For google/nano-banana-pro, we use image inputs and a prompt
-    // Try different parameter names as the model might use different conventions
-    let output;
+    // Always use predictions.create() and poll for results
+    // This is more reliable than replicate.run() for this model
+    console.log("Creating prediction with Replicate...");
+    
+    let prediction;
     try {
-      output = await replicate.run(MODEL_ID, {
+      // Try with image/image2 parameters first (most common for google/nano-banana-pro)
+      prediction = await replicate.predictions.create({
+        model: MODEL_ID,
         input: {
-          image: personInput, // Person image (now a URL)
-          image2: garmentInput, // Garment image (now a URL)
+          image: personInput,
+          image2: garmentInput,
           prompt: GARMENT_TRANSFER_PROMPT,
-          // OPTIMIZED: Add resolution parameters if model supports them
           width: config.width,
           height: config.height,
           num_inference_steps: config.numInferenceSteps,
           guidance_scale: config.guidanceScale,
         },
       });
+      console.log("Prediction created with image/image2 parameters");
     } catch (error: any) {
-      // If the above fails, try alternative parameter names
       console.warn("First attempt failed, trying alternative parameter names:", error.message);
       try {
-        output = await replicate.run(MODEL_ID, {
+        prediction = await replicate.predictions.create({
+          model: MODEL_ID,
           input: {
             person_image: personInput,
             garment_image: garmentInput,
@@ -270,98 +246,55 @@ export async function generateTryOn(
             height: config.height,
           },
         });
+        console.log("Prediction created with person_image/garment_image parameters");
       } catch (error2: any) {
-        console.warn("Second attempt failed, trying with different names:", error2.message);
-        // Try with just prompt and images as separate parameters (no resolution params)
-        output = await replicate.run(MODEL_ID, {
+        console.warn("Second attempt failed, trying with image1/image2:", error2.message);
+        prediction = await replicate.predictions.create({
+          model: MODEL_ID,
           input: {
             image1: personInput,
             image2: garmentInput,
             prompt: GARMENT_TRANSFER_PROMPT,
           },
         });
+        console.log("Prediction created with image1/image2 parameters");
       }
+    }
+    
+    console.log("Created prediction:", prediction.id, "Status:", prediction.status);
+    
+    // Poll for completion (max 120 seconds for image generation)
+    let pollCount = 0;
+    const maxPolls = 120;
+    let output: any = null;
+    
+    while ((prediction.status === "starting" || prediction.status === "processing") && pollCount < maxPolls) {
+      await new Promise(resolve => setTimeout(resolve, 2000)); // Poll every 2 seconds
+      const updated = await replicate.predictions.get(prediction.id);
+      prediction.status = updated.status;
+      prediction.output = updated.output;
+      prediction.error = updated.error;
+      pollCount++;
+      
+      console.log(`Poll ${pollCount}/${maxPolls} - Prediction status:`, prediction.status);
+      
+      if (prediction.status === "succeeded" && prediction.output) {
+        output = prediction.output;
+        console.log("Prediction succeeded, output:", JSON.stringify(output, null, 2));
+        break;
+      } else if (prediction.status === "failed" || prediction.status === "canceled") {
+        const errorMsg = prediction.error || "Unknown error";
+        console.error("Prediction failed:", errorMsg);
+        throw new Error(`Prediction ${prediction.status}: ${errorMsg}`);
+      }
+    }
+    
+    if (prediction.status !== "succeeded" || !output) {
+      throw new Error(`Prediction did not complete in time. Final status: ${prediction.status}, output: ${JSON.stringify(output)}`);
     }
 
     console.log("Replicate output type:", typeof output);
     console.log("Replicate output:", JSON.stringify(output, null, 2));
-    
-    // If output is an empty object {}, create a prediction manually and poll for results
-    if (output && typeof output === "object" && Object.keys(output).length === 0) {
-      console.warn("Replicate returned empty object, creating prediction manually and polling...");
-      
-      try {
-        // Create a prediction manually
-        let prediction;
-        try {
-          prediction = await replicate.predictions.create({
-            model: MODEL_ID,
-            input: {
-              image: personInput,
-              image2: garmentInput,
-              prompt: GARMENT_TRANSFER_PROMPT,
-              width: config.width,
-              height: config.height,
-            },
-          });
-        } catch (error: any) {
-          console.warn("First prediction attempt failed, trying alternatives:", error.message);
-          try {
-            prediction = await replicate.predictions.create({
-              model: MODEL_ID,
-              input: {
-                person_image: personInput,
-                garment_image: garmentInput,
-                prompt: GARMENT_TRANSFER_PROMPT,
-                width: config.width,
-                height: config.height,
-              },
-            });
-          } catch (error2: any) {
-            prediction = await replicate.predictions.create({
-              model: MODEL_ID,
-              input: {
-                image1: personInput,
-                image2: garmentInput,
-                prompt: GARMENT_TRANSFER_PROMPT,
-              },
-            });
-          }
-        }
-        
-        console.log("Created prediction:", prediction.id, "Status:", prediction.status);
-        
-        // Poll for completion (max 60 seconds)
-        let pollCount = 0;
-        const maxPolls = 60;
-        
-        while ((prediction.status === "starting" || prediction.status === "processing") && pollCount < maxPolls) {
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          const updated = await replicate.predictions.get(prediction.id);
-          prediction.status = updated.status;
-          prediction.output = updated.output;
-          prediction.error = updated.error;
-          pollCount++;
-          
-          console.log(`Poll ${pollCount}/${maxPolls} - Prediction status:`, prediction.status);
-          
-          if (prediction.status === "succeeded" && prediction.output) {
-            output = prediction.output;
-            console.log("Prediction succeeded, output:", output);
-            break;
-          } else if (prediction.status === "failed" || prediction.status === "canceled") {
-            throw new Error(`Prediction ${prediction.status}: ${prediction.error || "Unknown error"}`);
-          }
-        }
-        
-        if (prediction.status !== "succeeded") {
-          throw new Error(`Prediction did not complete in time. Final status: ${prediction.status}`);
-        }
-      } catch (pollError) {
-        console.error("Error polling prediction:", pollError);
-        throw pollError;
-      }
-    }
 
     // Replicate can return different formats:
     // 1. A string (URL)
