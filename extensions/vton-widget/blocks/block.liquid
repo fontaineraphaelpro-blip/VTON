@@ -1680,14 +1680,17 @@
             }
           }
           
+          state.isGenerating = false;
           if (generateBtn) generateBtn.disabled = false;
         }).catch(function(err) {
+          state.isGenerating = false;
           console.error('[VTON] Generation error:', err);
           
           // Stop loading messages
           stopLoadingMessages(shadowRoot);
           
           if (loading) loading.classList.remove('active');
+          if (generateBtn) generateBtn.disabled = false;
           const errorElement = shadowRoot.getElementById('vton-error');
           if (errorElement) {
             errorElement.classList.add('active');
