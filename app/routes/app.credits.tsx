@@ -97,8 +97,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             allSubscriptions = retryData?.data?.currentAppInstallation?.activeSubscriptions || [];
           }
           
+          // En développement, accepter aussi les abonnements de test
+          const allowTestSubscriptions = process.env.NODE_ENV !== "production";
           const recentSubscription = allSubscriptions
-            .filter((sub: any) => !sub.test)
+            .filter((sub: any) => allowTestSubscriptions || !sub.test)
             .sort((a: any, b: any) => {
               const dateA = new Date(a.createdAt || 0).getTime();
               const dateB = new Date(b.createdAt || 0).getTime();
@@ -180,13 +182,16 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       
       const allSubscriptions = subscriptionData?.data?.currentAppInstallation?.activeSubscriptions || [];
       
+      // En développement, accepter aussi les abonnements de test
+      const allowTestSubscriptions = process.env.NODE_ENV !== "production";
+      
       let activeSubscription = allSubscriptions.find((sub: any) => 
-        sub.status === "ACTIVE" && !sub.test
+        sub.status === "ACTIVE" && (allowTestSubscriptions || !sub.test)
       );
       
       if (!activeSubscription) {
         const sortedSubscriptions = allSubscriptions
-          .filter((sub: any) => !sub.test && (sub.status === "PENDING" || sub.status === "ACCEPTED" || sub.status === "ACTIVE"))
+          .filter((sub: any) => (allowTestSubscriptions || !sub.test) && (sub.status === "PENDING" || sub.status === "ACCEPTED" || sub.status === "ACTIVE"))
           .sort((a: any, b: any) => {
             const dateA = new Date(a.createdAt || 0).getTime();
             const dateB = new Date(b.createdAt || 0).getTime();
@@ -369,8 +374,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         const subscriptionData = await subscriptionResponse.json() as any;
         
         const activeSubscriptions = subscriptionData?.data?.currentAppInstallation?.activeSubscriptions || [];
+        // En développement, accepter aussi les abonnements de test
+        const allowTestSubscriptions = process.env.NODE_ENV !== "production";
         const activeSubscription = activeSubscriptions.find((sub: any) => 
-          sub.status === "ACTIVE" && !sub.test
+          sub.status === "ACTIVE" && (allowTestSubscriptions || !sub.test)
         );
 
         if (activeSubscription) {

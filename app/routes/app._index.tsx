@@ -73,15 +73,18 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         const allSubscriptions = subscriptionData?.data?.currentAppInstallation?.activeSubscriptions || [];
         console.log(`[Dashboard] 📊 Abonnements récupérés depuis Shopify: ${allSubscriptions.length}`, allSubscriptions.map((s: any) => ({ name: s.name, status: s.status, test: s.test, createdAt: s.createdAt })));
         
+        // En développement, accepter aussi les abonnements de test
+        const allowTestSubscriptions = process.env.NODE_ENV !== "production";
+        
         // Chercher d'abord un abonnement ACTIVE
         let activeSubscription = allSubscriptions.find((sub: any) => 
-          sub.status === "ACTIVE" && !sub.test
+          sub.status === "ACTIVE" && (allowTestSubscriptions || !sub.test)
         );
         
         // Si aucun ACTIVE, chercher un abonnement PENDING ou ACCEPTED (après achat récent)
         if (!activeSubscription) {
           const sortedSubscriptions = allSubscriptions
-            .filter((sub: any) => !sub.test && (sub.status === "PENDING" || sub.status === "ACCEPTED" || sub.status === "ACTIVE"))
+            .filter((sub: any) => (allowTestSubscriptions || !sub.test) && (sub.status === "PENDING" || sub.status === "ACCEPTED" || sub.status === "ACTIVE"))
             .sort((a: any, b: any) => {
               const dateA = new Date(a.createdAt || 0).getTime();
               const dateB = new Date(b.createdAt || 0).getTime();
