@@ -142,73 +142,76 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
           }
         `;
 
-        const subscriptionResponse = await admin.graphql(subscriptionQuery);
-        const subscriptionData = await subscriptionResponse.json() as any;
-        
-        const allSubscriptions = subscriptionData?.data?.currentAppInstallation?.activeSubscriptions || [];
-        
-        // Chercher l'abonnement le plus récent (créé récemment) qui n'est pas en test
-        // Il peut être ACTIVE, PENDING, ou autre selon le timing
-        const recentSubscription = allSubscriptions
-          .filter((sub: any) => !sub.test)
-          .sort((a: any, b: any) => {
-            // Trier par date de création (plus récent en premier)
-            const dateA = new Date(a.createdAt || 0).getTime();
-            const dateB = new Date(b.createdAt || 0).getTime();
-            return dateB - dateA;
-          })[0];
-        
-        // Si on trouve un abonnement (même s'il n'est pas encore ACTIVE), mettre à jour
-        // Les abonnements peuvent être PENDING avant d'être ACTIVE
-        if (recentSubscription) {
-          const planName = recentSubscription.name.toLowerCase().replace(/\s+/g, '-');
-
-          // Définir les crédits mensuels selon le plan
-          const planCredits: Record<string, number> = {
-            "free-installation-setup": 4,
-            "starter": 50,      // 29€ → 50 générations
-            "pro": 200,          // 99€ → 200 générations
-            "studio": 1000,      // 399€ → 1000 générations
-          };
-
-          const monthlyCredits = planCredits[planName] || planCredits["free-installation-setup"];
+          const subscriptionResponse = await currentAdmin.graphql(subscriptionQuery);
+          const subscriptionData = await subscriptionResponse.json() as any;
           
-          // Mettre à jour le shop avec le nouveau plan et crédits
-          await upsertShop(shop, {
-            monthlyQuota: monthlyCredits,
-          });
+          const allSubscriptions = subscriptionData?.data?.currentAppInstallation?.activeSubscriptions || [];
+          
+          // Chercher l'abonnement le plus récent (créé récemment) qui n'est pas en test
+          // Il peut être ACTIVE, PENDING, ou autre selon le timing
+          const recentSubscription = allSubscriptions
+            .filter((sub: any) => !sub.test)
+            .sort((a: any, b: any) => {
+              // Trier par date de création (plus récent en premier)
+              const dateA = new Date(a.createdAt || 0).getTime();
+              const dateB = new Date(b.createdAt || 0).getTime();
+              return dateB - dateA;
+            })[0];
+          
+          // Si on trouve un abonnement (même s'il n'est pas encore ACTIVE), mettre à jour
+          // Les abonnements peuvent être PENDING avant d'être ACTIVE
+          if (recentSubscription) {
+            const planName = recentSubscription.name.toLowerCase().replace(/\s+/g, '-');
 
-          // Mettre à jour plan_name dans la base de données
-          try {
-            await query(
-              `ALTER TABLE shops ADD COLUMN IF NOT EXISTS plan_name TEXT`
-            );
-            await query(
-              `UPDATE shops SET plan_name = $1 WHERE domain = $2`,
-              [planName, shop]
-            );
-          } catch (planError) {
-            // Ignore
+            // Définir les crédits mensuels selon le plan
+            const planCredits: Record<string, number> = {
+              "free-installation-setup": 4,
+              "starter": 50,      // 29€ → 50 générations
+              "pro": 200,          // 99€ → 200 générations
+              "studio": 1000,      // 399€ → 1000 générations
+            };
+
+            const monthlyCredits = planCredits[planName] || planCredits["free-installation-setup"];
+            
+            // Mettre à jour le shop avec le nouveau plan et crédits
+            await upsertShop(shop, {
+              monthlyQuota: monthlyCredits,
+            });
+
+            // Mettre à jour plan_name dans la base de données
+            try {
+              await query(
+                `ALTER TABLE shops ADD COLUMN IF NOT EXISTS plan_name TEXT`
+              );
+              await query(
+                `UPDATE shops SET plan_name = $1 WHERE domain = $2`,
+                [planName, shop]
+              );
+            } catch (planError) {
+              // Ignore
+            }
+
+            // Recharger les données du shop après mise à jour
+            const updatedShopData = await getShop(shop);
+            
+            // IMPORTANT: Retourner aussi le currentActivePlan mis à jour
+            // pour que l'UI affiche correctement le plan actuel
+            return json({
+              shop: updatedShopData || null,
+              subscriptionUpdated: true,
+              planName: planName,
+              subscriptionActivated: true,
+              activeSubscriptionName: recentSubscription.name,
+              subscriptionStatus: recentSubscription.status,
+              currentActivePlan: planName, // Ajouter le plan actuel pour l'UI
+            });
+          } else {
+            // Si aucun abonnement trouvé, peut-être que le paiement n'est pas encore traité
+            console.warn(`[Credits] Aucun abonnement trouvé après paiement pour shop: ${shop}, charge_id: ${chargeId}`);
           }
-
-          // Recharger les données du shop après mise à jour
-          const updatedShopData = await getShop(shop);
-          
-          // IMPORTANT: Retourner aussi le currentActivePlan mis à jour
-          // pour que l'UI affiche correctement le plan actuel
-          return json({
-            shop: updatedShopData || null,
-            subscriptionUpdated: true,
-            planName: planName,
-            subscriptionActivated: true,
-            activeSubscriptionName: recentSubscription.name,
-            subscriptionStatus: recentSubscription.status,
-            currentActivePlan: planName, // Ajouter le plan actuel pour l'UI
-          });
         } else {
-          // Si aucun abonnement trouvé, peut-être que le paiement n'est pas encore traité
-          // On attend un peu et on réessaie, ou on affiche un message
-          console.warn(`[Credits] Aucun abonnement trouvé après paiement pour shop: ${shop}, charge_id: ${chargeId}`);
+          // Session non disponible, continuer pour afficher la page normale
+          console.warn(`[Credits] Session non disponible pour traiter charge_id: ${chargeId}`);
         }
       } catch (subscriptionError) {
         // Log l'erreur pour débugger
