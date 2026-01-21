@@ -49,59 +49,29 @@ const replicate = new Replicate({
 
 /**
  * Generates a virtual try-on using google/nano-banana-pro with garment transfer prompt.
- * OPTIMIZED: Uses reduced resolution (512x512) and quality settings for faster processing.
+ * OPTIMIZED: Uses lowest resolution (512) and JPEG format for fastest processing.
  * 
  * @param personImage - Person image (URL or base64 data URL)
  * @param garmentImage - Garment image (URL or base64 data URL)
- * @param options - Quality mode options
  * @returns Object with resultUrl and config
  * @throws Error if generation fails
  */
 export async function generateTryOn(
   personImageUrl: string,
-  garmentImageUrl: string,
-  options?: {
-    qualityMode?: "speed" | "balanced" | "quality";
-  }
+  garmentImageUrl: string
 ): Promise<{ resultUrl: string; config?: any }> {
   if (!process.env.REPLICATE_API_TOKEN) {
     throw new Error("REPLICATE_API_TOKEN is not configured. Please set it in your environment variables.");
   }
 
-  // Default to "speed" for faster generation
-  const qualityMode = options?.qualityMode || "speed";
-  
-  // Adjust parameters based on quality mode
-  let config = { ...OPTIMIZED_CONFIG };
-  
-  if (qualityMode === "speed") {
-    // Fastest: Lowest resolution possible (512 is minimum for nano-banana-pro)
-    config = {
-      width: 512,
-      height: 512,
+  // Fastest optimized settings: 512 resolution, JPEG format
+  const config = {
+    width: 512,
+    height: 512,
       quality: 75,
       numInferenceSteps: 15,
       guidanceScale: 7.0,
     };
-  } else if (qualityMode === "balanced") {
-    // Balanced: Medium resolution
-    config = {
-      width: 512,
-      height: 512,
-      quality: 85,
-      numInferenceSteps: 20,
-      guidanceScale: 7.5,
-    };
-  } else if (qualityMode === "quality") {
-    // Best quality: Higher resolution but still optimized
-    config = {
-      width: 768,
-      height: 768,
-      quality: 90,
-      numInferenceSteps: 30,
-      guidanceScale: 8.0,
-    };
-  }
 
   try {
     // Convert data URLs to Replicate file URLs if needed
@@ -220,28 +190,15 @@ export async function generateTryOn(
     console.log("Person URL:", personInput?.substring(0, 100) + "...");
     console.log("Garment URL:", garmentInput?.substring(0, 100) + "...");
     console.log("Using prompt:", GARMENT_TRANSFER_PROMPT);
-    console.log("Quality mode:", qualityMode, "Config:", config);
+    console.log("Using optimized config:", config);
     
     // google/nano-banana-pro expects image_input as an array with [person_image, garment_image]
     // and uses aspect_ratio, resolution, output_format, safety_filter_level
     console.log("Creating prediction with Replicate...");
     
-    // Map quality mode to resolution
-    // Use "512" for speed (lowest resolution, fastest generation)
-    // Use "1K" for balanced (good quality/speed balance)
-    // Use "2K" for quality (highest resolution, slower)
-    let resolution: "512" | "1K" | "2K" = "512"; // Default to lowest for speed
-    if (qualityMode === "speed") {
-      resolution = "512";
-    } else if (qualityMode === "balanced") {
-      resolution = "1K";
-    } else if (qualityMode === "quality") {
-      resolution = "2K";
-    }
-    
-    // Use JPEG instead of PNG for faster processing and smaller file size
-    // JPEG is faster to process and generates smaller files
-    const outputFormat = qualityMode === "speed" ? "jpeg" : "png";
+    // Use "512" resolution (lowest, fastest) and JPEG format for optimal speed
+    const resolution: "512" | "1K" | "2K" = "512";
+    const outputFormat = "jpeg";
     
     const prediction = await replicate.predictions.create({
       model: MODEL_ID,
@@ -259,11 +216,10 @@ export async function generateTryOn(
     
     console.log("Created prediction:", prediction.id, "Status:", prediction.status);
     
-    // Poll for completion with shorter intervals for speed mode
-    // Reduced polling interval for faster response (1.5s instead of 2s)
+    // Poll for completion with optimized interval (1.5s for faster response)
     let pollCount = 0;
     const maxPolls = 120;
-    const pollInterval = qualityMode === "speed" ? 1500 : 2000; // 1.5s for speed, 2s for others
+    const pollInterval = 1500; // 1.5s for fastest response
     let output: any = null;
     
     while ((prediction.status === "starting" || prediction.status === "processing") && pollCount < maxPolls) {

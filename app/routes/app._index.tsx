@@ -609,7 +609,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       isEnabled,
       dailyLimit,
       monthlyQuota, // ADDED
-      qualityMode, // ADDED
     });
 
     return json({ success: true });
@@ -680,8 +679,6 @@ export default function Dashboard() {
   // Calculate 30-day total
   const last30DaysTotal = dailyStats.reduce((sum: number, stat: any) => sum + stat.count, 0);
   
-  // ADDED: Quality mode
-  const qualityMode = shop?.quality_mode || "balanced";
 
   const handleSave = (formData: FormData) => {
     // Ensure all required fields are present
@@ -705,9 +702,6 @@ export default function Dashboard() {
     }
     if (!formData.get("monthlyQuota")) {
       formData.set("monthlyQuota", shop?.monthly_quota ? String(shop.monthly_quota) : "");
-    }
-    if (!formData.get("qualityMode")) {
-      formData.set("qualityMode", shop?.quality_mode || "balanced");
     }
     fetcher.submit(formData, { method: "post" });
   };

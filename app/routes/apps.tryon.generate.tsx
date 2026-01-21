@@ -268,15 +268,11 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     // 6. Convert user photo to URL format
     const personImageUrl = convertBase64ToUrl(userPhoto);
 
-    // 7. Get quality mode from shop settings (default to "speed" for faster generation)
-    const qualityMode = (shopData.quality_mode || "speed") as "speed" | "balanced" | "quality";
-
-    // 8. Generate try-on image using Replicate
+    // 7. Generate try-on image using Replicate (optimized for speed)
     console.log("[Generate] Starting try-on generation:", {
       shop,
       productId,
       productHandle,
-      qualityMode,
     });
 
     let resultUrl: string;
@@ -284,7 +280,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     let success = false;
 
     try {
-      const result = await generateTryOn(personImageUrl, productImageUrl, { qualityMode });
+      const result = await generateTryOn(personImageUrl, productImageUrl);
       resultUrl = result.resultUrl;
       success = true;
       console.log("[Generate] Try-on generation successful:", { resultUrl });
