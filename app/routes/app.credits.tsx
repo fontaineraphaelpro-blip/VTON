@@ -87,28 +87,32 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       // Le charge_id dans l'URL confirme que Shopify a redirigé après un paiement
       // ATTENTION: La session peut être null juste après le paiement, on doit attendre et réessayer
       try {
-        // Attendre que la session soit réhydratée (jusqu'à 3 tentatives)
-        let attempts = 0;
+        // Si la session est null, attendre un peu et réessayer l'authentification
+        let currentAdmin = admin;
         let currentSession = session;
-        while ((!currentSession || !currentSession.shop) && attempts < 3) {
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          attempts++;
+        let currentShop = shop;
+        
+        if (!currentSession || !currentSession.shop) {
+          // Attendre un peu pour que la session soit réhydratée
+          await new Promise(resolve => setTimeout(resolve, 1500));
+          
           // Réessayer l'authentification
           try {
             const authResult = await authenticate.admin(request);
+            currentAdmin = authResult.admin;
             currentSession = authResult.session;
-          } catch {
-            // Continue to next attempt
+            if (currentSession && currentSession.shop) {
+              currentShop = currentSession.shop;
+            }
+          } catch (authError) {
+            console.warn(`[Credits] Impossible de ré-authentifier pour charge_id: ${chargeId}`, authError);
+            // Continuer avec la session originale si elle existe
           }
         }
         
-        // Si on n'a toujours pas de session après 3 tentatives, retourner une erreur
-        if (!currentSession || !currentSession.shop) {
-          console.warn(`[Credits] Session non disponible après ${attempts} tentatives pour charge_id: ${chargeId}`);
-          // Continuer quand même pour afficher la page normale
-        } else {
-          // Utiliser la session réhydratée
-          const shop = currentSession.shop;
+        // Si on a une session valide, traiter la mise à jour
+        if (currentSession && currentSession.shop && currentAdmin) {
+          const shop = currentShop;
           
           // Récupérer les abonnements actifs
           const subscriptionQuery = `#graphql
