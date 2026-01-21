@@ -73,13 +73,19 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         const allSubscriptions = subscriptionData?.data?.currentAppInstallation?.activeSubscriptions || [];
         console.log(`[Dashboard] 📊 Abonnements récupérés depuis Shopify: ${allSubscriptions.length}`, allSubscriptions.map((s: any) => ({ name: s.name, status: s.status, test: s.test, createdAt: s.createdAt })));
         
-        // En développement, accepter aussi les abonnements de test
+        // Accepter les abonnements de test (utilisés en développement/test)
+        // En production, les abonnements réels ne sont pas en test, donc ça marche aussi
         const allowTestSubscriptions = process.env.NODE_ENV !== "production";
+        console.log(`[Dashboard] 🔧 allowTestSubscriptions=${allowTestSubscriptions}, NODE_ENV=${process.env.NODE_ENV}`);
         
         // Chercher d'abord un abonnement ACTIVE
-        let activeSubscription = allSubscriptions.find((sub: any) => 
-          sub.status === "ACTIVE" && (allowTestSubscriptions || !sub.test)
-        );
+        let activeSubscription = allSubscriptions.find((sub: any) => {
+          const matches = sub.status === "ACTIVE" && (allowTestSubscriptions || !sub.test);
+          if (matches) {
+            console.log(`[Dashboard] ✅ Trouvé abonnement actif: ${sub.name}, status: ${sub.status}, test: ${sub.test}`);
+          }
+          return matches;
+        });
         
         // Si aucun ACTIVE, chercher un abonnement PENDING ou ACCEPTED (après achat récent)
         if (!activeSubscription) {

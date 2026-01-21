@@ -182,12 +182,17 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       
       const allSubscriptions = subscriptionData?.data?.currentAppInstallation?.activeSubscriptions || [];
       
-      // En développement, accepter aussi les abonnements de test
+      // Accepter les abonnements de test (utilisés en développement/test)
       const allowTestSubscriptions = process.env.NODE_ENV !== "production";
+      console.log(`[Credits] 🔧 allowTestSubscriptions=${allowTestSubscriptions}, NODE_ENV=${process.env.NODE_ENV}`);
       
-      let activeSubscription = allSubscriptions.find((sub: any) => 
-        sub.status === "ACTIVE" && (allowTestSubscriptions || !sub.test)
-      );
+      let activeSubscription = allSubscriptions.find((sub: any) => {
+        const matches = sub.status === "ACTIVE" && (allowTestSubscriptions || !sub.test);
+        if (matches) {
+          console.log(`[Credits] ✅ Trouvé abonnement actif: ${sub.name}, status: ${sub.status}, test: ${sub.test}`);
+        }
+        return matches;
+      });
       
       if (!activeSubscription) {
         const sortedSubscriptions = allSubscriptions
