@@ -191,8 +191,11 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   } catch (error) {
     // Si c'est une Response (redirection d'auth), la propager directement
     // authenticate.admin gère automatiquement la ré-authentification
-    // Ne PAS modifier l'URL de redirection car authenticate.admin sait déjà où rediriger
+    // IMPORTANT: authenticate.admin préserve automatiquement l'URL complète (avec query params)
+    // dans le paramètre return_to de la redirection OAuth, donc charge_id sera préservé
     if (error instanceof Response) {
+      // authenticate.admin a déjà inclus l'URL complète dans la redirection OAuth
+      // On propage simplement la Response sans modification
       throw error;
     }
     
