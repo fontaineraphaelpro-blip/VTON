@@ -120,11 +120,18 @@ export async function generateTryOn(
         console.log("[Replicate] File upload response:", JSON.stringify(file, null, 2));
         
         // Handle different response formats from Replicate
+        // Replicate returns: { urls: { get: "https://api.replicate.com/v1/files/..." } }
         let uploadedUrl: string | undefined;
         if (typeof file === "string") {
           uploadedUrl = file;
         } else if (file && typeof file === "object") {
-          uploadedUrl = file.url || file.uri || (file as any).URL;
+          // Try urls.get first (most common format)
+          if (file.urls && typeof file.urls === "object" && file.urls.get) {
+            uploadedUrl = file.urls.get;
+          } else {
+            // Fallback to other possible formats
+            uploadedUrl = file.url || file.uri || (file as any).URL;
+          }
         }
         
         if (!uploadedUrl || typeof uploadedUrl !== "string") {
@@ -158,11 +165,18 @@ export async function generateTryOn(
         console.log("[Replicate] File upload response:", JSON.stringify(file, null, 2));
         
         // Handle different response formats from Replicate
+        // Replicate returns: { urls: { get: "https://api.replicate.com/v1/files/..." } }
         let uploadedUrl: string | undefined;
         if (typeof file === "string") {
           uploadedUrl = file;
         } else if (file && typeof file === "object") {
-          uploadedUrl = file.url || file.uri || (file as any).URL;
+          // Try urls.get first (most common format)
+          if (file.urls && typeof file.urls === "object" && file.urls.get) {
+            uploadedUrl = file.urls.get;
+          } else {
+            // Fallback to other possible formats
+            uploadedUrl = file.url || file.uri || (file as any).URL;
+          }
         }
         
         if (!uploadedUrl || typeof uploadedUrl !== "string") {
