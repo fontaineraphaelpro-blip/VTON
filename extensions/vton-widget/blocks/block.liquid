@@ -1674,7 +1674,6 @@
           
           if (generateBtn) generateBtn.disabled = false;
         }).catch(function(err) {
-          clearTimeout(timeoutId);
           console.error('[VTON] Generation error:', err);
           
           // Stop loading messages
