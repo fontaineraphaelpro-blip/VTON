@@ -239,8 +239,26 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     // IMPORTANT: authenticate.admin préserve automatiquement l'URL complète (avec query params)
     // dans le paramètre return_to de la redirection OAuth, donc charge_id sera préservé
     if (error instanceof Response) {
-      // authenticate.admin a déjà inclus l'URL complète dans la redirection OAuth
-      // On propage simplement la Response sans modification
+      // authenticate.admin redirige vers /auth/login quand pas de session
+      // On doit préserver l'URL complète avec tous les paramètres (charge_id, etc.)
+      const url = new URL(request.url);
+      const currentUrl = url.toString();
+      
+      // Si la redirection est vers /auth/login, ajouter return_to avec l'URL complète
+      const location = error.headers.get("location");
+      if (location && location.includes("/auth/login")) {
+        const redirectUrl = new URL(location, request.url);
+        redirectUrl.searchParams.set("return_to", currentUrl);
+        
+        return new Response(null, {
+          status: 302,
+          headers: {
+            Location: redirectUrl.toString(),
+          },
+        });
+      }
+      
+      // Pour les autres redirections, propager directement
       throw error;
     }
     
