@@ -110,12 +110,8 @@ export async function generateTryOn(
         const base64Data = personImageUrl.split(",")[1];
         const buffer = Buffer.from(base64Data, "base64");
         
-        // Upload to Replicate files
-        const file = await replicate.files.create({
-          name: "person.jpg",
-          data: buffer,
-          contentType: "image/jpeg",
-        });
+        // Upload to Replicate files - files.create() expects a Buffer directly
+        const file = await replicate.files.create(buffer);
         
         personInput = file.url;
         console.log("[Replicate] Person image uploaded:", personInput);
@@ -133,12 +129,8 @@ export async function generateTryOn(
         const base64Data = garmentImageUrl.split(",")[1];
         const buffer = Buffer.from(base64Data, "base64");
         
-        // Upload to Replicate files
-        const file = await replicate.files.create({
-          name: "garment.jpg",
-          data: buffer,
-          contentType: "image/jpeg",
-        });
+        // Upload to Replicate files - files.create() expects a Buffer directly
+        const file = await replicate.files.create(buffer);
         
         garmentInput = file.url;
         console.log("[Replicate] Garment image uploaded:", garmentInput);
