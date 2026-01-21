@@ -677,19 +677,18 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       // Continue - if check fails, allow purchase attempt (will fail at Shopify level if duplicate)
     }
 
-    // SOLUTION SIMPLE: Laisser billing.request() gérer la redirection automatiquement
-    // billing.request() lance une Response de redirection qui doit être propagée directement
-    // Remix et Shopify gèrent automatiquement cette redirection, pas besoin de la capturer
+    // SOLUTION: Laisser billing.request() gérer la redirection automatiquement
+    // IMPORTANT: Le returnUrl DOIT inclure le paramètre shop pour que l'authentification fonctionne
     const { billing } = await authenticate.admin(request);
     
-    // Construire l'URL de retour complète pour que Shopify redirige vers l'app après paiement
-    // Utiliser SHOPIFY_APP_URL si disponible, sinon construire depuis request.url
+    // Construire l'URL de retour complète avec le paramètre shop
+    // Le paramètre shop est ESSENTIEL pour que l'authentification fonctionne après le paiement
     const appUrl = process.env.SHOPIFY_APP_URL || process.env.APPLICATION_URL || new URL(request.url).origin;
-    const returnUrl = `${appUrl}/app/credits`;
+    const returnUrl = `${appUrl}/app/credits?shop=${encodeURIComponent(shop)}`;
     
     // billing.request() va lancer une Response de redirection (302)
-    // On laisse Remix la propager automatiquement - c'est ça le truc !
-    // Après le paiement, Shopify redirigera automatiquement vers returnUrl
+    // Après le paiement, Shopify redirigera vers returnUrl avec charge_id
+    // Le paramètre shop permettra à authenticate.admin() de savoir quelle boutique authentifier
     return await billing.request({
       plan: planId as any,
       isTest: true, // Pour les boutiques de développement
