@@ -169,6 +169,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
           // Recharger les données du shop après mise à jour
           const updatedShopData = await getShop(shop);
+          
+          // IMPORTANT: Retourner aussi le currentActivePlan mis à jour
+          // pour que l'UI affiche correctement le plan actuel
           return json({
             shop: updatedShopData || null,
             subscriptionUpdated: true,
@@ -176,6 +179,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             subscriptionActivated: true,
             activeSubscriptionName: recentSubscription.name,
             subscriptionStatus: recentSubscription.status,
+            currentActivePlan: planName, // Ajouter le plan actuel pour l'UI
           });
         } else {
           // Si aucun abonnement trouvé, peut-être que le paiement n'est pas encore traité
@@ -824,21 +828,21 @@ export default function Credits() {
       id: "starter", 
       name: "Starter", 
       price: 29.0, 
-      description: "Parfait pour démarrer votre boutique",
+      description: "50 générations par mois",
       popular: false 
     },
     { 
       id: "pro", 
       name: "Pro", 
       price: 99.0, 
-      description: "Pour les professionnels en croissance",
+      description: "200 générations par mois",
       popular: true 
     },
     { 
       id: "studio", 
       name: "Studio", 
       price: 399.0, 
-      description: "Pour les studios créatifs et les grandes boutiques",
+      description: "1000 générations par mois",
       popular: false 
     },
   ];
