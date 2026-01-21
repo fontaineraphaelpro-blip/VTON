@@ -353,7 +353,16 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const formData = await request.formData();
     const intent = formData.get("intent");
 
-  if (intent === "purchase-credits") {
+  // Packs de crédits supprimés - seulement les abonnements sont disponibles
+  if (intent === "purchase-credits" || intent === "custom-pack") {
+    return json({ 
+      success: false, 
+      error: "Les packs de crédits ne sont plus disponibles. Veuillez utiliser un abonnement.",
+    });
+  }
+  
+  // Code des packs désactivé (gardé pour référence)
+  if (false && intent === "purchase-credits") {
     const packId = formData.get("packId") as string;
     const pack = CREDIT_PACKS.find((p) => p.id === packId);
 
@@ -634,7 +643,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     } else {
       return json({ success: false, error: "Minimum 250 credits required for custom pack" });
     }
-  } else if (intent === "purchase-subscription") {
+  }
+  
+  if (intent === "purchase-subscription") {
     const planId = formData.get("planId") as string;
     
     const validPlans = ["free-installation-setup", "starter", "pro", "studio"];
