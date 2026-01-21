@@ -193,14 +193,14 @@ export async function generateTryOn(
     console.log("Using optimized config:", config);
     
     // bytedance/seedream-4.5 expects image_input as an array with [person_image, garment_image]
-    // and uses size, width, height, aspect_ratio, max_images, sequential_image_generation
+    // and uses size (must be "2K", "4K", or "custom"), width, height, aspect_ratio, max_images, sequential_image_generation
     console.log("Creating prediction with Replicate...");
     
-    // Use "1K" size for faster generation (good balance between speed and quality)
-    // Can use "512" for even faster, but 1K is good balance
-    const size: "512" | "1K" | "2K" = "1K";
-    const width = size === "2K" ? 2048 : size === "1K" ? 1024 : 512;
-    const height = width; // Square aspect ratio
+    // Use "custom" size with 1024x1024 for faster generation (~30 seconds)
+    // The model only accepts "2K", "4K", or "custom" for size parameter
+    const size: "2K" | "4K" | "custom" = "custom";
+    const width = 1024; // Good balance between speed and quality
+    const height = 1024; // Square aspect ratio
     
     const prediction = await replicate.predictions.create({
       model: MODEL_ID,

@@ -1617,13 +1617,17 @@
             }
             
             if (!response.ok) {
-              return response.json().then(function(errorData) {
+              // Clone the response before consuming the body, so we can read it multiple times if needed
+              const clonedResponse = response.clone();
+              
+              // Try to parse as JSON first
+              return clonedResponse.json().then(function(errorData) {
                 console.error('[VTON] Error response:', errorData);
                 // Extract error message from response
                 const errorMessage = errorData?.error || errorData?.message || 'Generation failed: ' + response.status;
                 throw new Error(errorMessage);
               }).catch(function(parseError) {
-                // If JSON parsing fails, try to get text
+                // If JSON parsing fails, read from original response as text
                 return response.text().then(function(text) {
                   console.error('[VTON] Error response (text):', text);
                   throw new Error(text || 'Generation failed: ' + response.status);
