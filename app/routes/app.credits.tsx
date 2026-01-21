@@ -83,6 +83,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     // Handle return from Shopify payment - check charge_id first (subscription payments)
     // charge_id indicates a subscription payment return
     if (chargeId) {
+      console.log(`[Credits] 🔄 Traitement du paiement avec charge_id: ${chargeId} pour shop: ${shop}`);
+      
       // IMPORTANT: Vérifier explicitement le paiement
       // Le charge_id dans l'URL confirme que Shopify a redirigé après un paiement
       // ATTENTION: La session peut être null juste après le paiement, on doit attendre et réessayer
@@ -93,8 +95,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         let currentShop = shop;
         
         if (!currentSession || !currentSession.shop) {
+          console.log(`[Credits] ⏳ Session non disponible, attente de réhydratation...`);
           // Attendre un peu pour que la session soit réhydratée
-          await new Promise(resolve => setTimeout(resolve, 1500));
+          await new Promise(resolve => setTimeout(resolve, 2000)); // Augmenté à 2 secondes
           
           // Réessayer l'authentification
           try {
@@ -103,9 +106,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             currentSession = authResult.session;
             if (currentSession && currentSession.shop) {
               currentShop = currentSession.shop;
+              console.log(`[Credits] ✅ Session réhydratée pour shop: ${currentShop}`);
             }
           } catch (authError) {
-            console.warn(`[Credits] Impossible de ré-authentifier pour charge_id: ${chargeId}`, authError);
+            console.warn(`[Credits] ⚠️ Impossible de ré-authentifier pour charge_id: ${chargeId}`, authError);
             // Continuer avec la session originale si elle existe
           }
         }
@@ -113,6 +117,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         // Si on a une session valide, traiter la mise à jour
         if (currentSession && currentSession.shop && currentAdmin) {
           const shop = currentShop;
+          console.log(`[Credits] 🔍 Récupération des abonnements pour shop: ${shop}`);
           
           // Récupérer les abonnements actifs
           const subscriptionQuery = `#graphql
@@ -146,6 +151,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
           const subscriptionData = await subscriptionResponse.json() as any;
           
           const allSubscriptions = subscriptionData?.data?.currentAppInstallation?.activeSubscriptions || [];
+          console.log(`[Credits] 📋 Abonnements trouvés: ${allSubscriptions.length}`, allSubscriptions.map((s: any) => ({ name: s.name, status: s.status, test: s.test })));
           
           // Chercher l'abonnement le plus récent (créé récemment) qui n'est pas en test
           // Il peut être ACTIVE, PENDING, ou autre selon le timing
@@ -162,6 +168,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
           // Les abonnements peuvent être PENDING avant d'être ACTIVE
           if (recentSubscription) {
             const planName = recentSubscription.name.toLowerCase().replace(/\s+/g, '-');
+            console.log(`[Credits] ✅ Abonnement trouvé: ${recentSubscription.name} (${planName}), status: ${recentSubscription.status}`);
 
             // Définir les crédits mensuels selon le plan
             const planCredits: Record<string, number> = {
@@ -172,11 +179,13 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             };
 
             const monthlyCredits = planCredits[planName] || planCredits["free-installation-setup"];
+            console.log(`[Credits] 💰 Mise à jour du shop avec plan: ${planName}, crédits: ${monthlyCredits}`);
             
             // Mettre à jour le shop avec le nouveau plan et crédits
             await upsertShop(shop, {
               monthlyQuota: monthlyCredits,
             });
+            console.log(`[Credits] ✅ Shop mis à jour avec monthlyQuota: ${monthlyCredits}`);
 
             // Mettre à jour plan_name dans la base de données
             try {
@@ -187,17 +196,19 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                 `UPDATE shops SET plan_name = $1 WHERE domain = $2`,
                 [planName, shop]
               );
+              console.log(`[Credits] ✅ Plan name mis à jour: ${planName}`);
             } catch (planError) {
-              // Ignore
+              console.error(`[Credits] ⚠️ Erreur lors de la mise à jour du plan_name:`, planError);
             }
 
             // Recharger les données du shop après mise à jour
-            const updatedShopData = await getShop(shop);
+        const updatedShopData = await getShop(shop);
+            console.log(`[Credits] ✅ Données du shop rechargées:`, updatedShopData ? { monthlyQuota: updatedShopData.monthlyQuota, planName: (updatedShopData as any).plan_name } : 'null');
             
             // IMPORTANT: Retourner aussi le currentActivePlan mis à jour
             // pour que l'UI affiche correctement le plan actuel
-            return json({
-              shop: updatedShopData || null,
+        return json({
+          shop: updatedShopData || null,
               subscriptionUpdated: true,
               planName: planName,
               subscriptionActivated: true,
@@ -207,15 +218,16 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             });
           } else {
             // Si aucun abonnement trouvé, peut-être que le paiement n'est pas encore traité
-            console.warn(`[Credits] Aucun abonnement trouvé après paiement pour shop: ${shop}, charge_id: ${chargeId}`);
+            console.warn(`[Credits] ⚠️ Aucun abonnement trouvé après paiement pour shop: ${shop}, charge_id: ${chargeId}`);
+            console.warn(`[Credits] 📋 Tous les abonnements:`, allSubscriptions);
           }
         } else {
           // Session non disponible, continuer pour afficher la page normale
-          console.warn(`[Credits] Session non disponible pour traiter charge_id: ${chargeId}`);
+          console.warn(`[Credits] ⚠️ Session non disponible pour traiter charge_id: ${chargeId}`);
         }
       } catch (subscriptionError) {
         // Log l'erreur pour débugger
-        console.error(`[Credits] Erreur lors de la vérification de l'abonnement:`, subscriptionError);
+        console.error(`[Credits] ❌ Erreur lors de la vérification de l'abonnement:`, subscriptionError);
         // Continue - will show normal page even if subscription check fails
       }
     }
@@ -233,6 +245,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
               name
               status
               test
+              createdAt
               lineItems {
                 plan {
                   pricingDetails {
@@ -254,10 +267,26 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       const subscriptionResponse = await admin.graphql(subscriptionQuery);
       const subscriptionData = await subscriptionResponse.json() as any;
       
-      const activeSubscriptions = subscriptionData?.data?.currentAppInstallation?.activeSubscriptions || [];
-      const activeSubscription = activeSubscriptions.find((sub: any) => 
+      const allSubscriptions = subscriptionData?.data?.currentAppInstallation?.activeSubscriptions || [];
+      
+      // Chercher d'abord un abonnement ACTIVE
+      let activeSubscription = allSubscriptions.find((sub: any) => 
         sub.status === "ACTIVE" && !sub.test
       );
+      
+      // Si aucun ACTIVE, chercher un abonnement PENDING ou ACCEPTED (après achat récent)
+      if (!activeSubscription) {
+        // Trier par date de création (plus récent en premier) et prendre le premier non-test
+        const sortedSubscriptions = allSubscriptions
+          .filter((sub: any) => !sub.test && (sub.status === "PENDING" || sub.status === "ACCEPTED" || sub.status === "ACTIVE"))
+          .sort((a: any, b: any) => {
+            const dateA = new Date(a.createdAt || 0).getTime();
+            const dateB = new Date(b.createdAt || 0).getTime();
+            return dateB - dateA;
+          });
+        
+        activeSubscription = sortedSubscriptions[0];
+      }
 
       if (activeSubscription) {
         // Normalize plan name (e.g., "Starter" -> "starter")
@@ -265,6 +294,12 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       }
     } catch (subscriptionError) {
       // Continue even if subscription check fails - will show all plans as available
+    }
+
+    // FALLBACK: Utiliser plan_name de la base de données si aucun abonnement Shopify trouvé
+    // C'est important car après un achat, l'abonnement peut prendre du temps à devenir ACTIVE
+    if (!currentActivePlan && shopData?.plan_name) {
+      currentActivePlan = shopData.plan_name;
     }
 
     return json({
@@ -363,11 +398,11 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const shop = session.shop;
     const formData = await request.formData();
     const intent = formData.get("intent");
-
+    
   // Packs de crédits supprimés - seulement les abonnements sont disponibles
   if (intent === "purchase-credits" || intent === "custom-pack") {
-    return json({ 
-      success: false, 
+          return json({ 
+            success: false, 
       error: "Les packs de crédits ne sont plus disponibles. Veuillez utiliser un abonnement.",
     });
   }
@@ -378,16 +413,16 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     
     const validPlans = ["free-installation-setup", "starter", "pro", "studio"];
     if (!validPlans.includes(planId)) {
-      return json({ 
-        success: false, 
+          return json({ 
+            success: false, 
         error: "Plan d'abonnement invalide",
-      });
-    }
+          });
+        }
 
     // Le plan gratuit est déjà attribué automatiquement
     if (planId === "free-installation-setup") {
-      return json({ 
-        success: false, 
+          return json({ 
+            success: false, 
         error: "Le plan gratuit est déjà actif",
       });
     }
@@ -464,8 +499,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   }
   
   // Si aucun intent reconnu
-  return json({ 
-    success: false, 
+            return json({ 
+              success: false, 
     error: "Action non reconnue",
   });
   
@@ -515,11 +550,19 @@ export default function Credits() {
     if (subscriptionUpdated && planName) {
       // Attendre un peu pour que la base de données soit mise à jour
       const timer = setTimeout(() => {
-        revalidator.revalidate();
-      }, 1000);
+        // Nettoyer l'URL des paramètres de retour de paiement
+        const url = new URL(window.location.href);
+        url.searchParams.delete('charge_id');
+        url.searchParams.delete('purchase');
+        url.searchParams.delete('pack');
+        url.searchParams.delete('credits');
+        
+        // Recharger complètement la page pour forcer la mise à jour
+        window.location.href = url.toString();
+      }, 1500);
       return () => clearTimeout(timer);
     }
-  }, [subscriptionUpdated, planName, revalidator]);
+  }, [subscriptionUpdated, planName]);
 
   // Recharger automatiquement si charge_id est présent dans l'URL (retour de paiement)
   useEffect(() => {
@@ -528,11 +571,12 @@ export default function Credits() {
     if (chargeId && !subscriptionUpdated) {
       // Attendre que la session soit réhydratée puis recharger
       const timer = setTimeout(() => {
-        revalidator.revalidate();
-      }, 2000);
+        // Forcer un rechargement complet après le retour du paiement
+        window.location.reload();
+      }, 2500);
       return () => clearTimeout(timer);
     }
-  }, [revalidator, subscriptionUpdated]);
+  }, [subscriptionUpdated]);
 
   const handleSubscriptionPurchase = (planId: string) => {
     if (isSubmitting || submittingPackId !== null) {
@@ -634,7 +678,7 @@ export default function Credits() {
                         window.location.href = (fetcher.data as any).reauthUrl;
                       }
                     } catch (e) {
-                      window.location.href = (fetcher.data as any).reauthUrl;
+                    window.location.href = (fetcher.data as any).reauthUrl;
                     }
                   } else {
                     // Rafraîchir la page parente
@@ -645,7 +689,7 @@ export default function Credits() {
                         window.location.reload();
                       }
                     } catch (e) {
-                      window.location.reload();
+                    window.location.reload();
                     }
                   }
                 },
@@ -677,7 +721,7 @@ export default function Credits() {
           <p style={{ color: "var(--text-secondary)", marginBottom: "var(--spacing-lg)" }}>
             Choisissez un plan d'abonnement mensuel pour accéder à toutes les fonctionnalités
           </p>
-          <div className="pricing-grid">
+        <div className="pricing-grid">
             {subscriptionPlans.map((plan) => {
               const isCurrentPlan = currentActivePlan === plan.id;
               const isFreePlan = plan.id === "free-installation-setup";
@@ -685,23 +729,23 @@ export default function Credits() {
               return (
                 <div key={plan.id} className={`plan-card ${plan.popular ? 'featured' : ''} ${isCurrentPlan ? 'current-plan' : ''}`}>
                   {plan.popular && (
-                    <div className="plan-badge">Most popular</div>
-                  )}
+                <div className="plan-badge">Most popular</div>
+              )}
                   {isCurrentPlan && (
                     <div className="plan-badge" style={{ backgroundColor: '#008060', color: 'white' }}>
                       Plan actuel
                     </div>
                   )}
                   <div className="plan-name">{plan.name}</div>
-                  <div className="plan-price">
+              <div className="plan-price">
                     ${plan.price.toFixed(2)} <span>/ month</span>
-                  </div>
-                  <div className="plan-features">
+              </div>
+              <div className="plan-features">
                     <div className="plan-feature">{plan.description}</div>
                     <div className="plan-feature">Abonnement récurrent mensuel</div>
                     <div className="plan-feature">Annulable à tout moment</div>
-                  </div>
-                  <div className="plan-cta">
+              </div>
+              <div className="plan-cta">
                     {isCurrentPlan ? (
                       <button 
                         className="plan-button"
@@ -727,16 +771,16 @@ export default function Credits() {
                         Déjà inclus
                       </button>
                     ) : (
-                      <button 
-                        className="plan-button"
+                <button 
+                  className="plan-button"
                         onClick={() => handleSubscriptionPurchase(plan.id)}
-                        disabled={isSubmitting || submittingPackId !== null}
-                      >
+                  disabled={isSubmitting || submittingPackId !== null}
+                >
                         {isSubmitting && submittingPackId === plan.id ? "Processing..." : "S'abonner"}
-                      </button>
+                </button>
                     )}
-                  </div>
-                </div>
+              </div>
+            </div>
               );
             })}
           </div>
