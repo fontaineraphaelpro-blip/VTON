@@ -1,5 +1,5 @@
 import type { LoaderFunctionArgs, ActionFunctionArgs } from "@remix-run/node";
-import { authenticate } from "../shopify.server";
+import { authenticate } from "../../shopify.server";
 
 // For embedded apps, login is handled automatically via OAuth
 // This route should use authenticate.admin which will handle the OAuth flow automatically
