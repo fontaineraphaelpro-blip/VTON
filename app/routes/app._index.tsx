@@ -71,6 +71,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       if (subscriptionResponse.ok) {
         const subscriptionData = await subscriptionResponse.json() as any;
         const allSubscriptions = subscriptionData?.data?.currentAppInstallation?.activeSubscriptions || [];
+        console.log(`[Dashboard] 📊 Abonnements récupérés depuis Shopify: ${allSubscriptions.length}`, allSubscriptions.map((s: any) => ({ name: s.name, status: s.status, test: s.test, createdAt: s.createdAt })));
         
         // Chercher d'abord un abonnement ACTIVE
         let activeSubscription = allSubscriptions.find((sub: any) => 
@@ -94,16 +95,22 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
           // Normalize plan name (e.g., "Starter" -> "starter")
           const detectedPlanName = activeSubscription.name.toLowerCase().replace(/\s+/g, '-');
           currentActivePlan = detectedPlanName;
+          console.log(`[Dashboard] ✅ Abonnement détecté: ${activeSubscription.name} (${detectedPlanName}), status: ${activeSubscription.status}`);
           
           // Récupérer les données actuelles du shop
           const shopData = await getShop(shop);
           const dbPlanName = shopData?.plan_name;
+          console.log(`[Dashboard] 🔍 Comparaison: plan DB="${dbPlanName}", plan Shopify="${detectedPlanName}"`);
           
           // Vérifier si la base de données doit être mise à jour
           if (dbPlanName !== detectedPlanName) {
             console.log(`[Dashboard] 🔄 Synchronisation nécessaire: plan DB="${dbPlanName}", plan Shopify="${detectedPlanName}"`);
             shouldUpdateDb = true;
+          } else {
+            console.log(`[Dashboard] ✓ Plans identiques, pas de synchronisation nécessaire`);
           }
+        } else {
+          console.log(`[Dashboard] ⚠️ Aucun abonnement actif trouvé dans Shopify`);
         }
       }
     } catch (subError) {

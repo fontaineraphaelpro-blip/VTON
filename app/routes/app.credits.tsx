@@ -289,6 +289,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       const subscriptionData = await subscriptionResponse.json() as any;
       
       const allSubscriptions = subscriptionData?.data?.currentAppInstallation?.activeSubscriptions || [];
+      console.log(`[Credits] 📊 Abonnements récupérés depuis Shopify: ${allSubscriptions.length}`, allSubscriptions.map((s: any) => ({ name: s.name, status: s.status, test: s.test, createdAt: s.createdAt })));
       
       // Chercher d'abord un abonnement ACTIVE
       let activeSubscription = allSubscriptions.find((sub: any) => 
@@ -313,12 +314,16 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         // Normalize plan name (e.g., "Starter" -> "starter")
         const detectedPlanName = activeSubscription.name.toLowerCase().replace(/\s+/g, '-');
         currentActivePlan = detectedPlanName;
+        console.log(`[Credits] ✅ Abonnement détecté: ${activeSubscription.name} (${detectedPlanName}), status: ${activeSubscription.status}`);
         
         // Vérifier si la base de données doit être mise à jour
         const dbPlanName = shopData?.plan_name;
+        console.log(`[Credits] 🔍 Comparaison: plan DB="${dbPlanName}", plan Shopify="${detectedPlanName}"`);
         if (dbPlanName !== detectedPlanName) {
           console.log(`[Credits] 🔄 Synchronisation nécessaire: plan DB="${dbPlanName}", plan Shopify="${detectedPlanName}"`);
           shouldUpdateDb = true;
+        } else {
+          console.log(`[Credits] ✓ Plans identiques, pas de synchronisation nécessaire`);
         }
       } else {
         // Aucun abonnement actif trouvé, utiliser le plan gratuit par défaut
