@@ -90,6 +90,29 @@ function convertBase64ToUrl(base64Data: string): string {
 }
 
 /**
+ * Handle OPTIONS requests for CORS preflight
+ */
+export const loader = async ({ request }: LoaderFunctionArgs) => {
+  if (request.method === "OPTIONS") {
+    const origin = request.headers.get("origin") || "";
+    const referer = request.headers.get("referer") || "";
+    const isFromShopifyStorefront = origin.includes(".myshopify.com") || referer.includes(".myshopify.com");
+    
+    const headers = new Headers();
+    if (isFromShopifyStorefront) {
+      headers.set("Access-Control-Allow-Origin", origin || "*");
+      headers.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+      headers.set("Access-Control-Allow-Headers", "Content-Type");
+      headers.set("Access-Control-Max-Age", "86400"); // 24 hours
+    }
+    
+    return new Response(null, { status: 204, headers });
+  }
+  
+  return json({ error: "Method not allowed" }, { status: 405 });
+};
+
+/**
  * POST /apps/tryon/generate
  * 
  * Query parameters:
