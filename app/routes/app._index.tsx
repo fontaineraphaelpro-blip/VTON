@@ -593,10 +593,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const isEnabled = formData.get("isEnabled") === "true";
   const dailyLimitStr = formData.get("dailyLimit") as string;
   const dailyLimit = dailyLimitStr ? parseInt(dailyLimitStr) : 100;
-  // ADDED: Monthly quota and quality mode
+  // ADDED: Monthly quota
   const monthlyQuotaStr = formData.get("monthlyQuota") as string;
   const monthlyQuota = monthlyQuotaStr && monthlyQuotaStr.trim() !== "" ? parseInt(monthlyQuotaStr) : null;
-  const qualityMode = (formData.get("qualityMode") as string) || "balanced";
 
     // Configuration saved (logged in database)
 
@@ -1042,30 +1041,6 @@ export default function Dashboard() {
                     ? `Current usage: ${monthlyUsageCount.toLocaleString()} / ${monthlyQuota.toLocaleString()} (${quotaPercentage}%)`
                     : `Current usage: ${monthlyUsageCount.toLocaleString()} (no limit set)`
                   }
-                </p>
-              </div>
-              {/* ADDED: Quality vs Speed setting */}
-              <div className="setting-card">
-                <label>Quality Mode</label>
-                <select
-                  name="qualityMode"
-                  defaultValue={qualityMode}
-                  style={{ 
-                    width: "100%", 
-                    padding: "8px", 
-                    borderRadius: "4px", 
-                    border: "1px solid var(--border)",
-                    fontSize: "14px"
-                  }}
-                >
-                  <option value="speed">Speed (Faster generation, lower quality)</option>
-                  <option value="balanced">Balanced (Recommended)</option>
-                  <option value="quality">Quality (Slower generation, higher quality)</option>
-                </select>
-                <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "4px" }}>
-                  {qualityMode === "speed" && "Optimized for faster generation times"}
-                  {qualityMode === "balanced" && "Good balance between speed and quality"}
-                  {qualityMode === "quality" && "Optimized for best image quality"}
                 </p>
               </div>
               <div className="setting-card">
