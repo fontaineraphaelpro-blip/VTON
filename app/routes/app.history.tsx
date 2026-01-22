@@ -113,9 +113,12 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         // Fetch in batches (Shopify Admin API limit is 250, but let's use 10 for safety)
         for (let i = 0; i < handlesArray.length; i += 10) {
           const batch = handlesArray.slice(i, i + 10);
+          // Build query string for handles - correct GraphQL syntax
+          const handleQueryString = batch.map(h => `handle:${h}`).join(" OR ");
+          
           const handleQuery = `#graphql
-            query getProductsByHandle($handles: [String!]!) {
-              products(first: 10, query: $handles) {
+            query getProductsByHandle {
+              products(first: 10, query: "${handleQueryString}") {
                 edges {
                   node {
                     id
@@ -127,12 +130,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             }
           `;
           
-          // Build query string for handles
-          const handleQueryString = batch.map(h => `handle:${h}`).join(" OR ");
-          
-          const response = await admin.graphql(handleQuery, {
-            variables: { handles: handleQueryString }
-          });
+          const response = await admin.graphql(handleQuery);
           
           if (response.ok) {
             const data = await response.json() as any;
