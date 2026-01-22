@@ -509,7 +509,7 @@
               left: 0;
               right: 0;
               bottom: 0;
-              background: rgba(0, 0, 0, 0.7);
+              background: rgba(0, 0, 0, 0.75);
               display: none;
               align-items: center;
               justify-content: center;
@@ -522,11 +522,13 @@
             .vton-modal {
               background: white;
               border-radius: 8px;
-              max-width: 600px;
+              max-width: 700px;
               width: 100%;
-              max-height: 90vh;
-              overflow-y: auto;
+              max-height: 85vh;
+              overflow: hidden;
               position: relative;
+              display: flex;
+              flex-direction: column;
             }
             .vton-modal-close {
               position: absolute;
@@ -541,15 +543,26 @@
               color: #666;
             }
             .vton-modal-content {
-              padding: 24px;
+              padding: 20px;
+              display: flex;
+              flex-direction: column;
+              flex: 1;
+              overflow: hidden;
+            }
+            .vton-modal-content.has-result {
+              padding: 16px;
             }
             .vton-upload-area {
               border: 2px dashed #ccc;
               border-radius: 8px;
-              padding: 40px;
+              padding: 32px 24px;
               text-align: center;
               cursor: pointer;
-              margin-bottom: 16px;
+              margin-bottom: 12px;
+              transition: all 0.3s ease;
+            }
+            .vton-upload-area.hidden {
+              display: none;
             }
             .vton-upload-area p {
               margin: 0;
@@ -562,14 +575,20 @@
             }
             .vton-upload-area img {
               max-width: 100%;
+              max-height: 200px;
               border-radius: 8px;
+              object-fit: contain;
             }
             .vton-privacy-notice {
               font-size: 12px;
               color: #999;
               text-align: center;
-              margin: 12px 0;
+              margin: 8px 0;
               font-style: italic;
+              flex-shrink: 0;
+            }
+            .vton-privacy-notice.hidden {
+              display: none;
             }
             .vton-generate-btn {
               width: 100%;
@@ -579,7 +598,10 @@
               font-size: 16px;
               font-weight: 600;
               cursor: pointer;
-              margin-top: 16px;
+              margin-top: 12px;
+            }
+            .vton-generate-btn.hidden {
+              display: none;
             }
             .vton-generate-btn:disabled {
               opacity: 0.6;
@@ -587,8 +609,9 @@
             }
             .vton-loading {
               text-align: center;
-              padding: 40px;
+              padding: 32px 24px;
               display: none;
+              flex-shrink: 0;
             }
             .vton-loading.active {
               display: block;
@@ -716,15 +739,55 @@
               100% { transform: rotate(360deg); }
             }
             .vton-result {
-              margin-top: 16px;
               display: none;
+              flex: 1;
+              overflow: hidden;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+              min-height: 0;
             }
             .vton-result.active {
-              display: block;
+              display: flex;
+            }
+            .vton-result-content {
+              width: 100%;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+              gap: 16px;
             }
             .vton-result img {
-              width: 100%;
+              max-width: 100%;
+              max-height: 50vh;
+              width: auto;
+              height: auto;
               border-radius: 8px;
+              object-fit: contain;
+              display: block;
+            }
+            .vton-add-to-cart-btn {
+              width: 100%;
+              max-width: 400px;
+              padding: 16px 24px;
+              border: none;
+              border-radius: 6px;
+              font-size: 18px;
+              font-weight: 700;
+              cursor: pointer;
+              transition: all 0.3s ease;
+              box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+            }
+            .vton-add-to-cart-btn:hover {
+              transform: translateY(-2px);
+              box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+            }
+            .vton-add-to-cart-btn:active {
+              transform: translateY(0);
             }
             .vton-error {
               color: #d32f2f;
@@ -744,18 +807,24 @@
                 font-size: 15px;
               }
               .vton-modal-overlay {
-                padding: 10px;
+                padding: 0;
               }
               .vton-modal {
                 max-width: 100%;
-                max-height: 95vh;
-                border-radius: 8px 8px 0 0;
+                max-height: 100vh;
+                height: 100vh;
+                border-radius: 0;
               }
               .vton-modal-content {
-                padding: 20px 16px;
+                padding: 16px;
+                height: 100%;
+              }
+              .vton-modal-content.has-result {
+                padding: 12px;
+                justify-content: center;
               }
               .vton-upload-area {
-                padding: 32px 20px;
+                padding: 24px 16px;
               }
               .vton-upload-area p {
                 font-size: 13px;
@@ -769,9 +838,10 @@
                 right: 8px;
                 font-size: 32px;
                 padding: 8px;
+                z-index: 10;
               }
               .vton-loading {
-                padding: 32px 20px;
+                padding: 24px 16px;
               }
               .vton-loading-text {
                 font-size: 13px;
@@ -785,6 +855,14 @@
                 padding: 12px;
                 font-size: 14px;
               }
+              .vton-result img {
+                max-height: 60vh;
+              }
+              .vton-add-to-cart-btn {
+                max-width: 100%;
+                padding: 14px 20px;
+                font-size: 16px;
+              }
             }
             @media (max-width: 480px) {
               .vton-button {
@@ -792,17 +870,27 @@
                 font-size: 14px;
               }
               .vton-modal-content {
-                padding: 16px 12px;
+                padding: 12px;
+              }
+              .vton-modal-content.has-result {
+                padding: 8px;
               }
               .vton-upload-area {
-                padding: 28px 16px;
+                padding: 20px 12px;
               }
               .vton-generate-btn {
                 padding: 11px;
                 font-size: 14px;
               }
               .vton-loading {
-                padding: 28px 16px;
+                padding: 20px 12px;
+              }
+              .vton-result img {
+                max-height: 55vh;
+              }
+              .vton-add-to-cart-btn {
+                padding: 12px 16px;
+                font-size: 15px;
               }
             }
           </style>
@@ -1517,16 +1605,35 @@
         // Hide loading
         if (loading) loading.classList.remove('active');
         
-        // Display result with "Add to Cart" button
+        // Hide upload area (image de départ), generate button, and privacy notice
+        const uploadArea = shadowRoot.getElementById('vton-upload-area');
+        const modalContent = shadowRoot.querySelector('.vton-modal-content');
+        const privacyNotice = shadowRoot.querySelector('.vton-privacy-notice');
+        if (uploadArea) {
+          uploadArea.classList.add('hidden');
+        }
+        if (generateBtn) {
+          generateBtn.classList.add('hidden');
+        }
+        if (privacyNotice) {
+          privacyNotice.classList.add('hidden');
+        }
+        if (modalContent) {
+          modalContent.classList.add('has-result');
+        }
+        
+        // Display result with "Add to Cart" button - ONLY the result, no original image
         if (result && state.resultImageUrl && typeof state.resultImageUrl === 'string' && state.resultImageUrl.startsWith('http')) {
           result.classList.add('active');
           const buttonBg = state.widgetSettings.widget_bg || '#000000';
           const buttonColor = state.widgetSettings.widget_color || '#ffffff';
           result.innerHTML = 
-            '<img src="' + state.resultImageUrl + '" alt="Result" style="width: 100%; border-radius: 8px; display: block; margin-bottom: 16px;" />' +
-            '<button class="vton-add-to-cart-btn" style="width: 100%; padding: 14px; border: none; border-radius: 4px; font-size: 16px; font-weight: 600; cursor: pointer; background: ' + buttonBg + '; color: ' + buttonColor + '; transition: all 0.3s ease;" onclick="window.vtonWidgetInstance.handleAddToCart()">' +
+            '<div class="vton-result-content">' +
+            '<img src="' + state.resultImageUrl + '" alt="Try-On Result" />' +
+            '<button class="vton-add-to-cart-btn" style="background: ' + buttonBg + '; color: ' + buttonColor + ';" onclick="window.vtonWidgetInstance.handleAddToCart()">' +
             'Add to Cart' +
-            '</button>';
+            '</button>' +
+            '</div>';
           console.log('[VTON] Result displayed successfully with Add to Cart button');
         } else {
           console.error('[VTON] Cannot display result:', {
@@ -1703,16 +1810,35 @@
           // Hide loading
           if (loading) loading.classList.remove('active');
           
-          // Display result with "Add to Cart" button
+          // Hide upload area (image de départ), generate button, and privacy notice
+          const uploadArea = shadowRoot.getElementById('vton-upload-area');
+          const modalContent = shadowRoot.querySelector('.vton-modal-content');
+          const privacyNotice = shadowRoot.querySelector('.vton-privacy-notice');
+          if (uploadArea) {
+            uploadArea.classList.add('hidden');
+          }
+          if (generateBtn) {
+            generateBtn.classList.add('hidden');
+          }
+          if (privacyNotice) {
+            privacyNotice.classList.add('hidden');
+          }
+          if (modalContent) {
+            modalContent.classList.add('has-result');
+          }
+          
+          // Display result with "Add to Cart" button - ONLY the result, no original image
           if (result && state.resultImageUrl && typeof state.resultImageUrl === 'string' && state.resultImageUrl.startsWith('http')) {
             result.classList.add('active');
             const buttonBg = state.widgetSettings.widget_bg || '#000000';
             const buttonColor = state.widgetSettings.widget_color || '#ffffff';
             result.innerHTML = 
-              '<img src="' + state.resultImageUrl + '" alt="Result" style="width: 100%; border-radius: 8px; display: block; margin-bottom: 16px;" />' +
-              '<button class="vton-add-to-cart-btn" style="width: 100%; padding: 14px; border: none; border-radius: 4px; font-size: 16px; font-weight: 600; cursor: pointer; background: ' + buttonBg + '; color: ' + buttonColor + '; transition: all 0.3s ease;" onclick="window.vtonWidgetInstance.handleAddToCart()">' +
+              '<div class="vton-result-content">' +
+              '<img src="' + state.resultImageUrl + '" alt="Try-On Result" />' +
+              '<button class="vton-add-to-cart-btn" style="background: ' + buttonBg + '; color: ' + buttonColor + ';" onclick="window.vtonWidgetInstance.handleAddToCart()">' +
               'Add to Cart' +
-              '</button>';
+              '</button>' +
+              '</div>';
             console.log('[VTON] Result displayed successfully with Add to Cart button');
             console.log('[VTON] Image src:', state.resultImageUrl);
           } else {
