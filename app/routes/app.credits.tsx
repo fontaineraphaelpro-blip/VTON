@@ -515,7 +515,7 @@ export default function Credits() {
       id: "free-installation-setup", 
       name: "Free Installation Setup", 
       price: 0.0, 
-      description: "Plan gratuit - 4 crédits par mois",
+      description: "Free plan - 4 credits per month",
       popular: false 
     },
     { 
@@ -547,7 +547,7 @@ export default function Credits() {
       <div className="app-container">
         {showErrorBanner && error && (
           <div style={{ marginBottom: "var(--spacing-lg)" }}>
-            <Banner tone="critical" title="Erreur" onDismiss={() => setShowErrorBanner(false)}>
+            <Banner tone="critical" title="Error" onDismiss={() => setShowErrorBanner(false)}>
               {error}
             </Banner>
           </div>
@@ -555,8 +555,8 @@ export default function Credits() {
 
         {showSuccessBanner && subscriptionUpdated && planName && (
           <div style={{ marginBottom: "var(--spacing-lg)" }}>
-            <Banner tone="success" title="Abonnement activé !" onDismiss={() => setShowSuccessBanner(false)}>
-              Votre abonnement <strong>{planName}</strong> a été activé avec succès. Vos crédits mensuels ont été mis à jour.
+            <Banner tone="success" title="Subscription activated!" onDismiss={() => setShowSuccessBanner(false)}>
+              Your <strong>{planName}</strong> subscription has been activated successfully. Your monthly credits have been updated.
             </Banner>
           </div>
         )}
@@ -565,7 +565,7 @@ export default function Credits() {
           <div style={{ marginBottom: "var(--spacing-lg)" }}>
             <Banner 
               tone="critical" 
-              title={(fetcher.data as any)?.requiresAuth ? "Authentification requise" : "Erreur"}
+              title={(fetcher.data as any)?.requiresAuth ? "Authentication required" : "Error"}
               onDismiss={() => {
                 setShowFetcherErrorBanner(false);
                 fetcher.load('/app/credits');
