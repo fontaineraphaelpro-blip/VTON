@@ -8,6 +8,7 @@
  */
 
 import Replicate from "replicate";
+import { logger } from "../logger.server";
 
 // ==========================================
 // CONFIGURATION
