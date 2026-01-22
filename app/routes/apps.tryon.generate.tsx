@@ -269,12 +269,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const personImageUrl = convertBase64ToUrl(userPhoto);
 
     // 7. Generate try-on image using Replicate (optimized for speed)
-    console.log("[Generate] Starting try-on generation:", {
-      shop,
-      productId,
-      productHandle,
-    });
-
     let resultUrl: string;
     let errorMessage: string | null = null;
     let success = false;
@@ -283,10 +277,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       const result = await generateTryOn(personImageUrl, productImageUrl);
       resultUrl = result.resultUrl;
       success = true;
-      console.log("[Generate] Try-on generation successful:", { resultUrl });
     } catch (generateError) {
       errorMessage = generateError instanceof Error ? generateError.message : "Unknown error";
-      console.error("[Generate] Try-on generation failed:", errorMessage);
       throw generateError;
     }
 

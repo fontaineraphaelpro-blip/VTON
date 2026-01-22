@@ -36,7 +36,7 @@ const OPTIMIZED_CONFIG = {
 
 // Check if Replicate API token is configured
 if (!process.env.REPLICATE_API_TOKEN) {
-  console.warn("⚠️ REPLICATE_API_TOKEN is not set. Try-on generation will fail.");
+  logger.warn("⚠️ REPLICATE_API_TOKEN is not set. Try-on generation will fail.");
 }
 
 const replicate = new Replicate({
@@ -79,11 +79,11 @@ export async function generateTryOn(
     let personInput: string = personImageUrl;
     let garmentInput: string = garmentImageUrl;
 
-    console.log("[Replicate] Processing images - person type:", personImageUrl.substring(0, 50), "garment type:", garmentImageUrl.substring(0, 50));
+    logger.log("[Replicate] Processing images - person type:", personImageUrl.substring(0, 50), "garment type:", garmentImageUrl.substring(0, 50));
     
     // If person image is a data URL, upload it to Replicate files
     if (personImageUrl.startsWith("data:image/")) {
-      console.log("[Replicate] Uploading person image (data URL) to Replicate files...");
+      logger.log("[Replicate] Uploading person image (data URL) to Replicate files...");
       try {
         // Extract base64 data from data URL
         const base64Data = personImageUrl.split(",")[1];
@@ -93,10 +93,10 @@ export async function generateTryOn(
         const buffer = Buffer.from(base64Data, "base64");
         
         // Upload to Replicate files - files.create() expects a Buffer directly
-        console.log("[Replicate] Uploading buffer, size:", buffer.length, "bytes");
+        logger.log("[Replicate] Uploading buffer, size:", buffer.length, "bytes");
         const file = await replicate.files.create(buffer);
         
-        console.log("[Replicate] File upload response:", JSON.stringify(file, null, 2));
+        logger.log("[Replicate] File upload response:", JSON.stringify(file, null, 2));
         
         // Handle different response formats from Replicate
         // Replicate returns: { id: "...", urls: { get: "https://api.replicate.com/v1/files/..." } }
@@ -122,7 +122,7 @@ export async function generateTryOn(
         }
         
         personInput = uploadedUrl;
-        console.log("[Replicate] Using URL for person image:", personInput);
+        logger.log("[Replicate] Using URL for person image:", personInput);
       } catch (uploadError) {
         console.error("[Replicate] Failed to upload person image:", uploadError);
         throw new Error(`Failed to upload person image: ${uploadError instanceof Error ? uploadError.message : "Unknown error"}`);
@@ -131,7 +131,7 @@ export async function generateTryOn(
     
     // If garment image is a data URL, upload it to Replicate files
     if (garmentImageUrl.startsWith("data:image/")) {
-      console.log("[Replicate] Uploading garment image (data URL) to Replicate files...");
+      logger.log("[Replicate] Uploading garment image (data URL) to Replicate files...");
       try {
         // Extract base64 data from data URL
         const base64Data = garmentImageUrl.split(",")[1];
@@ -141,10 +141,10 @@ export async function generateTryOn(
         const buffer = Buffer.from(base64Data, "base64");
         
         // Upload to Replicate files - files.create() expects a Buffer directly
-        console.log("[Replicate] Uploading buffer, size:", buffer.length, "bytes");
+        logger.log("[Replicate] Uploading buffer, size:", buffer.length, "bytes");
         const file = await replicate.files.create(buffer);
         
-        console.log("[Replicate] File upload response:", JSON.stringify(file, null, 2));
+        logger.log("[Replicate] File upload response:", JSON.stringify(file, null, 2));
         
         // Handle different response formats from Replicate
         // Replicate returns: { id: "...", urls: { get: "https://api.replicate.com/v1/files/..." } }
@@ -170,7 +170,7 @@ export async function generateTryOn(
         }
         
         garmentInput = uploadedUrl;
-        console.log("[Replicate] Using URL for garment image:", garmentInput);
+        logger.log("[Replicate] Using URL for garment image:", garmentInput);
       } catch (uploadError) {
         console.error("[Replicate] Failed to upload garment image:", uploadError);
         throw new Error(`Failed to upload garment image: ${uploadError instanceof Error ? uploadError.message : "Unknown error"}`);
@@ -185,16 +185,16 @@ export async function generateTryOn(
       throw new Error(`Invalid garment image input: ${garmentInput}`);
     }
 
-    console.log("Calling Replicate API with model:", MODEL_ID);
-    console.log("Input types - person:", typeof personInput, "garment:", typeof garmentInput);
-    console.log("Person URL:", personInput?.substring(0, 100) + "...");
-    console.log("Garment URL:", garmentInput?.substring(0, 100) + "...");
-    console.log("Using prompt:", GARMENT_TRANSFER_PROMPT);
-    console.log("Using optimized config:", config);
+    logger.log("Calling Replicate API with model:", MODEL_ID);
+    logger.log("Input types - person:", typeof personInput, "garment:", typeof garmentInput);
+    logger.log("Person URL:", personInput?.substring(0, 100) + "...");
+    logger.log("Garment URL:", garmentInput?.substring(0, 100) + "...");
+    logger.log("Using prompt:", GARMENT_TRANSFER_PROMPT);
+    logger.log("Using optimized config:", config);
     
     // bytedance/seedream-4.5 expects image_input as an array with [person_image, garment_image]
     // and uses size (must be "2K", "4K", or "custom"), width, height, aspect_ratio, max_images, sequential_image_generation
-    console.log("Creating prediction with Replicate...");
+    logger.log("Creating prediction with Replicate...");
     
     // Use "custom" size with 2048x2048 (minimum required: 3,686,400 pixels)
     // 2048x2048 = 4,194,304 pixels, which meets the requirement
@@ -217,9 +217,9 @@ export async function generateTryOn(
       },
     });
     
-    console.log("Prediction created with image_input array format");
+    logger.log("Prediction created with image_input array format");
     
-    console.log("Created prediction:", prediction.id, "Status:", prediction.status);
+    logger.log("Created prediction:", prediction.id, "Status:", prediction.status);
     
     // Poll for completion with optimized interval (1.5s for faster response)
     let pollCount = 0;
@@ -235,11 +235,11 @@ export async function generateTryOn(
       prediction.error = updated.error;
       pollCount++;
       
-      console.log(`Poll ${pollCount}/${maxPolls} - Prediction status:`, prediction.status);
+      logger.log(`Poll ${pollCount}/${maxPolls} - Prediction status:`, prediction.status);
       
       if (prediction.status === "succeeded" && prediction.output) {
         output = prediction.output;
-        console.log("Prediction succeeded, output:", JSON.stringify(output, null, 2));
+        logger.log("Prediction succeeded, output:", JSON.stringify(output, null, 2));
         break;
       } else if (prediction.status === "failed" || prediction.status === "canceled") {
         const errorMsg = prediction.error || "Unknown error";
@@ -252,8 +252,8 @@ export async function generateTryOn(
       throw new Error(`Prediction did not complete in time. Final status: ${prediction.status}, output: ${JSON.stringify(output)}`);
     }
 
-    console.log("Replicate output type:", typeof output);
-    console.log("Replicate output:", JSON.stringify(output, null, 2));
+    logger.log("Replicate output type:", typeof output);
+    logger.log("Replicate output:", JSON.stringify(output, null, 2));
 
     // Replicate can return different formats:
     // 1. A string (URL)
@@ -318,7 +318,7 @@ export async function generateTryOn(
       // If not a valid URL, it might be a base64 data URL or file path
       // Check if it starts with http:// or https://
       if (!resultUrl.startsWith("http://") && !resultUrl.startsWith("https://") && !resultUrl.startsWith("data:")) {
-        console.warn("Result URL doesn't look like a valid URL:", resultUrl);
+        logger.warn("Result URL doesn't look like a valid URL:", resultUrl);
         // Try to construct a full URL if it's a relative path
         if (resultUrl.startsWith("/")) {
           resultUrl = `https://replicate.delivery${resultUrl}`;
@@ -328,7 +328,7 @@ export async function generateTryOn(
       }
     }
 
-    console.log("Replicate generation successful, result URL:", resultUrl);
+    logger.log("Replicate generation successful, result URL:", resultUrl);
     return {
       resultUrl,
       config: {

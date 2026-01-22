@@ -8,6 +8,12 @@
     (function() {
       'use strict';
       
+      // Production mode: disable all logs for performance
+      const isProduction = true; // Set to false for debugging
+      const log = isProduction ? function() {} : log.bind(console);
+      const warn = isProduction ? function() {} : warn.bind(console);
+      const error = error.bind(console); // Always log errors
+      
       // App URL - try to get from meta tag or use default
       // This should be configured in Shopify App Proxy settings
       const APP_URL = (function() {
@@ -21,7 +27,7 @@
         return 'https://vton-production-890a.up.railway.app';
       })();
       
-      console.log('[VTON] App URL configured:', APP_URL);
+      log('[VTON] App URL configured:', APP_URL);
       
       // Wait for DOM to be ready and Shopify object to be available
       function waitForShopify() {
@@ -54,21 +60,21 @@
         // Extract shop domain
         const shop = extractShop();
         if (!shop) {
-          console.warn('[VTON] Shop domain not found');
+          warn('[VTON] Shop domain not found');
           return;
         }
         
         // Extract product ID from URL
         const productId = extractProductId();
         if (!productId) {
-          console.warn('[VTON] Product ID not found');
+          warn('[VTON] Product ID not found');
           return;
         }
         
         // Extract product handle from URL (fallback for matching)
         const productHandle = extractProductHandle();
         
-        console.log('[VTON] Initializing widget for product:', {
+        log('[VTON] Initializing widget for product:', {
           shop: shop,
           productId: productId,
           productHandle: productHandle,
@@ -76,7 +82,7 @@
         });
         
         // Check status and initialize widget
-        console.log('[VTON] 🔍 Starting status check...', {
+        log('[VTON] 🔍 Starting status check...', {
           shop: shop,
           productId: productId,
           productHandle: productHandle,
@@ -84,7 +90,7 @@
         });
         
         checkStatus(shop, productId, productHandle).then(function(status) {
-          console.log('[VTON] ✅ Status check result:', {
+          log('[VTON] ✅ Status check result:', {
             shop: shop,
             productId: productId,
             enabled: status?.enabled,
@@ -95,11 +101,11 @@
           });
           
           if (status && status.enabled === true) {
-            console.log('[VTON] ✅ Widget will be displayed - try-on is enabled');
-            console.log('[VTON] 📋 Widget settings:', status.widget_settings || {});
+            log('[VTON] ✅ Widget will be displayed - try-on is enabled');
+            log('[VTON] 📋 Widget settings:', status.widget_settings || {});
             initializeWidget(shop, productId, status.widget_settings || {});
           } else {
-            console.warn('[VTON] ⚠️ Widget NOT displayed - try-on is disabled. Status:', {
+            warn('[VTON] ⚠️ Widget NOT displayed - try-on is disabled. Status:', {
               enabled: status?.enabled,
               shop_enabled: status?.shop_enabled,
               product_enabled: status?.product_enabled,
@@ -109,14 +115,14 @@
                   ? `Shop enabled: ${status.shop_enabled}, Product enabled: ${status.product_enabled}`
                   : 'Unknown reason'
             });
-            console.warn('[VTON] 💡 To enable the widget:');
-            console.warn('[VTON]   1. Go to your app dashboard');
-            console.warn('[VTON]   2. Make sure "Enable app on store" is checked');
-            console.warn('[VTON]   3. Check that the product is not explicitly disabled in the Products page');
+            warn('[VTON] 💡 To enable the widget:');
+            warn('[VTON]   1. Go to your app dashboard');
+            warn('[VTON]   2. Make sure "Enable app on store" is checked');
+            warn('[VTON]   3. Check that the product is not explicitly disabled in the Products page');
           }
         }).catch(function(error) {
-          console.error('[VTON] ❌ Failed to check status:', error);
-          console.error('[VTON] Error details:', {
+          error('[VTON] ❌ Failed to check status:', error);
+          error('[VTON] Error details:', {
             message: error?.message,
             stack: error?.stack,
             url: window.location.href
@@ -142,7 +148,7 @@
           // Try product.id first
           if (window.Shopify.product.id) {
             const productId = window.Shopify.product.id;
-            console.log('[VTON] Found product ID from window.Shopify.product.id:', productId);
+            log('[VTON] Found product ID from window.Shopify.product.id:', productId);
             if (/^\d+$/.test(String(productId))) {
               return 'gid://shopify/Product/' + productId;
             }
@@ -153,7 +159,7 @@
           // Also try product.product_id (sometimes different from id)
           if (window.Shopify.product.product_id) {
             const productId = window.Shopify.product.product_id;
-            console.log('[VTON] Found product ID from window.Shopify.product.product_id:', productId);
+            log('[VTON] Found product ID from window.Shopify.product.product_id:', productId);
             if (/^\d+$/.test(String(productId))) {
               return 'gid://shopify/Product/' + productId;
             }
@@ -170,7 +176,7 @@
             const data = JSON.parse(script.textContent || '{}');
             if (data['@type'] === 'Product' && data.productID) {
               const productId = String(data.productID);
-              console.log('[VTON] Found product ID from JSON-LD:', productId);
+              log('[VTON] Found product ID from JSON-LD:', productId);
               if (/^\d+$/.test(productId)) {
                 return 'gid://shopify/Product/' + productId;
               }
@@ -180,7 +186,7 @@
               for (const item of data['@graph']) {
                 if (item['@type'] === 'Product' && item.productID) {
                   const productId = String(item.productID);
-                  console.log('[VTON] Found product ID from JSON-LD @graph:', productId);
+                  log('[VTON] Found product ID from JSON-LD @graph:', productId);
                   if (/^\d+$/.test(productId)) {
                     return 'gid://shopify/Product/' + productId;
                   }
@@ -199,7 +205,7 @@
                            productForm.querySelector('[name="id"]')?.getAttribute('value') ||
                            productForm.querySelector('input[name="id"]')?.value;
           if (productId) {
-            console.log('[VTON] Found product ID from form:', productId);
+            log('[VTON] Found product ID from form:', productId);
             // Convert numeric ID to GID format if needed
             if (/^\d+$/.test(productId)) {
               return 'gid://shopify/Product/' + productId;
@@ -225,7 +231,7 @@
                              element.getAttribute('data-product-id') ||
                              element.getAttribute('value');
             if (productId) {
-              console.log('[VTON] Found product ID from meta:', productId);
+              log('[VTON] Found product ID from meta:', productId);
               if (/^\d+$/.test(productId)) {
                 return 'gid://shopify/Product/' + productId;
               }
@@ -241,7 +247,7 @@
         if (variantSelect) {
           const productId = variantSelect.getAttribute('data-product-id');
           if (productId && /^\d+$/.test(productId)) {
-            console.log('[VTON] Found product ID from variant select:', productId);
+            log('[VTON] Found product ID from variant select:', productId);
             return 'gid://shopify/Product/' + productId;
           }
         }
@@ -250,11 +256,11 @@
         const urlMatch = window.location.pathname.match(/\/products\/([^\/\?]+)/);
         if (urlMatch) {
           const handle = urlMatch[1];
-          console.warn('[VTON] Could not find product ID, using handle as fallback:', handle);
+          warn('[VTON] Could not find product ID, using handle as fallback:', handle);
           return handle; // Return handle as fallback
         }
         
-        console.error('[VTON] Could not extract product ID from any source');
+        error('[VTON] Could not extract product ID from any source');
         return null;
       }
       
@@ -263,18 +269,18 @@
         const urlMatch = window.location.pathname.match(/\/products\/([^\/\?]+)/);
         if (urlMatch) {
           const handle = urlMatch[1];
-          console.log('[VTON] Extracted handle from URL:', handle);
+          log('[VTON] Extracted handle from URL:', handle);
           return handle;
         }
         // Try from Shopify object
         if (window.Shopify && window.Shopify.product) {
           if (window.Shopify.product.handle) {
-            console.log('[VTON] Extracted handle from window.Shopify.product.handle:', window.Shopify.product.handle);
+            log('[VTON] Extracted handle from window.Shopify.product.handle:', window.Shopify.product.handle);
             return window.Shopify.product.handle;
           }
           // Also try from product JSON data
           if (window.Shopify.productJson && window.Shopify.productJson.handle) {
-            console.log('[VTON] Extracted handle from window.Shopify.productJson.handle:', window.Shopify.productJson.handle);
+            log('[VTON] Extracted handle from window.Shopify.productJson.handle:', window.Shopify.productJson.handle);
             return window.Shopify.productJson.handle;
           }
         }
@@ -285,11 +291,11 @@
           const handle = metaHandle.getAttribute('content') || 
                         metaHandle.getAttribute('data-product-handle');
           if (handle) {
-            console.log('[VTON] Extracted handle from meta tag:', handle);
+            log('[VTON] Extracted handle from meta tag:', handle);
             return handle;
           }
         }
-        console.warn('[VTON] Could not extract product handle');
+        warn('[VTON] Could not extract product handle');
         return null;
       }
       
@@ -318,13 +324,13 @@
           if (!response.ok) {
             // If App Proxy fails (404), try direct URL as fallback
             if (response.status === 404) {
-              console.warn('[VTON] ⚠️ App Proxy not available (404), trying direct URL...');
+              warn('[VTON] ⚠️ App Proxy not available (404), trying direct URL...');
               
               // Use the configured app URL as fallback
               const directUrl = APP_URL + '/apps/tryon/status?shop=' + encodeURIComponent(shop) + '&product_id=' + encodeURIComponent(productId);
               const finalUrl = productHandle ? directUrl + '&product_handle=' + encodeURIComponent(productHandle) : directUrl;
               
-              console.log('[VTON] 🔄 Trying direct URL:', finalUrl);
+              log('[VTON] 🔄 Trying direct URL:', finalUrl);
               
               return fetch(finalUrl, {
                 method: 'GET',
@@ -342,7 +348,7 @@
           }
           return response.json();
         }).catch(function(error) {
-          console.error('[VTON] ❌ Status check error:', error);
+          error('[VTON] ❌ Status check error:', error);
           throw error;
         });
       }
@@ -374,7 +380,7 @@
       }
       
       function initializeWidget(shop, productId, widgetSettings) {
-        console.log('[VTON] 🚀 Initializing widget...', {
+        log('[VTON] 🚀 Initializing widget...', {
           shop: shop,
           productId: productId,
           widgetSettings: widgetSettings
@@ -383,16 +389,16 @@
         // Find product form container
         const productForm = document.querySelector('form[action*="/cart/add"]');
         if (!productForm || !productForm.parentNode) {
-          console.error('[VTON] ❌ Product form not found. The widget requires a form with action="/cart/add" on the product page.');
-          console.error('[VTON] 💡 Make sure you are on a product page with an "Add to Cart" button.');
+          error('[VTON] ❌ Product form not found. The widget requires a form with action="/cart/add" on the product page.');
+          error('[VTON] 💡 Make sure you are on a product page with an "Add to Cart" button.');
           return;
         }
         
-        console.log('[VTON] ✅ Product form found:', productForm);
+        log('[VTON] ✅ Product form found:', productForm);
         
         // Check if widget already exists
         if (document.getElementById('vton-widget-container')) {
-          console.warn('[VTON] ⚠️ Widget container already exists, skipping initialization');
+          warn('[VTON] ⚠️ Widget container already exists, skipping initialization');
           return;
         }
         
@@ -404,27 +410,24 @@
         container.id = 'vton-widget-container';
         container.setAttribute('data-vton-widget', 'true');
         
-        // Trouver le bouton "Add to Cart" / "Acheter" pour insérer le widget juste après
+        // Find the "Add to Cart" button to insert the widget right after it
         const addToCartButton = productForm.querySelector('button[type="submit"], button[name="add"], [data-add-to-cart], .btn--add-to-cart, .add-to-cart, .product-form__cart-submit, .product-form__submit');
         
         if (addToCartButton && addToCartButton.parentNode) {
-          // Insérer juste après le bouton "Acheter"
-          // Si le bouton est dans un wrapper (div), insérer après le wrapper
+          // Insert right after the "Add to Cart" button
+          // If the button is in a wrapper (div), insert after the wrapper
           const buttonWrapper = addToCartButton.closest('.product-form__cart-submit-wrapper, .product-form__submit-wrapper, .product-form__cart, .product-form__buttons, .product-form__actions, div');
           
           if (buttonWrapper && buttonWrapper !== productForm) {
-            // Insérer après le wrapper du bouton
+            // Insert after the button wrapper
             buttonWrapper.parentNode.insertBefore(container, buttonWrapper.nextSibling);
-            console.log('[VTON] ✅ Widget inséré après le wrapper du bouton "Acheter"');
           } else {
-            // Insérer après le bouton directement
+            // Insert after the button directly
             addToCartButton.parentNode.insertBefore(container, addToCartButton.nextSibling);
-            console.log('[VTON] ✅ Widget inséré juste après le bouton "Acheter"');
           }
         } else {
-          // Fallback: Insérer après le formulaire si le bouton n'est pas trouvé
+          // Fallback: Insert after the form if button not found
           productForm.parentNode.insertBefore(container, productForm.nextSibling);
-          console.log('[VTON] ⚠️ Bouton "Acheter" non trouvé, widget inséré après le formulaire');
         }
         
         // Create shadow DOM
@@ -445,7 +448,7 @@
         // Render widget
         renderWidget(shadowRoot, state);
         
-        console.log('[VTON] ✅ Widget initialized and rendered successfully!', {
+        log('[VTON] ✅ Widget initialized and rendered successfully!', {
           containerId: container.id,
           productId: productId,
           productImageUrl: productImageUrl
@@ -968,16 +971,16 @@
                 <div id="vton-upload-area" class="vton-upload-area" onclick="window.vtonWidgetInstance.triggerFileInput()">
                   <input type="file" id="vton-file-input" accept="image/*" style="display: none;" onchange="window.vtonWidgetInstance.handleFileChange(event)" />
                   <span class="vton-upload-icon">📸</span>
-                  <p><strong>Ajoutez votre photo</strong></p>
-                  <p style="font-size: 13px; color: #888; margin-top: 8px; font-weight: normal;">Photo de face recommandée pour de meilleurs résultats</p>
+                  <p><strong>Add your photo</strong></p>
+                  <p style="font-size: 13px; color: #888; margin-top: 8px; font-weight: normal;">Front-facing photo recommended for best results</p>
                 </div>
-                <p class="vton-privacy-notice">🔒 Vos photos sont traitées de manière sécurisée et supprimées après utilisation</p>
+                <p class="vton-privacy-notice">🔒 Your photos are processed securely and deleted after use</p>
                 <button id="vton-generate-btn" class="vton-generate-btn" style="background: ${buttonBg}; color: ${buttonColor};" onclick="window.vtonWidgetInstance.generate()" disabled>
-                  Essayer maintenant
+                  Try it on now
                 </button>
                 <div id="vton-loading" class="vton-loading">
                   <div class="vton-spinner"></div>
-                  <p id="vton-loading-message" class="vton-loading-text">Génération en cours<span class="vton-loading-dots"><span></span><span></span><span></span></span></p>
+                  <p id="vton-loading-message" class="vton-loading-text">Generating<span class="vton-loading-dots"><span></span><span></span><span></span></span></p>
                   <div class="vton-progress-container">
                     <div id="vton-progress-bar" class="vton-progress-bar"></div>
                   </div>
@@ -985,7 +988,7 @@
                     <span id="vton-progress-text" class="vton-progress-text">0%</span>
                     <span id="vton-timer-value" class="vton-timer-value" style="font-size: 14px; color: #666;">~30s</span>
                   </div>
-                  <p class="vton-loading-subtext" style="margin: 16px 0 0 0;">Cela prend généralement 30 secondes</p>
+                  <p class="vton-loading-subtext" style="margin: 16px 0 0 0;">Usually takes about 30 seconds</p>
                 </div>
                 <div id="vton-result" class="vton-result"></div>
                 <div id="vton-error" class="vton-error"></div>
@@ -1032,7 +1035,7 @@
       }
       
       function handleAddToCart(shadowRoot, state) {
-        console.log('[VTON] handleAddToCart called');
+        log('[VTON] handleAddToCart called');
         
         // Get the button in the result to show loading state
         const atcButton = shadowRoot.querySelector('.vton-add-to-cart-btn');
@@ -1050,7 +1053,7 @@
         const addToCartButton = document.querySelector('form[action*="/cart/add"] button[type="submit"], form[action*="/cart/add"] input[type="submit"], button[name="add"], .product-form__cart-submit, [data-add-to-cart], button[type="submit"][form*="product"]');
         
         if (addToCartButton) {
-          console.log('[VTON] Found Add to Cart button, clicking it...');
+          log('[VTON] Found Add to Cart button, clicking it...');
           
           // Trigger click on the original button
           if (addToCartButton instanceof HTMLElement) {
@@ -1085,12 +1088,12 @@
         const addToCartForm = document.querySelector('form[action*="/cart/add"]');
         
         if (addToCartForm) {
-          console.log('[VTON] Found Add to Cart form, submitting...');
+          log('[VTON] Found Add to Cart form, submitting...');
           
           // Check if form has variant selected
           const variantInput = addToCartForm.querySelector('input[name="id"], select[name="id"]');
           if (!variantInput || !variantInput.value) {
-            console.warn('[VTON] No variant selected in form');
+            warn('[VTON] No variant selected in form');
             if (atcButton) {
               atcButton.disabled = false;
               atcButton.textContent = originalButtonText;
@@ -1131,10 +1134,10 @@
         }
         
         // Method 3: Use AJAX API as fallback
-        console.log('[VTON] Trying AJAX method...');
+        log('[VTON] Trying AJAX method...');
         
         if (!addToCartForm) {
-          console.error('[VTON] Add to Cart form not found');
+          error('[VTON] Add to Cart form not found');
           if (atcButton) {
             atcButton.disabled = false;
             atcButton.textContent = originalButtonText;
@@ -1166,7 +1169,7 @@
         }
         
         if (!variantId) {
-          console.error('[VTON] Variant ID not found in form');
+          error('[VTON] Variant ID not found in form');
           if (atcButton) {
             atcButton.disabled = false;
             atcButton.textContent = originalButtonText;
@@ -1177,7 +1180,7 @@
           return;
         }
         
-        console.log('[VTON] Using variant ID:', variantId, 'quantity:', quantity);
+        log('[VTON] Using variant ID:', variantId, 'quantity:', quantity);
         
         // Prepare cart add data
         const cartData = {
@@ -1196,7 +1199,7 @@
           }
         });
         
-        console.log('[VTON] Sending cart data:', cartData);
+        log('[VTON] Sending cart data:', cartData);
         
         // Submit to Shopify cart using AJAX
         fetch('/cart/add.js', {
@@ -1208,9 +1211,9 @@
           body: JSON.stringify(cartData)
         })
         .then(function(response) {
-          console.log('[VTON] Cart add response status:', response.status);
+          log('[VTON] Cart add response status:', response.status);
           return response.json().then(function(data) {
-            console.log('[VTON] Cart add response data:', data);
+            log('[VTON] Cart add response data:', data);
             if (!response.ok) {
               throw new Error(data.description || data.message || 'Failed to add to cart');
             }
@@ -1218,7 +1221,7 @@
           });
         })
         .then(function(data) {
-          console.log('[VTON] Product added to cart successfully:', data);
+          log('[VTON] Product added to cart successfully:', data);
           
           // Update button to show success
           if (atcButton) {
@@ -1266,7 +1269,7 @@
           });
         })
         .catch(function(error) {
-          console.error('[VTON] Error adding to cart:', error);
+          error('[VTON] Error adding to cart:', error);
           
           // Show error on button
           if (atcButton) {
@@ -1305,7 +1308,7 @@
         }).then(function(response) {
           // If App Proxy failed with 404, try direct URL as fallback
           if (useAppProxy && response.status === 404) {
-            console.warn('[VTON] ⚠️ App Proxy not available (404) for ATC tracking, trying direct URL...');
+            warn('[VTON] ⚠️ App Proxy not available (404) for ATC tracking, trying direct URL...');
             useAppProxy = false;
             const directUrl = APP_URL + '/apps/tryon/atc?shop=' + encodeURIComponent(state.shop) + '&product_id=' + encodeURIComponent(state.productId);
             return fetch(directUrl, {
@@ -1318,12 +1321,12 @@
           return response;
         }).then(function(response) {
           if (response.ok) {
-            console.log('[VTON] ✅ Add to Cart tracked successfully');
+            log('[VTON] ✅ Add to Cart tracked successfully');
           } else {
-            console.warn('[VTON] ⚠️ Add to Cart tracking returned status:', response.status);
+            warn('[VTON] ⚠️ Add to Cart tracking returned status:', response.status);
           }
         }).catch(function(err) {
-          console.error('[VTON] ❌ Failed to track Add to Cart:', err);
+          error('[VTON] ❌ Failed to track Add to Cart:', err);
         });
       }
       
@@ -1373,9 +1376,9 @@
       
       // Fun tips to show during waiting
       const tips = [
-        '💡 Astuce : Une bonne luminosité améliore les résultats',
-        '💡 Astuce : Le traitement prend généralement 30 secondes',
-        '💡 Astuce : Vos photos sont supprimées après utilisation'
+        '💡 Tip: Good lighting improves results',
+        '💡 Tip: Processing usually takes 30 seconds',
+        '💡 Tip: Your photos are deleted after use'
       ];
       
       function startLoadingMessages(shadowRoot) {
@@ -1559,7 +1562,7 @@
               return response.json();
             })
             .then(function(statusData) {
-              console.log('[VTON] Job status:', statusData.status, statusData);
+              log('[VTON] Job status:', statusData.status, statusData);
               
               if (statusData.status === 'completed' && statusData.result_url) {
                 clearInterval(pollInterval);
@@ -1576,10 +1579,10 @@
                 if (generateBtn) generateBtn.disabled = false;
               } else if (statusData.status === 'pending') {
                 // Continue polling
-                console.log('[VTON] Job still pending, continuing to poll...');
+                log('[VTON] Job still pending, continuing to poll...');
               } else {
                 // Status inconnu, arrêter le polling après quelques tentatives
-                console.warn('[VTON] Unknown status:', statusData.status);
+                warn('[VTON] Unknown status:', statusData.status);
                 if (attempts > 10) {
                   clearInterval(pollInterval);
                   stopLoadingMessages(shadowRoot);
@@ -1594,10 +1597,10 @@
               }
             })
             .catch(function(err) {
-              console.error('[VTON] Polling error:', err);
+              error('[VTON] Polling error:', err);
               // Arrêter le polling après plusieurs erreurs consécutives
               if (attempts > 5 && attempts % 3 === 0) {
-                console.error('[VTON] Multiple polling errors, stopping...');
+                error('[VTON] Multiple polling errors, stopping...');
                 clearInterval(pollInterval);
                 stopLoadingMessages(shadowRoot);
                 if (loading) loading.classList.remove('active');
@@ -1616,11 +1619,11 @@
       function displayResult(shadowRoot, state, resultUrl, loading, result, generateBtn) {
         state.resultImageUrl = resultUrl;
         
-        console.log('[VTON] Displaying result:', resultUrl);
+        log('[VTON] Displaying result:', resultUrl);
         
         // Validate result URL
         if (!state.resultImageUrl || typeof state.resultImageUrl !== 'string' || !state.resultImageUrl.startsWith('http')) {
-          console.error('[VTON] Invalid result URL:', state.resultImageUrl);
+          error('[VTON] Invalid result URL:', state.resultImageUrl);
           const errorElement = shadowRoot.getElementById('vton-error');
           if (errorElement) {
             errorElement.classList.add('active');
@@ -1679,15 +1682,15 @@
           const buttonColor = state.widgetSettings.widget_color || '#ffffff';
           result.innerHTML = 
             '<div class="vton-result-content">' +
-            '<h3 class="vton-result-title">Voici le résultat !</h3>' +
-            '<img src="' + state.resultImageUrl + '" alt="Résultat du try-on" />' +
+            '<h3 class="vton-result-title">Here\'s your result!</h3>' +
+            '<img src="' + state.resultImageUrl + '" alt="Try-on result" />' +
             '<button class="vton-add-to-cart-btn" style="background: ' + buttonBg + '; color: ' + buttonColor + ';" onclick="window.vtonWidgetInstance.handleAddToCart()">' +
-            'Ajouter au panier' +
+            'Add to Cart' +
             '</button>' +
             '</div>';
-          console.log('[VTON] Result displayed successfully with Add to Cart button');
+          log('[VTON] Result displayed successfully with Add to Cart button');
         } else {
-          console.error('[VTON] Cannot display result:', {
+          error('[VTON] Cannot display result:', {
             hasResult: !!result,
             resultImageUrl: state.resultImageUrl
           });
@@ -1708,7 +1711,7 @@
         
         // Prevent double submission
         if (state.isGenerating) {
-          console.warn('[VTON] Generation already in progress, ignoring duplicate request');
+          warn('[VTON] Generation already in progress, ignoring duplicate request');
           return;
         }
         state.isGenerating = true;
@@ -1761,16 +1764,16 @@
           }).then(function(response) {
             clearTimeout(timeoutId);
             
-            console.log('[VTON] Response status:', response.status, response.statusText);
+            log('[VTON] Response status:', response.status, response.statusText);
             
             // If App Proxy failed with 404, try direct URL as fallback (only once)
             if (useAppProxy && !hasTriedFallback && response.status === 404) {
-              console.warn('[VTON] ⚠️ App Proxy not available (404), trying direct URL...');
+              warn('[VTON] ⚠️ App Proxy not available (404), trying direct URL...');
               useAppProxy = false;
               hasTriedFallback = true; // Prevent double fallback
               // Use the configured app URL as fallback
               const directUrl = APP_URL + '/apps/tryon/generate?shop=' + encodeURIComponent(state.shop) + '&product_id=' + encodeURIComponent(state.productId);
-              console.log('[VTON] 🔄 Retrying with direct URL:', directUrl);
+              log('[VTON] 🔄 Retrying with direct URL:', directUrl);
               return makeGenerateRequest(directUrl);
             }
             
@@ -1780,14 +1783,14 @@
               
               // Try to parse as JSON first
               return clonedResponse.json().then(function(errorData) {
-                console.error('[VTON] Error response:', errorData);
+                error('[VTON] Error response:', errorData);
                 // Extract error message from response
                 const errorMessage = errorData?.error || errorData?.message || 'Generation failed: ' + response.status;
                 throw new Error(errorMessage);
               }).catch(function(parseError) {
                 // If JSON parsing fails, read from original response as text
                 return response.text().then(function(text) {
-                  console.error('[VTON] Error response (text):', text);
+                  error('[VTON] Error response (text):', text);
                   throw new Error(text || 'Generation failed: ' + response.status);
                 });
               });
@@ -1797,7 +1800,7 @@
             clearTimeout(timeoutId);
             // If it's an abort error and we haven't tried fallback, try fallback first
             if (error.name === 'AbortError' && useAppProxy && !hasTriedFallback) {
-              console.warn('[VTON] ⚠️ Request aborted, trying direct URL as fallback...');
+              warn('[VTON] ⚠️ Request aborted, trying direct URL as fallback...');
               useAppProxy = false;
               hasTriedFallback = true;
               const directUrl = APP_URL + '/apps/tryon/generate?shop=' + encodeURIComponent(state.shop) + '&product_id=' + encodeURIComponent(state.productId);
@@ -1809,7 +1812,7 @@
         
         // Start with App Proxy URL
         makeGenerateRequest(generateUrl).then(function(data) {
-          console.log('[VTON] Generation response data:', JSON.stringify(data, null, 2));
+          log('[VTON] Generation response data:', JSON.stringify(data, null, 2));
           
           // Extract result URL (synchronous mode - result_url should be present)
           state.resultImageUrl = data.result_url || data.image_url || data.output || 
@@ -1818,12 +1821,12 @@
                                  (data.data && data.data.result_url) ||
                                  (data.data && data.data.url);
           
-          console.log('[VTON] Extracted result URL:', state.resultImageUrl);
-          console.log('[VTON] Result URL type:', typeof state.resultImageUrl);
+          log('[VTON] Extracted result URL:', state.resultImageUrl);
+          log('[VTON] Result URL type:', typeof state.resultImageUrl);
           
           // Validate result URL
           if (!state.resultImageUrl || typeof state.resultImageUrl !== 'string') {
-            console.error('[VTON] Invalid result URL format:', {
+            error('[VTON] Invalid result URL format:', {
               resultImageUrl: state.resultImageUrl,
               type: typeof state.resultImageUrl,
               fullData: data
@@ -1832,7 +1835,7 @@
           }
           
           if (!state.resultImageUrl.startsWith('http')) {
-            console.error('[VTON] Result URL is not a valid HTTP URL:', state.resultImageUrl);
+            error('[VTON] Result URL is not a valid HTTP URL:', state.resultImageUrl);
             throw new Error('Result URL is not a valid HTTP URL');
           }
           
@@ -1885,16 +1888,16 @@
             const buttonColor = state.widgetSettings.widget_color || '#ffffff';
             result.innerHTML = 
               '<div class="vton-result-content">' +
-              '<h3 class="vton-result-title">Voici le résultat !</h3>' +
-              '<img src="' + state.resultImageUrl + '" alt="Résultat du try-on" />' +
+              '<h3 class="vton-result-title">Here\'s your result!</h3>' +
+              '<img src="' + state.resultImageUrl + '" alt="Try-on result" />' +
               '<button class="vton-add-to-cart-btn" style="background: ' + buttonBg + '; color: ' + buttonColor + ';" onclick="window.vtonWidgetInstance.handleAddToCart()">' +
-              'Ajouter au panier' +
+              'Add to Cart' +
               '</button>' +
               '</div>';
-            console.log('[VTON] Result displayed successfully with Add to Cart button');
-            console.log('[VTON] Image src:', state.resultImageUrl);
+            log('[VTON] Result displayed successfully with Add to Cart button');
+            log('[VTON] Image src:', state.resultImageUrl);
           } else {
-            console.error('[VTON] Cannot display result:', {
+            error('[VTON] Cannot display result:', {
               hasResult: !!result,
               resultImageUrl: state.resultImageUrl,
               resultImageUrlType: typeof state.resultImageUrl,
@@ -1911,7 +1914,7 @@
           if (generateBtn) generateBtn.disabled = false;
         }).catch(function(err) {
           state.isGenerating = false;
-          console.error('[VTON] Generation error:', err);
+          error('[VTON] Generation error:', err);
           
           // Stop loading messages
           stopLoadingMessages(shadowRoot);

@@ -9,6 +9,7 @@
 
 import pg from "pg";
 const { Pool } = pg;
+import { logger } from "../logger.server";
 
 // Database connection pool
 const DATABASE_URL = process.env.DATABASE_URL;
@@ -410,9 +411,9 @@ export async function getProductTryonSettingsBatch(shop: string, productIds: str
   const settingsMap: Record<string, boolean | null> = {};
   const processedSettings = new Set<string>();
   
-  console.log(`[getProductTryonSettingsBatch] Looking for settings. Input productIds:`, productIds);
-  console.log(`[getProductTryonSettingsBatch] Query will search for formats:`, formatsArray);
-  console.log(`[getProductTryonSettingsBatch] Found ${result.rows.length} matching rows in DB`);
+  logger.log(`[getProductTryonSettingsBatch] Looking for settings. Input productIds:`, productIds);
+  logger.log(`[getProductTryonSettingsBatch] Query will search for formats:`, formatsArray);
+  logger.log(`[getProductTryonSettingsBatch] Found ${result.rows.length} matching rows in DB`);
   
   result.rows.forEach((row: any) => {
     const enabled = row.tryon_enabled;
@@ -421,7 +422,7 @@ export async function getProductTryonSettingsBatch(shop: string, productIds: str
     
     const settingValue = disabledBool ? false : (enabledBool ? true : null);
     
-    console.log(`[getProductTryonSettingsBatch] Processing row:`, {
+    logger.log(`[getProductTryonSettingsBatch] Processing row:`, {
       storedProductId: row.product_id,
       storedHandle: row.product_handle,
       enabledRaw: enabled,
@@ -450,7 +451,7 @@ export async function getProductTryonSettingsBatch(shop: string, productIds: str
       const matchesDirectNumeric = storedProductId === numericId;
       
       if (matchesExact || matchesGID || matchesNumeric || matchesDirectNumeric) {
-        console.log(`[getProductTryonSettingsBatch] ✅ MATCH FOUND:`, {
+        logger.log(`[getProductTryonSettingsBatch] ✅ MATCH FOUND:`, {
           searchingFor: productId,
           foundInDB: storedProductId,
           matchType: matchesExact ? 'exact' : (matchesGID ? 'GID' : (matchesNumeric ? 'numeric' : 'directNumeric')),
@@ -462,8 +463,8 @@ export async function getProductTryonSettingsBatch(shop: string, productIds: str
     });
   });
   
-  console.log(`[getProductTryonSettingsBatch] After matching, settingsMap:`, settingsMap);
-  console.log(`[getProductTryonSettingsBatch] Processed settings:`, Array.from(processedSettings));
+  logger.log(`[getProductTryonSettingsBatch] After matching, settingsMap:`, settingsMap);
+  logger.log(`[getProductTryonSettingsBatch] Processed settings:`, Array.from(processedSettings));
   
   // Try matching by handle if product_handle column exists and we still have unmatched products
   const unmatchedIds = productIds.filter(id => !processedSettings.has(id));
@@ -517,7 +518,7 @@ export async function getProductTryonSettingsBatch(shop: string, productIds: str
  * ADDED: Sets product try-on enabled/disabled state.
  */
 export async function setProductTryonSetting(shop: string, productId: string, enabled: boolean, productHandle?: string) {
-  console.log(`[DB] Setting product try-on: shop=${shop}, productId=${productId}, productHandle=${productHandle}, enabled=${enabled}`);
+  logger.log(`[DB] Setting product try-on: shop=${shop}, productId=${productId}, productHandle=${productHandle}, enabled=${enabled}`);
   
   // Save with the exact ID provided first (most important)
   await query(
@@ -553,10 +554,10 @@ export async function setProductTryonSetting(shop: string, productId: string, en
            DO UPDATE SET tryon_enabled = $4, product_handle = COALESCE($3, product_settings.product_handle), updated_at = CURRENT_TIMESTAMP`,
           [shop, idFormat, productHandle || null, enabled]
         );
-        console.log(`[DB] Also saved with alternative format: ${idFormat}`);
+        logger.log(`[DB] Also saved with alternative format: ${idFormat}`);
       } catch (error) {
         // Ignore errors for alternative formats (they're just for redundancy)
-        console.warn(`[DB] Could not save with alternative format ${idFormat}:`, error);
+        logger.warn(`[DB] Could not save with alternative format ${idFormat}:`, error);
       }
     }
   }
@@ -567,7 +568,7 @@ export async function setProductTryonSetting(shop: string, productId: string, en
     [shop, productId]
   );
   if (verify.rows.length > 0) {
-    console.log(`[DB] ✅ Verified saved setting: shop=${shop}, productId=${productId}, saved=${verify.rows[0].tryon_enabled}, row_id=${verify.rows[0].product_id}`);
+    logger.log(`[DB] ✅ Verified saved setting: shop=${shop}, productId=${productId}, saved=${verify.rows[0].tryon_enabled}, row_id=${verify.rows[0].product_id}`);
   } else {
     console.error(`[DB] ❌ Could not verify saved setting - no row found for shop=${shop}, productId=${productId}`);
   }
@@ -734,7 +735,7 @@ export async function getProductTryonStatus(shop: string, productId: string, pro
   const directQuery = await query(querySql, queryParams);
   
   // Log for debugging (ALWAYS log to help debug product enablement issues)
-  console.log(`[getProductTryonStatus] Product setting check:`, {
+  logger.log(`[getProductTryonStatus] Product setting check:`, {
     shop,
     productId,
     productHandle,
@@ -759,7 +760,7 @@ export async function getProductTryonStatus(shop: string, productId: string, pro
   const productEnabled = productSetting !== false; // null or true means enabled, only false means disabled
   
   // Log final product enabled status (ALWAYS log)
-  console.log(`[getProductTryonStatus] Product enabled result:`, {
+  logger.log(`[getProductTryonStatus] Product enabled result:`, {
     productSetting,
     productEnabled,
     productSettingIsFalse: productSetting === false,
