@@ -109,10 +109,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                 return;
             }
             
-            // Supprimer les anciens widgets qui pourraient exister
+            // Remove old widgets that might exist
             this.removeOldWidgets();
             
-            // Vérifier les crédits avant d'afficher le bouton
+            // Check credits before displaying button
             this.checkCredits().then(hasCredits => {
                 if (hasCredits) {
                     if (document.readyState === 'loading') {
@@ -125,7 +125,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         }
         
         removeOldWidgets() {
-            // Supprimer les anciens boutons widget
+            // Remove old widget buttons
             const oldButtons = document.querySelectorAll('.vton-widget-button, [data-vton-widget], .try-on-button, .virtual-try-on-button');
             oldButtons.forEach(btn => btn.remove());
             
