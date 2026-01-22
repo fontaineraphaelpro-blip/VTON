@@ -193,21 +193,21 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             \`;
             vtonBtn.onclick = () => this.openModal();
             
-            // Essayer plusieurs méthodes d'insertion
+            // Try multiple insertion methods
             const parent = addToCartBtn.parentElement;
             const grandParent = parent?.parentElement;
             
-            // Méthode 1: Insérer après le bouton directement
+            // Method 1: Insert after button directly
             if (addToCartBtn.nextSibling) {
                 addToCartBtn.parentNode.insertBefore(vtonBtn, addToCartBtn.nextSibling);
             } else {
-                // Méthode 2: Ajouter dans le parent si c'est un flex container
+                // Method 2: Add to parent if it's a flex container
                 if (parent && (parent.style.display === 'flex' || 
                                parent.classList.contains('flex') || 
                                getComputedStyle(parent).display === 'flex')) {
                     parent.appendChild(vtonBtn);
                 } 
-                // Méthode 3: Créer un wrapper pour les deux boutons
+                // Method 3: Create a wrapper for both buttons
                 else if (parent) {
                     const wrapper = document.createElement('div');
                     wrapper.style.display = 'flex';
@@ -219,7 +219,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                     wrapper.appendChild(addToCartBtn);
                     wrapper.appendChild(vtonBtn);
                 }
-                // Méthode 4: Insérer après le parent
+                // Method 4: Insert after parent
                 else {
                     addToCartBtn.insertAdjacentElement('afterend', vtonBtn);
                 }
