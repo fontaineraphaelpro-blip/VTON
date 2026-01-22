@@ -121,9 +121,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
             const planCredits: Record<string, number> = {
               "free-installation-setup": 4,
-              "starter": 50,
-              "pro": 200,
-              "studio": 1000,
+              "starter": 100,
+              "pro": 400,
+              "studio": 2000,
             };
 
             const monthlyCredits = planCredits[planName] || planCredits["free-installation-setup"];
@@ -522,21 +522,21 @@ export default function Credits() {
       id: "starter", 
       name: "Starter", 
       price: 29.0, 
-      description: "50 générations par mois",
+      description: "100 generations per month",
       popular: false 
     },
     { 
       id: "pro", 
       name: "Pro", 
       price: 99.0, 
-      description: "200 générations par mois",
+      description: "400 generations per month",
       popular: true 
     },
     { 
       id: "studio", 
       name: "Studio", 
       price: 399.0, 
-      description: "1000 générations par mois",
+      description: "2000 generations per month",
       popular: false 
     },
   ];

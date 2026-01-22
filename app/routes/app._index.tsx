@@ -131,9 +131,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     if (shouldUpdateDb && currentActivePlan) {
       const planCredits: Record<string, number> = {
         "free-installation-setup": 4,
-        "starter": 50,
-        "pro": 200,
-        "studio": 1000,
+        "starter": 100,
+        "pro": 400,
+        "studio": 2000,
       };
 
       const monthlyCredits = planCredits[currentActivePlan] || planCredits["free-installation-setup"];
