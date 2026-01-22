@@ -52,6 +52,15 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       }
     });
     
+    // Debug: Log what we're trying to fetch
+    if (process.env.NODE_ENV !== "production" && (productIdsToFetch.size > 0 || productHandlesToFetch.size > 0)) {
+      console.log("[History] Fetching product names:", {
+        productIds: Array.from(productIdsToFetch),
+        productHandles: Array.from(productHandlesToFetch),
+        totalLogs: logs.length
+      });
+    }
+    
     // Fetch product names from Shopify by ID
     const productNamesMap: Record<string, string> = {};
     const productHandlesMap: Record<string, string> = {}; // handle -> title
@@ -95,6 +104,15 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                   }
                 }
               });
+              
+              // Debug: Log what we fetched
+              if (process.env.NODE_ENV !== "production") {
+                console.log("[History] Fetched product names:", {
+                  batchSize: batch.length,
+                  fetchedCount: data.data.nodes.length,
+                  productNamesMap: Object.keys(productNamesMap).length
+                });
+              }
             }
           } else {
             const errorText = await response.text();
