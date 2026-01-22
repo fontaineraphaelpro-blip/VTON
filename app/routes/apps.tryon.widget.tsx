@@ -149,7 +149,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             const cartSelectors = CONFIG.selectors.addToCartButton.split(', ');
             let addToCartBtn = null;
             
-            // Essayer tous les sélecteurs
+            // Try all selectors
             for (const selector of cartSelectors) {
                 const trimmedSelector = selector.trim();
                 if (!trimmedSelector) continue;
