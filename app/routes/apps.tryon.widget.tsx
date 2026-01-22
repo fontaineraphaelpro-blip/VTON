@@ -161,7 +161,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                 }
             }
             
-            // Si pas trouvé, essayer de trouver le formulaire de produit
+            // If not found, try to find the product form
             if (!addToCartBtn) {
                 const productForm = document.querySelector('form[action*="/cart/add"]');
                 if (productForm) {
@@ -171,7 +171,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                 }
             }
             
-            // Si toujours pas trouvé, réessayer
+            // If still not found, retry
             if (!addToCartBtn) {
                 this.retryCount++;
                 setTimeout(() => this.injectButton(), CONFIG.retryDelay);
@@ -571,7 +571,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                     color: #3b82f6;
                 }
                 
-                /* État Erreur */
+                /* Error State */
                 .vton-state-error {
                     display: flex;
                     flex-direction: column;
@@ -897,7 +897,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                 
             } catch (error) {
                 console.error('[VTON] Error:', error);
-                const errorMessage = error instanceof Error ? error.message : 'Une erreur est survenue. Veuillez réessayer.';
+                const errorMessage = error instanceof Error ? error.message : 'An error occurred. Please try again.';
                 this.showError(errorMessage);
             }
         }
@@ -930,7 +930,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                 const productForm = document.querySelector('form[action*="/cart/add"]');
                 
                 if (!productForm) {
-                    this.showError('Formulaire produit non trouvé sur la page');
+                    this.showError('Product form not found on page');
                     return;
                 }
                 
