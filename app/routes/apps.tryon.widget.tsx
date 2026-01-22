@@ -862,7 +862,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                     : this.userPhoto;
                 
                 const shop = window.Shopify?.shop || this.extractShopFromUrl() || '';
-                const url = new URL(\`\${CONFIG.apiBase}/generate\`, window.location.origin);
+                const url = new URL(CONFIG.apiBase + '/generate', window.location.origin);
                 if (shop) {
                     url.searchParams.set('shop', shop);
                 }
