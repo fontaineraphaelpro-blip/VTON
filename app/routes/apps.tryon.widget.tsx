@@ -31,7 +31,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         retryDelay: 500
     };
     
-    // États du modal
+    // Modal states
     const STATE = {
         INITIAL: 'initial',
         VERIFICATION: 'verification',
@@ -104,10 +104,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         }
         
         init() {
-            if (!this.productId || !this.productImage) {
-                console.log('[VTON] Not a product page, skipping...');
-                return;
-            }
+            if (!this.productId || !this.productImage) return;
             
             // Remove old widgets that might exist
             this.removeOldWidgets();
@@ -140,11 +137,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                 return;
             }
             
-            // Limiter le nombre de tentatives
-            if (this.retryCount >= CONFIG.maxRetries) {
-                console.warn('[VTON] Max retries reached, could not find Add to Cart button');
-                return;
-            }
+            if (this.retryCount >= CONFIG.maxRetries) return;
             
             const cartSelectors = CONFIG.selectors.addToCartButton.split(', ');
             let addToCartBtn = null;
@@ -155,10 +148,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                 if (!trimmedSelector) continue;
                 
                 addToCartBtn = document.querySelector(trimmedSelector);
-                if (addToCartBtn) {
-                    console.log('[VTON] Found Add to Cart button with selector:', trimmedSelector);
-                    break;
-                }
+                if (addToCartBtn) break;
             }
             
             // If not found, try to find the product form
@@ -233,7 +223,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             }
             
             this.injectStyles();
-            console.log('[VTON] Widget button injected successfully');
         }
         
         injectStyles() {
@@ -354,7 +343,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                     padding: 24px;
                 }
                 
-                /* État Initial */
+                /* Initial State */
                 .vton-state-initial {
                     display: flex;
                     flex-direction: column;
@@ -389,7 +378,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                     color: #6b7280;
                 }
                 
-                /* État Vérification */
+                /* Verification State */
                 .vton-state-verification {
                     display: flex;
                     flex-direction: column;
@@ -447,7 +436,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                     margin-top: 8px;
                 }
                 
-                /* État Loading */
+                /* Loading State */
                 .vton-state-loading {
                     display: flex;
                     flex-direction: column;
@@ -479,7 +468,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                     text-align: center;
                 }
                 
-                /* État Résultat */
+                /* Result State */
                 .vton-state-result {
                     display: flex;
                     flex-direction: column;
@@ -674,49 +663,49 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                         <button class="vton-modal-close" onclick="this.closest('.vton-modal-overlay').querySelector('.vton-modal-close').dispatchEvent(new Event('click'))">×</button>
                     </div>
                     <div class="vton-modal-body">
-                        <!-- État Initial -->
+                        <!-- Initial State -->
                         <div id="vton-state-initial" class="vton-state-initial">
                             <div class="vton-upload-option" data-option="upload">
                                 <div class="vton-upload-icon">📷</div>
                                 <div class="vton-upload-title">Upload Photo</div>
-                                <div class="vton-upload-subtitle">Caméra ou Galerie</div>
+                                <div class="vton-upload-subtitle">Camera or Gallery</div>
                                 <input type="file" id="vton-photo-input" accept="image/*" style="display: none;">
                             </div>
                             <div class="vton-upload-option" data-option="mannequin">
                                 <div class="vton-upload-icon">🤖</div>
                                 <div class="vton-upload-title">Mannequin IA</div>
-                                <div class="vton-upload-subtitle">Utiliser un mannequin virtuel</div>
+                                <div class="vton-upload-subtitle">Use a virtual mannequin</div>
                             </div>
                         </div>
                         
-                        <!-- État Vérification -->
+                        <!-- Verification State -->
                         <div id="vton-state-verification" class="vton-state-verification vton-state-hidden">
                             <div class="vton-preview-container">
                                 <img id="vton-preview-img" class="vton-preview-image" src="" alt="Preview">
                                 <div class="vton-preview-overlay">Preview</div>
                             </div>
                             <button class="vton-generate-btn" id="vton-generate-btn">
-                                Générer (1 jeton)
+                                Generate (1 token)
                             </button>
-                            <div class="vton-credit-cost">Coût: 1 jeton</div>
+                            <div class="vton-credit-cost">Cost: 1 token</div>
                         </div>
                         
-                        <!-- État Loading -->
+                        <!-- Loading State -->
                         <div id="vton-state-loading" class="vton-state-loading vton-state-hidden">
                             <div class="vton-spinner"></div>
-                            <div class="vton-loading-text">L'IA prépare votre essayage...</div>
-                            <div class="vton-loading-subtext">Cela peut prendre ~15 secondes</div>
+                            <div class="vton-loading-text">AI is preparing your try-on...</div>
+                            <div class="vton-loading-subtext">This may take ~15 seconds</div>
                         </div>
                         
-                        <!-- État Résultat -->
+                        <!-- Result State -->
                         <div id="vton-state-result" class="vton-state-result vton-state-hidden">
                             <div class="vton-result-slider">
                                 <div class="vton-slider-container">
-                                    <img id="vton-result-before" class="vton-slider-image" src="" alt="Avant" style="clip-path: polygon(0 0, 50% 0, 50% 100%, 0 100%);">
-                                    <img id="vton-result-after" class="vton-slider-image" src="" alt="Après" style="clip-path: polygon(50% 0, 100% 0, 100% 100%, 50% 100%);">
+                                    <img id="vton-result-before" class="vton-slider-image" src="" alt="Before" style="clip-path: polygon(0 0, 50% 0, 50% 100%, 0 100%);">
+                                    <img id="vton-result-after" class="vton-slider-image" src="" alt="After" style="clip-path: polygon(50% 0, 100% 0, 100% 100%, 50% 100%);">
                                     <div class="vton-slider-divider" id="vton-slider-divider"></div>
-                                    <div class="vton-slider-label vton-slider-label-left">Avant</div>
-                                    <div class="vton-slider-label vton-slider-label-right">Après</div>
+                                    <div class="vton-slider-label vton-slider-label-left">Before</div>
+                                    <div class="vton-slider-label vton-slider-label-right">After</div>
                                 </div>
                             </div>
                             <div class="vton-result-actions">
@@ -774,7 +763,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             const mannequinOption = overlay.querySelector('[data-option="mannequin"]');
             if (mannequinOption) {
                 mannequinOption.addEventListener('click', () => {
-                    alert('Fonctionnalité Mannequin IA à venir');
+                    alert('AI Mannequin feature coming soon');
                 });
             }
             

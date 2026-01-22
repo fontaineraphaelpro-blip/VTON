@@ -14,12 +14,6 @@ import { ensureTables } from "../lib/db-init.server";
 export const action = async ({ request }: ActionFunctionArgs) => {
   try {
     const { shop, topic } = await authenticate.webhook(request);
-
-    // GDPR webhook received (log only in development)
-    if (process.env.NODE_ENV !== "production") {
-      console.log(`[GDPR] Received ${topic} webhook for ${shop}`);
-    }
-
     await ensureTables();
 
     if (topic === "customers/data_request") {
@@ -62,11 +56,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         request_date: new Date().toISOString(),
       };
 
-      // Data request processed (log only in development)
-      if (process.env.NODE_ENV !== "production") {
-        console.log(`[GDPR] Data request processed for customer ${customerId || customerEmail} in shop ${shop}`);
-      }
-      
       // Return the data (Shopify will handle delivery)
       return new Response(JSON.stringify(customerData), {
         status: 200,
@@ -93,15 +82,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         [shop, customerId, customerEmail]
       );
 
-      // Delete rate limits for this customer (if we stored customer_id there)
-      // Note: rate_limits uses customer_ip, not customer_id, so we might not have data to delete
-      // But we'll try to clean up if customer_id was stored
-
-      // Customer data redacted (log only in development)
-      if (process.env.NODE_ENV !== "production") {
-        console.log(`[GDPR] Customer data redacted for customer ${customerId || customerEmail} in shop ${shop}`);
-      }
-
       return new Response(JSON.stringify({}), { status: 200 });
     }
 
@@ -121,22 +101,12 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       
       // Delete shop record
       await query("DELETE FROM shops WHERE domain = $1", [shop]);
-
-      // Shop data redacted (log only in development)
-      if (process.env.NODE_ENV !== "production") {
-        console.log(`[GDPR] Shop data redacted for ${shop}`);
-      }
-
       return new Response(JSON.stringify({}), { status: 200 });
     }
 
     // Unknown topic - return 200 to acknowledge receipt
     return new Response(JSON.stringify({}), { status: 200 });
-  } catch (error) {
-    // Log error only in development
-    if (process.env.NODE_ENV !== "production") {
-      console.error("[GDPR] Error processing webhook:", error);
-    }
+  } catch {
     // Always return 200 to acknowledge receipt
     // Shopify will retry if needed
     return new Response(JSON.stringify({}), { status: 200 });

@@ -51,27 +51,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         productHandlesToFetch.add(log.product_handle);
       }
     });
-    
-    // Debug: Log what we're trying to fetch (always log for debugging)
-    if (productIdsToFetch.size > 0 || productHandlesToFetch.size > 0) {
-      console.log("[History] Fetching product names:", {
-        productIds: Array.from(productIdsToFetch),
-        productHandles: Array.from(productHandlesToFetch),
-        totalLogs: logs.length,
-        sampleLog: logs[0] ? {
-          product_id: logs[0].product_id,
-          product_handle: logs[0].product_handle,
-          product_title: logs[0].product_title
-        } : null
-      });
-    } else {
-      console.log("[History] No product IDs or handles to fetch. Sample log:", logs[0] ? {
-        product_id: logs[0].product_id,
-        product_handle: logs[0].product_handle,
-        product_title: logs[0].product_title
-      } : null);
-    }
-    
+
     // Fetch product names from Shopify by ID
     const productNamesMap: Record<string, string> = {};
     const productHandlesMap: Record<string, string> = {}; // handle -> title
@@ -123,26 +103,11 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                   }
                 }
               });
-              
-              // Debug: Log what we fetched (always log for debugging)
-              console.log("[History] Fetched product names:", {
-                batchSize: batch.length,
-                fetchedCount: data.data.nodes.length,
-                productNamesMapSize: Object.keys(productNamesMap).length,
-                fetchedTitles: data.data.nodes.map((n: any) => ({ id: n.id, title: n.title }))
-              });
-            }
-          } else {
-            const errorText = await response.text();
-            if (process.env.NODE_ENV !== "production") {
-              console.error("[History] GraphQL error:", errorText);
             }
           }
         }
-      } catch (error) {
-        if (process.env.NODE_ENV !== "production") {
-          console.error("[History] Error fetching product names:", error);
-        }
+      } catch {
+        // Silently fail
       }
     }
     
@@ -151,9 +116,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     if (productHandlesToFetch.size > 0) {
       try {
         const handlesArray = Array.from(productHandlesToFetch);
-        console.log("[History] Fetching products by handle:", handlesArray);
-        
-        // Fetch products one by one using handle (more reliable)
         for (const handle of handlesArray) {
           try {
             const handleQuery = `#graphql
@@ -165,16 +127,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                 }
               }
             `;
-            
-            console.log("[History] Fetching product by handle:", handle);
-            const response = await admin.graphql(handleQuery, {
-              variables: { handle }
-            });
-            
+            const response = await admin.graphql(handleQuery, { variables: { handle } });
             if (response.ok) {
               const data = await response.json() as any;
-              console.log("[History] Handle query response for", handle, ":", JSON.stringify(data, null, 2));
-              
               if (data.data?.product) {
                 const product = data.data.product;
                 const numericId = product.id ? product.id.replace('gid://shopify/Product/', '') : '';
@@ -182,36 +137,22 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                   productHandlesMap[product.handle] = product.title;
                   productNamesMap[product.id] = product.title;
                   if (numericId) productNamesMap[numericId] = product.title;
-                  console.log("[History] ✅ Mapped handle to title:", product.handle, "->", product.title);
                 }
                 if (product.id && product.handle) {
                   productIdToHandleMap[product.id] = product.handle;
                   if (numericId) productIdToHandleMap[numericId] = product.handle;
                 }
-              } else {
-                console.log("[History] ⚠️ No product found for handle:", handle);
               }
-            } else {
-              const errorText = await response.text();
-              console.error("[History] Handle query failed for", handle, ":", errorText);
             }
-          } catch (error) {
-            console.error("[History] Error fetching product by handle", handle, ":", error);
+          } catch {
+            // Skip this handle
           }
         }
-      } catch (error) {
-        console.error("[History] Error in handle fetching loop:", error);
+      } catch {
+        // Silently fail
       }
     }
-    
-    // Debug: Log the maps before enrichment
-    console.log("[History] Before enrichment:", {
-      productNamesMapSize: Object.keys(productNamesMap).length,
-      productHandlesMapSize: Object.keys(productHandlesMap).length,
-      productNamesMapKeys: Object.keys(productNamesMap).slice(0, 5),
-      productHandlesMapKeys: Object.keys(productHandlesMap).slice(0, 5)
-    });
-    
+
     // Enrich logs with product titles
     const enrichedLogs = logs.map((log: any) => {
       let title: string | undefined;
@@ -293,10 +234,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       shop,
     });
   } catch (error) {
-    // Log only in development
-    if (process.env.NODE_ENV !== "production") {
-      console.error("History loader error:", error);
-    }
     return json({
       logs: [],
       shop,

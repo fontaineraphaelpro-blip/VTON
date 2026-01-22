@@ -22,40 +22,29 @@ const pool = connectionString
     })
   : null;
 
-// Cache pour éviter de vérifier les tables à chaque requête
+// Cache to avoid checking tables on every request
 let tablesEnsured = false;
-let tablesEnsuring = false; // Flag pour éviter les appels concurrents
+let tablesEnsuring = false; // Flag to prevent concurrent checks
 const ensureTablesPromise: Promise<void> | null = null;
 
 /**
  * Ensures all business tables exist.
- * OPTIMIZED: Utilise un cache en mémoire pour éviter les vérifications répétées.
+ * Uses in-memory cache to avoid repeated checks.
  */
 export async function ensureTables() {
-  if (!pool) {
-    // Log only in development
-    if (process.env.NODE_ENV !== "production") {
-      console.warn("DATABASE_URL not configured, skipping table creation");
-    }
-    return;
-  }
+  if (!pool) return;
 
-  // Si les tables sont déjà vérifiées, retourner immédiatement
   if (tablesEnsured) {
     return;
   }
 
-  // Si une vérification est en cours, attendre qu'elle se termine
   if (tablesEnsuring) {
-    // Attendre un peu et réessayer
     await new Promise(resolve => setTimeout(resolve, 50));
     if (tablesEnsured) return;
-    // Si toujours en cours, attendre encore un peu
     await new Promise(resolve => setTimeout(resolve, 100));
     if (tablesEnsured) return;
   }
 
-  // Marquer comme en cours
   tablesEnsuring = true;
 
   try {
@@ -147,33 +136,17 @@ export async function ensureTables() {
         ADD COLUMN IF NOT EXISTS product_handle TEXT
       `);
     } catch (error: any) {
-      // Column might already exist or other error - ignore if it's about duplicate column
+      // Ignore duplicate column / already exists
       if (!error.message?.includes('duplicate') && !error.message?.includes('already exists')) {
-        // Log only in development
-        if (process.env.NODE_ENV !== "production") {
-          console.error('Error adding product_handle column:', error);
-        }
+        // Suppress other errors for this migration
       }
     }
 
-    // Marquer comme terminé
     tablesEnsured = true;
-    
-    // Log only in development
-    if (process.env.NODE_ENV !== "production") {
-      console.log("✅ Business tables initialized");
-    }
   } catch (error) {
-    // En cas d'erreur, réinitialiser le flag pour permettre une nouvelle tentative
     tablesEnsuring = false;
-    
-    // Log error only in development
-    if (process.env.NODE_ENV !== "production") {
-      console.error("❌ Error initializing business tables:", error);
-    }
     throw error;
   } finally {
-    // Toujours réinitialiser le flag "en cours"
     tablesEnsuring = false;
   }
 }

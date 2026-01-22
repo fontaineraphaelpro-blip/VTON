@@ -11,14 +11,12 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const shopParam = url.searchParams.get("shop");
   const returnTo = url.searchParams.get("return_to");
   
-  // Si le paramètre shop est présent dans l'URL, utiliser shopify.login() directement
-  // Cela permet de lancer l'OAuth même si la requête ne vient pas de l'iframe Shopify
+  // If shop param is in URL, use shopify.login() to start OAuth (e.g. when not from Shopify iframe)
   if (shopParam) {
-    // shopify.login() va lancer l'OAuth flow et préserver automatiquement le return_to
     return login(request);
   }
   
-  // Sinon, utiliser authenticate.admin() pour le flux OAuth standard
+  // Otherwise use authenticate.admin() for standard OAuth flow
   try {
     // authenticate.admin() handles OAuth flow automatically
     // If no session, it redirects to Shopify OAuth with return_to preserved

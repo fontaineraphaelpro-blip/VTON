@@ -5,12 +5,7 @@ import { query } from "../lib/services/db.service";
 import { ensureTables } from "../lib/db-init.server";
 
 export const action = async ({ request }: ActionFunctionArgs) => {
-  const { shop, session, topic } = await authenticate.webhook(request);
-
-  // Webhook received (log only in development)
-  if (process.env.NODE_ENV !== "production") {
-    console.log(`Received ${topic} webhook for ${shop}`);
-  }
+  const { shop, session } = await authenticate.webhook(request);
 
   try {
     // Ensure database tables exist before cleanup
@@ -59,18 +54,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     } catch (scriptTagError) {
       // Ignore script tag cleanup errors - Shopify will handle it
     }
-
-    // Cleanup completed successfully (log only in development)
-    if (process.env.NODE_ENV !== "production") {
-      console.log(`[Uninstall] Successfully cleaned up all data for ${shop}`);
-    }
-  } catch (error) {
-    // Log error but don't fail the webhook
-    // Shopify expects a 200 response even if cleanup fails
-    // Log only in development to avoid exposing errors in production
-    if (process.env.NODE_ENV !== "production") {
-      console.error(`[Uninstall] Error cleaning up data for ${shop}:`, error);
-    }
+  } catch {
+    // Shopify expects 200 even if cleanup fails
   }
 
   return new Response();

@@ -27,8 +27,6 @@
         return 'https://vton-production-890a.up.railway.app';
       })();
       
-      log('[VTON] App URL configured:', APP_URL);
-      
       // Wait for DOM to be ready and Shopify object to be available
       function waitForShopify() {
         if (window.Shopify && window.Shopify.product) {
@@ -1599,7 +1597,7 @@
             })
             .catch(function(err) {
               error('[VTON] Polling error:', err);
-              // Arrêter le polling après plusieurs erreurs consécutives
+              // Stop polling after several consecutive errors
               if (attempts > 5 && attempts % 3 === 0) {
                 error('[VTON] Multiple polling errors, stopping...');
                 clearInterval(pollInterval);
@@ -1612,7 +1610,7 @@
                 }
                 if (generateBtn) generateBtn.disabled = false;
               }
-              // Sinon, continuer le polling (erreur temporaire possible)
+              // Otherwise, continue polling (temporary error possible)
             });
         }, 2000); // Poll every 2 seconds
       }
@@ -1659,7 +1657,7 @@
         // Hide loading
         if (loading) loading.classList.remove('active');
         
-        // Hide upload area (image de départ), generate button, and privacy notice
+        // Hide upload area (source image), generate button, and privacy notice
         const uploadArea = shadowRoot.getElementById('vton-upload-area');
         const modalContent = shadowRoot.querySelector('.vton-modal-content');
         const privacyNotice = shadowRoot.querySelector('.vton-privacy-notice');
@@ -1870,7 +1868,7 @@
           // Hide loading
           if (loading) loading.classList.remove('active');
           
-          // Hide upload area (image de départ), generate button, and privacy notice
+          // Hide upload area (source image), generate button, and privacy notice
           const uploadArea = shadowRoot.getElementById('vton-upload-area');
           const modalContent = shadowRoot.querySelector('.vton-modal-content');
           const privacyNotice = shadowRoot.querySelector('.vton-privacy-notice');

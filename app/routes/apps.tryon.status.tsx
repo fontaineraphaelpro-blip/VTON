@@ -126,24 +126,11 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       return json({ error: "product_id parameter required" }, { status: 400 });
     }
     
-    // Decode URL-encoded product ID (e.g., gid%3A%2F%2Fshopify%2FProduct%2F123 -> gid://shopify/Product/123)
     try {
       const decoded = decodeURIComponent(productId);
-      if (decoded !== productId) {
-        if (process.env.NODE_ENV !== "production") {
-          console.log(`[Status] Decoded product ID: ${productId} -> ${decoded}`);
-        }
-        productId = decoded;
-      }
-    } catch (e) {
-      // If decoding fails, use original
-      if (process.env.NODE_ENV !== "production") {
-        console.log(`[Status] Could not decode product ID, using as-is: ${productId}`);
-      }
-    }
-    
-    if (process.env.NODE_ENV !== "production") {
-      console.log(`[Status] Using product ID: ${productId}, product handle: ${productHandle}`);
+      if (decoded !== productId) productId = decoded;
+    } catch {
+      // Use original if decode fails
     }
 
     // 4. Normalize product ID: if it's a handle (not GID and not numeric), 
@@ -156,11 +143,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     try {
       await ensureTables();
       
-      // S'assurer que le widget est activé par défaut si is_enabled n'est pas défini
+      // Ensure widget is enabled by default if is_enabled is not set
       const { getShop, upsertShop } = await import("../lib/services/db.service");
       const shopRecord = await getShop(shop);
       if (shopRecord && (shopRecord.is_enabled === null || shopRecord.is_enabled === undefined)) {
-        console.log(`[Status] 🔧 Activation automatique du widget pour ${shop} (is_enabled n'était pas défini)`);
         await upsertShop(shop, {
           isEnabled: true,
         });
@@ -176,7 +162,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     try {
       status = await getProductTryonStatus(shop, productId, productHandle || undefined);
     } catch (error) {
-      console.error("[Status] Error in getProductTryonStatus:", error);
       return json(
         {
           error: "Failed to check try-on status",
@@ -185,16 +170,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         { status: 500 }
       );
     }
-
-    // Log for debugging (ALWAYS log this to help debug product enablement issues)
-    console.log("[Status] Product try-on status check:", {
-      shop,
-      productId,
-      productHandle,
-      enabled: status.enabled,
-      shopEnabled: status.shopEnabled,
-      productEnabled: status.productEnabled,
-    });
 
     // 6. Return status with CORS headers for storefront requests
     const origin = request.headers.get("origin") || "";
@@ -217,10 +192,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       widget_settings: status.widgetSettings, // Only set if enabled, null otherwise
     }, { headers });
   } catch (error) {
-    // Log error for debugging (only in development)
-    if (process.env.NODE_ENV !== "production") {
-      console.error("[Status] Error in /apps/tryon/status:", error);
-    }
     return json(
       {
         error: "Failed to check try-on status",

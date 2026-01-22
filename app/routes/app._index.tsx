@@ -23,8 +23,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const shop = session.shop;
   const url = new URL(request.url);
   
-  // Si on vient d'un paiement (charge_id présent), rediriger vers /app/credits
-  // pour que la mise à jour de l'abonnement soit traitée là-bas avec la session réhydratée
+  // If returning from payment (charge_id present), redirect to /app/credits to handle subscription update with rehydrated session
   const chargeId = url.searchParams.get("charge_id");
   if (chargeId) {
     return redirect(`/app/credits?charge_id=${encodeURIComponent(chargeId)}`);
@@ -32,10 +31,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   
   const returnUrl = `https://${url.host}/app`;
 
-  // IMPORTANT: Synchroniser toujours la base de données avec les abonnements Shopify
-  // Cela garantit que la base de données est à jour même sans charge_id
+  // Always sync database with Shopify subscriptions (keeps DB up to date even without charge_id)
   try {
-    // Vérifier les abonnements existants via GraphQL
     const subscriptionQuery = `#graphql
       query {
         currentAppInstallation {
@@ -71,24 +68,12 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       if (subscriptionResponse.ok) {
         const subscriptionData = await subscriptionResponse.json() as any;
         const allSubscriptions = subscriptionData?.data?.currentAppInstallation?.activeSubscriptions || [];
-        console.log(`[Dashboard] 📊 Abonnements récupérés depuis Shopify: ${allSubscriptions.length}`, allSubscriptions.map((s: any) => ({ name: s.name, status: s.status, test: s.test, createdAt: s.createdAt })));
+        const allowTestSubscriptions = true;
+        let activeSubscription = allSubscriptions.find((sub: any) =>
+          sub.status === "ACTIVE" && (allowTestSubscriptions || !sub.test)
+        );
         
-        // Accepter les abonnements de test (utilisés en développement/test)
-        // En production, les abonnements réels ne sont pas en test, donc ça marche aussi
-        // Forcer true pour l'instant car les abonnements de test sont utilisés même en "production" sur Railway
-        const allowTestSubscriptions = true; // process.env.NODE_ENV !== "production";
-        console.log(`[Dashboard] 🔧 allowTestSubscriptions=${allowTestSubscriptions}, NODE_ENV=${process.env.NODE_ENV}`);
-        
-        // Chercher d'abord un abonnement ACTIVE
-        let activeSubscription = allSubscriptions.find((sub: any) => {
-          const matches = sub.status === "ACTIVE" && (allowTestSubscriptions || !sub.test);
-          if (matches) {
-            console.log(`[Dashboard] ✅ Trouvé abonnement actif: ${sub.name}, status: ${sub.status}, test: ${sub.test}`);
-          }
-          return matches;
-        });
-        
-        // Si aucun ACTIVE, chercher un abonnement PENDING ou ACCEPTED (après achat récent)
+        // If no ACTIVE, look for PENDING or ACCEPTED (e.g. after recent purchase)
         if (!activeSubscription) {
           const sortedSubscriptions = allSubscriptions
             .filter((sub: any) => (allowTestSubscriptions || !sub.test) && (sub.status === "PENDING" || sub.status === "ACCEPTED" || sub.status === "ACTIVE"))
@@ -102,32 +87,20 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         }
 
         if (activeSubscription) {
-          // Normalize plan name (e.g., "Starter" -> "starter")
           const detectedPlanName = activeSubscription.name.toLowerCase().replace(/\s+/g, '-');
           currentActivePlan = detectedPlanName;
-          console.log(`[Dashboard] ✅ Abonnement détecté: ${activeSubscription.name} (${detectedPlanName}), status: ${activeSubscription.status}`);
-          
-          // Récupérer les données actuelles du shop
           const shopData = await getShop(shop);
           const dbPlanName = shopData?.plan_name;
-          console.log(`[Dashboard] 🔍 Comparaison: plan DB="${dbPlanName}", plan Shopify="${detectedPlanName}"`);
-          
-          // Vérifier si la base de données doit être mise à jour
           if (dbPlanName !== detectedPlanName) {
-            console.log(`[Dashboard] 🔄 Synchronisation nécessaire: plan DB="${dbPlanName}", plan Shopify="${detectedPlanName}"`);
             shouldUpdateDb = true;
-          } else {
-            console.log(`[Dashboard] ✓ Plans identiques, pas de synchronisation nécessaire`);
           }
-        } else {
-          console.log(`[Dashboard] ⚠️ Aucun abonnement actif trouvé dans Shopify`);
         }
       }
-    } catch (subError) {
-      console.log("ℹ️ Impossible de vérifier les abonnements:", subError);
+    } catch {
+      // Continue without subscription sync
     }
 
-    // Synchroniser la base de données si nécessaire
+    // Sync database if plan changed
     if (shouldUpdateDb && currentActivePlan) {
       const planCredits: Record<string, number> = {
         "free-installation-setup": 4,
@@ -137,13 +110,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       };
 
       const monthlyCredits = planCredits[currentActivePlan] || planCredits["free-installation-setup"];
-      console.log(`[Dashboard] 💾 Synchronisation de la base de données: plan=${currentActivePlan}, crédits=${monthlyCredits}`);
-      
       try {
-        // Mettre à jour à la fois monthlyQuota ET credits pour refléter le plan actif
         await upsertShop(shop, {
           monthlyQuota: monthlyCredits,
-          credits: monthlyCredits, // Ajouter les crédits correspondant au plan
+          credits: monthlyCredits,
         });
         
         await query(
@@ -153,14 +123,14 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
           `UPDATE shops SET plan_name = $1 WHERE domain = $2`,
           [currentActivePlan, shop]
         );
-        
-        console.log(`[Dashboard] ✅ Base de données synchronisée avec succès: monthlyQuota=${monthlyCredits}, credits=${monthlyCredits}`);
       } catch (syncError) {
-        console.error(`[Dashboard] ❌ Erreur lors de la synchronisation:`, syncError);
+        if (process.env.NODE_ENV !== "production") {
+          console.error("[Dashboard] Sync error:", syncError);
+        }
       }
     }
 
-    // Si aucun abonnement actif, attribuer le plan gratuit par défaut
+    // If no active subscription, assign free plan by default
     if (!currentActivePlan) {
       try {
         const shopData = await getShop(shop);
@@ -179,19 +149,20 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
               `UPDATE shops SET plan_name = $1 WHERE domain = $2`,
               ["free-installation-setup", shop]
             );
-          } catch (planError) {
-            console.log("ℹ️ Plan name update skipped:", planError);
+          } catch {
+            // Plan name update skipped
           }
-          
-          console.log("✅ Plan gratuit attribué automatiquement");
         }
       } catch (dbError) {
-        console.error("❌ Erreur lors de l'attribution du plan gratuit:", dbError);
+        if (process.env.NODE_ENV !== "production") {
+          console.error("[Dashboard] Free plan assignment error:", dbError);
+        }
       }
     }
   } catch (error) {
-    console.error("❌ Erreur lors de la vérification des abonnements:", error);
-    // On continue quand même pour ne pas bloquer l'app
+    if (process.env.NODE_ENV !== "production") {
+      console.error("[Dashboard] Subscription check error:", error);
+    }
   }
 
   try {
@@ -200,9 +171,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     // OPTIMIZED: Load critical data immediately
     let shopData = await getShop(shop);
     
-    // S'assurer que le widget est activé par défaut si is_enabled n'est pas défini ou est null
     if (shopData && (shopData.is_enabled === null || shopData.is_enabled === undefined)) {
-      console.log(`[Dashboard] 🔧 Activation automatique du widget pour ${shop} (is_enabled n'était pas défini)`);
       await upsertShop(shop, {
         isEnabled: true,
       });
@@ -303,11 +272,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             }
           }
         }
-      } catch (error) {
+      } catch {
         // Silently fail - use fallback titles from logs
-        if (process.env.NODE_ENV !== "production") {
-          console.error("Error fetching product names:", error);
-        }
       }
     }
     
@@ -460,7 +426,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       await upsertShop(shop, {
         credits: 4, // Initialize credits for compatibility with old system
         monthlyQuota: 4, // Initialize with free plan
-        isEnabled: true, // Widget activé par défaut pour les nouveaux shops
+        isEnabled: true, // Widget enabled by default for new shops
       });
       // Re-fetch shop data after creation
       const newShopData = await getShop(shop);
@@ -474,12 +440,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       });
     }
 
-    // NOTE: Le widget utilise maintenant l'App Embed Block (block.liquid) et non plus les script tags
-    // L'installation doit être faite manuellement dans le thème Shopify :
-    // 1. Aller dans Online Store > Themes > Customize
-    // 2. Sélectionner un template de produit
-    // 3. Ajouter une section "App embeds" ou "Apps"
-    // 4. Activer le widget "Virtual Try-On Widget"
+    // NOTE: Widget uses App Embed Block (block.liquid). To install: Online Store > Themes > Customize > Product template > App embeds > Enable "Virtual Try-On Widget"
 
     return json({
       shop: shopData || null,
@@ -532,7 +493,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         const scriptTagsData = await scriptTagsResponse.json() as any;
         const existingScripts = scriptTagsData.data?.scriptTags?.edges || [];
         
-        // Trouver tous les anciens script tags liés au widget
+        // Find all old script tags related to the widget
         const oldScriptTags = existingScripts.filter((edge: any) => {
           const src = edge.node.src || '';
           return src.includes('widget') || 
@@ -544,7 +505,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         
         let deletedCount = 0;
         
-        // Supprimer chaque ancien script tag
         for (const oldScript of oldScriptTags) {
           try {
             const deleteScriptTagMutation = `#graphql
@@ -664,19 +624,8 @@ export default function Dashboard() {
     : null;
   const quotaExceeded = monthlyQuota && monthlyUsageCount >= monthlyQuota;
 
-  // Use credits directly (accumulation system)
-  // Credits accumulate when purchasing plans and are deducted on each generation
   const credits = shop?.credits || 0;
-  
-  // Debug log to verify credits value
-  if (process.env.NODE_ENV !== "production") {
-    console.log(`[Dashboard] Credits display: shop?.credits=${shop?.credits}, credits=${credits}, shop object:`, {
-      credits: shop?.credits,
-      monthly_quota: shop?.monthly_quota,
-      monthly_quota_used: shop?.monthly_quota_used
-    });
-  }
-  
+
   // Get total try-ons from loader data (calculated in loader) or fallback to shop value
   const totalTryons = typeof (loaderData as any).totalTryons === 'number' 
     ? (loaderData as any).totalTryons 
@@ -960,7 +909,7 @@ export default function Dashboard() {
             )}
           </div>
 
-          {/* Activité */}
+          {/* Recent Activity */}
           <div className="dashboard-section">
             <h2>Recent Activity</h2>
             {recentLogs.length > 0 ? (

@@ -322,8 +322,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       }, { status: 500, headers });
     }
   } catch (error) {
-    console.error("[Generate] Error in /apps/tryon/generate:", error);
-    
+    if (process.env.NODE_ENV !== "production") {
+      console.error("[Generate] Error:", error);
+    }
     // Use CORS headers that were set at the beginning
     return json(
       {

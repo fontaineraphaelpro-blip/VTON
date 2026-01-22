@@ -31,16 +31,15 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     await ensureTables();
     let shopData = await getShop(shop);
     
-    // S'assurer que le widget est activé par défaut si is_enabled n'est pas défini
+    // Ensure widget is enabled by default if is_enabled is not set
     if (shopData && (shopData.is_enabled === null || shopData.is_enabled === undefined)) {
-      console.log(`[Credits] 🔧 Activation automatique du widget pour ${shop} (is_enabled n'était pas défini)`);
       await upsertShop(shop, {
         isEnabled: true,
       });
       shopData = await getShop(shop);
     }
 
-    // Traiter le retour de paiement si charge_id présent
+    // Handle billing return when charge_id is present
     if (chargeId) {
       try {
         let currentAdmin = admin;
@@ -58,8 +57,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             if (currentSession && currentSession.shop) {
               currentShop = currentSession.shop;
             }
-          } catch (authError) {
-            console.warn(`[Credits] ⚠️ Impossible de ré-authentifier pour charge_id: ${chargeId}`);
+          } catch {
+            // Re-auth failed
           }
         }
         
@@ -98,7 +97,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
           
           let allSubscriptions = subscriptionData?.data?.currentAppInstallation?.activeSubscriptions || [];
           
-          // Réessayer si aucun abonnement trouvé
+          // Retry if no subscription found
           if (allSubscriptions.length === 0) {
             await new Promise(resolve => setTimeout(resolve, 2000));
             const retryResponse = await currentAdmin.graphql(subscriptionQuery);
@@ -106,7 +105,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             allSubscriptions = retryData?.data?.currentAppInstallation?.activeSubscriptions || [];
           }
           
-          // En développement, accepter aussi les abonnements de test
+          // In development, also accept test subscriptions
           const allowTestSubscriptions = process.env.NODE_ENV !== "production";
           const recentSubscription = allSubscriptions
             .filter((sub: any) => allowTestSubscriptions || !sub.test)
@@ -128,19 +127,17 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
             const monthlyCredits = planCredits[planName] || planCredits["free-installation-setup"];
             
-            // Mettre à jour à la fois monthlyQuota ET credits pour refléter le plan acheté
+            // Update monthlyQuota and credits to reflect purchased plan
             await upsertShop(shop, {
               monthlyQuota: monthlyCredits,
-              credits: monthlyCredits, // Ajouter les crédits correspondant au plan
-            });
-            
-            console.log(`[Credits] 💰 Crédits mis à jour: plan=${planName}, monthlyQuota=${monthlyCredits}, credits=${monthlyCredits}`);
+              credits: monthlyCredits,
+            }            );
 
             try {
               await query(`ALTER TABLE shops ADD COLUMN IF NOT EXISTS plan_name TEXT`);
               await query(`UPDATE shops SET plan_name = $1 WHERE domain = $2`, [planName, shop]);
-            } catch (planError) {
-              console.error(`[Credits] ⚠️ Erreur lors de la mise à jour du plan_name:`, planError);
+            } catch {
+              // Plan name update skipped
             }
 
             const updatedShopData = await getShop(shop);
@@ -153,12 +150,12 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             });
           }
         }
-      } catch (subscriptionError) {
-        console.error(`[Credits] ❌ Erreur lors de la vérification de l'abonnement:`, subscriptionError);
+      } catch {
+        // Subscription check failed
       }
     }
 
-    // Synchroniser toujours la base de données avec les abonnements Shopify
+    // Always sync database with Shopify subscriptions
     let currentActivePlan: string | null = null;
     let shouldUpdateDb = false;
     
@@ -195,18 +192,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       
       const allSubscriptions = subscriptionData?.data?.currentAppInstallation?.activeSubscriptions || [];
       
-      // Accepter les abonnements de test (utilisés en développement/test)
-      // Forcer true pour l'instant car les abonnements de test sont utilisés même en "production" sur Railway
-      const allowTestSubscriptions = true; // process.env.NODE_ENV !== "production";
-      console.log(`[Credits] 🔧 allowTestSubscriptions=${allowTestSubscriptions}, NODE_ENV=${process.env.NODE_ENV}`);
-      
-      let activeSubscription = allSubscriptions.find((sub: any) => {
-        const matches = sub.status === "ACTIVE" && (allowTestSubscriptions || !sub.test);
-        if (matches) {
-          console.log(`[Credits] ✅ Trouvé abonnement actif: ${sub.name}, status: ${sub.status}, test: ${sub.test}`);
-        }
-        return matches;
-      });
+      const allowTestSubscriptions = true;
+      let activeSubscription = allSubscriptions.find((sub: any) =>
+        sub.status === "ACTIVE" && (allowTestSubscriptions || !sub.test)
+      );
       
       if (!activeSubscription) {
         const sortedSubscriptions = allSubscriptions
@@ -226,7 +215,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         
         const dbPlanName = shopData?.plan_name;
         if (dbPlanName !== detectedPlanName) {
-          console.log(`[Credits] 🔄 Synchronisation: plan DB="${dbPlanName}", plan Shopify="${detectedPlanName}"`);
           shouldUpdateDb = true;
         }
       } else {
@@ -249,23 +237,21 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         const monthlyCredits = planCredits[currentActivePlan] || planCredits["free-installation-setup"];
         
         try {
-          // Mettre à jour à la fois monthlyQuota ET credits pour refléter le plan actif
+          // Update monthlyQuota and credits to reflect active plan
           await upsertShop(shop, {
             monthlyQuota: monthlyCredits,
-            credits: monthlyCredits, // Ajouter les crédits correspondant au plan
+            credits: monthlyCredits,
           });
           
           await query(`ALTER TABLE shops ADD COLUMN IF NOT EXISTS plan_name TEXT`);
           await query(`UPDATE shops SET plan_name = $1 WHERE domain = $2`, [currentActivePlan, shop]);
           
           shopData = await getShop(shop);
-          console.log(`[Credits] ✅ Base de données synchronisée: plan=${currentActivePlan}, monthlyQuota=${monthlyCredits}, credits=${monthlyCredits}`);
-        } catch (syncError) {
-          console.error(`[Credits] ❌ Erreur lors de la synchronisation:`, syncError);
+        } catch {
+          // Sync failed
         }
       }
-    } catch (subscriptionError) {
-      console.error(`[Credits] ❌ Erreur lors de la vérification des abonnements:`, subscriptionError);
+    } catch {
       if (shopData?.plan_name) {
         currentActivePlan = shopData.plan_name;
       }
@@ -295,9 +281,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       throw error;
     }
     
-    if (process.env.NODE_ENV !== "production") {
-      console.error("[Credits Loader] ❌ Error:", error);
-    }
     return json({
       shop: null,
       error: error instanceof Error ? error.message : "Unknown error",
@@ -363,7 +346,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         });
       }
 
-      // Vérifier si l'utilisateur possède déjà ce plan
+      // Check if user already has this plan
       try {
         const subscriptionQuery = `#graphql
           query {
@@ -571,7 +554,7 @@ export default function Credits() {
                 fetcher.load('/app/credits');
               }}
               action={(fetcher.data as any)?.requiresAuth ? {
-                content: (fetcher.data as any)?.reauthUrl ? "Ré-authentifier" : "Rafraîchir la page",
+                content: (fetcher.data as any)?.reauthUrl ? "Re-authenticate" : "Refresh page",
                 onAction: () => {
                   if ((fetcher.data as any)?.reauthUrl) {
                     try {

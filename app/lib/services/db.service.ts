@@ -9,7 +9,6 @@
 
 import pg from "pg";
 const { Pool } = pg;
-import { logger } from "../logger.server";
 
 // Database connection pool
 const DATABASE_URL = process.env.DATABASE_URL;
@@ -149,8 +148,7 @@ export async function upsertShop(domain: string, data: {
   } else {
     // Create new shop - automatically initialize with free plan (4 credits/month)
     const defaultMonthlyQuota = data.monthlyQuota !== undefined ? data.monthlyQuota : 4;
-    // Widget activé par défaut pour les nouveaux shops
-    const isEnabled = data.isEnabled !== undefined ? data.isEnabled : true;
+    const isEnabled = data.isEnabled !== undefined ? data.isEnabled : true; // Widget enabled by default for new shops
     await query(
       `INSERT INTO shops (domain, access_token, credits, widget_text, widget_bg, widget_color, max_tries_per_user, monthly_quota, is_enabled)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
@@ -163,7 +161,7 @@ export async function upsertShop(domain: string, data: {
         data.widgetColor || "#ffffff",
         data.maxTriesPerUser || 5,
         defaultMonthlyQuota, // Default to 4 (free plan) for new shops
-        isEnabled, // Widget activé par défaut
+        isEnabled, // Widget enabled by default
       ]
     );
   }
@@ -200,7 +198,7 @@ export async function getTryonLogs(shop: string, filters: {
   
   queryText += " ORDER BY created_at DESC";
   
-  // Ajoute LIMIT et OFFSET si spécifiés
+  // Add LIMIT and OFFSET if specified
   if (filters.limit !== undefined) {
     queryText += ` LIMIT $${paramIndex++}`;
     params.push(filters.limit);
@@ -411,28 +409,13 @@ export async function getProductTryonSettingsBatch(shop: string, productIds: str
   const settingsMap: Record<string, boolean | null> = {};
   const processedSettings = new Set<string>();
   
-  logger.log(`[getProductTryonSettingsBatch] Looking for settings. Input productIds:`, productIds);
-  logger.log(`[getProductTryonSettingsBatch] Query will search for formats:`, formatsArray);
-  logger.log(`[getProductTryonSettingsBatch] Found ${result.rows.length} matching rows in DB`);
-  
   result.rows.forEach((row: any) => {
     const enabled = row.tryon_enabled;
     const enabledBool = enabled === true || enabled === 'true' || enabled === 1;
     const disabledBool = enabled === false || enabled === 'false' || enabled === 0;
     
     const settingValue = disabledBool ? false : (enabledBool ? true : null);
-    
-    logger.log(`[getProductTryonSettingsBatch] Processing row:`, {
-      storedProductId: row.product_id,
-      storedHandle: row.product_handle,
-      enabledRaw: enabled,
-      enabledType: typeof enabled,
-      enabledBool,
-      disabledBool,
-      settingValue,
-      settingValueType: typeof settingValue
-    });
-    
+
     // Match this setting to all product IDs that could match
     const storedProductId = row.product_id;
     const numericFromStored = storedProductId.match(/\d+/)?.[0];
@@ -451,21 +434,12 @@ export async function getProductTryonSettingsBatch(shop: string, productIds: str
       const matchesDirectNumeric = storedProductId === numericId;
       
       if (matchesExact || matchesGID || matchesNumeric || matchesDirectNumeric) {
-        logger.log(`[getProductTryonSettingsBatch] ✅ MATCH FOUND:`, {
-          searchingFor: productId,
-          foundInDB: storedProductId,
-          matchType: matchesExact ? 'exact' : (matchesGID ? 'GID' : (matchesNumeric ? 'numeric' : 'directNumeric')),
-          settingValue
-        });
         settingsMap[productId] = settingValue;
         processedSettings.add(productId);
       }
     });
   });
-  
-  logger.log(`[getProductTryonSettingsBatch] After matching, settingsMap:`, settingsMap);
-  logger.log(`[getProductTryonSettingsBatch] Processed settings:`, Array.from(processedSettings));
-  
+
   // Try matching by handle if product_handle column exists and we still have unmatched products
   const unmatchedIds = productIds.filter(id => !processedSettings.has(id));
   if (unmatchedIds.length > 0) {
@@ -518,8 +492,6 @@ export async function getProductTryonSettingsBatch(shop: string, productIds: str
  * ADDED: Sets product try-on enabled/disabled state.
  */
 export async function setProductTryonSetting(shop: string, productId: string, enabled: boolean, productHandle?: string) {
-  logger.log(`[DB] Setting product try-on: shop=${shop}, productId=${productId}, productHandle=${productHandle}, enabled=${enabled}`);
-  
   // Save with the exact ID provided first (most important)
   await query(
     `INSERT INTO product_settings (shop, product_id, product_handle, tryon_enabled, updated_at)
@@ -554,24 +526,12 @@ export async function setProductTryonSetting(shop: string, productId: string, en
            DO UPDATE SET tryon_enabled = $4, product_handle = COALESCE($3, product_settings.product_handle), updated_at = CURRENT_TIMESTAMP`,
           [shop, idFormat, productHandle || null, enabled]
         );
-        logger.log(`[DB] Also saved with alternative format: ${idFormat}`);
-      } catch (error) {
-        // Ignore errors for alternative formats (they're just for redundancy)
-        logger.warn(`[DB] Could not save with alternative format ${idFormat}:`, error);
+      } catch {
+        // Ignore errors for alternative formats
       }
     }
   }
   
-  // Verify the setting was saved correctly
-  const verify = await query(
-    "SELECT product_id, tryon_enabled FROM product_settings WHERE shop = $1 AND product_id = $2",
-    [shop, productId]
-  );
-  if (verify.rows.length > 0) {
-    logger.log(`[DB] ✅ Verified saved setting: shop=${shop}, productId=${productId}, saved=${verify.rows[0].tryon_enabled}, row_id=${verify.rows[0].product_id}`);
-  } else {
-    console.error(`[DB] ❌ Could not verify saved setting - no row found for shop=${shop}, productId=${productId}`);
-  }
 }
 
 /**
@@ -702,73 +662,18 @@ export async function getProductTryonStatus(shop: string, productId: string, pro
     };
   }
   
-  // Check shop-level enablement
-  // Si is_enabled est null/undefined, considérer comme activé (par défaut)
-  // Si is_enabled est explicitement false, alors désactivé
-  const shopEnabled = shopRecord.is_enabled !== false; // Default to true if not set (null/undefined = true)
+  // Shop-level: if is_enabled is null/undefined, treat as enabled; if explicitly false, disabled
+  const shopEnabled = shopRecord.is_enabled !== false;
   
-  // Check product-level enablement (pass handle for better matching)
   const productSetting = await getProductTryonSetting(shop, productId, productHandle);
-  
-  // ALSO do a direct DB query to verify what's actually stored
-  // This helps debug if the matching logic is working correctly
-  const gidMatch = productId.match(/^gid:\/\/shopify\/Product\/(\d+)$/);
-  const numericId = gidMatch ? gidMatch[1] : (productId.match(/\d+/)?.[0] || productId);
-  const gidFormat = gidMatch ? productId : `gid://shopify/Product/${numericId}`;
-  
-  // Build parameters array dynamically
-  const queryParams: any[] = [shop, productId, numericId, gidFormat];
-  let querySql = `SELECT product_id, tryon_enabled, product_handle 
-     FROM product_settings 
-     WHERE shop = $1 
-     AND (
-       product_id = $2 
-       OR product_id = $3 
-       OR product_id = $4`;
-  
-  if (productHandle) {
-    queryParams.push(productHandle);
-    querySql += ` OR product_handle = $5`;
-  }
-  querySql += `)`;
-  
-  const directQuery = await query(querySql, queryParams);
-  
-  // Log for debugging (ALWAYS log to help debug product enablement issues)
-  logger.log(`[getProductTryonStatus] Product setting check:`, {
-    shop,
-    productId,
-    productHandle,
-    numericId,
-    gidFormat,
-    productSetting,
-    productSettingType: typeof productSetting,
-    directQueryResults: directQuery.rows.map((r: any) => ({
-      product_id: r.product_id,
-      tryon_enabled: r.tryon_enabled,
-      tryon_enabled_type: typeof r.tryon_enabled,
-      product_handle: r.product_handle
-    })),
-    directQueryCount: directQuery.rows.length
-  });
-  
+
   // IMPORTANT: 
   // - If productSetting is explicitly true, product is enabled
   // - If productSetting is explicitly false, product is disabled
   // - If productSetting is null (not set), default to ENABLED (all products enabled by default at installation)
   // Admin can then explicitly disable products they don't want
-  const productEnabled = productSetting !== false; // null or true means enabled, only false means disabled
-  
-  // Log final product enabled status (ALWAYS log)
-  logger.log(`[getProductTryonStatus] Product enabled result:`, {
-    productSetting,
-    productEnabled,
-    productSettingIsFalse: productSetting === false,
-    productSettingIsNull: productSetting === null,
-    productSettingIsTrue: productSetting === true,
-    willBeEnabled: shopEnabled && productEnabled
-  });
-  
+  const productEnabled = productSetting !== false;
+
   // Final enabled status: both shop and product must be enabled
   const enabled = shopEnabled && productEnabled;
   

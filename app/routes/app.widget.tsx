@@ -32,9 +32,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       shop: shopData || null,
     });
   } catch (error) {
-    if (process.env.NODE_ENV !== "production") {
-      console.error("Widget loader error:", error);
-    }
     return json({
       shop: null,
       error: error instanceof Error ? error.message : "Unknown error",
@@ -51,32 +48,13 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const widgetBg = (formData.get("widgetBg") as string) || "#000000";
   const widgetColor = (formData.get("widgetColor") as string) || "#ffffff";
 
-  if (process.env.NODE_ENV !== "production") {
-    console.log("[Widget Action] Saving widget configuration:", {
-      shop,
-      widgetText,
-      widgetBg,
-      widgetColor,
-    });
-  }
-
   try {
     await upsertShop(shop, {
       widgetText,
       widgetBg,
       widgetColor,
     });
-
-    // Verify the save by reading back from database
     const verifyShop = await getShop(shop);
-    if (process.env.NODE_ENV !== "production") {
-      console.log("[Widget Action] Widget configuration saved and verified:", {
-        widget_text: verifyShop?.widget_text,
-        widget_bg: verifyShop?.widget_bg,
-        widget_color: verifyShop?.widget_color,
-      });
-    }
-
     return json({ 
       success: true,
       savedValues: {
@@ -86,9 +64,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       }
     });
   } catch (error) {
-    if (process.env.NODE_ENV !== "production") {
-      console.error("[Widget Action] Error saving widget configuration:", error);
-    }
     return json({ 
       success: false, 
         error: error instanceof Error ? error.message : "Error saving configuration"
@@ -296,7 +271,7 @@ export default function Widget() {
                             value={widgetBg}
                             onChange={setWidgetBg}
                             autoComplete="off"
-                            helpText="Code couleur hexadécimal"
+                            helpText="Hexadecimal color code"
                           />
                         </Box>
                       </InlineStack>
@@ -326,7 +301,7 @@ export default function Widget() {
                             value={widgetColor}
                             onChange={setWidgetColor}
                             autoComplete="off"
-                            helpText="Code couleur hexadécimal"
+                            helpText="Hexadecimal color code"
                           />
                         </Box>
                       </InlineStack>

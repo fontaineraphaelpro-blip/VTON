@@ -17,10 +17,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   // The actual widget is now served via App Embed Block (block.liquid)
   // Return empty response or redirect to the widget route
   
-  // Return empty JavaScript that does nothing
-  const emptyWidget = `(function() {
-    console.warn('[VTON] widget-v2.js is deprecated. Please use the App Embed Block instead.');
-  })();`;
+  const emptyWidget = `(function(){})();`;
 
   return new Response(emptyWidget, {
     headers: {
