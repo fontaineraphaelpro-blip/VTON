@@ -326,7 +326,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         }
         return json({ 
           success: false, 
-          error: `Erreur d'authentification (${authError.status}). Veuillez rafraîchir la page.`,
+          error: `Authentication error (${authError.status}). Please refresh the page.`,
           requiresAuth: true,
         });
       }
@@ -352,7 +352,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       if (!validPlans.includes(planId)) {
         return json({ 
           success: false, 
-          error: "Plan d'abonnement invalide",
+          error: "Invalid subscription plan",
         });
       }
 
@@ -407,7 +407,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           if (currentPlanName === planId) {
             return json({ 
               success: false, 
-              error: `Vous possédez déjà l'abonnement "${activeSubscription.name}". Vous ne pouvez pas l'acheter à nouveau.`,
+              error: `You already have the "${activeSubscription.name}" subscription. You cannot purchase it again.`,
             });
           }
         }
@@ -437,7 +437,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     }
     return json({ 
       success: false, 
-      error: error instanceof Error ? error.message : "Une erreur est survenue. Veuillez réessayer.",
+      error: error instanceof Error ? error.message : "An error occurred. Please try again.",
     });
   }
 };
@@ -633,10 +633,10 @@ export default function Credits() {
 
         <div style={{ marginTop: "var(--spacing-xl)" }}>
           <h2 style={{ fontSize: "24px", fontWeight: "600", marginBottom: "var(--spacing-md)" }}>
-            Plans d'abonnement
+            Subscription Plans
           </h2>
           <p style={{ color: "var(--text-secondary)", marginBottom: "var(--spacing-lg)" }}>
-            Choisissez un plan d'abonnement mensuel pour accéder à toutes les fonctionnalités
+            Choose a monthly subscription plan to access all features
           </p>
           <div className="pricing-grid">
             {subscriptionPlans.map((plan) => {

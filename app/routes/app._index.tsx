@@ -897,7 +897,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Générations */}
+        {/* Generations */}
         <div className="dashboard-section">
           <h2>Daily Generations (Last 7 Days)</h2>
           {dailyStats.length > 0 ? (
@@ -935,9 +935,9 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Produits et Activité côte à côte */}
+        {/* Products and Activity side by side */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--spacing-lg)", marginBottom: "var(--spacing-lg)" }}>
-          {/* Produits */}
+          {/* Products */}
           <div className="dashboard-section">
             <h2>Most Tried Products</h2>
             {topProducts.length > 0 ? (

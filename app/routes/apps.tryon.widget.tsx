@@ -720,18 +720,18 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                                 </div>
                             </div>
                             <div class="vton-result-actions">
-                                <button class="vton-btn vton-btn-primary" id="vton-add-to-cart-btn">Ajouter au panier</button>
-                                <button class="vton-btn vton-btn-secondary" id="vton-download-btn">Télécharger</button>
-                                <button class="vton-btn vton-btn-secondary" id="vton-new-try-btn">Nouvel essai</button>
+                                <button class="vton-btn vton-btn-primary" id="vton-add-to-cart-btn">Add to Cart</button>
+                                <button class="vton-btn vton-btn-secondary" id="vton-download-btn">Download</button>
+                                <button class="vton-btn vton-btn-secondary" id="vton-new-try-btn">New Try</button>
                             </div>
                         </div>
                         
-                        <!-- État Erreur -->
+                        <!-- Error State -->
                         <div id="vton-state-error" class="vton-state-error vton-state-hidden">
                             <div class="vton-error-icon">⚠️</div>
-                            <div class="vton-error-title">Erreur</div>
-                            <div class="vton-error-message" id="vton-error-message">Une erreur est survenue</div>
-                            <button class="vton-error-retry" id="vton-error-retry">Réessayer</button>
+                            <div class="vton-error-title">Error</div>
+                            <div class="vton-error-message" id="vton-error-message">An error occurred</div>
+                            <button class="vton-error-retry" id="vton-error-retry">Retry</button>
                         </div>
                     </div>
                 </div>
@@ -854,7 +854,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                 }
                 
                 if (!this.productImage) {
-                    throw new Error('Image produit non trouvée');
+                    throw new Error('Product image not found');
                 }
                 
                 const personBase64 = this.userPhoto.includes(',') 
@@ -879,7 +879,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                 
                 if (!response.ok) {
                     const errorData = await response.json().catch(() => ({ error: \`HTTP \${response.status}\` }));
-                    throw new Error(errorData.error || \`Échec de la génération: \${response.status}\`);
+                    throw new Error(errorData.error || `Generation failed: ${response.status}`);
                 }
                 
                 const data = await response.json();
@@ -962,7 +962,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                 }
             } catch (error) {
                 console.error('[VTON] Error in handleAddToCart:', error);
-                this.showError('Erreur lors de l\\'ajout au panier');
+                this.showError('Error adding to cart');
             }
         }
         

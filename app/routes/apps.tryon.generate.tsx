@@ -257,7 +257,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         const customerDailyUsage = await getCustomerDailyTryonUsage(shop, firstIp);
         if (customerDailyUsage >= maxTriesPerUser) {
           return json({ 
-            error: `Vous avez utilisé tous vos crédits disponibles pour aujourd'hui. Vous avez atteint la limite de ${maxTriesPerUser} essai${maxTriesPerUser > 1 ? "s" : ""} par jour. Réessayez demain.`,
+            error: `You have used all your available credits for today. You have reached the limit of ${maxTriesPerUser} attempt${maxTriesPerUser > 1 ? "s" : ""} per day. Please try again tomorrow.`,
             customerDailyUsage,
             maxTriesPerUser 
           }, { status: 402, headers: corsHeaders });
