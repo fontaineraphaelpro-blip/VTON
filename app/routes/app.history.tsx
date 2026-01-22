@@ -52,13 +52,24 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       }
     });
     
-    // Debug: Log what we're trying to fetch
-    if (process.env.NODE_ENV !== "production" && (productIdsToFetch.size > 0 || productHandlesToFetch.size > 0)) {
+    // Debug: Log what we're trying to fetch (always log for debugging)
+    if (productIdsToFetch.size > 0 || productHandlesToFetch.size > 0) {
       console.log("[History] Fetching product names:", {
         productIds: Array.from(productIdsToFetch),
         productHandles: Array.from(productHandlesToFetch),
-        totalLogs: logs.length
+        totalLogs: logs.length,
+        sampleLog: logs[0] ? {
+          product_id: logs[0].product_id,
+          product_handle: logs[0].product_handle,
+          product_title: logs[0].product_title
+        } : null
       });
+    } else {
+      console.log("[History] No product IDs or handles to fetch. Sample log:", logs[0] ? {
+        product_id: logs[0].product_id,
+        product_handle: logs[0].product_handle,
+        product_title: logs[0].product_title
+      } : null);
     }
     
     // Fetch product names from Shopify by ID
@@ -105,14 +116,13 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                 }
               });
               
-              // Debug: Log what we fetched
-              if (process.env.NODE_ENV !== "production") {
-                console.log("[History] Fetched product names:", {
-                  batchSize: batch.length,
-                  fetchedCount: data.data.nodes.length,
-                  productNamesMap: Object.keys(productNamesMap).length
-                });
-              }
+              // Debug: Log what we fetched (always log for debugging)
+              console.log("[History] Fetched product names:", {
+                batchSize: batch.length,
+                fetchedCount: data.data.nodes.length,
+                productNamesMapSize: Object.keys(productNamesMap).length,
+                fetchedTitles: data.data.nodes.map((n: any) => ({ id: n.id, title: n.title }))
+              });
             }
           } else {
             const errorText = await response.text();
@@ -178,12 +188,23 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       }
     }
     
+    // Debug: Log the maps before enrichment
+    console.log("[History] Before enrichment:", {
+      productNamesMapSize: Object.keys(productNamesMap).length,
+      productHandlesMapSize: Object.keys(productHandlesMap).length,
+      productNamesMapKeys: Object.keys(productNamesMap).slice(0, 5),
+      productHandlesMapKeys: Object.keys(productHandlesMap).slice(0, 5)
+    });
+    
     // Enrich logs with product titles
     const enrichedLogs = logs.map((log: any) => {
       let title: string | undefined;
       
-      // Priority 1: Use existing product_title from log (if already fetched and stored)
-      if (log.product_title && log.product_title !== `Product #${log.product_id}` && !log.product_title.startsWith('Product #')) {
+      // Priority 1: Use existing product_title from log (if already fetched and stored and not a fallback)
+      if (log.product_title && 
+          log.product_title !== `Product #${log.product_id}` && 
+          !log.product_title.startsWith('Product #') &&
+          !log.product_title.startsWith('Product: ')) {
         title = log.product_title;
       }
       // Priority 2: Use product_handle to match (most reliable)
@@ -208,6 +229,21 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         if (!title && numericId) {
           title = productNamesMap[`gid://shopify/Product/${numericId}`];
         }
+      }
+      
+      // Debug: Log enrichment for first log
+      if (logs.indexOf(log) === 0) {
+        console.log("[History] Enriching first log:", {
+          logProductId: log.product_id,
+          logProductHandle: log.product_handle,
+          logProductTitle: log.product_title,
+          foundTitle: title,
+          checkedInMaps: {
+            byGID: log.product_id ? productNamesMap[log.product_id] : undefined,
+            byNumeric: log.product_id ? productNamesMap[log.product_id?.match(/^gid:\/\/shopify\/Product\/(\d+)$/)?.[1] || log.product_id] : undefined,
+            byHandle: log.product_handle ? productHandlesMap[log.product_handle] : undefined
+          }
+        });
       }
       
       // Always set product_title - use title if found, otherwise use handle or formatted ID
