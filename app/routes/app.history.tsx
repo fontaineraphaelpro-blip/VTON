@@ -139,61 +139,57 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     }
     
     // Also fetch products by handle if we have handles
+    // Try fetching products one by one by handle (more reliable than query with OR)
     if (productHandlesToFetch.size > 0) {
       try {
         const handlesArray = Array.from(productHandlesToFetch);
         console.log("[History] Fetching products by handle:", handlesArray);
         
-        // Fetch in batches (Shopify Admin API limit is 250, but let's use 10 for safety)
-        for (let i = 0; i < handlesArray.length; i += 10) {
-          const batch = handlesArray.slice(i, i + 10);
-          // Build query string for handles - correct GraphQL syntax
-          const handleQueryString = batch.map(h => `handle:${h}`).join(" OR ");
-          
-          const handleQuery = `#graphql
-            query getProductsByHandle {
-              products(first: 10, query: "${handleQueryString}") {
-                edges {
-                  node {
-                    id
-                    title
-                    handle
-                  }
+        // Fetch products one by one using handle (more reliable)
+        for (const handle of handlesArray) {
+          try {
+            const handleQuery = `#graphql
+              query getProductByHandle($handle: String!) {
+                product(handle: $handle) {
+                  id
+                  title
+                  handle
                 }
               }
-            }
-          `;
-          
-          console.log("[History] Executing handle query:", handleQueryString);
-          const response = await admin.graphql(handleQuery);
-          
-          if (response.ok) {
-            const data = await response.json() as any;
-            console.log("[History] Handle query response:", JSON.stringify(data, null, 2));
+            `;
             
-            if (data.data?.products?.edges) {
-              data.data.products.edges.forEach((edge: any) => {
-                const node = edge.node;
-                if (node && node.title && node.handle) {
-                  productHandlesMap[node.handle] = node.title;
+            console.log("[History] Fetching product by handle:", handle);
+            const response = await admin.graphql(handleQuery, {
+              variables: { handle }
+            });
+            
+            if (response.ok) {
+              const data = await response.json() as any;
+              console.log("[History] Handle query response for", handle, ":", JSON.stringify(data, null, 2));
+              
+              if (data.data?.product) {
+                const product = data.data.product;
+                if (product.title && product.handle) {
+                  productHandlesMap[product.handle] = product.title;
                   // Also store by ID
-                  productNamesMap[node.id] = node.title;
-                  const numericId = node.id.replace('gid://shopify/Product/', '');
-                  productNamesMap[numericId] = node.title;
-                  console.log("[History] Mapped handle to title:", node.handle, "->", node.title);
+                  productNamesMap[product.id] = product.title;
+                  const numericId = product.id.replace('gid://shopify/Product/', '');
+                  productNamesMap[numericId] = product.title;
+                  console.log("[History] ✅ Mapped handle to title:", product.handle, "->", product.title);
                 }
-              });
+              } else {
+                console.log("[History] ⚠️ No product found for handle:", handle);
+              }
             } else {
-              console.log("[History] No products found in handle query response");
+              const errorText = await response.text();
+              console.error("[History] Handle query failed for", handle, ":", errorText);
             }
-          } else {
-            const errorText = await response.text();
-            console.error("[History] Handle query failed:", errorText);
+          } catch (error) {
+            console.error("[History] Error fetching product by handle", handle, ":", error);
           }
         }
       } catch (error) {
-        // Handle query not supported, try alternative approach
-        console.error("[History] Error fetching products by handle:", error);
+        console.error("[History] Error in handle fetching loop:", error);
       }
     }
     
