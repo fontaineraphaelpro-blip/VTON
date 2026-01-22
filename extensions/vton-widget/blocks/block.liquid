@@ -10,9 +10,9 @@
       
       // Production mode: disable all logs for performance
       const isProduction = true; // Set to false for debugging
-      const log = isProduction ? function() {} : log.bind(console);
-      const warn = isProduction ? function() {} : warn.bind(console);
-      const error = error.bind(console); // Always log errors
+      const log = isProduction ? function() {} : console.log.bind(console);
+      const warn = isProduction ? function() {} : console.warn.bind(console);
+      const error = console.error.bind(console); // Always log errors
       
       // App URL - try to get from meta tag or use default
       // This should be configured in Shopify App Proxy settings
