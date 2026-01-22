@@ -602,16 +602,16 @@ export default function Credits() {
           </div>
         )}
 
-        {/* Information sur le système de crédits */}
+        {/* Credit system information */}
         <div style={{ marginBottom: "var(--spacing-lg)" }}>
-          <Banner tone="info" title="💡 Comment fonctionnent les crédits ?">
+          <Banner tone="info" title="💡 How do credits work?">
             <div style={{ lineHeight: "1.6" }}>
               <p style={{ margin: "0 0 8px 0" }}>
-                Les crédits sont réinitialisés automatiquement chaque mois en fonction de votre plan d'abonnement.
+                Credits are automatically reset each month based on your subscription plan.
               </p>
               <p style={{ margin: "8px 0 0 0" }}>
-                <strong>Important :</strong> Les crédits non utilisés ne sont pas reportés au mois suivant. 
-                Chaque mois, votre solde est remis à zéro et vous recevez un nouveau quota de crédits selon votre plan actif.
+                <strong>Important:</strong> Unused credits are not carried over to the next month. 
+                Each month, your balance is reset to zero and you receive a new credit quota according to your active plan.
               </p>
             </div>
           </Banner>
@@ -659,8 +659,8 @@ export default function Credits() {
                   </div>
                   <div className="plan-features">
                     <div className="plan-feature">{plan.description}</div>
-                    <div className="plan-feature">Abonnement récurrent mensuel</div>
-                    <div className="plan-feature">Annulable à tout moment</div>
+                    <div className="plan-feature">Monthly recurring subscription</div>
+                    <div className="plan-feature">Cancel anytime</div>
                   </div>
                   <div className="plan-cta">
                     {isCurrentPlan ? (
