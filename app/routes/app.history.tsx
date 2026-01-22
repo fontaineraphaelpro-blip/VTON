@@ -236,6 +236,15 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         }
       }
       
+      // Priority 4: Use handle as title if we have a handle but no title found
+      if (!title && log.product_handle) {
+        // Format handle nicely as title (capitalize first letter, replace dashes with spaces)
+        title = log.product_handle
+          .split('-')
+          .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+          .join(' ');
+      }
+      
       // Debug: Log enrichment for first log
       if (logs.indexOf(log) === 0) {
         console.log("[History] Enriching first log:", {
