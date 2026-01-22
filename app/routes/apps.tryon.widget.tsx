@@ -673,7 +673,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                             </div>
                             <div class="vton-upload-option" data-option="mannequin">
                                 <div class="vton-upload-icon">🤖</div>
-                                <div class="vton-upload-title">Mannequin IA</div>
+                                <div class="vton-upload-title">AI Mannequin</div>
                                 <div class="vton-upload-subtitle">Use a virtual mannequin</div>
                             </div>
                         </div>

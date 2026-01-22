@@ -676,7 +676,7 @@ export default function Credits() {
                         onClick={() => handleSubscriptionPurchase(plan.id)}
                         disabled={isSubmitting || submittingPackId !== null}
                       >
-                        {isSubmitting && submittingPackId === plan.id ? "Processing..." : "S'abonner"}
+                        {isSubmitting && submittingPackId === plan.id ? "Processing..." : "Subscribe"}
                       </button>
                     )}
                   </div>
