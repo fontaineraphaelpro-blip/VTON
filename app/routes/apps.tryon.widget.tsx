@@ -879,7 +879,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                 
                 if (!response.ok) {
                     const errorData = await response.json().catch(() => ({ error: \`HTTP \${response.status}\` }));
-                    throw new Error(errorData.error || `Generation failed: ${response.status}`);
+                    throw new Error(errorData.error || \`Generation failed: \${response.status}\`);
                 }
                 
                 const data = await response.json();
@@ -889,7 +889,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                 }
                 
                 if (!data.result_image_url) {
-                    throw new Error('Aucune image de résultat reçue');
+                    throw new Error('No result image received');
                 }
                 
                 this.resultImageUrl = data.result_image_url;
