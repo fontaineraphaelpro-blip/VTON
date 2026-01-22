@@ -1581,7 +1581,7 @@
                 // Continue polling
                 log('[VTON] Job still pending, continuing to poll...');
               } else {
-                // Status inconnu, arrêter le polling après quelques tentatives
+                // Unknown status, stop polling after a few attempts
                 warn('[VTON] Unknown status:', statusData.status);
                 if (attempts > 10) {
                   clearInterval(pollInterval);
