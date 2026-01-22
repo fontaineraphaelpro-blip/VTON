@@ -428,7 +428,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   
     return json({ 
       success: false, 
-      error: "Action non reconnue",
+      error: "Unrecognized action",
     });
   
   } catch (error) {
