@@ -80,7 +80,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         }
         
         async checkCredits() {
-            // Vérifier le solde de jetons via l'API
+            // Check credit balance via API
             try {
                 const shop = window.Shopify?.shop || this.extractShopFromUrl() || '';
                 const url = new URL(\`\${CONFIG.apiBase}/check-credits\`, window.location.origin);
@@ -129,13 +129,13 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             const oldButtons = document.querySelectorAll('.vton-widget-button, [data-vton-widget], .try-on-button, .virtual-try-on-button');
             oldButtons.forEach(btn => btn.remove());
             
-            // Supprimer les anciens styles
+            // Remove old styles
             const oldStyles = document.getElementById('vton-v2-styles');
             if (oldStyles) oldStyles.remove();
         }
         
         injectButton() {
-            // Vérifier si le bouton existe déjà
+            // Check if button already exists
             if (document.querySelector('.vton-widget-button')) {
                 return;
             }
@@ -178,7 +178,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                 return;
             }
             
-            // Créer le bouton widget
+            // Create widget button
             const vtonBtn = document.createElement('button');
             vtonBtn.type = 'button';
             vtonBtn.className = 'vton-widget-button';
