@@ -142,6 +142,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     if (productHandlesToFetch.size > 0) {
       try {
         const handlesArray = Array.from(productHandlesToFetch);
+        console.log("[History] Fetching products by handle:", handlesArray);
+        
         // Fetch in batches (Shopify Admin API limit is 250, but let's use 10 for safety)
         for (let i = 0; i < handlesArray.length; i += 10) {
           const batch = handlesArray.slice(i, i + 10);
@@ -162,10 +164,13 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             }
           `;
           
+          console.log("[History] Executing handle query:", handleQueryString);
           const response = await admin.graphql(handleQuery);
           
           if (response.ok) {
             const data = await response.json() as any;
+            console.log("[History] Handle query response:", JSON.stringify(data, null, 2));
+            
             if (data.data?.products?.edges) {
               data.data.products.edges.forEach((edge: any) => {
                 const node = edge.node;
@@ -175,16 +180,20 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                   productNamesMap[node.id] = node.title;
                   const numericId = node.id.replace('gid://shopify/Product/', '');
                   productNamesMap[numericId] = node.title;
+                  console.log("[History] Mapped handle to title:", node.handle, "->", node.title);
                 }
               });
+            } else {
+              console.log("[History] No products found in handle query response");
             }
+          } else {
+            const errorText = await response.text();
+            console.error("[History] Handle query failed:", errorText);
           }
         }
       } catch (error) {
         // Handle query not supported, try alternative approach
-        if (process.env.NODE_ENV !== "production") {
-          console.warn("[History] Could not fetch products by handle:", error);
-        }
+        console.error("[History] Error fetching products by handle:", error);
       }
     }
     
