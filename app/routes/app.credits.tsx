@@ -685,7 +685,7 @@ export default function Credits() {
                           opacity: 0.6
                         }}
                       >
-                        Déjà inclus
+                        Already included
                       </button>
                     ) : (
                       <button 
