@@ -650,7 +650,7 @@ export default function Credits() {
                   )}
                   {isCurrentPlan && (
                     <div className="plan-badge" style={{ backgroundColor: '#008060', color: 'white' }}>
-                      Plan actuel
+                      Current Plan
                     </div>
                   )}
                   <div className="plan-name">{plan.name}</div>
@@ -674,7 +674,7 @@ export default function Credits() {
                           opacity: 0.8
                         }}
                       >
-                        Plan actuel
+                        Current Plan
                       </button>
                     ) : isFreePlan ? (
                       <button 
