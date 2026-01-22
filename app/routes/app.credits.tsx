@@ -22,7 +22,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     if (!session || !session.shop) {
       return json({
         shop: null,
-        error: "Session invalide. Veuillez rafraîchir la page.",
+        error: "Invalid session. Please refresh the page.",
       });
     }
     
@@ -319,7 +319,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
                            authError.headers.get('location');
           return json({ 
             success: false, 
-            error: "Votre session a expiré. Veuillez rafraîchir la page pour vous ré-authentifier.",
+            error: "Your session has expired. Please refresh the page to re-authenticate.",
             requiresAuth: true,
             reauthUrl: reauthUrl || null,
           });
@@ -336,7 +336,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     if (!session || !session.shop || !admin) {
       return json({ 
         success: false, 
-        error: "Session invalide. Veuillez rafraîchir la page.",
+        error: "Invalid session. Please refresh the page.",
         requiresAuth: true,
       });
     }
@@ -359,7 +359,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       if (planId === "free-installation-setup") {
         return json({ 
           success: false, 
-          error: "Le plan gratuit est déjà actif",
+          error: "The free plan is already active",
         });
       }
 
