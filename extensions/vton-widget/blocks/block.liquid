@@ -1740,6 +1740,9 @@
         // Construct absolute URL for app proxy
         // Try App Proxy first, fallback to direct URL
         let generateUrl = window.location.origin + '/apps/tryon/generate?shop=' + encodeURIComponent(state.shop) + '&product_id=' + encodeURIComponent(state.productId);
+        if (state.productHandle) {
+          generateUrl += '&product_handle=' + encodeURIComponent(state.productHandle);
+        }
         let useAppProxy = true;
         
         // Helper function to make the fetch request
@@ -1773,7 +1776,8 @@
               useAppProxy = false;
               hasTriedFallback = true; // Prevent double fallback
               // Use the configured app URL as fallback
-              const directUrl = APP_URL + '/apps/tryon/generate?shop=' + encodeURIComponent(state.shop) + '&product_id=' + encodeURIComponent(state.productId);
+              let directUrl = APP_URL + '/apps/tryon/generate?shop=' + encodeURIComponent(state.shop) + '&product_id=' + encodeURIComponent(state.productId);
+              if (state.productHandle) directUrl += '&product_handle=' + encodeURIComponent(state.productHandle);
               log('[VTON] 🔄 Retrying with direct URL:', directUrl);
               return makeGenerateRequest(directUrl);
             }
@@ -1804,7 +1808,8 @@
               warn('[VTON] ⚠️ Request aborted, trying direct URL as fallback...');
               useAppProxy = false;
               hasTriedFallback = true;
-              const directUrl = APP_URL + '/apps/tryon/generate?shop=' + encodeURIComponent(state.shop) + '&product_id=' + encodeURIComponent(state.productId);
+              let directUrl = APP_URL + '/apps/tryon/generate?shop=' + encodeURIComponent(state.shop) + '&product_id=' + encodeURIComponent(state.productId);
+              if (state.productHandle) directUrl += '&product_handle=' + encodeURIComponent(state.productHandle);
               return makeGenerateRequest(directUrl);
             }
             throw err;

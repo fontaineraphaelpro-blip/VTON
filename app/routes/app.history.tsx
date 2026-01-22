@@ -75,6 +75,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     // Fetch product names from Shopify by ID
     const productNamesMap: Record<string, string> = {};
     const productHandlesMap: Record<string, string> = {}; // handle -> title
+    const productIdToHandleMap: Record<string, string> = {}; // id or numericId -> handle (for display when we have id but no handle in log)
     
     if (productIdsToFetch.size > 0) {
       try {
@@ -103,15 +104,22 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             const data = await response.json() as any;
             if (data.data?.nodes) {
               data.data.nodes.forEach((node: any) => {
-                if (node && node.id && node.title) {
-                  // Store by GID format
-                  productNamesMap[node.id] = node.title;
-                  // Store by numeric ID
+                if (node && node.id) {
                   const numericId = node.id.replace('gid://shopify/Product/', '');
-                  productNamesMap[numericId] = node.title;
-                  // Store by handle if available
+                  if (node.title) {
+                    // Store by GID format
+                    productNamesMap[node.id] = node.title;
+                    // Store by numeric ID
+                    productNamesMap[numericId] = node.title;
+                    // Store by handle if available
+                    if (node.handle) {
+                      productHandlesMap[node.handle] = node.title;
+                    }
+                  }
+                  // Always store id->handle so we can show handle instead of GID when we have no title
                   if (node.handle) {
-                    productHandlesMap[node.handle] = node.title;
+                    productIdToHandleMap[node.id] = node.handle;
+                    productIdToHandleMap[numericId] = node.handle;
                   }
                 }
               });
@@ -169,13 +177,16 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
               
               if (data.data?.product) {
                 const product = data.data.product;
+                const numericId = product.id ? product.id.replace('gid://shopify/Product/', '') : '';
                 if (product.title && product.handle) {
                   productHandlesMap[product.handle] = product.title;
-                  // Also store by ID
                   productNamesMap[product.id] = product.title;
-                  const numericId = product.id.replace('gid://shopify/Product/', '');
-                  productNamesMap[numericId] = product.title;
+                  if (numericId) productNamesMap[numericId] = product.title;
                   console.log("[History] ✅ Mapped handle to title:", product.handle, "->", product.title);
+                }
+                if (product.id && product.handle) {
+                  productIdToHandleMap[product.id] = product.handle;
+                  if (numericId) productIdToHandleMap[numericId] = product.handle;
                 }
               } else {
                 console.log("[History] ⚠️ No product found for handle:", handle);
@@ -236,40 +247,44 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         }
       }
       
-      // Priority 4: Use handle as title if we have a handle but no title found
+      // Priority 4: Use handle from log as title if we have a handle but no title found
       if (!title && log.product_handle) {
-        // Format handle nicely as title (capitalize first letter, replace dashes with spaces)
         title = log.product_handle
           .split('-')
           .map(word => word.charAt(0).toUpperCase() + word.slice(1))
           .join(' ');
       }
       
-      // Debug: Log enrichment for first log
-      if (logs.indexOf(log) === 0) {
-        console.log("[History] Enriching first log:", {
-          logProductId: log.product_id,
-          logProductHandle: log.product_handle,
-          logProductTitle: log.product_title,
-          foundTitle: title,
-          checkedInMaps: {
-            byGID: log.product_id ? productNamesMap[log.product_id] : undefined,
-            byNumeric: log.product_id ? productNamesMap[log.product_id?.match(/^gid:\/\/shopify\/Product\/(\d+)$/)?.[1] || log.product_id] : undefined,
-            byHandle: log.product_handle ? productHandlesMap[log.product_handle] : undefined
-          }
-        });
+      // Priority 5: Use handle from GraphQL fetch (productIdToHandleMap) when log has product_id but no product_handle
+      // This fixes old logs that only have GID: we show the handle instead of "Product #123"
+      if (!title && log.product_id) {
+        const gidMatch = log.product_id.match(/^gid:\/\/shopify\/Product\/(\d+)$/);
+        const numericId = gidMatch ? gidMatch[1] : log.product_id.replace('gid://shopify/Product/', '');
+        const handleFromFetch = productIdToHandleMap[log.product_id] || productIdToHandleMap[numericId];
+        if (handleFromFetch) {
+          title = handleFromFetch
+            .split('-')
+            .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ');
+        }
       }
       
-      // Always set product_title - use title if found, otherwise use handle or formatted ID
+      // Always set product_title - use title if found, otherwise avoid GID: prefer handle, last resort "Product #id"
       if (title) {
         return { ...log, product_title: title };
       } else {
-        // Fallback: use handle if available, otherwise format ID nicely
         const numericId = log.product_id ? 
           (log.product_id.match(/^gid:\/\/shopify\/Product\/(\d+)$/)?.[1] || log.product_id.replace('gid://shopify/Product/', '')) : 
-          'Unknown';
-        const displayText = log.product_handle || numericId;
-        return { ...log, product_title: log.product_handle ? `Product: ${displayText}` : `Product #${displayText}` };
+          null;
+        const handleFromFetch = numericId ? (productIdToHandleMap[log.product_id!] || productIdToHandleMap[numericId]) : null;
+        const displayText = log.product_handle 
+          ? log.product_handle.split('-').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+          : handleFromFetch 
+            ? handleFromFetch.split('-').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+            : numericId 
+              ? `Product #${numericId}` 
+              : 'Unknown Product';
+        return { ...log, product_title: displayText };
       }
     });
 
