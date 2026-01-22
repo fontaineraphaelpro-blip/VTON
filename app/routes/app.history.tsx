@@ -98,11 +98,15 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             }
           } else {
             const errorText = await response.text();
-            console.error("[History] GraphQL error:", errorText);
+            if (process.env.NODE_ENV !== "production") {
+              console.error("[History] GraphQL error:", errorText);
+            }
           }
         }
       } catch (error) {
-        console.error("[History] Error fetching product names:", error);
+        if (process.env.NODE_ENV !== "production") {
+          console.error("[History] Error fetching product names:", error);
+        }
       }
     }
     
@@ -150,7 +154,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         }
       } catch (error) {
         // Handle query not supported, try alternative approach
-        console.warn("[History] Could not fetch products by handle:", error);
+        if (process.env.NODE_ENV !== "production") {
+          console.warn("[History] Could not fetch products by handle:", error);
+        }
       }
     }
     
@@ -158,20 +164,32 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     const enrichedLogs = logs.map((log: any) => {
       let title: string | undefined;
       
-      // Priority 1: Use product_handle to match (most reliable)
-      if (log.product_handle && productHandlesMap[log.product_handle]) {
+      // Priority 1: Use existing product_title from log (if already fetched and stored)
+      if (log.product_title && log.product_title !== `Product #${log.product_id}` && !log.product_title.startsWith('Product #')) {
+        title = log.product_title;
+      }
+      // Priority 2: Use product_handle to match (most reliable)
+      else if (log.product_handle && productHandlesMap[log.product_handle]) {
         title = productHandlesMap[log.product_handle];
       }
-      // Priority 2: Try product_id (GID or numeric) in fetched map
+      // Priority 3: Try product_id (GID or numeric) in fetched map
       else if (log.product_id) {
+        // Try multiple formats
         const gidMatch = log.product_id.match(/^gid:\/\/shopify\/Product\/(\d+)$/);
         const numericId = gidMatch ? gidMatch[1] : log.product_id;
-        title = productNamesMap[log.product_id] || productNamesMap[numericId];
-      }
-      
-      // Priority 3: Use existing product_title from log
-      if (!title && log.product_title) {
-        title = log.product_title;
+        
+        // Try GID format first
+        if (log.product_id.startsWith('gid://')) {
+          title = productNamesMap[log.product_id];
+        }
+        // Try numeric ID
+        if (!title && numericId) {
+          title = productNamesMap[numericId];
+        }
+        // Try with GID prefix if numeric ID didn't work
+        if (!title && numericId) {
+          title = productNamesMap[`gid://shopify/Product/${numericId}`];
+        }
       }
       
       // Always set product_title - use title if found, otherwise use handle or formatted ID
@@ -179,8 +197,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         return { ...log, product_title: title };
       } else {
         // Fallback: use handle if available, otherwise format ID nicely
-        const displayText = log.product_handle || 
-          (log.product_id ? (log.product_id.match(/^gid:\/\/shopify\/Product\/(\d+)$/)?.[1] || log.product_id.replace('gid://shopify/Product/', '')) : 'Unknown');
+        const numericId = log.product_id ? 
+          (log.product_id.match(/^gid:\/\/shopify\/Product\/(\d+)$/)?.[1] || log.product_id.replace('gid://shopify/Product/', '')) : 
+          'Unknown';
+        const displayText = log.product_handle || numericId;
         return { ...log, product_title: log.product_handle ? `Product: ${displayText}` : `Product #${displayText}` };
       }
     });
