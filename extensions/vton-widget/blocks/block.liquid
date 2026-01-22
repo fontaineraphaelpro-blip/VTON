@@ -103,7 +103,7 @@
           if (status && status.enabled === true) {
             log('[VTON] ✅ Widget will be displayed - try-on is enabled');
             log('[VTON] 📋 Widget settings:', status.widget_settings || {});
-            initializeWidget(shop, productId, status.widget_settings || {});
+            initializeWidget(shop, productId, productHandle, status.widget_settings || {});
           } else {
             warn('[VTON] ⚠️ Widget NOT displayed - try-on is disabled. Status:', {
               enabled: status?.enabled,
@@ -437,6 +437,7 @@
         const state = {
           shop: shop,
           productId: productId,
+          productHandle: productHandle,
           widgetSettings: widgetSettings,
           productImageUrl: productImageUrl,
           userPhoto: null,
