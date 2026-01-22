@@ -829,7 +829,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         
         handlePhotoUpload(file) {
             if (!file || !file.type.startsWith('image/')) {
-                this.showError('Veuillez uploader un fichier image');
+                this.showError('Please upload an image file');
                 return;
             }
             
@@ -850,7 +850,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             
             try {
                 if (!this.userPhoto) {
-                    throw new Error('Aucune photo uploadée');
+                    throw new Error('No photo uploaded');
                 }
                 
                 if (!this.productImage) {
