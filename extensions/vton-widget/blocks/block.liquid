@@ -120,11 +120,11 @@
             warn('[VTON]   2. Make sure "Enable app on store" is checked');
             warn('[VTON]   3. Check that the product is not explicitly disabled in the Products page');
           }
-        }).catch(function(error) {
-          error('[VTON] ❌ Failed to check status:', error);
+        }).catch(function(err) {
+          error('[VTON] ❌ Failed to check status:', err);
           error('[VTON] Error details:', {
-            message: error?.message,
-            stack: error?.stack,
+            message: err?.message,
+            stack: err?.stack,
             url: window.location.href
           });
         });
@@ -347,9 +347,9 @@
             throw new Error('Status check failed: ' + response.status);
           }
           return response.json();
-        }).catch(function(error) {
-          error('[VTON] ❌ Status check error:', error);
-          throw error;
+        }).catch(function(err) {
+          error('[VTON] ❌ Status check error:', err);
+          throw err;
         });
       }
       
@@ -1719,7 +1719,7 @@
         const loading = shadowRoot.getElementById('vton-loading');
         const generateBtn = shadowRoot.getElementById('vton-generate-btn');
         const result = shadowRoot.getElementById('vton-result');
-        const error = shadowRoot.getElementById('vton-error');
+        const errorElement = shadowRoot.getElementById('vton-error');
         
         // Show loading
         if (loading) loading.classList.add('active');
@@ -1728,9 +1728,9 @@
           result.classList.remove('active');
           result.innerHTML = '';
         }
-        if (error) {
-          error.classList.remove('active');
-          error.textContent = '';
+        if (errorElement) {
+          errorElement.classList.remove('active');
+          errorElement.textContent = '';
         }
         
         // Start rotating loading messages
@@ -1796,17 +1796,17 @@
               });
             }
             return response.json();
-          }).catch(function(error) {
+          }).catch(function(err) {
             clearTimeout(timeoutId);
             // If it's an abort error and we haven't tried fallback, try fallback first
-            if (error.name === 'AbortError' && useAppProxy && !hasTriedFallback) {
+            if (err.name === 'AbortError' && useAppProxy && !hasTriedFallback) {
               warn('[VTON] ⚠️ Request aborted, trying direct URL as fallback...');
               useAppProxy = false;
               hasTriedFallback = true;
               const directUrl = APP_URL + '/apps/tryon/generate?shop=' + encodeURIComponent(state.shop) + '&product_id=' + encodeURIComponent(state.productId);
               return makeGenerateRequest(directUrl);
             }
-            throw error;
+            throw err;
           });
         }
         
