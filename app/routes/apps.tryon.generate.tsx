@@ -187,8 +187,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
     const userPhoto = body.user_photo || body.person_image_base64;
     const productImageUrl = body.product_image_url || body.clothing_url;
-    const productId = body.product_id || queryParams.get("product_id");
-    const productHandle = body.product_handle || queryParams.get("product_handle") || undefined;
+    let productId = body.product_id ?? queryParams.get("product_id") ?? undefined;
+    let productHandle = body.product_handle ?? queryParams.get("product_handle") ?? undefined;
+    if (productId === "undefined" || productId === "null" || productId === "") productId = undefined;
+    if (productHandle === "undefined" || productHandle === "null" || productHandle === "") productHandle = undefined;
 
     if (!userPhoto) {
       return json({ error: "user_photo is required" }, { status: 400, headers: corsHeaders });

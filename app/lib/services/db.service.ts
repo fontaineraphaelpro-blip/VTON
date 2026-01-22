@@ -286,21 +286,29 @@ export async function incrementRateLimit(shop: string, customerIp: string, date:
 
 /**
  * Gets top products by tryon count.
+ * Groups by normalized product id (GID and numeric merged) and includes product_handle-only rows.
  */
 export async function getTopProducts(shop: string, limit: number = 10) {
   const result = await query(
-    `SELECT product_id, COUNT(*) as count 
+    `SELECT 
+       COALESCE( (regexp_match(product_id, '^gid://shopify/Product/([0-9]+)$'))[1], product_id, product_handle ) AS product_key,
+       MAX(product_id) AS max_product_id,
+       MAX(product_handle) AS max_product_handle,
+       COUNT(*) AS count 
      FROM tryon_logs 
-     WHERE shop = $1 AND success = true AND product_id IS NOT NULL 
-     GROUP BY product_id 
+     WHERE shop = $1 AND success = true 
+       AND (product_id IS NOT NULL OR product_handle IS NOT NULL)
+       AND (product_id IS NULL OR product_id NOT IN ('undefined', 'null'))
+     GROUP BY 1 
      ORDER BY count DESC 
      LIMIT $2`,
     [shop, limit]
   );
-  
+
   return result.rows.map((p: any) => ({
-    product_id: p.product_id,
-    tryons: parseInt(p.count),
+    product_id: p.max_product_id || p.max_product_handle || p.product_key,
+    product_handle: p.max_product_handle || undefined,
+    tryons: parseInt(p.count, 10),
   }));
 }
 

@@ -36,26 +36,16 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       });
     }
 
-    const response = await admin.graphql(
-      `#graphql
-        query getProducts {
-          products(first: 100) {
-            edges {
-              node {
-                id
-                title
-                handle
-                featuredImage {
-                  url
-                  altText
-                }
-                totalInventory
-                status
-              }
-            }
-          }
-        }`
-    );
+    const productsQuery = `#graphql
+      query getProducts {
+        products(first: 100) {
+          edges { node { id title handle featuredImage { url altText } totalInventory status } }
+        }
+      }`;
+    const [response] = await Promise.all([
+      admin.graphql(productsQuery),
+      ensureTables(),
+    ]);
 
     // Check if response is OK
     if (!response.ok) {
@@ -127,23 +117,16 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     let tryonCounts: Record<string, number> = {};
     let productSettings: Record<string, boolean> = {};
     
-    // ADDED: Load product settings and try-on counts
+    // Load product settings and try-on counts (ensureTables already ran in parallel with GraphQL)
     try {
-      await ensureTables();
-      
-      // Get product IDs
       const productIds = products.map((p: any) => p.id);
-      
-      // Get try-on counts for all products
-      tryonCounts = await getProductTryonCounts(shop, productIds).catch(() => ({}));
-      
-      // OPTIMIZED: Get product settings in batch (single query instead of N queries)
-      const batchSettings = await getProductTryonSettingsBatch(shop, productIds).catch(() => ({}));
-      
-      // Convert to expected format (null or true means enabled, only false means disabled)
-      productIds.forEach(productId => {
-        const setting = batchSettings[productId];
-        productSettings[productId] = setting !== false; // null or true means enabled, only false means disabled
+      const [countsRes, batchSettings] = await Promise.all([
+        getProductTryonCounts(shop, productIds).catch(() => ({})),
+        getProductTryonSettingsBatch(shop, productIds).catch(() => ({})),
+      ]);
+      tryonCounts = countsRes;
+      productIds.forEach((productId: string) => {
+        productSettings[productId] = batchSettings[productId] !== false;
       });
     } catch (dbError) {
       // Log only in development

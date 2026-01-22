@@ -199,7 +199,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     const productNamesMap: Record<string, string> = {};
     const productIdsArray: string[] = [];
     
-    // Collect product IDs that need fetching (from topProducts and recentLogs)
+    // Collect product IDs and handles that need fetching (from topProducts and recentLogs)
+    const productHandlesToFetch = new Set<string>();
     topProducts.forEach((product: any) => {
       if (product.product_id && !product.product_title) {
         const gidMatch = product.product_id.match(/^gid:\/\/shopify\/Product\/(\d+)$/);
@@ -207,6 +208,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
           productIdsArray.push(gidMatch[1]);
         } else if (/^\d+$/.test(product.product_id)) {
           productIdsArray.push(product.product_id);
+        } else if (product.product_handle) {
+          productHandlesToFetch.add(product.product_handle);
         }
       }
     });
@@ -216,15 +219,12 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         const gidMatch = log.product_id.match(/^gid:\/\/shopify\/Product\/(\d+)$/);
         if (gidMatch) {
           const numericId = gidMatch[1];
-          if (!productIdsArray.includes(numericId)) {
-            productIdsArray.push(numericId);
-          }
+          if (!productIdsArray.includes(numericId)) productIdsArray.push(numericId);
         } else if (/^\d+$/.test(log.product_id)) {
-          if (!productIdsArray.includes(log.product_id)) {
-            productIdsArray.push(log.product_id);
-          }
+          if (!productIdsArray.includes(log.product_id)) productIdsArray.push(log.product_id);
         }
       }
+      if (log.product_handle) productHandlesToFetch.add(log.product_handle);
     });
 
     // OPTIMIZED: Fetch only the specific products we need using nodes(ids) instead of all 250 products
@@ -276,7 +276,31 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         // Silently fail - use fallback titles from logs
       }
     }
-    
+
+    // Fetch product titles by handle for topProducts/recentLogs that only have product_handle
+    if (productHandlesToFetch.size > 0) {
+      try {
+        for (const handle of productHandlesToFetch) {
+          const r = await admin.graphql(
+            `#graphql
+              query getProductByHandle($query: String!) {
+                products(first: 1, query: $query) {
+                  edges { node { id title handle } }
+                }
+              }`,
+            { variables: { query: `handle:${handle}` } }
+          );
+          if (r.ok) {
+            const d = (await r.json()) as any;
+            const node = d?.data?.products?.edges?.[0]?.node;
+            if (node?.title) productNamesMap[handle] = node.title;
+          }
+        }
+      } catch {
+        // Ignore
+      }
+    }
+
     // Enrich topProducts with product titles (use fetched names, fallback to existing product_title from logs)
     // IMPORTANT: Fetch product titles directly from tryon_logs first (most reliable since they're already stored)
     const enrichedTopProducts = await Promise.all(topProducts.map(async (product: any) => {
@@ -287,13 +311,14 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         // PRIORITY 1: Try to get title from tryon_logs (most reliable - already stored in DB)
         let title: string | undefined;
         try {
+          const idParams = [shop, product.product_id, numericId, gidMatch ? product.product_id : `gid://shopify/Product/${numericId}`];
+          const idCondition = "product_id IN ($2, $3, $4)";
+          const handleCondition = product.product_handle ? " OR product_handle = $5" : "";
           const logResult = await query(
-            `SELECT product_title, product_handle 
-             FROM tryon_logs 
-             WHERE shop = $1 AND product_id IN ($2, $3, $4) AND product_title IS NOT NULL AND product_title != ''
-             ORDER BY created_at DESC 
-             LIMIT 1`,
-            [shop, product.product_id, numericId, gidMatch ? product.product_id : `gid://shopify/Product/${numericId}`]
+            `SELECT product_title, product_handle FROM tryon_logs 
+             WHERE shop = $1 AND (${idCondition}${handleCondition}) AND product_title IS NOT NULL AND product_title != ''
+             ORDER BY created_at DESC LIMIT 1`,
+            product.product_handle ? [...idParams, product.product_handle] : idParams
           );
           if (logResult.rows.length > 0 && logResult.rows[0].product_title) {
             title = logResult.rows[0].product_title;
@@ -301,10 +326,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         } catch (err) {
           // Ignore errors
         }
-        
+
         // PRIORITY 2: Try fetched names map (from GraphQL query above)
         if (!title) {
-          title = productNamesMap[product.product_id] || productNamesMap[numericId];
+          title = productNamesMap[product.product_id] || productNamesMap[numericId] || (product.product_handle ? productNamesMap[product.product_handle] : undefined);
         }
         
         // PRIORITY 3: Try to find title from recentLogs
@@ -677,11 +702,11 @@ export default function Dashboard() {
     }
   }, [fetcher.data?.success, revalidator]);
 
-  // Auto-refresh dashboard every 30 seconds to update stats (try-ons, add to cart, etc.)
+  // Auto-refresh dashboard every 15 seconds to update stats (try-ons, Most Tried, add to cart, etc.)
   useEffect(() => {
     const interval = setInterval(() => {
       revalidator.revalidate();
-    }, 30000); // Refresh every 30 seconds
+    }, 15000);
 
     return () => clearInterval(interval);
   }, [revalidator]);
@@ -776,7 +801,7 @@ export default function Dashboard() {
                 <Banner tone="warning" title="Low Credits Balance" onDismiss={() => setShowLowCreditsBanner(false)}>
                   <p>
                     You have <strong>{credits}</strong> credit{credits !== 1 ? "s" : ""} remaining. 
-                    <Link to="/app/credits" style={{ marginLeft: "8px" }}>
+                    <Link to="/app/credits" prefetch="intent" style={{ marginLeft: "8px" }}>
                       Purchase credits →
                     </Link>
                   </p>

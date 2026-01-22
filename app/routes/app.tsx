@@ -1,5 +1,5 @@
 import type { HeadersFunction, LoaderFunctionArgs } from "@remix-run/node";
-import { Link, Outlet, useLoaderData, useRouteError } from "@remix-run/react";
+import { Link, Outlet, useLoaderData, useNavigation, useRouteError } from "@remix-run/react";
 import { boundary } from "@shopify/shopify-app-remix/server";
 import { AppProvider } from "@shopify/shopify-app-remix/react";
 import { NavMenu } from "@shopify/app-bridge-react";
@@ -21,21 +21,26 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
 export default function App() {
   const { apiKey } = useLoaderData<typeof loader>();
+  const navigation = useNavigation();
+  const isLoading = navigation.state === "loading";
 
   return (
     <AppProvider isEmbeddedApp apiKey={apiKey}>
-            <NavMenu>
-              <Link to="/app" rel="home">
-                Dashboard
-              </Link>
-              <Link to="/app/products">Products</Link>
-              <Link to="/app/widget">Widget</Link>
-              <Link to="/app/history">History</Link>
-              <Link to="/app/credits">Credits</Link>
-              <Link to="/app/privacy">Privacy Policy</Link>
-              <Link to="/app/terms">Terms of Service</Link>
-              <Link to="/app/support">Support</Link>
-            </NavMenu>
+      {isLoading && (
+        <div className="nav-loading-bar" role="progressbar" aria-busy="true" aria-valuetext="Loading" />
+      )}
+      <NavMenu>
+        <Link to="/app" rel="home" prefetch="intent">
+          Dashboard
+        </Link>
+        <Link to="/app/products" prefetch="intent">Products</Link>
+        <Link to="/app/widget" prefetch="intent">Widget</Link>
+        <Link to="/app/history" prefetch="intent">History</Link>
+        <Link to="/app/credits" prefetch="intent">Credits</Link>
+        <Link to="/app/privacy" prefetch="intent">Privacy Policy</Link>
+        <Link to="/app/terms" prefetch="intent">Terms of Service</Link>
+        <Link to="/app/support" prefetch="intent">Support</Link>
+      </NavMenu>
       <Outlet />
     </AppProvider>
   );

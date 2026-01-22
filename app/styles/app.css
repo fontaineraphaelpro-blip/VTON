@@ -49,6 +49,27 @@
 }
 
 /* ============================================
+   NAVIGATION LOADING BAR - instant feedback
+   ============================================ */
+
+.nav-loading-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  z-index: 9999;
+  background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-primary) 50%, transparent 50%);
+  background-size: 200% 100%;
+  animation: nav-loading-shimmer 0.8s ease-in-out infinite;
+}
+
+@keyframes nav-loading-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ============================================
    BASE & RESET
    ============================================ */
 
