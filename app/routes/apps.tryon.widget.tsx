@@ -878,8 +878,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                 });
                 
                 if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({ error: \`HTTP \${response.status}\` }));
-                    throw new Error(errorData.error || \`Generation failed: \${response.status}\`);
+                    const errorData = await response.json().catch(() => ({ error: 'HTTP ' + response.status }));
+                    throw new Error(errorData.error || 'Generation failed: ' + response.status);
                 }
                 
                 const data = await response.json();
