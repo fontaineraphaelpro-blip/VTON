@@ -601,9 +601,9 @@ export default function Credits() {
         </div>
 
         <header className="app-header">
-          <h1 className="app-title">Credits</h1>
+          <h1 className="app-title">Get More Credits</h1>
           <p className="app-subtitle">
-            Use credits to generate virtual try-ons instantly
+            Unlock unlimited virtual try-ons and boost your sales with AI-powered fashion visualization
           </p>
         </header>
 
@@ -614,75 +614,116 @@ export default function Credits() {
           </div>
         </div>
 
-        <div style={{ marginTop: "var(--spacing-xl)" }}>
-          <h2 style={{ fontSize: "24px", fontWeight: "600", marginBottom: "var(--spacing-md)" }}>
-            Subscription Plans
+        {/* Value Proposition Section */}
+        <div className="conversion-hero" style={{ marginBottom: "48px", textAlign: "center" }}>
+          <h2 style={{ fontSize: "32px", fontWeight: "800", marginBottom: "16px", letterSpacing: "-0.02em", color: "var(--color-text-primary)" }}>
+            Choose Your Plan
           </h2>
-          <p style={{ color: "var(--text-secondary)", marginBottom: "var(--spacing-lg)" }}>
-            Choose a monthly subscription plan to access all features
+          <p style={{ fontSize: "18px", color: "var(--color-text-secondary)", marginBottom: "8px", fontWeight: "500" }}>
+            Start generating stunning virtual try-ons today
           </p>
+          <p style={{ fontSize: "15px", color: "var(--color-text-tertiary)", marginBottom: "0" }}>
+            All plans include instant generation, unlimited products, and cancel anytime
+          </p>
+        </div>
           <div className="pricing-grid">
             {subscriptionPlans.map((plan) => {
               const isCurrentPlan = currentActivePlan === plan.id;
               const isFreePlan = plan.id === "free-installation-setup";
               
+              // Calculate value metrics (visual only - no logic change)
+              const creditsMap: Record<string, number> = {
+                "free-installation-setup": 4,
+                "starter": 100,
+                "pro": 400,
+                "studio": 2000,
+              };
+              const credits = creditsMap[plan.id] || 0;
+              const pricePerCredit = plan.price > 0 && credits > 0 ? (plan.price / credits).toFixed(3) : "0";
+              const isBestValue = plan.id === "pro"; // Pro is best value
+              
               return (
-                <div key={plan.id} className={`plan-card ${plan.popular ? 'featured' : ''} ${isCurrentPlan ? 'current-plan' : ''}`}>
+                <div key={plan.id} className={`plan-card ${plan.popular ? 'featured' : ''} ${isCurrentPlan ? 'current-plan' : ''} ${isBestValue ? 'best-value' : ''}`}>
                   {plan.popular && (
-                    <div className="plan-badge">Most popular</div>
+                    <div className="plan-badge plan-badge-popular">⭐ Most Popular</div>
+                  )}
+                  {isBestValue && !plan.popular && (
+                    <div className="plan-badge plan-badge-value">💰 Best Value</div>
                   )}
                   {isCurrentPlan && (
-                    <div className="plan-badge" style={{ backgroundColor: '#008060', color: 'white' }}>
-                      Current Plan
-                    </div>
+                    <div className="plan-badge plan-badge-current">✓ Current Plan</div>
                   )}
                   <div className="plan-name">{plan.name}</div>
                   <div className="plan-price">
                     ${plan.price.toFixed(2)} <span>/ month</span>
                   </div>
+                  {plan.price > 0 && credits > 0 && (
+                    <div className="plan-value-indicator">
+                      <span className="plan-value-text">${pricePerCredit}</span>
+                      <span className="plan-value-label">per generation</span>
+                    </div>
+                  )}
                   <div className="plan-features">
-                    <div className="plan-feature">{plan.description}</div>
-                    <div className="plan-feature">Monthly recurring subscription</div>
-                    <div className="plan-feature">Cancel anytime</div>
+                    <div className="plan-feature plan-feature-highlight">{plan.description}</div>
+                    <div className="plan-feature">✓ Instant AI generation</div>
+                    <div className="plan-feature">✓ Unlimited products</div>
+                    <div className="plan-feature">✓ Cancel anytime</div>
+                    <div className="plan-feature">✓ No setup fees</div>
                   </div>
                   <div className="plan-cta">
                     {isCurrentPlan ? (
                       <button 
-                        className="plan-button"
+                        className="plan-button plan-button-current"
                         disabled={true}
-                        style={{ 
-                          backgroundColor: '#008060', 
-                          color: 'white',
-                          cursor: 'not-allowed',
-                          opacity: 0.8
-                        }}
                       >
-                        Current Plan
+                        ✓ Current Plan
                       </button>
                     ) : isFreePlan ? (
                       <button 
-                        className="plan-button"
+                        className="plan-button plan-button-disabled"
                         disabled={true}
-                        style={{ 
-                          cursor: 'not-allowed',
-                          opacity: 0.6
-                        }}
                       >
-                        Already included
+                        Already Included
                       </button>
                     ) : (
                       <button 
-                        className="plan-button"
+                        className={`plan-button ${plan.popular ? 'plan-button-featured' : ''}`}
                         onClick={() => handleSubscriptionPurchase(plan.id)}
                         disabled={isSubmitting || submittingPackId !== null}
                       >
-                        {isSubmitting && submittingPackId === plan.id ? "Processing..." : "Subscribe"}
+                        {isSubmitting && submittingPackId === plan.id ? "Processing..." : plan.popular ? "Get Started →" : "Subscribe Now"}
                       </button>
                     )}
                   </div>
                 </div>
               );
             })}
+          </div>
+          
+          {/* Reassurance Section */}
+          <div className="conversion-reassurance" style={{ marginTop: "64px", padding: "40px", background: "linear-gradient(to bottom, #f9fafb 0%, #ffffff 100%)", borderRadius: "16px", border: "1.5px solid var(--color-border)" }}>
+            <div style={{ textAlign: "center", maxWidth: "800px", margin: "0 auto" }}>
+              <h3 style={{ fontSize: "24px", fontWeight: "700", marginBottom: "16px", color: "var(--color-text-primary)" }}>
+                💯 100% Risk-Free
+              </h3>
+              <p style={{ fontSize: "16px", color: "var(--color-text-secondary)", lineHeight: "1.7", marginBottom: "24px" }}>
+                Cancel your subscription at any time. No questions asked. Your credits reset monthly, so you always get fresh value.
+              </p>
+              <div style={{ display: "flex", justifyContent: "center", gap: "32px", flexWrap: "wrap", marginTop: "32px" }}>
+                <div style={{ textAlign: "center" }}>
+                  <div style={{ fontSize: "20px", fontWeight: "700", color: "var(--color-primary)", marginBottom: "4px" }}>✓</div>
+                  <div style={{ fontSize: "14px", color: "var(--color-text-secondary)", fontWeight: "600" }}>Instant Setup</div>
+                </div>
+                <div style={{ textAlign: "center" }}>
+                  <div style={{ fontSize: "20px", fontWeight: "700", color: "var(--color-primary)", marginBottom: "4px" }}>✓</div>
+                  <div style={{ fontSize: "14px", color: "var(--color-text-secondary)", fontWeight: "600" }}>Cancel Anytime</div>
+                </div>
+                <div style={{ textAlign: "center" }}>
+                  <div style={{ fontSize: "20px", fontWeight: "700", color: "var(--color-primary)", marginBottom: "4px" }}>✓</div>
+                  <div style={{ fontSize: "14px", color: "var(--color-text-secondary)", fontWeight: "600" }}>No Hidden Fees</div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
