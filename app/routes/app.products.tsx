@@ -246,6 +246,18 @@ export default function Products() {
     }
   }, [(fetcher.data as any)?.error, fetcher.state]);
 
+  // Memoize handleToggle to prevent recreation on every render
+  const handleToggle = useCallback((productId: string, productHandle: string | undefined, checked: boolean) => {
+    const formData = new FormData();
+    formData.append("intent", "toggle-product-tryon");
+    formData.append("productId", productId);
+    if (productHandle) {
+      formData.append("productHandle", productHandle);
+    }
+    formData.append("enabled", checked ? "true" : "false");
+    fetcher.submit(formData, { method: "post" });
+  }, [fetcher]);
+
   // Memoize productRows to prevent recalculation on every render
   const productRows = useMemo(() => {
     return products.map((product: any) => {
@@ -256,18 +268,6 @@ export default function Products() {
       const productId = product.id.replace("gid://shopify/Product/", "");
       const tryonEnabled = productSettings[product.id] !== false; // null or true means enabled, only false means disabled
       const tryonCount = tryonCounts[product.id] || 0;
-      
-      // ADDED: Handle toggle
-      const handleToggle = (checked: boolean) => {
-        const formData = new FormData();
-        formData.append("intent", "toggle-product-tryon");
-        formData.append("productId", product.id);
-        if (product.handle) {
-          formData.append("productHandle", product.handle);
-        }
-        formData.append("enabled", checked ? "true" : "false");
-        fetcher.submit(formData, { method: "post" });
-      };
       
       return [
         <InlineStack key={product.id} gap="300" align="start">
@@ -306,7 +306,7 @@ export default function Products() {
         <Checkbox
           key={`checkbox-${product.id}`}
           checked={tryonEnabled}
-          onChange={handleToggle}
+          onChange={(checked) => handleToggle(product.id, product.handle, checked)}
           disabled={fetcher.state === "submitting"}
           label=""
           labelHidden
@@ -321,7 +321,7 @@ export default function Products() {
         </Button>,
       ];
     }).filter((row: (React.ReactNode | null)[]) => row !== null);
-  }, [products, productSettings, tryonCounts, fetcher]);
+  }, [products, productSettings, tryonCounts, fetcher, handleToggle]);
 
   return (
     <Page>

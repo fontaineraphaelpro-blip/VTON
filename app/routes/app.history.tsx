@@ -1,6 +1,7 @@
 import type { LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
+import { useMemo, useCallback } from "react";
 import {
   Page,
   Text,
@@ -239,7 +240,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 export default function History() {
   const { logs, error } = useLoaderData<typeof loader>();
 
-  const formatDate = (dateString: string) => {
+  // Memoize formatDate to prevent recreation on every render
+  const formatDate = useCallback((dateString: string) => {
     try {
       return new Date(dateString).toLocaleString("en-US", {
         dateStyle: "short",
@@ -248,49 +250,60 @@ export default function History() {
     } catch {
       return dateString;
     }
-  };
+  }, []);
 
-  const formatLatency = (ms: number | null) => {
+  // Memoize formatLatency to prevent recreation on every render
+  const formatLatency = useCallback((ms: number | null) => {
     if (!ms) return "-";
     // Always display in seconds
     return `${(ms / 1000).toFixed(1)} sec`;
-  };
+  }, []);
 
-  const totalLogs = logs.length;
-  const successfulLogs = logs.filter((log: any) => log.success).length;
-  const successRate = totalLogs > 0 ? ((successfulLogs / totalLogs) * 100).toFixed(1) : "0.0";
-  const avgLatency = totalLogs > 0
-    ? (logs.reduce((sum: number, log: any) => sum + (log.latency_ms || 0), 0) / totalLogs / 1000).toFixed(1)
-    : "0.0";
+  // Memoize expensive calculations
+  const totalLogs = useMemo(() => logs.length, [logs.length]);
+  const successfulLogs = useMemo(() => logs.filter((log: any) => log.success).length, [logs]);
+  const successRate = useMemo(() => {
+    return totalLogs > 0 ? ((successfulLogs / totalLogs) * 100).toFixed(1) : "0.0";
+  }, [totalLogs, successfulLogs]);
+  
+  const avgLatency = useMemo(() => {
+    return totalLogs > 0
+      ? (logs.reduce((sum: number, log: any) => sum + (log.latency_ms || 0), 0) / totalLogs / 1000).toFixed(1)
+      : "0.0";
+  }, [logs, totalLogs]);
 
-  const stats = [
+  // Memoize stats array to prevent recreation on every render
+  const stats = useMemo(() => [
     { label: "Total Attempts", value: totalLogs.toLocaleString("en-US"), icon: "" },
     { label: "Success Rate", value: `${successRate}%`, icon: "" },
     { label: "Average Latency", value: `${avgLatency} sec`, icon: "" },
-  ];
+  ], [totalLogs, successRate, avgLatency]);
 
-  const rows = logs.map((log: any) => {
-    // Ensure we never display raw GID - always use product_title or format nicely
-    let productDisplay = log.product_title || "-";
-    if (!log.product_title && log.product_id) {
-      // Format ID nicely if no title
-      const numericId = log.product_id.match(/^gid:\/\/shopify\/Product\/(\d+)$/)?.[1] || log.product_id;
-      productDisplay = log.product_handle ? `Product: ${log.product_handle}` : `Product #${numericId}`;
-    }
-    
-    return [
-      formatDate(log.created_at),
-      productDisplay,
-      log.customer_id || log.customer_ip || "-",
-    <Badge key={`badge-${log.id}`} tone={log.success ? "success" : "critical"}>
-      {log.success ? "Success" : "Error"}
-    </Badge>,
-    <Text key={`latency-${log.id}`} tone={log.latency_ms && log.latency_ms > 3000 ? "critical" : "subdued"}>
-      {formatLatency(log.latency_ms)}
-    </Text>,
-      log.error_message || "-",
-    ];
-  });
+  // Memoize rows array to prevent recalculation on every render
+  const rows = useMemo(() => {
+    return logs.map((log: any) => {
+      // Ensure we never display raw GID - always use product_title or format nicely
+      let productDisplay = log.product_title || "-";
+      if (!log.product_title && log.product_id) {
+        // Format ID nicely if no title
+        const numericId = log.product_id.match(/^gid:\/\/shopify\/Product\/(\d+)$/)?.[1] || log.product_id;
+        productDisplay = log.product_handle ? `Product: ${log.product_handle}` : `Product #${numericId}`;
+      }
+      
+      return [
+        formatDate(log.created_at),
+        productDisplay,
+        log.customer_id || log.customer_ip || "-",
+        <Badge key={`badge-${log.id}`} tone={log.success ? "success" : "critical"}>
+          {log.success ? "Success" : "Error"}
+        </Badge>,
+        <Text key={`latency-${log.id}`} tone={log.latency_ms && log.latency_ms > 3000 ? "critical" : "subdued"}>
+          {formatLatency(log.latency_ms)}
+        </Text>,
+        log.error_message || "-",
+      ];
+    });
+  }, [logs, formatDate, formatLatency]);
 
   return (
     <Page>

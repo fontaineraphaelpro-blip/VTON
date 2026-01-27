@@ -1,7 +1,7 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
 import { useLoaderData, useFetcher, useNavigation } from "@remix-run/react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   Page,
   Button,
@@ -431,7 +431,8 @@ export default function Credits() {
     }
   }, [subscriptionUpdated]);
 
-  const handleSubscriptionPurchase = (planId: string) => {
+  // Memoize handleSubscriptionPurchase to prevent recreation on every render
+  const handleSubscriptionPurchase = useCallback((planId: string) => {
     if (isSubmitting || submittingPackId !== null) {
       return;
     }
@@ -444,9 +445,10 @@ export default function Credits() {
     
     // Submit - Remix will handle redirect automatically
     fetcher.submit(formData, { method: "post" });
-  };
+  }, [isSubmitting, submittingPackId, fetcher]);
 
-  const subscriptionPlans = [
+  // Memoize subscriptionPlans array to prevent recreation on every render
+  const subscriptionPlans = useMemo(() => [
     { 
       id: "free-installation-setup", 
       name: "Free Installation Setup", 
@@ -475,7 +477,7 @@ export default function Credits() {
       description: "2000 generations per month",
       popular: false 
     },
-  ];
+  ], []);
 
   return (
     <Page>
