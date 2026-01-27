@@ -485,7 +485,7 @@
       
       function renderWidget(shadowRoot, state) {
         const settings = state.widgetSettings;
-        const buttonText = settings.widget_text || 'Try It On Now ✨';
+        const buttonText = settings.widget_text || 'Try It On Now';
         const buttonBg = settings.widget_bg || '#000000';
         const buttonColor = settings.widget_color || '#ffffff';
         
@@ -498,17 +498,18 @@
             }
             .vton-button {
               width: 100%;
-              padding: 20px 32px;
-              border: none;
-              border-radius: 12px;
-              font-size: 16px;
-              font-weight: 700;
+              padding: 18px 32px;
+              border: 2px solid #000000;
+              border-radius: 8px;
+              font-size: 15px;
+              font-weight: 600;
               cursor: pointer;
-              transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-              box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06);
-              letter-spacing: 0.02em;
+              transition: all 0.2s ease;
+              box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+              letter-spacing: 0.01em;
               position: relative;
               overflow: hidden;
+              text-transform: uppercase;
             }
             .vton-button::before {
               content: '';
@@ -524,12 +525,14 @@
               left: 100%;
               }
               .vton-button:hover {
-              transform: translateY(-3px);
-              box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15), 0 4px 8px rgba(0, 0, 0, 0.1);
+              transform: translateY(-2px);
+              box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+              background: #000000;
+              color: #ffffff;
             }
             .vton-button:active {
-              transform: translateY(-1px);
-              box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.08);
+              transform: translateY(0);
+              box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
             }
             .vton-modal-overlay {
               position: fixed;
@@ -556,16 +559,16 @@
             }
             .vton-modal {
               background: #ffffff;
-              border-radius: 24px;
-              max-width: 640px;
+              border-radius: 12px;
+              max-width: 600px;
               width: 100%;
               max-height: 90vh;
               overflow: hidden;
               position: relative;
               display: flex;
               flex-direction: column;
-              box-shadow: 0 32px 80px rgba(0, 0, 0, 0.3), 0 12px 24px rgba(0, 0, 0, 0.2);
-              border: 1px solid rgba(255, 255, 255, 0.2);
+              box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25), 0 8px 16px rgba(0, 0, 0, 0.15);
+              border: 1px solid rgba(0, 0, 0, 0.08);
               animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             }
             @keyframes slideUp {
@@ -609,7 +612,7 @@
               transform: scale(1.05) rotate(90deg);
             }
             .vton-modal-content {
-              padding: 48px 40px;
+              padding: 40px 32px;
               display: flex;
               flex-direction: column;
               flex: 1;
@@ -620,14 +623,14 @@
               justify-content: center;
             }
             .vton-upload-area {
-              border: 2.5px dashed #d1d5db;
-              border-radius: 20px;
-              padding: 72px 48px;
+              border: 2px dashed #d1d5db;
+              border-radius: 8px;
+              padding: 60px 40px;
               text-align: center;
               cursor: pointer;
-              margin-bottom: 32px;
-              transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-              background: linear-gradient(135deg, #ffffff 0%, #f9fafb 50%, #fafbfc 100%);
+              margin-bottom: 24px;
+              transition: all 0.25s ease;
+              background: #fafafa;
               position: relative;
               overflow: hidden;
             }
@@ -655,11 +658,10 @@
               transition: opacity 0.35s ease;
             }
               .vton-upload-area:hover {
-              border-color: ${buttonBg};
-              border-width: 3px;
-              background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 50%, #f9fafb 100%);
-              box-shadow: 0 8px 32px rgba(0, 128, 96, 0.12), 0 4px 12px rgba(0, 128, 96, 0.08);
-              transform: translateY(-4px) scale(1.01);
+              border-color: #000000;
+              border-width: 2px;
+              background: #ffffff;
+              box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
             }
             .vton-upload-area:hover::before {
               opacity: 1;
@@ -672,34 +674,36 @@
             }
             .vton-upload-area p {
               margin: 0;
-              font-size: 17px;
-              color: #111827;
-              font-weight: 700;
-              line-height: 1.6;
-              letter-spacing: -0.02em;
+              font-size: 16px;
+              color: #000000;
+              font-weight: 600;
+              line-height: 1.5;
             }
             .vton-upload-area p:first-of-type {
               margin-bottom: 8px;
             }
             .vton-upload-area p:last-of-type {
-              font-size: 14px;
-              color: #6b7280;
-              font-weight: 500;
+              font-size: 13px;
+              color: #666666;
+              font-weight: 400;
               margin-top: 8px;
-              letter-spacing: 0;
             }
             .vton-upload-icon {
-              font-size: 72px;
-              margin-bottom: 24px;
+              width: 48px;
+              height: 48px;
+              margin: 0 auto 20px;
               display: block;
-              filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15));
-              transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
               position: relative;
               z-index: 1;
             }
-            .vton-upload-area:hover .vton-upload-icon {
-              transform: scale(1.1) translateY(-4px);
-              filter: drop-shadow(0 6px 16px rgba(0, 128, 96, 0.25));
+            .vton-upload-icon svg {
+              width: 100%;
+              height: 100%;
+              stroke: #666666;
+              transition: stroke 0.25s ease;
+            }
+            .vton-upload-area:hover .vton-upload-icon svg {
+              stroke: #000000;
             }
             .vton-upload-area.has-image {
               border: none;
@@ -718,47 +722,46 @@
               border: 1px solid rgba(0, 0, 0, 0.06);
             }
             .vton-privacy-notice {
-              font-size: 13px;
-              color: #6b7280;
+              font-size: 12px;
+              color: #666666;
               text-align: center;
-              margin: 24px 0;
+              margin: 20px 0;
               flex-shrink: 0;
-              line-height: 1.7;
-              font-weight: 600;
-              padding: 16px 20px;
-              background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-              border-radius: 12px;
-              border: 1.5px solid #fbbf24;
-              box-shadow: 0 2px 8px rgba(251, 191, 36, 0.15);
-              position: relative;
-              overflow: hidden;
+              line-height: 1.6;
+              font-weight: 400;
+              padding: 12px 16px;
+              background: #f5f5f5;
+              border-radius: 6px;
+              border: 1px solid #e5e5e5;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              gap: 8px;
             }
-            .vton-privacy-notice::before {
-              content: '';
-              position: absolute;
-              top: 0;
-              left: 0;
-              right: 0;
-              height: 2px;
-              background: linear-gradient(90deg, #f59e0b 0%, #fbbf24 100%);
+            .vton-privacy-notice svg {
+              width: 14px;
+              height: 14px;
+              stroke: #666666;
+              flex-shrink: 0;
             }
             .vton-privacy-notice.hidden {
               display: none;
             }
             .vton-generate-btn {
               width: 100%;
-              padding: 20px 32px;
-              border: none;
-              border-radius: 12px;
-              font-size: 16px;
-              font-weight: 700;
+              padding: 16px 32px;
+              border: 2px solid #000000;
+              border-radius: 8px;
+              font-size: 15px;
+              font-weight: 600;
               cursor: pointer;
-              margin-top: 24px;
-              transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-              box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06);
-              letter-spacing: 0.02em;
+              margin-top: 20px;
+              transition: all 0.2s ease;
+              box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+              letter-spacing: 0.01em;
               position: relative;
               overflow: hidden;
+              text-transform: uppercase;
             }
             .vton-generate-btn::before {
               content: '';
@@ -774,8 +777,10 @@
               left: 100%;
             }
             .vton-generate-btn:hover:not(:disabled) {
-              transform: translateY(-3px);
-              box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15), 0 4px 8px rgba(0, 0, 0, 0.1);
+              transform: translateY(-2px);
+              box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+              background: #000000;
+              color: #ffffff;
             }
             .vton-generate-btn.hidden {
               display: none;
@@ -857,7 +862,7 @@
               border-radius: 4px;
               height: 6px;
               overflow: hidden;
-              position: relative;
+                position: relative;
               flex-shrink: 0;
             }
             .vton-progress-bar {
@@ -876,7 +881,7 @@
               margin: 0 auto;
               padding: 0 4px;
               flex-shrink: 0;
-              width: 100%;
+                width: 100%;
             }
             .vton-progress-text {
               font-size: 13px;
@@ -957,7 +962,7 @@
               display: flex;
             }
             .vton-result-content {
-              width: 100%;
+                width: 100%;
               display: flex;
               flex-direction: column;
               align-items: center;
@@ -1024,16 +1029,15 @@
             .vton-error {
               color: #dc2626;
               text-align: center;
-              padding: 24px 28px;
+              padding: 16px 20px;
               display: none;
-              background: linear-gradient(to bottom, #fef2f2 0%, #fee2e2 100%);
-              border: 1.5px solid #fecaca;
-              border-radius: 14px;
+              background: #fef2f2;
+              border: 1px solid #fecaca;
+              border-radius: 8px;
               margin: 24px 0;
-              font-size: 15px;
-              line-height: 1.7;
-              font-weight: 600;
-              box-shadow: 0 4px 12px rgba(220, 38, 38, 0.1), 0 2px 4px rgba(220, 38, 38, 0.05);
+              font-size: 14px;
+              line-height: 1.6;
+              font-weight: 500;
             }
             .vton-error.active {
               display: block;
@@ -1161,11 +1165,23 @@
               <div class="vton-modal-content">
                 <div id="vton-upload-area" class="vton-upload-area" onclick="window.vtonWidgetInstance.triggerFileInput()">
                   <input type="file" id="vton-file-input" accept="image/*" style="display: none;" onchange="window.vtonWidgetInstance.handleFileChange(event)" />
-                  <span class="vton-upload-icon">📸</span>
+                  <span class="vton-upload-icon">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M23 19C23 19.5304 22.7893 20.0391 22.4142 20.4142C22.0391 20.7893 21.5304 21 21 21H3C2.46957 21 1.96086 20.7893 1.58579 20.4142C1.21071 20.0391 1 19.5304 1 19V8C1 7.46957 1.21071 6.96086 1.58579 6.58579C1.96086 6.21071 2.46957 6 3 6H7L9 4H15L17 6H21C21.5304 6 22.0391 6.21071 22.4142 6.58579C22.7893 6.96086 23 7.46957 23 8V19Z" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                      <path d="M12 17C14.2091 17 16 15.2091 16 13C16 10.7909 14.2091 9 12 9C9.79086 9 8 10.7909 8 13C8 15.2091 9.79086 17 12 17Z" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </span>
                   <p>Add your photo</p>
                   <p>Front-facing photo recommended for best results</p>
                 </div>
-                <p class="vton-privacy-notice">🔒 Your photos are processed securely and deleted after use</p>
+                <p class="vton-privacy-notice">
+                  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M12 8V12" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M12 16H12.01" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  Your photos are processed securely and deleted after use
+                </p>
                 <button id="vton-generate-btn" class="vton-generate-btn" style="background: ${buttonBg}; color: ${buttonColor};" onclick="window.vtonWidgetInstance.generate()" disabled>
                   Try it on now
                 </button>
@@ -1532,31 +1548,31 @@
       const getContextualMessage = function(elapsedSeconds) {
         if (elapsedSeconds < 10) {
           return [
-            '✨ Setting up your virtual try-on experience',
-            '📸 Analyzing your photo with AI precision',
-            '🎨 Detecting colors and patterns',
-            '🤖 Initializing advanced algorithms',
-            '⚡ Preparing the magic...'
+            'Setting up your virtual try-on experience',
+            'Analyzing your photo with AI precision',
+            'Detecting colors and patterns',
+            'Initializing advanced algorithms',
+            'Preparing the generation...'
           ];
         } else if (elapsedSeconds < 20) {
           return [
-            '🔄 Processing your image in high resolution',
-            '🎯 Matching your photo with product details',
-            '💫 Applying realistic fabric textures',
-            '🌟 Creating seamless blend effects',
-            '🔬 Optimizing every pixel for perfection'
+            'Processing your image in high resolution',
+            'Matching your photo with product details',
+            'Applying realistic fabric textures',
+            'Creating seamless blend effects',
+            'Optimizing every pixel for perfection'
           ];
         } else if (elapsedSeconds < 30) {
           return [
-            '🎭 Fine-tuning the fit and proportions',
-            '🌈 Adjusting lighting and shadows',
-            '✨ Adding final touches to make it perfect',
-            '✨ Almost there! Adding the final touches',
-            '💎 Polishing every detail for you'
+            'Fine-tuning the fit and proportions',
+            'Adjusting lighting and shadows',
+            'Adding final touches to make it perfect',
+            'Almost there! Adding the final touches',
+            'Polishing every detail for you'
           ];
         } else {
           return [
-            '⏳ Taking a bit longer than usual, but it\'s worth it!',
+            'Taking a bit longer than usual, but it\'s worth it!',
             '🎨 Creating something truly special for you',
             '💪 Our AI is working extra hard to make it perfect',
             '🌟 Great things take time - your result is almost ready!',
