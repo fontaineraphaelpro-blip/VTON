@@ -843,10 +843,6 @@ body {
     grid-template-columns: repeat(2, 1fr);
     gap: 28px;
   }
-  
-  .plan-card.featured {
-    order: -1;
-  }
 }
 
 @media (max-width: 768px) {
