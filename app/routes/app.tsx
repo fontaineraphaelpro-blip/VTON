@@ -1,5 +1,6 @@
 import type { HeadersFunction, LoaderFunctionArgs } from "@remix-run/node";
 import { Link, Outlet, useLoaderData, useNavigation, useRouteError } from "@remix-run/react";
+import { useMemo } from "react";
 import { boundary } from "@shopify/shopify-app-remix/server";
 import { AppProvider } from "@shopify/shopify-app-remix/react";
 import { NavMenu } from "@shopify/app-bridge-react";
@@ -22,7 +23,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 export default function App() {
   const { apiKey } = useLoaderData<typeof loader>();
   const navigation = useNavigation();
-  const isLoading = navigation.state === "loading";
+  const isLoading = useMemo(() => navigation.state === "loading", [navigation.state]);
 
   return (
     <AppProvider isEmbeddedApp apiKey={apiKey}>

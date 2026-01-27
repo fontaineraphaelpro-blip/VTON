@@ -1,7 +1,7 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useLoaderData, useFetcher } from "@remix-run/react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   Page,
   Layout,
@@ -246,79 +246,82 @@ export default function Products() {
     }
   }, [(fetcher.data as any)?.error, fetcher.state]);
 
-  const productRows = products.map((product: any) => {
-    if (!product || !product.id) {
-      return null;
-    }
-    
-    const productId = product.id.replace("gid://shopify/Product/", "");
-    const tryonEnabled = productSettings[product.id] !== false; // null or true means enabled, only false means disabled
-    const tryonCount = tryonCounts[product.id] || 0;
-    
-    // ADDED: Handle toggle
-    const handleToggle = (checked: boolean) => {
-      const formData = new FormData();
-      formData.append("intent", "toggle-product-tryon");
-      formData.append("productId", product.id);
-      if (product.handle) {
-        formData.append("productHandle", product.handle);
+  // Memoize productRows to prevent recalculation on every render
+  const productRows = useMemo(() => {
+    return products.map((product: any) => {
+      if (!product || !product.id) {
+        return null;
       }
-      formData.append("enabled", checked ? "true" : "false");
-      fetcher.submit(formData, { method: "post" });
-    };
-    
-    return [
-      <InlineStack key={product.id} gap="300" align="start">
-        {product.featuredImage?.url && (
-          <Thumbnail
-            source={product.featuredImage.url}
-            alt={product.featuredImage.altText || product.title || "Product"}
-            size="small"
-          />
-        )}
-        <BlockStack gap="050">
-          <Text variant="bodyMd" fontWeight="semibold" as="span">
-            {product.title || "Untitled Product"}
-          </Text>
-          {product.handle && (
-            <Text variant="bodySm" tone="subdued" as="span">
-              /{product.handle}
-            </Text>
+      
+      const productId = product.id.replace("gid://shopify/Product/", "");
+      const tryonEnabled = productSettings[product.id] !== false; // null or true means enabled, only false means disabled
+      const tryonCount = tryonCounts[product.id] || 0;
+      
+      // ADDED: Handle toggle
+      const handleToggle = (checked: boolean) => {
+        const formData = new FormData();
+        formData.append("intent", "toggle-product-tryon");
+        formData.append("productId", product.id);
+        if (product.handle) {
+          formData.append("productHandle", product.handle);
+        }
+        formData.append("enabled", checked ? "true" : "false");
+        fetcher.submit(formData, { method: "post" });
+      };
+      
+      return [
+        <InlineStack key={product.id} gap="300" align="start">
+          {product.featuredImage?.url && (
+            <Thumbnail
+              source={product.featuredImage.url}
+              alt={product.featuredImage.altText || product.title || "Product"}
+              size="small"
+            />
           )}
-        </BlockStack>
-      </InlineStack>,
-      <Badge
-        key={`status-${product.id}`}
-        tone={product.status === "ACTIVE" ? "success" : "warning"}
-      >
-        {product.status || "UNKNOWN"}
-      </Badge>,
-      <Text key={`inventory-${product.id}`} variant="bodyMd" as="span">
-        {product.totalInventory ?? 0}
-      </Text>,
-      // ADDED: Try-on usage count
-      <Text key={`tryon-count-${product.id}`} variant="bodyMd" as="span">
-        {tryonCount.toLocaleString("en-US")}
-      </Text>,
-      // ADDED: Try-on toggle checkbox
-      <Checkbox
-        key={`checkbox-${product.id}`}
-        checked={tryonEnabled}
-        onChange={handleToggle}
-        disabled={fetcher.state === "submitting"}
-        label=""
-        labelHidden
-      />,
-      <Button
-        key={`btn-${product.id}`}
-        url={`shopify:admin/products/${productId}`}
-        target="_blank"
-        variant="plain"
-      >
-        View
-      </Button>,
-    ];
-  }).filter((row: (React.ReactNode | null)[]) => row !== null);
+          <BlockStack gap="050">
+            <Text variant="bodyMd" fontWeight="semibold" as="span">
+              {product.title || "Untitled Product"}
+            </Text>
+            {product.handle && (
+              <Text variant="bodySm" tone="subdued" as="span">
+                /{product.handle}
+              </Text>
+            )}
+          </BlockStack>
+        </InlineStack>,
+        <Badge
+          key={`status-${product.id}`}
+          tone={product.status === "ACTIVE" ? "success" : "warning"}
+        >
+          {product.status || "UNKNOWN"}
+        </Badge>,
+        <Text key={`inventory-${product.id}`} variant="bodyMd" as="span">
+          {product.totalInventory ?? 0}
+        </Text>,
+        // ADDED: Try-on usage count
+        <Text key={`tryon-count-${product.id}`} variant="bodyMd" as="span">
+          {tryonCount.toLocaleString("en-US")}
+        </Text>,
+        // ADDED: Try-on toggle checkbox
+        <Checkbox
+          key={`checkbox-${product.id}`}
+          checked={tryonEnabled}
+          onChange={handleToggle}
+          disabled={fetcher.state === "submitting"}
+          label=""
+          labelHidden
+        />,
+        <Button
+          key={`btn-${product.id}`}
+          url={`shopify:admin/products/${productId}`}
+          target="_blank"
+          variant="plain"
+        >
+          View
+        </Button>,
+      ];
+    }).filter((row: (React.ReactNode | null)[]) => row !== null);
+  }, [products, productSettings, tryonCounts, fetcher]);
 
   return (
     <Page>

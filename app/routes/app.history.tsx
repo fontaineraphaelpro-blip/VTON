@@ -3,17 +3,11 @@ import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 import {
   Page,
-  Layout,
-  Card,
-  BlockStack,
   Text,
   DataTable,
   Badge,
   Banner,
   EmptyState,
-  InlineStack,
-  Divider,
-  Box,
 } from "@shopify/polaris";
 import { TitleBar } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
@@ -301,94 +295,75 @@ export default function History() {
   return (
     <Page>
       <TitleBar title="History - VTON Magic" />
-      <Layout>
-        <Layout.Section>
-          <BlockStack gap="600">
-            {error && (
-              <Banner tone="critical" title="Error" onDismiss={() => {
-                // Error from loader, reload to clear
-                window.location.href = window.location.pathname;
-              }}>
-                Error loading history: {error}
-              </Banner>
-            )}
+      <div className="app-container">
+        {error && (
+          <div style={{ marginBottom: "var(--spacing-lg)" }}>
+            <Banner tone="critical" title="Error" onDismiss={() => {
+              // Error from loader, reload to clear
+              window.location.href = window.location.pathname;
+            }}>
+              Error loading history: {error}
+            </Banner>
+          </div>
+        )}
 
-            <Layout>
-              {stats.map((stat) => (
-                <Layout.Section variant="oneThird" key={stat.label}>
-                  <div className="vton-stat-card">
-                    <BlockStack gap="300">
-                      <InlineStack align="space-between" blockAlign="start">
-                        <BlockStack gap="100">
-                          <Text variant="heading2xl" as="p" fontWeight="bold">
-                            {stat.value}
-                          </Text>
-                          <Text variant="bodySm" tone="subdued" as="p">
-                            {stat.label}
-                          </Text>
-                        </BlockStack>
-                        <Text variant="headingLg" as="span">
-                          {stat.icon}
-                        </Text>
-                      </InlineStack>
-                    </BlockStack>
-                  </div>
-                </Layout.Section>
-              ))}
-            </Layout>
+        <header className="app-header">
+          <h1 className="app-title">History</h1>
+          <p className="app-subtitle">
+            View the complete history of all virtual try-on attempts made on your store
+          </p>
+        </header>
 
-            <Divider />
+        <div className="stats-grid">
+          {stats.map((stat) => (
+            <div key={stat.label} className="stat-card">
+              <div className="stat-icon-wrapper">
+                {stat.icon || "📊"}
+              </div>
+              <div className="stat-value">{stat.value}</div>
+              <div className="stat-label">{stat.label}</div>
+            </div>
+          ))}
+        </div>
 
-            <Card>
-              <BlockStack gap="400">
-                <InlineStack align="space-between" blockAlign="center">
-                  <BlockStack gap="200">
-                    <Text as="h2" variant="headingLg" fontWeight="semibold">
-                      Try-On History
-                    </Text>
-                    <Text variant="bodyMd" tone="subdued" as="p">
-                      View the complete history of all virtual try-on attempts made on your store.
-                    </Text>
-                  </BlockStack>
-                </InlineStack>
-
-                <Divider />
-
-                {logs.length === 0 ? (
-                  <EmptyState
-                    heading="No History"
-                    image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
-                  >
-                    <p>
-                      No try-on sessions have been recorded yet.
-                    </p>
-                  </EmptyState>
-                ) : (
-                  <DataTable
-                    columnContentTypes={[
-                      "text",
-                      "text",
-                      "text",
-                      "text",
-                      "text",
-                      "text",
-                    ]}
-                    headings={[
-                      "Date",
-                      "Product",
-                      "Customer",
-                      "Status",
-                      "Latency",
-                      "Error",
-                    ]}
-                    rows={rows}
-                  />
-                )}
-              </BlockStack>
-            </Card>
-          </BlockStack>
-        </Layout.Section>
-      </Layout>
+        <div className="dashboard-section">
+          <h2>Try-On History</h2>
+          {logs.length === 0 ? (
+            <div className="dashboard-placeholder">
+              <EmptyState
+                heading="No History"
+                image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
+              >
+                <p>
+                  No try-on sessions have been recorded yet.
+                </p>
+              </EmptyState>
+            </div>
+          ) : (
+            <div className="history-table-wrapper">
+              <DataTable
+                columnContentTypes={[
+                  "text",
+                  "text",
+                  "text",
+                  "text",
+                  "text",
+                  "text",
+                ]}
+                headings={[
+                  "Date",
+                  "Product",
+                  "Customer",
+                  "Status",
+                  "Latency",
+                  "Error",
+                ]}
+                rows={rows}
+              />
+            </div>
+          )}
+        </div>
+      </div>
     </Page>
   );
 }

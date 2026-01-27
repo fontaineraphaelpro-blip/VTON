@@ -1,7 +1,7 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json, defer, redirect } from "@remix-run/node";
 import { useLoaderData, useFetcher, useRevalidator, Link } from "@remix-run/react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import {
   Page,
   Text,
@@ -657,15 +657,22 @@ export default function Dashboard() {
     : (shop?.total_tryons || 0);
   
   const totalAtc = shop?.total_atc || 0;
-  const conversionRate = totalTryons > 0 && totalAtc >= 0
-    ? ((totalAtc / totalTryons) * 100).toFixed(1)
-    : "0.0";
   
-  // Calculate 30-day total
-  const last30DaysTotal = dailyStats.reduce((sum: number, stat: any) => sum + stat.count, 0);
+  // Memoize conversion rate calculation
+  const conversionRate = useMemo(() => {
+    return totalTryons > 0 && totalAtc >= 0
+      ? ((totalAtc / totalTryons) * 100).toFixed(1)
+      : "0.0";
+  }, [totalTryons, totalAtc]);
+  
+  // Memoize 30-day total calculation
+  const last30DaysTotal = useMemo(() => {
+    return dailyStats.reduce((sum: number, stat: any) => sum + stat.count, 0);
+  }, [dailyStats]);
   
 
-  const handleSave = (formData: FormData) => {
+  // Memoize handleSave to prevent recreation on every render
+  const handleSave = useCallback((formData: FormData) => {
     // Ensure all required fields are present
     if (!formData.get("widgetText")) {
       formData.set("widgetText", shop?.widget_text || "Try It On Now");
@@ -689,7 +696,7 @@ export default function Dashboard() {
       formData.set("monthlyQuota", shop?.monthly_quota ? String(shop.monthly_quota) : "");
     }
     fetcher.submit(formData, { method: "post" });
-  };
+  }, [shop, fetcher]);
   
   const [isEnabled, setIsEnabled] = useState(shop?.is_enabled !== false);
 
@@ -711,7 +718,8 @@ export default function Dashboard() {
     return () => clearInterval(interval);
   }, [revalidator]);
 
-  const stats = [
+  // Memoize stats array to prevent recreation on every render
+  const stats = useMemo(() => [
     { 
       label: "Available Credits", 
       value: credits.toLocaleString("en-US"), 
@@ -736,7 +744,18 @@ export default function Dashboard() {
       icon: "",
       link: "/app/history"
     },
-  ];
+  ], [credits, totalTryons, totalAtc, conversionRate]);
+
+  // Memoize last 7 days stats for graph
+  const last7DaysStats = useMemo(() => dailyStats.slice(-7), [dailyStats]);
+  
+  // Memoize max count for graph scaling
+  const maxDailyCount = useMemo(() => {
+    return dailyStats.length > 0 ? Math.max(...dailyStats.map((s: any) => s.count)) : 0;
+  }, [dailyStats]);
+  
+  // Memoize recent logs (first 5)
+  const recentLogsDisplay = useMemo(() => recentLogs.slice(0, 5), [recentLogs]);
 
   return (
     <Page>
@@ -877,11 +896,10 @@ export default function Dashboard() {
           {dailyStats.length > 0 ? (
             <div className="graph-container-large">
               <div className="graph-bars">
-                {dailyStats.slice(-7).map((stat: any, index: number) => {
-                  const maxCount = Math.max(...dailyStats.map((s: any) => s.count));
+                {last7DaysStats.map((stat: any, index: number) => {
                   // Calculate percentage: scale from 0% to 100% based on max value
-                  const percentage = maxCount > 0 && stat.count > 0 
-                    ? (stat.count / maxCount) * 100 
+                  const percentage = maxDailyCount > 0 && stat.count > 0 
+                    ? (stat.count / maxDailyCount) * 100 
                     : 0;
                   const date = new Date(stat.date);
                   const isToday = date.toDateString() === new Date().toDateString();
@@ -939,7 +957,7 @@ export default function Dashboard() {
             <h2>Recent Activity</h2>
             {recentLogs.length > 0 ? (
               <div className="activity-list">
-                {recentLogs.slice(0, 5).map((log: any, index: number) => (
+                {recentLogsDisplay.map((log: any, index: number) => (
                   <div key={log.id || index} className="activity-item">
                     <div className="activity-info">
                       <p className="activity-title">
