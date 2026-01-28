@@ -355,7 +355,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       
       return await billing.request({
         plan: planId as any,
-        isTest: true,
+        isTest: null,
         returnUrl: returnUrl,
       });
     }

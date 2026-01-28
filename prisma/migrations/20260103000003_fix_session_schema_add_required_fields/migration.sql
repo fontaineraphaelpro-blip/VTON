@@ -30,3 +30,4 @@ ALTER TABLE "Session" ADD COLUMN IF NOT EXISTS "expires" TIMESTAMP(3);
 
 
 
+
