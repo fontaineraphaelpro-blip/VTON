@@ -18,7 +18,7 @@ import { authenticate } from "../shopify.server";
 import { getShop, upsertShop, getTryonLogs, getTopProducts, getTryonStatsByDay, getMonthlyTryonUsage, getSuccessfulTryonsCount, query } from "../lib/services/db.service";
 import { ensureTables } from "../lib/db-init.server";
 
-const REVIEW_URL = "https://apps.shopify.com/85e1a9dba888450e33b84fbb067bc3a5/preview/en";
+const REVIEW_URL = "https://apps.shopify.com/try-on-stylelab";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session, admin } = await authenticate.admin(request);
@@ -669,7 +669,7 @@ export default function Dashboard() {
   const monthlyUsage = typeof (loaderData as any).monthlyUsage === 'number' ? (loaderData as any).monthlyUsage : 0;
   const error = (loaderData as any).error || null;
   const shouldShowReview = (loaderData as any).shouldShowReview || false;
-  const reviewUrl = (loaderData as any).reviewUrl || "https://apps.shopify.com/85e1a9dba888450e33b84fbb067bc3a5/preview/en";
+  const reviewUrl = (loaderData as any).reviewUrl || "https://apps.shopify.com/try-on-stylelab";
 
   // State for managing notification visibility
   const [showErrorBanner, setShowErrorBanner] = useState(error !== null);
