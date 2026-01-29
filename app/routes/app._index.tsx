@@ -516,8 +516,24 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
   const intent = formData.get("intent") as string;
 
-  // Action pour marquer le review comme vu
+  // Action pour fermer la notification (sans laisser de review) - réapparaîtra après 30 jours
   if (intent === "dismiss-review") {
+    try {
+      await upsertShop(shop, {
+        last_review_prompt_date: new Date(),
+        // Ne pas mettre review_shown = true, pour permettre la réapparition après 30 jours
+      });
+      return json({ success: true });
+    } catch (error) {
+      return json({ 
+        success: false, 
+        error: error instanceof Error ? error.message : "Error dismissing review" 
+      });
+    }
+  }
+
+  // Action pour marquer que le client a cliqué sur "Leave a Review" - ne plus jamais réafficher
+  if (intent === "review-completed") {
     try {
       await upsertShop(shop, {
         review_shown: true,
@@ -527,7 +543,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     } catch (error) {
       return json({ 
         success: false, 
-        error: error instanceof Error ? error.message : "Error dismissing review" 
+        error: error instanceof Error ? error.message : "Error marking review as completed" 
       });
     }
   }
@@ -817,6 +833,7 @@ export default function Dashboard() {
                   title="⭐ Love Virtual Try-On? Leave us a review!"
                   onDismiss={() => {
                     setShowReviewBanner(false);
+                    // Fermer la notification - réapparaîtra après 30 jours
                     const formData = new FormData();
                     formData.append("intent", "dismiss-review");
                     fetcher.submit(formData, { method: "post" });
@@ -826,8 +843,9 @@ export default function Dashboard() {
                     onAction: () => {
                       window.open(reviewUrl, "_blank");
                       setShowReviewBanner(false);
+                      // Marquer comme review complété - ne plus jamais réafficher
                       const formData = new FormData();
-                      formData.append("intent", "dismiss-review");
+                      formData.append("intent", "review-completed");
                       fetcher.submit(formData, { method: "post" });
                     },
                   }}
