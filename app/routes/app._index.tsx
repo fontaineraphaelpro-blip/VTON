@@ -15,8 +15,10 @@ import {
 } from "@shopify/polaris";
 import { TitleBar } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
-import { getShop, upsertShop, getTryonLogs, getTopProducts, getTryonStatsByDay, getMonthlyTryonUsage, query } from "../lib/services/db.service";
+import { getShop, upsertShop, getTryonLogs, getTopProducts, getTryonStatsByDay, getMonthlyTryonUsage, getSuccessfulTryonsCount, query } from "../lib/services/db.service";
 import { ensureTables } from "../lib/db-init.server";
+
+const REVIEW_URL = "https://apps.shopify.com/85e1a9dba888450e33b84fbb067bc3a5/preview/en";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session, admin } = await authenticate.admin(request);
@@ -467,6 +469,22 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
     // NOTE: Widget uses App Embed Block (block.liquid). To install: Online Store > Themes > Customize > Product template > App embeds > Enable "Virtual Try-On Widget"
 
+    // Check if review prompt should be shown
+    let shouldShowReview = false;
+    if (shopData && !shopData.review_shown && totalTryons >= 10) {
+      // Show review prompt if user has at least 10 successful try-ons and hasn't seen the prompt yet
+      const lastPromptDate = shopData.last_review_prompt_date;
+      const now = new Date();
+      const daysSinceLastPrompt = lastPromptDate 
+        ? Math.floor((now.getTime() - new Date(lastPromptDate).getTime()) / (1000 * 60 * 60 * 24))
+        : Infinity;
+      
+      // Show if never prompted, or if last prompt was more than 30 days ago
+      if (!lastPromptDate || daysSinceLastPrompt >= 30) {
+        shouldShowReview = true;
+      }
+    }
+
     return json({
       shop: shopData || null,
       recentLogs: Array.isArray(enrichedRecentLogs) ? enrichedRecentLogs.slice(0, 5) : [],
@@ -474,6 +492,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       dailyStats: Array.isArray(dailyStats) ? dailyStats : [],
       monthlyUsage: monthlyUsage || 0, // ADDED: Monthly usage count
       totalTryons: totalTryons || 0, // ADDED: Total try-ons (calculated or from shop)
+      shouldShowReview: shouldShowReview, // ADDED: Review prompt flag
+      reviewUrl: REVIEW_URL, // ADDED: Review URL
     });
   } catch (error) {
     // Log error only in development
@@ -495,6 +515,22 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const formData = await request.formData();
 
   const intent = formData.get("intent") as string;
+
+  // Action pour marquer le review comme vu
+  if (intent === "dismiss-review") {
+    try {
+      await upsertShop(shop, {
+        review_shown: true,
+        last_review_prompt_date: new Date(),
+      });
+      return json({ success: true });
+    } catch (error) {
+      return json({ 
+        success: false, 
+        error: error instanceof Error ? error.message : "Error dismissing review" 
+      });
+    }
+  }
 
   // Action pour nettoyer les anciens script tags
   if (intent === "cleanup-script-tags") {
@@ -632,6 +668,8 @@ export default function Dashboard() {
   const dailyStats = Array.isArray((loaderData as any).dailyStats) ? (loaderData as any).dailyStats : [];
   const monthlyUsage = typeof (loaderData as any).monthlyUsage === 'number' ? (loaderData as any).monthlyUsage : 0;
   const error = (loaderData as any).error || null;
+  const shouldShowReview = (loaderData as any).shouldShowReview || false;
+  const reviewUrl = (loaderData as any).reviewUrl || "https://apps.shopify.com/85e1a9dba888450e33b84fbb067bc3a5/preview/en";
 
   // State for managing notification visibility
   const [showErrorBanner, setShowErrorBanner] = useState(error !== null);
@@ -640,6 +678,7 @@ export default function Dashboard() {
   const [showLowCreditsBanner, setShowLowCreditsBanner] = useState(true);
   const [showQuotaExceededBanner, setShowQuotaExceededBanner] = useState(true);
   const [showQuotaWarningBanner, setShowQuotaWarningBanner] = useState(true);
+  const [showReviewBanner, setShowReviewBanner] = useState(shouldShowReview);
 
   // ADDED: Monthly quota and usage (for display only)
   const monthlyQuota = shop?.monthly_quota || null;
@@ -769,9 +808,35 @@ export default function Dashboard() {
         </header>
 
         {/* Alerts compactes en haut */}
-        {(showErrorBanner || fetcher.data?.success || showLowCreditsBanner || showDisabledBanner || showQuotaExceededBanner || showQuotaWarningBanner) && (
+        {(showErrorBanner || fetcher.data?.success || showLowCreditsBanner || showDisabledBanner || showQuotaExceededBanner || showQuotaWarningBanner || showReviewBanner) && (
           <div style={{ marginBottom: "var(--spacing-lg)" }}>
             <BlockStack gap="300">
+              {showReviewBanner && (
+                <Banner 
+                  tone="info" 
+                  title="⭐ Love Virtual Try-On? Leave us a review!"
+                  onDismiss={() => {
+                    setShowReviewBanner(false);
+                    const formData = new FormData();
+                    formData.append("intent", "dismiss-review");
+                    fetcher.submit(formData, { method: "post" });
+                  }}
+                  action={{
+                    content: "Leave a Review",
+                    onAction: () => {
+                      window.open(reviewUrl, "_blank");
+                      setShowReviewBanner(false);
+                      const formData = new FormData();
+                      formData.append("intent", "dismiss-review");
+                      fetcher.submit(formData, { method: "post" });
+                    },
+                  }}
+                >
+                  <p>
+                    Your feedback helps us improve! If you're enjoying Virtual Try-On, please take a moment to leave us a review on the Shopify App Store.
+                  </p>
+                </Banner>
+              )}
               {showErrorBanner && error && (
                 <Banner tone="critical" title="Error" onDismiss={() => setShowErrorBanner(false)}>
                   {error}

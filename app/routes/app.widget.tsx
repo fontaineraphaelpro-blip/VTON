@@ -152,6 +152,42 @@ export default function Widget() {
     }
   }, [fetcher.data?.success, fetcher.data?.savedValues, fetcher.state, revalidator]);
 
+  // Helper function to calculate if a color is dark or light
+  const getLuminance = (hex: string): number => {
+    const rgb = hexToRgb(hex);
+    if (!rgb) return 0;
+    const [r, g, b] = rgb.map(val => {
+      val = val / 255;
+      return val <= 0.03928 ? val / 12.92 : Math.pow((val + 0.055) / 1.055, 2.4);
+    });
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  };
+
+  const hexToRgb = (hex: string): [number, number, number] | null => {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result
+      ? [
+          parseInt(result[1], 16),
+          parseInt(result[2], 16),
+          parseInt(result[3], 16),
+        ]
+      : null;
+  };
+
+  // Calculate appropriate text color based on background
+  const getContrastTextColor = (bgColor: string, textColor: string): string => {
+    const bgLuminance = getLuminance(bgColor);
+    const textLuminance = getLuminance(textColor);
+    const contrast = (Math.max(bgLuminance, textLuminance) + 0.05) / (Math.min(bgLuminance, textLuminance) + 0.05);
+    
+    // If contrast is too low (less than 4.5:1 for WCAG AA), use automatic color
+    if (contrast < 4.5) {
+      // Use white text on dark backgrounds, black on light backgrounds
+      return bgLuminance > 0.5 ? "#000000" : "#ffffff";
+    }
+    return textColor;
+  };
+
   const handleSave = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
@@ -352,7 +388,7 @@ export default function Widget() {
                             cursor: "default",
                             transition: "opacity 0.2s",
                             backgroundColor: widgetBg || "#000000",
-                            color: widgetColor || "#ffffff",
+                            color: getContrastTextColor(widgetBg || "#000000", widgetColor || "#ffffff"),
                           }}
                         >
                           {widgetText || "Try It On Now ✨"}
