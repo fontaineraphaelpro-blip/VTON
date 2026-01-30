@@ -273,6 +273,29 @@ export async function createTryonLog(data: {
 }
 
 /**
+ * Updates an existing tryon log with result or error.
+ */
+export async function updateTryonLog(logId: number, data: {
+  success: boolean;
+  errorMessage?: string;
+  latencyMs?: number;
+  resultImageUrl?: string;
+}): Promise<void> {
+  await query(
+    `UPDATE tryon_logs 
+     SET success = $1, error_message = $2, latency_ms = $3, result_image_url = $4
+     WHERE id = $5`,
+    [
+      data.success,
+      data.errorMessage || null,
+      data.latencyMs || null,
+      data.resultImageUrl || null,
+      logId,
+    ]
+  );
+}
+
+/**
  * Gets or creates a rate limit entry.
  */
 export async function getOrCreateRateLimit(shop: string, customerIp: string, date: string) {

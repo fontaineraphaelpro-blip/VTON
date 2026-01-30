@@ -14,7 +14,7 @@ import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import crypto from "crypto";
 import { generateTryOn } from "../lib/services/replicate.service";
-import { getShop, upsertShop, createTryonLog, getMonthlyTryonUsage, getDailyTryonUsage, getCustomerDailyTryonUsage, query } from "../lib/services/db.service";
+import { getShop, upsertShop, createTryonLog, updateTryonLog, getMonthlyTryonUsage, getDailyTryonUsage, getCustomerDailyTryonUsage, query } from "../lib/services/db.service";
 import { ensureTables } from "../lib/db-init.server";
 
 const SHOPIFY_API_SECRET = process.env.SHOPIFY_API_SECRET || "";
@@ -270,59 +270,80 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     // 6. Convert user photo to URL format
     const personImageUrl = convertBase64ToUrl(userPhoto);
 
-    // 7. Generate try-on image using Replicate (optimized for speed)
-    let resultUrl: string;
-    let errorMessage: string | null = null;
-    let success = false;
-
-    try {
-      const result = await generateTryOn(personImageUrl, productImageUrl);
-      resultUrl = result.resultUrl;
-      success = true;
-    } catch (generateError) {
-      errorMessage = generateError instanceof Error ? generateError.message : "Unknown error";
-      throw generateError;
-    }
-
-    // 9. Calculate latency
-    const latencyMs = Date.now() - startTime;
-
-    // 10. Deduct credit and update usage
-    if (success) {
-      // Deduct one credit
-      await upsertShop(shop, {
-        addCredits: -1, // Deduct one credit
-        incrementTotalTryons: true,
-        monthly_quota_used: (shopData.monthly_quota_used || 0) + 1,
-      });
-    }
-
-    // 11. Log the generation attempt
+    // 7. Create log entry immediately (before starting generation) for async tracking
+    const customerIp = request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || undefined;
     const logId = await createTryonLog({
       shop,
-      customerIp: request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || undefined,
+      customerIp,
       productId: productId || undefined,
       productHandle: productHandle || undefined,
-      success,
-      errorMessage: errorMessage || undefined,
-      latencyMs,
-      resultImageUrl: success ? resultUrl : undefined,
+      success: false, // Will be updated when generation completes
+      errorMessage: undefined,
+      latencyMs: undefined,
+      resultImageUrl: undefined,
     });
 
-    // 12. Return result with CORS headers (already set above)
-    const headers = corsHeaders;
+    // 8. Start generation in background (don't await - respond immediately)
+    // This function will run asynchronously and update the log when done
+    (async () => {
+      const generationStartTime = Date.now();
+      let resultUrl: string;
+      let errorMessage: string | null = null;
+      let success = false;
 
-    if (success) {
-      return json({
-        result_url: resultUrl,
-        job_id: logId.toString(), // Return log ID as job ID for tracking
-      }, { headers });
-    } else {
-      return json({
-        error: errorMessage || "Generation failed",
-        job_id: logId.toString(),
-      }, { status: 500, headers });
-    }
+      try {
+        const result = await generateTryOn(personImageUrl, productImageUrl);
+        resultUrl = result.resultUrl;
+        success = true;
+      } catch (generateError) {
+        errorMessage = generateError instanceof Error ? generateError.message : "Unknown error";
+        success = false;
+      }
+
+      // Calculate latency
+      const latencyMs = Date.now() - generationStartTime;
+
+      // Deduct credit and update usage only if successful
+      if (success) {
+        try {
+          await upsertShop(shop, {
+            addCredits: -1, // Deduct one credit
+            incrementTotalTryons: true,
+            monthly_quota_used: (shopData.monthly_quota_used || 0) + 1,
+          });
+        } catch (creditError) {
+          console.error("[Generate] Error deducting credit:", creditError);
+        }
+      }
+
+      // Update the log with the result
+      try {
+        await updateTryonLog(logId, {
+          success,
+          errorMessage: errorMessage || undefined,
+          latencyMs,
+          resultImageUrl: success ? resultUrl : undefined,
+        });
+      } catch (logError) {
+        console.error("[Generate] Error updating log:", logError);
+      }
+    })().catch((backgroundError) => {
+      // Handle any errors in the background process
+      console.error("[Generate] Background generation error:", backgroundError);
+      updateTryonLog(logId, {
+        success: false,
+        errorMessage: backgroundError instanceof Error ? backgroundError.message : "Unknown error",
+        latencyMs: Date.now() - startTime,
+      }).catch((logError) => {
+        console.error("[Generate] Error updating log after background error:", logError);
+      });
+    });
+
+    // 9. Return immediately with job_id (don't wait for generation to complete)
+    const headers = corsHeaders;
+    return json({
+      job_id: logId.toString(), // Return log ID as job ID for tracking
+    }, { headers });
   } catch (error) {
     if (process.env.NODE_ENV !== "production") {
       console.error("[Generate] Error:", error);
