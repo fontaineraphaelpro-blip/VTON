@@ -1094,6 +1094,11 @@
             .vton-error.active {
               display: block;
             }
+            .vton-error.info {
+              color: #1e40af;
+              background: #eff6ff;
+              border: 1px solid #bfdbfe;
+            }
             @media (max-width: 640px) {
               .vton-widget-container {
                 margin: 20px 0 0 0;
@@ -2105,6 +2110,7 @@
         }
         if (errorElement) {
           errorElement.classList.remove('active');
+          errorElement.classList.remove('info');
           errorElement.textContent = '';
         }
         
@@ -2174,12 +2180,20 @@
                 error('[VTON] Error response:', errorData);
                 // Extract error message from response
                 const errorMessage = errorData?.error || errorData?.message || 'Generation failed: ' + response.status;
-                throw new Error(errorMessage);
+                // Create error object with status code for detection
+                const err = new Error(errorMessage);
+                (err as any).status = response.status;
+                (err as any).isDailyLimit = errorMessage.includes('used all your available credits') || 
+                                            (errorMessage.includes('limit') && errorMessage.includes('per day')) ||
+                                            errorMessage.includes('Please try again tomorrow');
+                throw err;
               }).catch(function(parseError) {
                 // If JSON parsing fails, read from original response as text
                 return response.text().then(function(text) {
                   error('[VTON] Error response (text):', text);
-                  throw new Error(text || 'Generation failed: ' + response.status);
+                  const err = new Error(text || 'Generation failed: ' + response.status);
+                  (err as any).status = response.status;
+                  throw err;
                 });
               });
             }
@@ -2319,12 +2333,29 @@
             errorElement.classList.add('active');
             // Extract error message from the error object
             let errorMessage = 'An error occurred. Please try again.';
+            let isDailyLimitError = false;
             
             if (err.message) {
               // Use the error message from the backend if available
               errorMessage = err.message;
+              // Check if this is a daily limit error (should be displayed as info, not error)
+              // Check both the message content and the status code (402 = Payment Required, used for limits)
+              if ((err as any).isDailyLimit || 
+                  err.message.includes('used all your available credits') || 
+                  (err.message.includes('limit') && err.message.includes('per day')) ||
+                  err.message.includes('Please try again tomorrow') ||
+                  ((err as any).status === 402 && (err.message.includes('limit') || err.message.includes('credits')))) {
+                isDailyLimitError = true;
+              }
             } else if (err.name === 'AbortError' || err.message?.includes('timeout') || err.message?.includes('504')) {
               errorMessage = 'Generation is taking longer than expected. Please wait a moment and check back, or try again.';
+            }
+            
+            // If it's a daily limit error, use info style instead of error style
+            if (isDailyLimitError) {
+              errorElement.classList.add('info');
+            } else {
+              errorElement.classList.remove('info');
             }
             
             errorElement.textContent = errorMessage;
