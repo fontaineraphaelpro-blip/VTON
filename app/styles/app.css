@@ -303,6 +303,7 @@ body {
   background: var(--color-bg) !important;
   padding: 0 !important;
   width: 100% !important;
+  max-width: 100% !important;
   height: 100% !important;
   min-height: 100vh !important;
   margin: 0 !important;
@@ -313,9 +314,17 @@ body {
   padding: 0 !important;
   background: var(--color-bg) !important;
   width: 100% !important;
+  max-width: 100% !important;
   min-height: 100% !important;
   margin: 0 !important;
   overflow-x: hidden !important;
+}
+
+/* Force full width on all Polaris containers */
+.Polaris-Page__Content > *,
+.Polaris-Page__Content > div {
+  max-width: 100% !important;
+  width: 100% !important;
 }
 
 .Polaris-Card {
@@ -378,10 +387,10 @@ body {
    ============================================ */
 
 .app-container {
-  max-width: 100%;
-  width: 100%;
-  margin: 0 auto;
-  padding: 24px 20px 32px;
+  max-width: 100% !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 24px 16px 32px !important;
   zoom: 1;
   transform: scale(1);
   box-sizing: border-box;
@@ -1235,16 +1244,24 @@ body {
 
 .Polaris-Layout {
   margin-top: 0 !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
   width: 100% !important;
   max-width: 100% !important;
   overflow-x: hidden !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
 }
 
 .Polaris-Layout__Section {
   margin-top: 0 !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
   width: 100% !important;
   max-width: 100% !important;
   overflow-x: hidden !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
 }
 
 .Polaris-InlineStack {
@@ -1440,10 +1457,21 @@ iframe {
   overflow-x: hidden !important;
 }
 
-/* Prevent horizontal scroll */
+/* Prevent horizontal scroll and remove side margins */
 * {
   max-width: 100%;
   box-sizing: border-box;
+}
+
+/* Remove all side margins and padding from main containers */
+body > div,
+#app > div,
+[data-app-embed] > div {
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  max-width: 100% !important;
 }
 
 /* Optimize table and list widths */
@@ -1453,6 +1481,15 @@ iframe {
   width: 100% !important;
   max-width: 100% !important;
   overflow-x: auto !important;
+}
+
+/* Remove any default Polaris spacing that creates side gaps */
+.Polaris-Page__Content > .Polaris-Layout,
+.Polaris-Page__Content > div > .Polaris-Layout {
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
 }
 
 /* ============================================

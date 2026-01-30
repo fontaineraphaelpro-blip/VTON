@@ -57,12 +57,40 @@ export default function App() {
         document.body.style.mozTextSizeAdjust = '100%';
         document.body.style.textSizeAdjust = '100%';
         
-        // Ensure Polaris Page takes full width
+        // Ensure Polaris Page and all containers take full width with no side margins
         const polarisPage = document.querySelector('.Polaris-Page');
         if (polarisPage) {
           (polarisPage as HTMLElement).style.width = '100%';
+          (polarisPage as HTMLElement).style.maxWidth = '100%';
           (polarisPage as HTMLElement).style.margin = '0';
+          (polarisPage as HTMLElement).style.padding = '0';
           (polarisPage as HTMLElement).style.overflowX = 'hidden';
+        }
+        
+        const polarisPageContent = document.querySelector('.Polaris-Page__Content');
+        if (polarisPageContent) {
+          (polarisPageContent as HTMLElement).style.width = '100%';
+          (polarisPageContent as HTMLElement).style.maxWidth = '100%';
+          (polarisPageContent as HTMLElement).style.margin = '0';
+          (polarisPageContent as HTMLElement).style.padding = '0';
+          (polarisPageContent as HTMLElement).style.overflowX = 'hidden';
+        }
+        
+        const polarisLayout = document.querySelector('.Polaris-Layout');
+        if (polarisLayout) {
+          (polarisLayout as HTMLElement).style.width = '100%';
+          (polarisLayout as HTMLElement).style.maxWidth = '100%';
+          (polarisLayout as HTMLElement).style.marginLeft = '0';
+          (polarisLayout as HTMLElement).style.marginRight = '0';
+          (polarisLayout as HTMLElement).style.paddingLeft = '0';
+          (polarisLayout as HTMLElement).style.paddingRight = '0';
+        }
+        
+        const appContainer = document.querySelector('.app-container');
+        if (appContainer) {
+          (appContainer as HTMLElement).style.width = '100%';
+          (appContainer as HTMLElement).style.maxWidth = '100%';
+          (appContainer as HTMLElement).style.margin = '0';
         }
       }
     };
