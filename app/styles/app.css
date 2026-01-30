@@ -77,6 +77,29 @@
   box-sizing: border-box;
 }
 
+/* Prevent zoom issues in Shopify admin iframe */
+html,
+body,
+#app,
+[data-app-embed],
+.Polaris-Page,
+.Polaris-Page__Content {
+  zoom: 1 !important;
+  transform: scale(1) !important;
+  -webkit-text-size-adjust: 100% !important;
+  -moz-text-size-adjust: 100% !important;
+  -ms-text-size-adjust: 100% !important;
+  text-size-adjust: 100% !important;
+}
+
+html {
+  zoom: 1;
+  -webkit-text-size-adjust: 100%;
+  -moz-text-size-adjust: 100%;
+  -ms-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   background-color: var(--color-bg);
@@ -84,6 +107,12 @@ body {
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  zoom: 1;
+  transform: scale(1);
+  -webkit-text-size-adjust: 100%;
+  -moz-text-size-adjust: 100%;
+  -ms-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 /* ============================================
@@ -331,6 +360,8 @@ body {
   max-width: 1400px;
   margin: 0 auto;
   padding: 48px 40px 64px;
+  zoom: 1;
+  transform: scale(1);
 }
 
 .app-header {

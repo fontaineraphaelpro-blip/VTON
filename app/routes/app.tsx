@@ -1,6 +1,6 @@
 import type { HeadersFunction, LoaderFunctionArgs } from "@remix-run/node";
 import { Link, Outlet, useLoaderData, useNavigation, useRouteError } from "@remix-run/react";
-import { useMemo } from "react";
+import { useMemo, useEffect } from "react";
 import { boundary } from "@shopify/shopify-app-remix/server";
 import { AppProvider } from "@shopify/shopify-app-remix/react";
 import { NavMenu } from "@shopify/app-bridge-react";
@@ -24,6 +24,43 @@ export default function App() {
   const { apiKey } = useLoaderData<typeof loader>();
   const navigation = useNavigation();
   const isLoading = useMemo(() => navigation.state === "loading", [navigation.state]);
+
+  // Force zoom to 100% to prevent zoom issues in Shopify admin
+  useEffect(() => {
+    // Reset zoom on mount and whenever it might change
+    const resetZoom = () => {
+      if (typeof document !== 'undefined') {
+        const viewport = document.querySelector('meta[name="viewport"]');
+        if (viewport) {
+          viewport.setAttribute('content', 'width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no');
+        }
+        
+        // Force body zoom to 1
+        document.body.style.zoom = '1';
+        document.documentElement.style.zoom = '1';
+        
+        // Prevent text size adjustment
+        document.body.style.webkitTextSizeAdjust = '100%';
+        document.body.style.mozTextSizeAdjust = '100%';
+        document.body.style.textSizeAdjust = '100%';
+      }
+    };
+
+    resetZoom();
+    
+    // Reset zoom periodically to prevent external changes
+    const interval = setInterval(resetZoom, 1000);
+    
+    // Also reset on resize and focus
+    window.addEventListener('resize', resetZoom);
+    window.addEventListener('focus', resetZoom);
+    
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('resize', resetZoom);
+      window.removeEventListener('focus', resetZoom);
+    };
+  }, []);
 
   return (
     <AppProvider isEmbeddedApp apiKey={apiKey}>
