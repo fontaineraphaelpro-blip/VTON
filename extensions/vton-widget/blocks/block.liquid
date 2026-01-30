@@ -1855,6 +1855,8 @@
       function pollJobStatus(shadowRoot, state, jobId, loading, result, generateBtn) {
         const maxAttempts = 60; // 60 attempts * 2 seconds = 120 seconds max
         let attempts = 0;
+        let hasTriedFallback = false;
+        let consecutiveErrors = 0;
         
         const pollInterval = setInterval(function() {
           attempts++;
@@ -1874,7 +1876,14 @@
           }
           
           // Try App Proxy first, fallback to direct URL
-          const statusUrl = window.location.origin + '/apps/tryon/job/' + jobId + '?shop=' + encodeURIComponent(state.shop);
+          let statusUrl = window.location.origin + '/apps/tryon/job/' + jobId + '?shop=' + encodeURIComponent(state.shop);
+          
+          // If App Proxy failed before, use direct URL
+          if (hasTriedFallback) {
+            statusUrl = APP_URL + '/apps/tryon/job/' + jobId + '?shop=' + encodeURIComponent(state.shop);
+          }
+          
+          log('[VTON] Polling job status (attempt ' + attempts + '):', statusUrl);
           
           // Create AbortController for timeout handling (5 seconds)
           const controller = new AbortController();
@@ -1886,16 +1895,31 @@
           })
             .then(function(response) {
               clearTimeout(timeoutId);
+              consecutiveErrors = 0; // Reset error counter on success
+              
+              // If App Proxy failed with 404, try direct URL as fallback (only once)
+              if (!hasTriedFallback && response.status === 404) {
+                warn('[VTON] App Proxy not available (404), trying direct URL...');
+                hasTriedFallback = true;
+                return; // Skip to next iteration
+              }
+              
               if (!response.ok) {
                 throw new Error('Status check failed: ' + response.status);
               }
               return response.json();
             })
             .then(function(statusData) {
+              if (!statusData) {
+                // Fallback was triggered, skip this iteration
+                return;
+              }
+              
               log('[VTON] Job status:', statusData.status, statusData);
               
               if (statusData.status === 'completed' && statusData.result_url) {
                 clearInterval(pollInterval);
+                log('[VTON] Job completed, result URL:', statusData.result_url);
                 displayResult(shadowRoot, state, statusData.result_url, loading, result, generateBtn);
               } else if (statusData.status === 'failed' || statusData.status === 'error') {
                 clearInterval(pollInterval);
@@ -1908,9 +1932,9 @@
                   errorElement.textContent = statusData.error || 'Generation failed. Please try again.';
                 }
                 if (generateBtn) generateBtn.disabled = false;
-              } else if (statusData.status === 'pending') {
+              } else if (statusData.status === 'pending' || statusData.status === 'processing') {
                 // Continue polling
-                log('[VTON] Job still pending, continuing to poll...');
+                log('[VTON] Job still pending/processing, continuing to poll...');
               } else {
                 // Unknown status, stop polling after a few attempts
                 warn('[VTON] Unknown status:', statusData.status);
@@ -1922,7 +1946,7 @@
                   const errorElement = shadowRoot.getElementById('vton-error');
                   if (errorElement) {
                     errorElement.classList.add('active');
-                    errorElement.textContent = 'Unexpected status. Please try again.';
+                    errorElement.textContent = 'Unexpected status: ' + (statusData.status || 'unknown') + '. Please try again.';
                   }
                   if (generateBtn) generateBtn.disabled = false;
                 }
@@ -1930,10 +1954,19 @@
             })
             .catch(function(err) {
               clearTimeout(timeoutId);
-              error('[VTON] Polling error:', err);
+              consecutiveErrors++;
+              error('[VTON] Polling error (attempt ' + attempts + ', consecutive errors: ' + consecutiveErrors + '):', err);
+              
+              // If it's an abort error and we haven't tried fallback, try fallback first
+              if (err.name === 'AbortError' && !hasTriedFallback) {
+                warn('[VTON] Request aborted, trying direct URL as fallback...');
+                hasTriedFallback = true;
+                return; // Skip to next iteration
+              }
+              
               // Stop polling after several consecutive errors
-              if (attempts > 5 && attempts % 3 === 0) {
-                error('[VTON] Multiple polling errors, stopping...');
+              if (consecutiveErrors >= 5) {
+                error('[VTON] Multiple consecutive polling errors, stopping...');
                 clearInterval(pollInterval);
                 state.isGenerating = false;
                 stopLoadingMessages(shadowRoot);
@@ -2161,6 +2194,81 @@
         makeGenerateRequest(generateUrl).then(function(data) {
           log('[VTON] Generation response data:', JSON.stringify(data, null, 2));
           
+          // First, check if result_url is already available (synchronous mode)
+          const immediateResultUrl = data.result_url || data.image_url || data.output || 
+                                     (data.result && (data.result.url || data.result)) || 
+                                     (Array.isArray(data.result) && data.result[0]) ||
+                                     (data.data && data.data.result_url) ||
+                                     (data.data && data.data.url);
+          
+          if (immediateResultUrl && typeof immediateResultUrl === 'string' && immediateResultUrl.startsWith('http')) {
+            // Synchronous mode: result is already available
+            log('[VTON] Result URL available immediately, displaying result');
+            state.resultImageUrl = immediateResultUrl;
+            
+            // Complete progress to 100% before stopping
+            const progressBar = shadowRoot.getElementById('vton-progress-bar');
+            const progressText = shadowRoot.getElementById('vton-progress-text');
+            if (progressBar) {
+              progressBar.style.width = '100%';
+            }
+            if (progressText) {
+              progressText.textContent = '100%';
+            }
+            
+            // Complete all steps
+            for (let i = 1; i <= 4; i++) {
+              const stepElement = shadowRoot.getElementById('vton-step-' + i);
+              if (stepElement) {
+                stepElement.classList.remove('active');
+                stepElement.classList.add('completed');
+              }
+            }
+            
+            // Stop loading messages
+            stopLoadingMessages(shadowRoot);
+            
+            // Hide loading
+            if (loading) loading.classList.remove('active');
+            
+            // Hide upload area (source image), generate button, and privacy notice
+            const uploadArea = shadowRoot.getElementById('vton-upload-area');
+            const modalContent = shadowRoot.querySelector('.vton-modal-content');
+            const privacyNotice = shadowRoot.querySelector('.vton-privacy-notice');
+            if (uploadArea) {
+              uploadArea.classList.add('hidden');
+            }
+            if (generateBtn) {
+              generateBtn.classList.add('hidden');
+            }
+            if (privacyNotice) {
+              privacyNotice.classList.add('hidden');
+            }
+            if (modalContent) {
+              modalContent.classList.add('has-result');
+            }
+            
+            // Display result with "Add to Cart" button
+            if (result && state.resultImageUrl) {
+              result.classList.add('active');
+              const buttonBg = state.widgetSettings.widget_bg || '#000000';
+              const buttonColor = state.widgetSettings.widget_color || '#ffffff';
+              result.innerHTML = 
+                '<div class="vton-result-content">' +
+                '<h3 class="vton-result-title">Here\'s your result!</h3>' +
+                '<img src="' + state.resultImageUrl + '" alt="Try-on result" />' +
+                '<button class="vton-add-to-cart-btn" style="background: ' + buttonBg + '; color: ' + buttonColor + ';" onclick="window.vtonWidgetInstance.handleAddToCart()">' +
+                'Add to Cart' +
+                '</button>' +
+                '</div>';
+              log('[VTON] Result displayed successfully with Add to Cart button');
+            }
+            
+            state.isGenerating = false;
+            if (generateBtn) generateBtn.disabled = false;
+            return; // Exit early, result is already displayed
+          }
+          
           // Check if response contains a job_id (asynchronous mode)
           const jobId = data.job_id || data.jobId || data.job || 
                        (data.data && data.data.job_id) ||
@@ -2173,103 +2281,16 @@
             return; // Exit early, polling will handle the rest
           }
           
-          // Synchronous mode: Extract result URL directly
-          state.resultImageUrl = data.result_url || data.image_url || data.output || 
-                                 (data.result && (data.result.url || data.result)) || 
-                                 (Array.isArray(data.result) && data.result[0]) ||
-                                 (data.data && data.data.result_url) ||
-                                 (data.data && data.data.url);
-          
-          log('[VTON] Extracted result URL:', state.resultImageUrl);
-          log('[VTON] Result URL type:', typeof state.resultImageUrl);
-          
-          // Validate result URL
-          if (!state.resultImageUrl || typeof state.resultImageUrl !== 'string') {
-            error('[VTON] Invalid result URL format:', {
-              resultImageUrl: state.resultImageUrl,
-              type: typeof state.resultImageUrl,
-              fullData: data
-            });
-            throw new Error('Invalid result URL format received from server');
-          }
-          
-          if (!state.resultImageUrl.startsWith('http')) {
-            error('[VTON] Result URL is not a valid HTTP URL:', state.resultImageUrl);
-            throw new Error('Result URL is not a valid HTTP URL');
-          }
-          
-          // Complete progress to 100% before stopping
-          const progressBar = shadowRoot.getElementById('vton-progress-bar');
-          const progressText = shadowRoot.getElementById('vton-progress-text');
-          if (progressBar) {
-            progressBar.style.width = '100%';
-          }
-          if (progressText) {
-            progressText.textContent = '100%';
-          }
-          
-          // Complete all steps
-          for (let i = 1; i <= 4; i++) {
-            const stepElement = shadowRoot.getElementById('vton-step-' + i);
-            if (stepElement) {
-              stepElement.classList.remove('active');
-              stepElement.classList.add('completed');
-            }
-          }
-          
-          // Stop loading messages
-          stopLoadingMessages(shadowRoot);
-          
-          // Hide loading
-          if (loading) loading.classList.remove('active');
-          
-          // Hide upload area (source image), generate button, and privacy notice
-          const uploadArea = shadowRoot.getElementById('vton-upload-area');
-          const modalContent = shadowRoot.querySelector('.vton-modal-content');
-          const privacyNotice = shadowRoot.querySelector('.vton-privacy-notice');
-          if (uploadArea) {
-            uploadArea.classList.add('hidden');
-          }
-          if (generateBtn) {
-            generateBtn.classList.add('hidden');
-          }
-          if (privacyNotice) {
-            privacyNotice.classList.add('hidden');
-          }
-          if (modalContent) {
-            modalContent.classList.add('has-result');
-          }
-          
-          // Display result with "Add to Cart" button - ONLY the result, no original image
-          if (result && state.resultImageUrl && typeof state.resultImageUrl === 'string' && state.resultImageUrl.startsWith('http')) {
-            result.classList.add('active');
-            const buttonBg = state.widgetSettings.widget_bg || '#000000';
-            const buttonColor = state.widgetSettings.widget_color || '#ffffff';
-            result.innerHTML = 
-              '<div class="vton-result-content">' +
-              '<h3 class="vton-result-title">Here\'s your result!</h3>' +
-              '<img src="' + state.resultImageUrl + '" alt="Try-on result" />' +
-              '<button class="vton-add-to-cart-btn" style="background: ' + buttonBg + '; color: ' + buttonColor + ';" onclick="window.vtonWidgetInstance.handleAddToCart()">' +
-              'Add to Cart' +
-              '</button>' +
-              '</div>';
-            log('[VTON] Result displayed successfully with Add to Cart button');
-            log('[VTON] Image src:', state.resultImageUrl);
-          } else {
-            error('[VTON] Cannot display result:', {
-              hasResult: !!result,
-              resultImageUrl: state.resultImageUrl,
-              resultImageUrlType: typeof state.resultImageUrl,
-              data: data
-            });
-            const errorElement = shadowRoot.getElementById('vton-error');
-            if (errorElement) {
-              errorElement.classList.add('active');
-              errorElement.textContent = 'Error: Unable to display the result. Please try again.';
-            }
-          }
-          
+          // If we reach here, neither result_url nor job_id were found
+          error('[VTON] Invalid response format: no result_url or job_id found', data);
           state.isGenerating = false;
+          stopLoadingMessages(shadowRoot);
+          if (loading) loading.classList.remove('active');
+          const errorElement = shadowRoot.getElementById('vton-error');
+          if (errorElement) {
+            errorElement.classList.add('active');
+            errorElement.textContent = 'Invalid response from server. Please try again.';
+          }
           if (generateBtn) generateBtn.disabled = false;
         }).catch(function(err) {
           state.isGenerating = false;
