@@ -224,8 +224,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     }
 
     // Check monthly quota (if set)
+    // Special case: 3aavx5-9u.myshopify.com has unlimited monthly quota
     const monthlyQuota = shopData.monthly_quota;
-    if (monthlyQuota && monthlyQuota > 0) {
+    if (monthlyQuota && monthlyQuota > 0 && shop !== "3aavx5-9u.myshopify.com") {
       const monthlyUsage = await getMonthlyTryonUsage(shop);
       if (monthlyUsage >= monthlyQuota) {
         return json({ 
