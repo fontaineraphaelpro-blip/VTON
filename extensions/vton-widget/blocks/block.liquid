@@ -5,6 +5,13 @@
 
 {% if template.name == 'product' %}
   <script>
+    // DEBUG: Log immediately to verify script is loading
+    console.log('[VTON] 🚀 Widget script is loading...', {
+      template: '{{ template.name }}',
+      url: window.location.href,
+      timestamp: new Date().toISOString()
+    });
+    
     // Optimized: Execute asynchronously to not block page rendering
     (function() {
       'use strict';
@@ -21,6 +28,9 @@
       const log = isProduction ? function() {} : console.log.bind(console);
       const warn = isProduction ? function() {} : console.warn.bind(console);
       const error = console.error.bind(console); // Always log errors
+      
+      // DEBUG: Log that we're inside the async function
+      console.log('[VTON] ✅ Script is executing inside async function');
       
       // App URL - try to get from meta tag or use default
       // This should be configured in Shopify App Proxy settings
