@@ -5,8 +5,16 @@
 
 {% if template.name == 'product' %}
   <script>
+    // Optimized: Execute asynchronously to not block page rendering
     (function() {
       'use strict';
+      
+      // Use requestIdleCallback if available, otherwise setTimeout for async execution
+      const runAsync = window.requestIdleCallback 
+        ? function(cb) { window.requestIdleCallback(cb, { timeout: 100 }); }
+        : function(cb) { setTimeout(cb, 0); };
+      
+      runAsync(function() {
       
       // Production mode: disable all logs for performance
       const isProduction = true; // Set to false for debugging
@@ -28,12 +36,13 @@
       })();
       
       // Wait for DOM to be ready and Shopify object to be available
+      // Optimized: Start immediately and reduce wait times
       function waitForShopify() {
         if (window.Shopify && window.Shopify.product) {
           initWidget();
         } else if (document.readyState === 'complete') {
           // DOM is ready but Shopify object might not be loaded yet
-          // Wait a bit more for Shopify scripts
+          // Reduced wait time for faster initialization
           setTimeout(function() {
             if (window.Shopify && window.Shopify.product) {
               initWidget();
@@ -41,18 +50,24 @@
               // Try anyway, might work with other extraction methods
         initWidget();
             }
-          }, 500);
+          }, 50); // Reduced from 500ms to 50ms
         } else {
           // Wait for DOM
           if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', waitForShopify);
           } else {
-            setTimeout(waitForShopify, 100);
+            setTimeout(waitForShopify, 10); // Reduced from 100ms to 10ms
           }
         }
       }
       
-      waitForShopify();
+      // Start immediately - don't wait for full page load
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', waitForShopify);
+      } else {
+        // DOM already ready, start immediately
+        waitForShopify();
+      }
       
       function initWidget() {
         // Extract shop domain
@@ -79,6 +94,13 @@
           currentUrl: window.location.href
         });
         
+        // Optimized: Start status check immediately and prepare widget container in parallel
+        // This allows the widget to appear faster even if status check is slow
+        const statusPromise = checkStatus(shop, productId, productHandle);
+        
+        // Pre-find the product form while status check is running (parallel execution)
+        const productForm = document.querySelector('form[action*="/cart/add"]');
+        
         // Check status and initialize widget
         log('[VTON] 🔍 Starting status check...', {
           shop: shop,
@@ -87,7 +109,7 @@
           timestamp: new Date().toISOString()
         });
         
-        checkStatus(shop, productId, productHandle).then(function(status) {
+        statusPromise.then(function(status) {
           log('[VTON] ✅ Status check result:', {
             shop: shop,
             productId: productId,
@@ -313,12 +335,19 @@
         // We'll try App Proxy first, and if it fails, we'll need to use the direct URL
         // Note: The app URL should be configured in Shopify App Proxy settings
         
+        // Optimized: Add timeout and use AbortController for faster failure detection
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
+        
         return fetch(appProxyUrl, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json'
-          }
+          },
+          signal: controller.signal,
+          cache: 'no-cache' // Ensure fresh data but don't block on cache
         }).then(function(response) {
+          clearTimeout(timeoutId);
           if (!response.ok) {
             // If App Proxy fails (404), try direct URL as fallback
             if (response.status === 404) {
@@ -330,12 +359,19 @@
               
               log('[VTON] 🔄 Trying direct URL:', finalUrl);
               
+              // Create new controller for fallback request
+              const fallbackController = new AbortController();
+              const fallbackTimeout = setTimeout(() => fallbackController.abort(), 3000);
+              
               return fetch(finalUrl, {
                 method: 'GET',
                 headers: {
                   'Content-Type': 'application/json'
-                }
+                },
+                signal: fallbackController.signal,
+                cache: 'no-cache'
               }).then(function(directResponse) {
+                clearTimeout(fallbackTimeout);
                 if (!directResponse.ok) {
                   throw new Error('Status check failed: ' + directResponse.status);
                 }
@@ -346,6 +382,12 @@
           }
           return response.json();
         }).catch(function(err) {
+          clearTimeout(timeoutId);
+          if (err.name === 'AbortError') {
+            error('[VTON] ❌ Status check timed out');
+            // Return a default disabled status to allow page to continue loading
+            return { enabled: false, error: 'timeout' };
+          }
           error('[VTON] ❌ Status check error:', err);
           throw err;
         });
@@ -400,87 +442,93 @@
           return;
         }
         
-        // Get product image URL from the page
+        // Get product image URL from the page (optimized: do this in parallel)
         const productImageUrl = getProductImage();
         
-        // Create widget container
-        const container = document.createElement('div');
-        container.id = 'vton-widget-container';
-        container.setAttribute('data-vton-widget', 'true');
-        
-        // Find the "Add to Cart" button to insert the widget right after it
-        const addToCartButton = productForm.querySelector('button[type="submit"], button[name="add"], [data-add-to-cart], .btn--add-to-cart, .add-to-cart, .product-form__cart-submit, .product-form__submit');
-        
-        if (addToCartButton && addToCartButton.parentNode) {
-          // Insert right after the "Add to Cart" button
-          // If the button is in a wrapper (div), insert after the wrapper
-          const buttonWrapper = addToCartButton.closest('.product-form__cart-submit-wrapper, .product-form__submit-wrapper, .product-form__cart, .product-form__buttons, .product-form__actions, div');
+        // Optimized: Use requestAnimationFrame for smoother DOM insertion
+        requestAnimationFrame(function() {
+          // Create widget container
+          const container = document.createElement('div');
+          container.id = 'vton-widget-container';
+          container.setAttribute('data-vton-widget', 'true');
           
-          if (buttonWrapper && buttonWrapper !== productForm) {
-            // Insert after the button wrapper
-            buttonWrapper.parentNode.insertBefore(container, buttonWrapper.nextSibling);
-          } else {
-            // Insert after the button directly
-            addToCartButton.parentNode.insertBefore(container, addToCartButton.nextSibling);
-          }
+          // Find the "Add to Cart" button to insert the widget right after it
+          const addToCartButton = productForm.querySelector('button[type="submit"], button[name="add"], [data-add-to-cart], .btn--add-to-cart, .add-to-cart, .product-form__cart-submit, .product-form__submit');
+          
+          if (addToCartButton && addToCartButton.parentNode) {
+            // Insert right after the "Add to Cart" button
+            // If the button is in a wrapper (div), insert after the wrapper
+            const buttonWrapper = addToCartButton.closest('.product-form__cart-submit-wrapper, .product-form__submit-wrapper, .product-form__cart, .product-form__buttons, .product-form__actions, div');
+            
+            if (buttonWrapper && buttonWrapper !== productForm) {
+              // Insert after the button wrapper
+              buttonWrapper.parentNode.insertBefore(container, buttonWrapper.nextSibling);
             } else {
-          // Fallback: Insert after the form if button not found
-          productForm.parentNode.insertBefore(container, productForm.nextSibling);
-        }
-        
-        // Create shadow DOM
-        const shadowRoot = container.attachShadow({ mode: 'closed' });
-        
-        // Widget state
-        const state = {
-          shop: shop,
-          productId: productId,
-          productHandle: productHandle,
-          widgetSettings: widgetSettings,
-          productImageUrl: productImageUrl,
-          userPhoto: null,
-          resultImageUrl: null,
-          modalOpen: false,
-          isGenerating: false // Flag to prevent double submission
-        };
-        
-        // Render widget
-        renderWidget(shadowRoot, state);
-        
-        log('[VTON] ✅ Widget initialized and rendered successfully!', {
-          containerId: container.id,
-          productId: productId,
-          productImageUrl: productImageUrl
+              // Insert after the button directly
+              addToCartButton.parentNode.insertBefore(container, addToCartButton.nextSibling);
+            }
+              } else {
+            // Fallback: Insert after the form if button not found
+            productForm.parentNode.insertBefore(container, productForm.nextSibling);
+          }
+          
+          // Create shadow DOM
+          const shadowRoot = container.attachShadow({ mode: 'closed' });
+          
+          // Widget state
+          const state = {
+            shop: shop,
+            productId: productId,
+            productHandle: productHandle,
+            widgetSettings: widgetSettings,
+            productImageUrl: productImageUrl,
+            userPhoto: null,
+            resultImageUrl: null,
+            modalOpen: false,
+            isGenerating: false // Flag to prevent double submission
+          };
+          
+          // Render widget (use another requestAnimationFrame for rendering)
+          requestAnimationFrame(function() {
+            renderWidget(shadowRoot, state);
+            
+            log('[VTON] ✅ Widget initialized and rendered successfully!', {
+              containerId: container.id,
+              productId: productId,
+              productImageUrl: productImageUrl
+            });
+            
+            // Make widget accessible globally for event handlers
+            window.vtonWidgetInstance = {
+              openModal: function() {
+                openModal(shadowRoot, state);
+              },
+              closeModal: function() {
+                closeModal(shadowRoot, state);
+              },
+              triggerFileInput: function() {
+                const fileInput = shadowRoot.getElementById('vton-file-input');
+                if (fileInput) fileInput.click();
+              },
+              generate: function() {
+                generateTryOn(shadowRoot, state);
+              },
+              handleFileChange: function(event) {
+                handleFileChange(event, shadowRoot, state);
+              },
+              handleAddToCart: function() {
+                handleAddToCart(shadowRoot, state);
+              },
+              startLoadingMessages: function() {
+                startLoadingMessages(shadowRoot);
+              },
+              stopLoadingMessages: function() {
+                stopLoadingMessages(shadowRoot);
+              }
+            };
+          });
         });
         
-        // Make widget accessible globally for event handlers
-        window.vtonWidgetInstance = {
-          openModal: function() {
-            openModal(shadowRoot, state);
-          },
-          closeModal: function() {
-            closeModal(shadowRoot, state);
-          },
-          triggerFileInput: function() {
-            const fileInput = shadowRoot.getElementById('vton-file-input');
-            if (fileInput) fileInput.click();
-          },
-          generate: function() {
-            generateTryOn(shadowRoot, state);
-          },
-          handleFileChange: function(event) {
-            handleFileChange(event, shadowRoot, state);
-          },
-          handleAddToCart: function() {
-            handleAddToCart(shadowRoot, state);
-          },
-          startLoadingMessages: function() {
-            startLoadingMessages(shadowRoot);
-          },
-          stopLoadingMessages: function() {
-            stopLoadingMessages(shadowRoot);
-          }
-        };
       }
       
       function renderWidget(shadowRoot, state) {
@@ -2199,6 +2247,7 @@
           if (generateBtn) generateBtn.disabled = false;
         });
       }
+      }); // End of runAsync
     })();
   </script>
 {% endif %}

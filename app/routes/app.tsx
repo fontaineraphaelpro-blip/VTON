@@ -25,15 +25,28 @@ export default function App() {
   const navigation = useNavigation();
   const isLoading = useMemo(() => navigation.state === "loading", [navigation.state]);
 
-  // Force zoom to 100% to prevent zoom issues in Shopify admin
+  // Force zoom to 100% and optimize dimensions for Shopify admin iframe
   useEffect(() => {
-    // Reset zoom on mount and whenever it might change
-    const resetZoom = () => {
+    // Reset zoom and optimize dimensions on mount and whenever it might change
+    const resetZoomAndDimensions = () => {
       if (typeof document !== 'undefined') {
         const viewport = document.querySelector('meta[name="viewport"]');
         if (viewport) {
           viewport.setAttribute('content', 'width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no');
         }
+        
+        // Force body and html to take full dimensions
+        document.documentElement.style.width = '100%';
+        document.documentElement.style.height = '100%';
+        document.documentElement.style.margin = '0';
+        document.documentElement.style.padding = '0';
+        document.documentElement.style.overflowX = 'hidden';
+        
+        document.body.style.width = '100%';
+        document.body.style.height = '100%';
+        document.body.style.margin = '0';
+        document.body.style.padding = '0';
+        document.body.style.overflowX = 'hidden';
         
         // Force body zoom to 1
         document.body.style.zoom = '1';
@@ -43,22 +56,30 @@ export default function App() {
         document.body.style.webkitTextSizeAdjust = '100%';
         document.body.style.mozTextSizeAdjust = '100%';
         document.body.style.textSizeAdjust = '100%';
+        
+        // Ensure Polaris Page takes full width
+        const polarisPage = document.querySelector('.Polaris-Page');
+        if (polarisPage) {
+          (polarisPage as HTMLElement).style.width = '100%';
+          (polarisPage as HTMLElement).style.margin = '0';
+          (polarisPage as HTMLElement).style.overflowX = 'hidden';
+        }
       }
     };
 
-    resetZoom();
+    resetZoomAndDimensions();
     
-    // Reset zoom periodically to prevent external changes
-    const interval = setInterval(resetZoom, 1000);
+    // Reset zoom and dimensions periodically to prevent external changes
+    const interval = setInterval(resetZoomAndDimensions, 1000);
     
     // Also reset on resize and focus
-    window.addEventListener('resize', resetZoom);
-    window.addEventListener('focus', resetZoom);
+    window.addEventListener('resize', resetZoomAndDimensions);
+    window.addEventListener('focus', resetZoomAndDimensions);
     
     return () => {
       clearInterval(interval);
-      window.removeEventListener('resize', resetZoom);
-      window.removeEventListener('focus', resetZoom);
+      window.removeEventListener('resize', resetZoomAndDimensions);
+      window.removeEventListener('focus', resetZoomAndDimensions);
     };
   }, []);
 
