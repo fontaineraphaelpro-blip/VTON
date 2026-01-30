@@ -384,7 +384,9 @@ body {
 
 /* Save Configuration button - Black background with white text */
 .save-config-button,
-.save-config-button.Polaris-Button--primary {
+.save-config-button.Polaris-Button--primary,
+button.save-config-button,
+button.save-config-button.Polaris-Button--primary {
   background: #000000 !important;
   background-color: #000000 !important;
   border-color: #000000 !important;
@@ -393,13 +395,30 @@ body {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25), 0 1px 3px rgba(0, 0, 0, 0.15) !important;
 }
 
+/* Force white text on all children elements */
+.save-config-button *,
+.save-config-button.Polaris-Button--primary *,
+button.save-config-button *,
+button.save-config-button.Polaris-Button--primary * {
+  color: #ffffff !important;
+}
+
 .save-config-button:hover:not(:disabled),
-.save-config-button.Polaris-Button--primary:hover:not(:disabled) {
+.save-config-button.Polaris-Button--primary:hover:not(:disabled),
+button.save-config-button:hover:not(:disabled),
+button.save-config-button.Polaris-Button--primary:hover:not(:disabled) {
   background: #1a1a1a !important;
   background-color: #1a1a1a !important;
   border-color: #1a1a1a !important;
   color: #ffffff !important;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35), 0 2px 6px rgba(0, 0, 0, 0.2) !important;
+}
+
+.save-config-button:hover:not(:disabled) *,
+.save-config-button.Polaris-Button--primary:hover:not(:disabled) *,
+button.save-config-button:hover:not(:disabled) *,
+button.save-config-button.Polaris-Button--primary:hover:not(:disabled) * {
+  color: #ffffff !important;
 }
 
 /* ============================================
