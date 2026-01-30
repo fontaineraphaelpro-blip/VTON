@@ -1861,6 +1861,7 @@
           
           if (attempts > maxAttempts) {
             clearInterval(pollInterval);
+            state.isGenerating = false;
             stopLoadingMessages(shadowRoot);
             if (loading) loading.classList.remove('active');
             const errorElement = shadowRoot.getElementById('vton-error');
@@ -1875,8 +1876,16 @@
           // Try App Proxy first, fallback to direct URL
           const statusUrl = window.location.origin + '/apps/tryon/job/' + jobId + '?shop=' + encodeURIComponent(state.shop);
           
-          fetch(statusUrl)
+          // Create AbortController for timeout handling (5 seconds)
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 5000);
+          
+          fetch(statusUrl, {
+            signal: controller.signal,
+            cache: 'no-cache'
+          })
             .then(function(response) {
+              clearTimeout(timeoutId);
               if (!response.ok) {
                 throw new Error('Status check failed: ' + response.status);
               }
@@ -1890,6 +1899,7 @@
                 displayResult(shadowRoot, state, statusData.result_url, loading, result, generateBtn);
               } else if (statusData.status === 'failed' || statusData.status === 'error') {
                 clearInterval(pollInterval);
+                state.isGenerating = false;
                 stopLoadingMessages(shadowRoot);
                 if (loading) loading.classList.remove('active');
                 const errorElement = shadowRoot.getElementById('vton-error');
@@ -1906,6 +1916,7 @@
                 warn('[VTON] Unknown status:', statusData.status);
                 if (attempts > 10) {
                   clearInterval(pollInterval);
+                  state.isGenerating = false;
                   stopLoadingMessages(shadowRoot);
                   if (loading) loading.classList.remove('active');
                   const errorElement = shadowRoot.getElementById('vton-error');
@@ -1918,11 +1929,13 @@
               }
             })
             .catch(function(err) {
+              clearTimeout(timeoutId);
               error('[VTON] Polling error:', err);
               // Stop polling after several consecutive errors
               if (attempts > 5 && attempts % 3 === 0) {
                 error('[VTON] Multiple polling errors, stopping...');
                 clearInterval(pollInterval);
+                state.isGenerating = false;
                 stopLoadingMessages(shadowRoot);
                 if (loading) loading.classList.remove('active');
                 const errorElement = shadowRoot.getElementById('vton-error');
@@ -2022,6 +2035,7 @@
           }
         }
         
+        state.isGenerating = false;
         if (generateBtn) generateBtn.disabled = false;
       }
       
@@ -2147,7 +2161,19 @@
         makeGenerateRequest(generateUrl).then(function(data) {
           log('[VTON] Generation response data:', JSON.stringify(data, null, 2));
           
-          // Extract result URL (synchronous mode - result_url should be present)
+          // Check if response contains a job_id (asynchronous mode)
+          const jobId = data.job_id || data.jobId || data.job || 
+                       (data.data && data.data.job_id) ||
+                       (data.data && data.data.jobId);
+          
+          if (jobId) {
+            // Asynchronous mode: start polling for job status
+            log('[VTON] Job ID received, starting polling:', jobId);
+            pollJobStatus(shadowRoot, state, jobId, loading, result, generateBtn);
+            return; // Exit early, polling will handle the rest
+          }
+          
+          // Synchronous mode: Extract result URL directly
           state.resultImageUrl = data.result_url || data.image_url || data.output || 
                                  (data.result && (data.result.url || data.result)) || 
                                  (Array.isArray(data.result) && data.result[0]) ||
