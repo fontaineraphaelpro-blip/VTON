@@ -350,7 +350,11 @@ export default function Widget() {
                       variant="primary" 
                       loading={fetcher.state === "submitting"}
                       size="large"
-                      style={{ color: "#ffffff" }}
+                      style={{ 
+                        backgroundColor: "#000000",
+                        color: "#ffffff",
+                        borderColor: "#000000"
+                      }}
                     >
                       Save Configuration
                     </Button>
