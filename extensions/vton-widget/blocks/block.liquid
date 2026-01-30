@@ -2123,9 +2123,15 @@
         // Use a closure variable to track if we've already tried the fallback
         let hasTriedFallback = false;
         function makeGenerateRequest(url) {
-          // Create AbortController for timeout handling (90 seconds - plus que 60)
+          // Create AbortController for timeout handling (10 seconds for connection, 90 seconds for generation)
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 90000); // 90 seconds timeout
+          const connectionTimeout = setTimeout(() => {
+            controller.abort();
+            error('[VTON] Connection timeout after 10 seconds');
+          }, 10000); // 10 seconds timeout for connection
+          
+          log('[VTON] Sending generation request to:', url);
+          const requestStartTime = Date.now();
           
           return fetch(url, {
           method: 'POST',
@@ -2140,7 +2146,9 @@
             }),
             signal: controller.signal
           }).then(function(response) {
-            clearTimeout(timeoutId);
+            clearTimeout(connectionTimeout);
+            const requestTime = Date.now() - requestStartTime;
+            log('[VTON] Request sent successfully in', requestTime + 'ms');
             
             log('[VTON] Response status:', response.status, response.statusText);
             
@@ -2176,14 +2184,18 @@
             }
             return response.json();
           }).catch(function(err) {
-            clearTimeout(timeoutId);
-            // If it's an abort error and we haven't tried fallback, try fallback first
+            clearTimeout(connectionTimeout);
+            const requestTime = Date.now() - requestStartTime;
+            error('[VTON] Request failed after', requestTime + 'ms:', err);
+            
+            // If it's an abort error (timeout) and we haven't tried fallback, try fallback immediately
             if (err.name === 'AbortError' && useAppProxy && !hasTriedFallback) {
-              warn('[VTON] ⚠️ Request aborted, trying direct URL as fallback...');
+              warn('[VTON] ⚠️ Connection timeout, trying direct URL as fallback...');
               useAppProxy = false;
               hasTriedFallback = true;
               let directUrl = APP_URL + '/apps/tryon/generate?shop=' + encodeURIComponent(state.shop) + '&product_id=' + encodeURIComponent(state.productId);
               if (state.productHandle) directUrl += '&product_handle=' + encodeURIComponent(state.productHandle);
+              log('[VTON] 🔄 Retrying with direct URL:', directUrl);
               return makeGenerateRequest(directUrl);
             }
             throw err;
