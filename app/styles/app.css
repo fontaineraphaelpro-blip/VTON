@@ -330,7 +330,37 @@ body {
 /* Ensure Banners have proper width without stretching titles */
 .Polaris-Banner {
   max-width: 100% !important;
+  width: 100% !important;
+}
+
+/* Fix Banner title positioning - prevent it from going to extreme right */
+.Polaris-Banner__Heading,
+.Polaris-Banner__Title,
+.Polaris-Banner__Header,
+.Polaris-Banner__Content > *:first-child,
+.Polaris-Banner__Content h2,
+.Polaris-Banner__Content h3,
+.Polaris-Banner__Content h4 {
+  text-align: left !important;
   width: auto !important;
+  max-width: 100% !important;
+  margin-left: 0 !important;
+  margin-right: auto !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+/* Ensure Banner content is properly aligned */
+.Polaris-Banner__Content {
+  text-align: left !important;
+  width: 100% !important;
+}
+
+/* Fix Banner internal layout */
+.Polaris-Banner__Ribbon,
+.Polaris-Banner__ContentWrapper {
+  width: 100% !important;
+  max-width: 100% !important;
 }
 
 .Polaris-Card {
