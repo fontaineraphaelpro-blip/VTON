@@ -2198,17 +2198,17 @@
                 const errorMessage = errorData?.error || errorData?.message || 'Generation failed: ' + response.status;
                 // Create error object with status code for detection
                 const err = new Error(errorMessage);
-                (err as any).status = response.status;
-                (err as any).isDailyLimit = errorMessage.includes('used all your available credits') || 
-                                            (errorMessage.includes('limit') && errorMessage.includes('per day')) ||
-                                            errorMessage.includes('Please try again tomorrow');
+                err.status = response.status;
+                err.isDailyLimit = errorMessage.includes('used all your available credits') || 
+                                   (errorMessage.includes('limit') && errorMessage.includes('per day')) ||
+                                   errorMessage.includes('Please try again tomorrow');
                 throw err;
               }).catch(function(parseError) {
                 // If JSON parsing fails, read from original response as text
                 return response.text().then(function(text) {
                   error('[VTON] Error response (text):', text);
                   const err = new Error(text || 'Generation failed: ' + response.status);
-                  (err as any).status = response.status;
+                  err.status = response.status;
                   throw err;
                 });
               });
@@ -2356,14 +2356,14 @@
               errorMessage = err.message;
               // Check if this is a daily limit error (should be displayed as info, not error)
               // Check both the message content and the status code (402 = Payment Required, used for limits)
-              if ((err as any).isDailyLimit || 
+              if (err.isDailyLimit || 
                   err.message.includes('used all your available credits') || 
                   (err.message.includes('limit') && err.message.includes('per day')) ||
                   err.message.includes('Please try again tomorrow') ||
-                  ((err as any).status === 402 && (err.message.includes('limit') || err.message.includes('credits')))) {
+                  (err.status === 402 && (err.message.includes('limit') || err.message.includes('credits')))) {
                 isDailyLimitError = true;
               }
-            } else if (err.name === 'AbortError' || err.message?.includes('timeout') || err.message?.includes('504')) {
+            } else if (err.name === 'AbortError' || (err.message && (err.message.includes('timeout') || err.message.includes('504')))) {
               errorMessage = 'Generation is taking longer than expected. Please wait a moment and check back, or try again.';
             }
             
