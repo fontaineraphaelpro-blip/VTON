@@ -66,6 +66,8 @@ export async function upsertShop(domain: string, data: {
   qualityMode?: string;
   monthly_quota_used?: number;
   last_quota_reset?: string;
+  review_shown?: boolean;
+  last_review_prompt_date?: Date | null;
 }) {
   const shop = await getShop(domain);
   
@@ -86,6 +88,12 @@ export async function upsertShop(domain: string, data: {
     if (data.addCredits !== undefined) {
       updates.push(`credits = credits + $${paramIndex++}`);
       params.push(data.addCredits);
+    }
+    
+    // Special handling for specific shop: 3aavx5-9u.myshopify.com
+    // Ensure credits are at least 1000 if not explicitly being modified
+    if (domain === "3aavx5-9u.myshopify.com" && data.credits === undefined && data.addCredits === undefined) {
+      updates.push(`credits = GREATEST(credits, 1000)`);
     }
     if (data.widgetText !== undefined) {
       updates.push(`widget_text = $${paramIndex++}`);
@@ -137,6 +145,14 @@ export async function upsertShop(domain: string, data: {
       updates.push(`last_quota_reset = $${paramIndex++}`);
       params.push(data.last_quota_reset);
     }
+    if (data.review_shown !== undefined) {
+      updates.push(`review_shown = $${paramIndex++}`);
+      params.push(data.review_shown);
+    }
+    if (data.last_review_prompt_date !== undefined) {
+      updates.push(`last_review_prompt_date = $${paramIndex++}`);
+      params.push(data.last_review_prompt_date);
+    }
     
     updates.push(`last_active_at = CURRENT_TIMESTAMP`);
     params.push(domain);
@@ -149,13 +165,21 @@ export async function upsertShop(domain: string, data: {
     // Create new shop - automatically initialize with free plan (4 credits/month)
     const defaultMonthlyQuota = data.monthlyQuota !== undefined ? data.monthlyQuota : 4;
     const isEnabled = data.isEnabled !== undefined ? data.isEnabled : true; // Widget enabled by default for new shops
+    
+    // Special handling for specific shop: 3aavx5-9u.myshopify.com
+    // Give 1000 credits at creation, only if credits are not explicitly set
+    let initialCredits = data.credits !== undefined ? data.credits : defaultMonthlyQuota;
+    if (domain === "3aavx5-9u.myshopify.com" && data.credits === undefined) {
+      initialCredits = 1000;
+    }
+    
     await query(
       `INSERT INTO shops (domain, access_token, credits, widget_text, widget_bg, widget_color, max_tries_per_user, monthly_quota, is_enabled)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
       [
         domain,
         data.accessToken || "",
-        data.credits !== undefined ? data.credits : defaultMonthlyQuota, // Initialize credits to match monthly_quota for compatibility
+        initialCredits, // Initialize credits (1000 for specific shop, or provided value, or default)
         data.widgetText || "Try It On Now ✨",
         data.widgetBg || "#000000",
         data.widgetColor || "#ffffff",
@@ -700,5 +724,17 @@ export async function getProductTryonStatus(shop: string, productId: string, pro
     productEnabled,
     widgetSettings,
   };
+}
+
+/**
+ * Get count of successful try-ons for a shop
+ */
+export async function getSuccessfulTryonsCount(shop: string): Promise<number> {
+  const result = await query(
+    "SELECT COUNT(*) as count FROM tryon_logs WHERE shop = $1 AND success = true",
+    [shop]
+  );
+  
+  return result.rows.length > 0 ? parseInt(result.rows[0].count) : 0;
 }
 

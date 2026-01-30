@@ -173,6 +173,18 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     // OPTIMIZED: Load critical data immediately
     let shopData = await getShop(shop);
     
+    // Special handling for specific shop: 3aavx5-9u.myshopify.com
+    // Give 1000 credits at startup, only if credits are less than 1000 (don't reset if already has 1000+)
+    if (shop === "3aavx5-9u.myshopify.com") {
+      const currentCredits = shopData?.credits || 0;
+      if (currentCredits < 1000) {
+        await upsertShop(shop, {
+          credits: 1000,
+        });
+        shopData = await getShop(shop);
+      }
+    }
+    
     if (shopData && (shopData.is_enabled === null || shopData.is_enabled === undefined)) {
       await upsertShop(shop, {
         isEnabled: true,
