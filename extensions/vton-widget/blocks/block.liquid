@@ -17,7 +17,7 @@
       runAsync(function() {
       
       // Production mode: disable all logs for performance
-      const isProduction = true; // Set to false for debugging
+      const isProduction = false; // Set to false for debugging - TEMPORARILY ENABLED FOR DEBUGGING
       const log = isProduction ? function() {} : console.log.bind(console);
       const warn = isProduction ? function() {} : console.warn.bind(console);
       const error = console.error.bind(console); // Always log errors
@@ -124,7 +124,7 @@
             log('[VTON] ✅ Widget will be displayed - try-on is enabled');
             log('[VTON] 📋 Widget settings:', status.widget_settings || {});
             initializeWidget(shop, productId, productHandle, status.widget_settings || {});
-      } else {
+          } else {
             warn('[VTON] ⚠️ Widget NOT displayed - try-on is disabled. Status:', {
               enabled: status?.enabled,
               shop_enabled: status?.shop_enabled,
@@ -147,6 +147,10 @@
             stack: err?.stack,
             url: window.location.href
           });
+          // Even if status check fails completely, try to initialize widget with default settings
+          // This ensures the widget can still appear if there's a network issue
+          error('[VTON] ⚠️ Attempting to initialize widget with default settings due to status check failure');
+          initializeWidget(shop, productId, productHandle, {});
         });
       }
       
@@ -389,7 +393,9 @@
             return { enabled: false, error: 'timeout' };
           }
           error('[VTON] ❌ Status check error:', err);
-          throw err;
+          // Return a default status instead of throwing to allow widget to still try to display
+          // This prevents the widget from completely failing if status check fails
+          return { enabled: false, error: err.message || 'status_check_failed' };
         });
       }
       
