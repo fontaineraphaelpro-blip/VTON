@@ -546,9 +546,11 @@
               display: none;
               align-items: center;
               justify-content: center;
-              z-index: 99999;
+              z-index: 999999;
               padding: 24px;
               animation: fadeIn 0.2s ease-out;
+              overflow-y: auto;
+              overscroll-behavior: contain;
             }
             @keyframes fadeIn {
               from { opacity: 0; }
@@ -563,13 +565,15 @@
               max-width: 600px;
               width: 100%;
               max-height: 90vh;
-              overflow: hidden;
+              overflow-y: auto;
+              overflow-x: hidden;
               position: relative;
               display: flex;
               flex-direction: column;
               box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25), 0 8px 16px rgba(0, 0, 0, 0.15);
               border: 1px solid rgba(0, 0, 0, 0.08);
               animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+              overscroll-behavior: contain;
             }
             @keyframes slideUp {
               from {
@@ -1210,6 +1214,23 @@
         if (overlay) {
           overlay.classList.add('active');
           state.modalOpen = true;
+          
+          // Prevent body scroll when modal is open
+          const body = document.body;
+          const html = document.documentElement;
+          const scrollY = window.scrollY;
+          
+          // Save current scroll position
+          body.style.position = 'fixed';
+          body.style.top = '-' + scrollY + 'px';
+          body.style.width = '100%';
+          body.style.overflow = 'hidden';
+          
+          // Also prevent scroll on html element
+          html.style.overflow = 'hidden';
+          
+          // Store scroll position for restoration
+          state.savedScrollY = scrollY;
         }
       }
       
@@ -1218,6 +1239,26 @@
         if (overlay) {
           overlay.classList.remove('active');
           state.modalOpen = false;
+          
+          // Restore body scroll
+          const body = document.body;
+          const html = document.documentElement;
+          const scrollY = state.savedScrollY || 0;
+          
+          // Restore body styles
+          body.style.position = '';
+          body.style.top = '';
+          body.style.width = '';
+          body.style.overflow = '';
+          
+          // Restore html overflow
+          html.style.overflow = '';
+          
+          // Restore scroll position
+          window.scrollTo(0, scrollY);
+          
+          // Clear saved scroll position
+          state.savedScrollY = null;
         }
       }
       
