@@ -2124,12 +2124,12 @@
         let hasTriedFallback = false;
         function makeGenerateRequest(url) {
           // Create AbortController for timeout handling
-          // Use 30 seconds timeout to allow server to respond (even if generation is async, server should respond quickly with job_id or result)
+          // Use 60 seconds timeout to allow server to respond (even if generation is async, server should respond quickly with job_id or result)
           const controller = new AbortController();
           const requestTimeout = setTimeout(() => {
             controller.abort();
-            error('[VTON] Request timeout after 30 seconds - server did not respond');
-          }, 30000); // 30 seconds timeout - enough for server to respond, but not too long
+            error('[VTON] Request timeout after 60 seconds - server did not respond');
+          }, 60000); // 60 seconds timeout - enough for server to respond, but not too long
           
           log('[VTON] Sending generation request to:', url);
           const requestStartTime = Date.now();
