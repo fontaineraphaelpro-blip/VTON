@@ -126,9 +126,7 @@ export async function ensureTables() {
       ADD COLUMN IF NOT EXISTS monthly_quota INTEGER DEFAULT NULL,
       ADD COLUMN IF NOT EXISTS monthly_quota_used INTEGER DEFAULT 0,
       ADD COLUMN IF NOT EXISTS last_quota_reset TEXT DEFAULT NULL,
-      ADD COLUMN IF NOT EXISTS quality_mode TEXT DEFAULT 'balanced',
-      ADD COLUMN IF NOT EXISTS review_shown BOOLEAN DEFAULT false,
-      ADD COLUMN IF NOT EXISTS last_review_prompt_date TIMESTAMP DEFAULT NULL
+      ADD COLUMN IF NOT EXISTS quality_mode TEXT DEFAULT 'balanced'
     `);
 
     // ADDED: Add product_handle column to product_settings table if it doesn't exist (migration)
