@@ -414,3 +414,96 @@ export async function getProductTryonSettingsBatch(
   
   return settings;
 }
+
+/**
+ * Get comprehensive try-on status for a product
+ * Checks both shop-level and product-level settings
+ */
+export async function getProductTryonStatus(
+  shop: string,
+  productId: string,
+  productHandle?: string
+): Promise<{
+  enabled: boolean;
+  shopEnabled: boolean;
+  productEnabled: boolean | null;
+  widgetSettings: {
+    widget_text: string;
+    widget_bg: string;
+    widget_color: string;
+  } | null;
+}> {
+  if (!pool) {
+    return {
+      enabled: false,
+      shopEnabled: false,
+      productEnabled: null,
+      widgetSettings: null,
+    };
+  }
+
+  // 1. Get shop settings
+  const shopData = await getShop(shop);
+  const shopEnabled = shopData?.is_enabled !== false; // Default to true if not set
+
+  // 2. Get product-specific setting
+  let productEnabled: boolean | null = null;
+
+  // Try multiple product ID formats
+  const productIdVariations = [
+    productId,
+    productId.replace(/^gid:\/\/shopify\/Product\//, ""), // Numeric ID
+    `gid://shopify/Product/${productId.replace(/^gid:\/\/shopify\/Product\//, "")}`, // GID format
+  ];
+
+  // Also try with handle if provided
+  if (productHandle) {
+    productIdVariations.push(productHandle);
+  }
+
+  // Query product settings with all variations
+  for (const idVar of productIdVariations) {
+    const result = await pool.query(
+      `SELECT tryon_enabled
+       FROM product_settings
+       WHERE shop = $1 AND product_id = $2
+       LIMIT 1`,
+      [shop, idVar]
+    );
+
+    if (result.rows.length > 0) {
+      productEnabled = result.rows[0].tryon_enabled !== false;
+      break; // Found a match, stop searching
+    }
+  }
+
+  // 3. Determine final enabled status
+  // Product setting overrides shop setting:
+  // - If product setting exists and is false, disabled
+  // - If product setting exists and is true, enabled (if shop enabled)
+  // - If product setting doesn't exist, use shop setting (default enabled)
+  let enabled = false;
+  if (productEnabled !== null) {
+    // Product has explicit setting
+    enabled = productEnabled && shopEnabled;
+  } else {
+    // No product setting, use shop default (enabled by default)
+    enabled = shopEnabled;
+  }
+
+  // 4. Get widget settings if enabled
+  const widgetSettings = enabled && shopData
+    ? {
+        widget_text: shopData.widget_text || "Try It On Now ✨",
+        widget_bg: shopData.widget_bg || "#000000",
+        widget_color: shopData.widget_color || "#ffffff",
+      }
+    : null;
+
+  return {
+    enabled,
+    shopEnabled,
+    productEnabled,
+    widgetSettings,
+  };
+}
