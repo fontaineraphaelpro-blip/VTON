@@ -707,6 +707,7 @@ export default function Dashboard() {
   const [showQuotaExceededBanner, setShowQuotaExceededBanner] = useState(true);
   const [showQuotaWarningBanner, setShowQuotaWarningBanner] = useState(true);
   const [showReviewBanner, setShowReviewBanner] = useState(shouldShowReview);
+  const [showAppEmbedBanner, setShowAppEmbedBanner] = useState(true);
 
   // ADDED: Monthly quota and usage (for display only)
   const monthlyQuota = shop?.monthly_quota || null;
@@ -836,9 +837,22 @@ export default function Dashboard() {
         </header>
 
         {/* Alerts compactes en haut */}
-        {(showErrorBanner || fetcher.data?.success || showLowCreditsBanner || showDisabledBanner || showQuotaExceededBanner || showQuotaWarningBanner || showReviewBanner) && (
+        {(showErrorBanner || fetcher.data?.success || showLowCreditsBanner || showDisabledBanner || showQuotaExceededBanner || showQuotaWarningBanner || showReviewBanner || showAppEmbedBanner) && (
           <div style={{ marginBottom: "var(--spacing-lg)" }}>
             <BlockStack gap="300">
+              {showAppEmbedBanner && (
+                <Banner 
+                  tone="info" 
+                  title="⚠️ Important: Add App Embed to Product Pages"
+                  onDismiss={() => setShowAppEmbedBanner(false)}
+                >
+                  <p>
+                    <strong>Don't forget to add the App Embed block to your product pages through the theme editor!</strong> 
+                    Otherwise, the Virtual Try-On widget will not appear on your storefront. 
+                    Go to <strong>Online Store → Themes → Customize</strong>, then add the "Virtual Try-On Widget" block to your product template.
+                  </p>
+                </Banner>
+              )}
               {showReviewBanner && (
                 <Banner 
                   tone="info" 
