@@ -707,7 +707,13 @@ export default function Dashboard() {
   const [showQuotaExceededBanner, setShowQuotaExceededBanner] = useState(true);
   const [showQuotaWarningBanner, setShowQuotaWarningBanner] = useState(true);
   const [showReviewBanner, setShowReviewBanner] = useState(shouldShowReview);
-  const [showAppEmbedBanner, setShowAppEmbedBanner] = useState(true);
+  
+  // App Embed banner - show only 2 times
+  const [showAppEmbedBanner, setShowAppEmbedBanner] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    const displayCount = parseInt(localStorage.getItem('appEmbedBannerDisplayCount') || '0', 10);
+    return displayCount < 2;
+  });
 
   // ADDED: Monthly quota and usage (for display only)
   const monthlyQuota = shop?.monthly_quota || null;
@@ -776,6 +782,21 @@ export default function Dashboard() {
       }, 500);
     }
   }, [fetcher.data?.success, revalidator]);
+
+  // Increment App Embed banner display count when it's shown
+  useEffect(() => {
+    if (showAppEmbedBanner && typeof window !== 'undefined') {
+      const currentCount = parseInt(localStorage.getItem('appEmbedBannerDisplayCount') || '0', 10);
+      if (currentCount < 2) {
+        // Increment count when banner is displayed
+        localStorage.setItem('appEmbedBannerDisplayCount', String(currentCount + 1));
+        // Hide banner if it's been shown 2 times
+        if (currentCount + 1 >= 2) {
+          setShowAppEmbedBanner(false);
+        }
+      }
+    }
+  }, [showAppEmbedBanner]);
 
   // Auto-refresh dashboard every 15 seconds to update stats (try-ons, Most Tried, add to cart, etc.)
   useEffect(() => {
