@@ -150,9 +150,10 @@ body {
   /* transition disabled for performance */
 }
 
-.Polaris-DataTable__Row:hover .Polaris-DataTable__Cell {
+/* Hover effect disabled for performance */
+/* .Polaris-DataTable__Row:hover .Polaris-DataTable__Cell {
   background: #f9fafb !important;
-}
+} */
 
 .Polaris-TextField__Input {
   border-radius: 8px !important;
@@ -1470,10 +1471,10 @@ a:hover {
   padding-right: 24px;
 }
 
-.history-table-wrapper .Polaris-DataTable__Row:hover {
+/* Hover effect disabled for performance */
+/* .history-table-wrapper .Polaris-DataTable__Row:hover {
   background: #fafbfc;
-  /* transition disabled for performance */
-}
+} */
 
 .history-table-wrapper .Polaris-DataTable__Row:last-child .Polaris-DataTable__Cell {
   border-bottom: none;
