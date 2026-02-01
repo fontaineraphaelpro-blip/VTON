@@ -1,11 +1,14 @@
 /* ============================================
-   OPTIMISATIONS DE SCROLL POUR L'INTERFACE ADMIN
+   OPTIMISATIONS MAXIMALES FPS - INTERFACE ADMIN
    ============================================ */
 
-/* Optimisations globales pour le scroll */
+/* Optimisations globales pour le scroll - MAX FPS */
 html {
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
+  /* Forcer l'accélération GPU */
+  transform: translate3d(0, 0, 0);
+  will-change: scroll-position;
 }
 
 body {
@@ -13,90 +16,145 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
-  /* Réduire les reflows lors du scroll */
-  contain: layout style paint;
-}
-
-/* Optimisations pour les conteneurs scrollables */
-.app-container,
-[class*="scroll"],
-[class*="overflow"] {
-  /* Utiliser la composition GPU pour le scroll */
-  transform: translateZ(0);
+  /* Contain strict pour isolation maximale */
+  contain: strict;
+  /* Accélération GPU */
+  transform: translate3d(0, 0, 0);
   will-change: scroll-position;
-  /* Améliorer la performance du scroll */
-  -webkit-overflow-scrolling: touch;
-  overflow-scrolling: touch;
-}
-
-/* Optimisations pour les DataTables Shopify Polaris */
-.Polaris-DataTable,
-.Polaris-DataTable__ScrollContainer,
-.Polaris-DataTable__TableWrapper,
-.optimized-data-table-wrapper,
-.history-table-wrapper {
-  /* Accélération GPU pour le scroll */
-  transform: translateZ(0);
-  will-change: scroll-position;
-  /* Smooth scrolling */
-  -webkit-overflow-scrolling: touch;
-  overflow-scrolling: touch;
-  /* Réduire les reflows */
-  contain: layout style paint;
   /* Optimiser le rendu */
   backface-visibility: hidden;
   perspective: 1000px;
 }
 
-/* Optimisations pour les tableaux */
+/* Optimisations MAX FPS pour les conteneurs scrollables */
+.app-container,
+[class*="scroll"],
+[class*="overflow"] {
+  /* Accélération GPU maximale */
+  transform: translate3d(0, 0, 0);
+  will-change: scroll-position, transform;
+  /* Améliorer la performance du scroll */
+  -webkit-overflow-scrolling: touch;
+  overflow-scrolling: touch;
+  /* Contain strict pour isolation */
+  contain: strict;
+  /* Optimiser le rendu */
+  backface-visibility: hidden;
+  perspective: 1000px;
+  /* Content visibility pour les éléments hors écran */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 500px;
+}
+
+/* Optimisations MAX FPS pour les DataTables Shopify Polaris */
+.Polaris-DataTable,
+.Polaris-DataTable__ScrollContainer,
+.Polaris-DataTable__TableWrapper,
+.optimized-data-table-wrapper,
+.history-table-wrapper {
+  /* Accélération GPU maximale */
+  transform: translate3d(0, 0, 0);
+  will-change: scroll-position, transform;
+  /* Smooth scrolling */
+  -webkit-overflow-scrolling: touch;
+  overflow-scrolling: touch;
+  /* Contain strict pour isolation maximale */
+  contain: strict;
+  /* Optimiser le rendu */
+  backface-visibility: hidden;
+  perspective: 1000px;
+  /* Content visibility pour virtualisation */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 1000px;
+  /* Isolation de la couche de composition */
+  isolation: isolate;
+  /* Forcer la composition GPU */
+  transform-style: preserve-3d;
+}
+
+/* Optimisations MAX FPS pour les tableaux */
 table,
 .Polaris-DataTable__Table {
+  /* Accélération GPU maximale */
+  transform: translate3d(0, 0, 0);
+  will-change: transform;
+  /* Contain strict */
+  contain: strict;
   /* Isolation de la composition */
-  transform: translateZ(0);
-  /* Réduire les reflows */
-  contain: layout style;
+  isolation: isolate;
+  /* Content visibility */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 500px;
 }
 
-/* Optimisations pour les lignes de tableau */
+/* Optimisations MAX FPS pour les lignes de tableau */
 .Polaris-DataTable__TableRow,
 tr {
-  /* Isolation de la composition pour chaque ligne */
-  transform: translateZ(0);
-  /* Réduire les reflows lors du scroll */
-  contain: layout style;
+  /* Accélération GPU maximale */
+  transform: translate3d(0, 0, 0);
+  will-change: transform;
+  /* Contain strict pour isolation */
+  contain: strict;
+  /* Content visibility pour virtualisation */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 50px;
+  /* Isolation de la composition */
+  isolation: isolate;
 }
 
-/* Optimisations pour les cellules de tableau */
+/* Optimisations MAX FPS pour les cellules de tableau */
 .Polaris-DataTable__Cell,
 td,
 th {
+  /* Accélération GPU maximale */
+  transform: translate3d(0, 0, 0);
+  will-change: transform;
+  /* Contain strict */
+  contain: strict;
+  /* Content visibility */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 30px;
   /* Isolation de la composition */
-  transform: translateZ(0);
-  /* Réduire les reflows */
-  contain: layout style;
+  isolation: isolate;
 }
 
-/* Optimisations pour les listes scrollables */
+/* Optimisations MAX FPS pour les listes scrollables */
 .history-table-wrapper,
 .products-list,
 .activity-list,
 .dashboard-section {
-  /* Accélération GPU */
-  transform: translateZ(0);
-  will-change: scroll-position;
+  /* Accélération GPU maximale */
+  transform: translate3d(0, 0, 0);
+  will-change: scroll-position, transform;
   /* Smooth scrolling */
   -webkit-overflow-scrolling: touch;
   overflow-scrolling: touch;
+  /* Contain strict */
+  contain: strict;
+  /* Content visibility */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 500px;
+  /* Isolation */
+  isolation: isolate;
+  backface-visibility: hidden;
+  perspective: 1000px;
 }
 
-/* Optimisations pour les cartes et sections */
+/* Optimisations MAX FPS pour les cartes et sections */
 .stat-card,
 .dashboard-section,
 .setting-card {
-  /* Isolation de la composition */
-  transform: translateZ(0);
-  /* Réduire les reflows */
-  contain: layout style paint;
+  /* Accélération GPU maximale */
+  transform: translate3d(0, 0, 0);
+  will-change: transform;
+  /* Contain strict */
+  contain: strict;
+  /* Content visibility */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 200px;
+  /* Isolation */
+  isolation: isolate;
+  backface-visibility: hidden;
 }
 
 /* Optimisations pour les graphiques et visualisations */
@@ -104,7 +162,7 @@ th {
 .graph-bars,
 .graph-bar-item {
   /* Accélération GPU pour les animations */
-  transform: translateZ(0);
+  transform: translate3d(0, 0, 0);
   will-change: transform;
   /* Réduire les reflows */
   contain: layout style paint;
@@ -113,7 +171,7 @@ th {
 /* Optimisations pour les barres de graphique */
 .graph-bar {
   /* Isolation de la composition */
-  transform: translateZ(0);
+  transform: translate3d(0, 0, 0);
   will-change: height, transform;
   /* Transition fluide */
   transition: height 0.2s cubic-bezier(0.4, 0, 0.2, 1);
@@ -125,7 +183,7 @@ th {
 [class*="modal"],
 [class*="overlay"] {
   /* Accélération GPU */
-  transform: translateZ(0);
+  transform: translate3d(0, 0, 0);
   will-change: transform, opacity;
   /* Réduire les reflows */
   contain: layout style paint;
@@ -136,7 +194,7 @@ button,
 .Polaris-Button,
 [role="button"] {
   /* Isolation de la composition */
-  transform: translateZ(0);
+  transform: translate3d(0, 0, 0);
   /* Réduire les reflows lors des interactions */
   contain: layout style;
 }
@@ -147,7 +205,7 @@ button,
 [class*="badge"],
 [class*="label"] {
   /* Isolation de la composition */
-  transform: translateZ(0);
+  transform: translate3d(0, 0, 0);
   /* Réduire les reflows */
   contain: layout style;
 }
@@ -155,7 +213,7 @@ button,
 /* Optimisations pour les images lazy loading */
 img[loading="lazy"] {
   /* Isolation de la composition */
-  transform: translateZ(0);
+  transform: translate3d(0, 0, 0);
   /* Réduire les reflows lors du chargement */
   contain: layout style paint;
 }
@@ -167,71 +225,106 @@ img[loading="lazy"] {
   -webkit-overflow-scrolling: touch;
   overflow-scrolling: touch;
   /* Accélération GPU */
-  transform: translateZ(0);
+  transform: translate3d(0, 0, 0);
   will-change: scroll-position;
 }
 
-/* Optimisations spécifiques pour les pages admin */
+/* Optimisations MAX FPS spécifiques pour les pages admin */
 .app-container {
-  /* Isolation de la composition pour tout le conteneur */
-  transform: translateZ(0);
-  /* Réduire les reflows */
-  contain: layout style paint;
+  /* Accélération GPU maximale */
+  transform: translate3d(0, 0, 0);
+  will-change: scroll-position, transform;
+  /* Contain strict */
+  contain: strict;
+  /* Content visibility */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 1000px;
   /* Smooth scrolling */
   -webkit-overflow-scrolling: touch;
   overflow-scrolling: touch;
+  /* Isolation */
+  isolation: isolate;
+  backface-visibility: hidden;
+  perspective: 1000px;
 }
 
-/* Optimisations pour les sections de dashboard */
+/* Optimisations MAX FPS pour les sections de dashboard */
 .dashboard-section {
-  /* Isolation de la composition */
-  transform: translateZ(0);
-  /* Réduire les reflows */
-  contain: layout style paint;
+  /* Accélération GPU maximale */
+  transform: translate3d(0, 0, 0);
+  will-change: transform;
+  /* Contain strict */
+  contain: strict;
+  /* Content visibility */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 500px;
+  /* Isolation */
+  isolation: isolate;
+  backface-visibility: hidden;
   /* Margin pour éviter les reflows */
   margin-bottom: var(--spacing-lg);
 }
 
-/* Optimisations pour les grilles de statistiques */
+/* Optimisations MAX FPS pour les grilles de statistiques */
 .stats-grid {
-  /* Isolation de la composition */
-  transform: translateZ(0);
-  /* Réduire les reflows */
-  contain: layout style paint;
+  /* Accélération GPU maximale */
+  transform: translate3d(0, 0, 0);
+  will-change: transform;
+  /* Contain strict */
+  contain: strict;
+  /* Content visibility */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 300px;
   /* Display grid optimisé */
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: var(--spacing-md);
+  /* Isolation */
+  isolation: isolate;
 }
 
-/* Optimisations pour les cartes de statistiques */
+/* Optimisations MAX FPS pour les cartes de statistiques */
 .stat-card {
-  /* Isolation de la composition */
-  transform: translateZ(0);
-  /* Réduire les reflows */
-  contain: layout style paint;
-  /* Transition fluide */
-  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  /* Accélération GPU maximale */
+  transform: translate3d(0, 0, 0);
+  will-change: transform;
+  /* Contain strict */
+  contain: strict;
+  /* Content visibility */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 150px;
+  /* Transition fluide optimisée */
+  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  /* Isolation */
+  isolation: isolate;
+  backface-visibility: hidden;
 }
 
-/* Optimisations pour les listes de produits */
+/* Optimisations MAX FPS pour les listes de produits */
 .products-list,
 .activity-list {
   /* Smooth scrolling */
   -webkit-overflow-scrolling: touch;
   overflow-scrolling: touch;
-  /* Accélération GPU */
-  transform: translateZ(0);
-  will-change: scroll-position;
-  /* Réduire les reflows */
-  contain: layout style paint;
+  /* Accélération GPU maximale */
+  transform: translate3d(0, 0, 0);
+  will-change: scroll-position, transform;
+  /* Contain strict */
+  contain: strict;
+  /* Content visibility pour virtualisation */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 400px;
+  /* Isolation */
+  isolation: isolate;
+  backface-visibility: hidden;
+  perspective: 1000px;
 }
 
 /* Optimisations pour les éléments de liste */
 .product-item,
 .activity-item {
   /* Isolation de la composition */
-  transform: translateZ(0);
+  transform: translate3d(0, 0, 0);
   /* Réduire les reflows */
   contain: layout style;
   /* Transition fluide */
@@ -242,7 +335,7 @@ img[loading="lazy"] {
 form,
 .Polaris-FormLayout {
   /* Isolation de la composition */
-  transform: translateZ(0);
+  transform: translate3d(0, 0, 0);
   /* Réduire les reflows */
   contain: layout style;
 }
@@ -253,7 +346,7 @@ textarea,
 select,
 .Polaris-TextField__Input {
   /* Isolation de la composition */
-  transform: translateZ(0);
+  transform: translate3d(0, 0, 0);
   /* Réduire les reflows lors de la saisie */
   contain: layout style;
 }
@@ -262,7 +355,7 @@ select,
 .Page,
 .Polaris-Page {
   /* Isolation de la composition */
-  transform: translateZ(0);
+  transform: translate3d(0, 0, 0);
   /* Réduire les reflows */
   contain: layout style paint;
 }
@@ -271,7 +364,7 @@ select,
 .Layout,
 .Polaris-Layout {
   /* Isolation de la composition */
-  transform: translateZ(0);
+  transform: translate3d(0, 0, 0);
   /* Réduire les reflows */
   contain: layout style paint;
 }
@@ -280,7 +373,7 @@ select,
 .Layout__Section,
 .Polaris-Layout__Section {
   /* Isolation de la composition */
-  transform: translateZ(0);
+  transform: translate3d(0, 0, 0);
   /* Réduire les reflows */
   contain: layout style paint;
 }
@@ -289,7 +382,7 @@ select,
 .Card,
 .Polaris-Card {
   /* Isolation de la composition */
-  transform: translateZ(0);
+  transform: translate3d(0, 0, 0);
   /* Réduire les reflows */
   contain: layout style paint;
 }
@@ -298,7 +391,7 @@ select,
 .Banner,
 .Polaris-Banner {
   /* Isolation de la composition */
-  transform: translateZ(0);
+  transform: translate3d(0, 0, 0);
   /* Réduire les reflows */
   contain: layout style paint;
 }
@@ -307,7 +400,7 @@ select,
 .Text,
 .Polaris-Text {
   /* Isolation de la composition */
-  transform: translateZ(0);
+  transform: translate3d(0, 0, 0);
   /* Réduire les reflows */
   contain: layout style;
 }
@@ -316,7 +409,7 @@ select,
 .BlockStack,
 .Polaris-BlockStack {
   /* Isolation de la composition */
-  transform: translateZ(0);
+  transform: translate3d(0, 0, 0);
   /* Réduire les reflows */
   contain: layout style paint;
 }
@@ -325,7 +418,7 @@ select,
 .InlineStack,
 .Polaris-InlineStack {
   /* Isolation de la composition */
-  transform: translateZ(0);
+  transform: translate3d(0, 0, 0);
   /* Réduire les reflows */
   contain: layout style;
 }
@@ -334,7 +427,7 @@ select,
 .Thumbnail,
 .Polaris-Thumbnail {
   /* Isolation de la composition */
-  transform: translateZ(0);
+  transform: translate3d(0, 0, 0);
   /* Réduire les reflows */
   contain: layout style paint;
 }
@@ -343,7 +436,7 @@ select,
 .Checkbox,
 .Polaris-Checkbox {
   /* Isolation de la composition */
-  transform: translateZ(0);
+  transform: translate3d(0, 0, 0);
   /* Réduire les reflows */
   contain: layout style;
 }
@@ -352,7 +445,7 @@ select,
 .Divider,
 .Polaris-Divider {
   /* Isolation de la composition */
-  transform: translateZ(0);
+  transform: translate3d(0, 0, 0);
   /* Réduire les reflows */
   contain: layout style;
 }
@@ -361,7 +454,7 @@ select,
 .EmptyState,
 .Polaris-EmptyState {
   /* Isolation de la composition */
-  transform: translateZ(0);
+  transform: translate3d(0, 0, 0);
   /* Réduire les reflows */
   contain: layout style paint;
 }
@@ -370,7 +463,7 @@ select,
 .pricing-grid,
 .plan-card {
   /* Isolation de la composition */
-  transform: translateZ(0);
+  transform: translate3d(0, 0, 0);
   /* Réduire les reflows */
   contain: layout style paint;
 }
@@ -379,7 +472,7 @@ select,
 .credits-balance,
 .credits-amount {
   /* Isolation de la composition */
-  transform: translateZ(0);
+  transform: translate3d(0, 0, 0);
   /* Réduire les reflows */
   contain: layout style;
 }
@@ -387,7 +480,7 @@ select,
 /* Optimisations pour les settings grids */
 .settings-grid {
   /* Isolation de la composition */
-  transform: translateZ(0);
+  transform: translate3d(0, 0, 0);
   /* Réduire les reflows */
   contain: layout style paint;
   /* Display grid optimisé */
@@ -400,7 +493,7 @@ select,
 .conversion-hero,
 .conversion-reassurance {
   /* Isolation de la composition */
-  transform: translateZ(0);
+  transform: translate3d(0, 0, 0);
   /* Réduire les reflows */
   contain: layout style paint;
 }
@@ -408,7 +501,7 @@ select,
 /* Optimisations pour les plan cards */
 .plan-card {
   /* Isolation de la composition */
-  transform: translateZ(0);
+  transform: translate3d(0, 0, 0);
   /* Réduire les reflows */
   contain: layout style paint;
   /* Transition fluide */
@@ -419,7 +512,7 @@ select,
 /* Optimisations pour les plan buttons */
 .plan-button {
   /* Isolation de la composition */
-  transform: translateZ(0);
+  transform: translate3d(0, 0, 0);
   /* Réduire les reflows */
   contain: layout style;
   /* Transition fluide */
@@ -430,7 +523,7 @@ select,
 /* Optimisations pour les plan badges */
 .plan-badge {
   /* Isolation de la composition */
-  transform: translateZ(0);
+  transform: translate3d(0, 0, 0);
   /* Réduire les reflows */
   contain: layout style;
 }
@@ -438,7 +531,7 @@ select,
 /* Optimisations pour les plan features */
 .plan-feature {
   /* Isolation de la composition */
-  transform: translateZ(0);
+  transform: translate3d(0, 0, 0);
   /* Réduire les reflows */
   contain: layout style;
 }
@@ -446,7 +539,7 @@ select,
 /* Optimisations pour les plan value indicators */
 .plan-value-indicator {
   /* Isolation de la composition */
-  transform: translateZ(0);
+  transform: translate3d(0, 0, 0);
   /* Réduire les reflows */
   contain: layout style;
 }
@@ -454,7 +547,7 @@ select,
 /* Optimisations pour les plan CTAs */
 .plan-cta {
   /* Isolation de la composition */
-  transform: translateZ(0);
+  transform: translate3d(0, 0, 0);
   /* Réduire les reflows */
   contain: layout style;
 }
@@ -462,7 +555,7 @@ select,
 /* Optimisations pour les graph bars */
 .graph-bar-item {
   /* Isolation de la composition */
-  transform: translateZ(0);
+  transform: translate3d(0, 0, 0);
   /* Réduire les reflows */
   contain: layout style paint;
 }
@@ -470,7 +563,7 @@ select,
 /* Optimisations pour les graph bar labels */
 .graph-bar-label {
   /* Isolation de la composition */
-  transform: translateZ(0);
+  transform: translate3d(0, 0, 0);
   /* Réduire les reflows */
   contain: layout style;
 }
@@ -478,7 +571,7 @@ select,
 /* Optimisations pour les graph bar values */
 .graph-bar-value {
   /* Isolation de la composition */
-  transform: translateZ(0);
+  transform: translate3d(0, 0, 0);
   /* Réduire les reflows */
   contain: layout style;
 }
@@ -486,7 +579,7 @@ select,
 /* Optimisations pour les placeholders */
 .dashboard-placeholder {
   /* Isolation de la composition */
-  transform: translateZ(0);
+  transform: translate3d(0, 0, 0);
   /* Réduire les reflows */
   contain: layout style paint;
 }
@@ -496,7 +589,7 @@ select,
 .app-title,
 .app-subtitle {
   /* Isolation de la composition */
-  transform: translateZ(0);
+  transform: translate3d(0, 0, 0);
   /* Réduire les reflows */
   contain: layout style;
 }
@@ -504,7 +597,7 @@ select,
 /* Optimisations pour les stat icons */
 .stat-icon-wrapper {
   /* Isolation de la composition */
-  transform: translateZ(0);
+  transform: translate3d(0, 0, 0);
   /* Réduire les reflows */
   contain: layout style paint;
 }
@@ -512,7 +605,7 @@ select,
 /* Optimisations pour les stat values */
 .stat-value {
   /* Isolation de la composition */
-  transform: translateZ(0);
+  transform: translate3d(0, 0, 0);
   /* Réduire les reflows */
   contain: layout style;
 }
@@ -520,7 +613,7 @@ select,
 /* Optimisations pour les stat labels */
 .stat-label {
   /* Isolation de la composition */
-  transform: translateZ(0);
+  transform: translate3d(0, 0, 0);
   /* Réduire les reflows */
   contain: layout style;
 }
@@ -528,7 +621,7 @@ select,
 /* Optimisations pour les product names */
 .product-name {
   /* Isolation de la composition */
-  transform: translateZ(0);
+  transform: translate3d(0, 0, 0);
   /* Réduire les reflows */
   contain: layout style;
 }
@@ -536,7 +629,7 @@ select,
 /* Optimisations pour les activity info */
 .activity-info {
   /* Isolation de la composition */
-  transform: translateZ(0);
+  transform: translate3d(0, 0, 0);
   /* Réduire les reflows */
   contain: layout style;
 }
@@ -544,7 +637,7 @@ select,
 /* Optimisations pour les activity titles */
 .activity-title {
   /* Isolation de la composition */
-  transform: translateZ(0);
+  transform: translate3d(0, 0, 0);
   /* Réduire les reflows */
   contain: layout style;
 }
@@ -552,7 +645,7 @@ select,
 /* Optimisations pour les activity dates */
 .activity-date {
   /* Isolation de la composition */
-  transform: translateZ(0);
+  transform: translate3d(0, 0, 0);
   /* Réduire les reflows */
   contain: layout style;
 }
@@ -560,7 +653,7 @@ select,
 /* Optimisations pour les credits labels */
 .credits-label {
   /* Isolation de la composition */
-  transform: translateZ(0);
+  transform: translate3d(0, 0, 0);
   /* Réduire les reflows */
   contain: layout style;
 }
@@ -568,7 +661,7 @@ select,
 /* Optimisations pour les vton inputs */
 .vton-input {
   /* Isolation de la composition */
-  transform: translateZ(0);
+  transform: translate3d(0, 0, 0);
   /* Réduire les reflows */
   contain: layout style;
 }
@@ -576,7 +669,7 @@ select,
 /* Optimisations pour les setting cards */
 .setting-card {
   /* Isolation de la composition */
-  transform: translateZ(0);
+  transform: translate3d(0, 0, 0);
   /* Réduire les reflows */
   contain: layout style paint;
 }
@@ -584,7 +677,7 @@ select,
 /* Optimisations pour les setting card labels */
 .setting-card label {
   /* Isolation de la composition */
-  transform: translateZ(0);
+  transform: translate3d(0, 0, 0);
   /* Réduire les reflows */
   contain: layout style;
 }
@@ -592,7 +685,7 @@ select,
 /* Optimisations pour les plan names */
 .plan-name {
   /* Isolation de la composition */
-  transform: translateZ(0);
+  transform: translate3d(0, 0, 0);
   /* Réduire les reflows */
   contain: layout style;
 }
@@ -600,7 +693,7 @@ select,
 /* Optimisations pour les plan prices */
 .plan-price {
   /* Isolation de la composition */
-  transform: translateZ(0);
+  transform: translate3d(0, 0, 0);
   /* Réduire les reflows */
   contain: layout style;
 }
@@ -608,7 +701,7 @@ select,
 /* Optimisations pour les plan value texts */
 .plan-value-text {
   /* Isolation de la composition */
-  transform: translateZ(0);
+  transform: translate3d(0, 0, 0);
   /* Réduire les reflows */
   contain: layout style;
 }
@@ -616,7 +709,7 @@ select,
 /* Optimisations pour les plan value labels */
 .plan-value-label {
   /* Isolation de la composition */
-  transform: translateZ(0);
+  transform: translate3d(0, 0, 0);
   /* Réduire les reflows */
   contain: layout style;
 }
@@ -624,7 +717,7 @@ select,
 /* Optimisations pour les plan features lists */
 .plan-features {
   /* Isolation de la composition */
-  transform: translateZ(0);
+  transform: translate3d(0, 0, 0);
   /* Réduire les reflows */
   contain: layout style paint;
 }

@@ -216,6 +216,11 @@ export function optimizeDataTables() {
 export function initAllScrollOptimizations() {
   initScrollOptimizer();
   
+  // Importer et initialiser les optimisations MAX FPS
+  import('./maxFpsOptimizer').then(({ initMaxFpsOptimizations }) => {
+    initMaxFpsOptimizations();
+  });
+  
   if (typeof document !== 'undefined') {
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', () => {
