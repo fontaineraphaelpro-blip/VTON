@@ -256,6 +256,20 @@ body {
   padding: 16px 20px !important;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
   border: 1.5px solid !important;
+  /* Force all internal elements to align left */
+  text-align: left !important;
+}
+
+/* GLOBAL FIX: Force ALL text elements in Banner to align left */
+.Polaris-Banner * {
+  text-align: left !important;
+}
+
+/* Override for buttons and interactive elements */
+.Polaris-Banner button,
+.Polaris-Banner [role="button"],
+.Polaris-Banner a {
+  text-align: center !important;
 }
 
 .Polaris-Banner--toneSuccess {
@@ -354,12 +368,14 @@ body {
 }
 
 /* Fix Banner header layout - keep title on left, not pushed to right */
-/* Target ALL possible header containers */
+/* Target ALL possible header containers and force flex-start */
 .Polaris-Banner__Header,
 .Polaris-Banner__HeaderWrapper,
 .Polaris-Banner__HeaderContainer,
 .Polaris-Banner > div:first-child,
-.Polaris-Banner > *:first-child {
+.Polaris-Banner > *:first-child,
+.Polaris-Banner > div,
+.Polaris-Banner [class*="Header"] {
   display: flex !important;
   align-items: flex-start !important;
   justify-content: flex-start !important;
@@ -371,13 +387,10 @@ body {
   box-sizing: border-box !important;
 }
 
-/* Override ANY justify-content that might stretch the title */
-.Polaris-Banner__Header,
-.Polaris-Banner__HeaderWrapper,
-.Polaris-Banner__HeaderContainer,
-.Polaris-Banner > div:first-child,
-.Polaris-Banner > *:first-child,
-.Polaris-Banner [class*="Header"] {
+/* Override ANY justify-content that might stretch the title - use universal selector */
+.Polaris-Banner [class*="Header"],
+.Polaris-Banner > *,
+.Polaris-Banner > div > * {
   justify-content: flex-start !important;
   align-items: flex-start !important;
 }
@@ -390,7 +403,9 @@ body {
 .Polaris-Banner__Header > *:not(button):not([role="button"]):not(.Polaris-Banner__Dismiss):nth-child(1),
 .Polaris-Banner__Header > *:not(button):not([role="button"]):not(.Polaris-Banner__Dismiss):nth-child(2),
 .Polaris-Banner [class*="Title"]:not(button):not([role="button"]),
-.Polaris-Banner [class*="Heading"]:not(button):not([role="button"]) {
+.Polaris-Banner [class*="Heading"]:not(button):not([role="button"]),
+.Polaris-Banner > * > *:not(button):not([role="button"]):first-child,
+.Polaris-Banner > div > *:not(button):not([role="button"]):first-child {
   flex: 0 0 auto !important;
   flex-grow: 0 !important;
   flex-shrink: 0 !important;
