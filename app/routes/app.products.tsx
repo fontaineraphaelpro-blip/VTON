@@ -410,10 +410,10 @@ export default function Products() {
                       </Banner>
                     )}
                     <DataTable
-                        columnContentTypes={["text", "text", "numeric", "numeric", "text", "text"]}
-                        headings={["Product", "Status", "Inventory", "Try-On Usage", "Try-On Enabled", "Actions"]}
-                        rows={productRows}
-                      />
+                      columnContentTypes={["text", "text", "numeric", "numeric", "text", "text"]}
+                      headings={["Product", "Status", "Inventory", "Try-On Usage", "Try-On Enabled", "Actions"]}
+                      rows={productRows}
+                    />
                   </>
                 )}
               </BlockStack>
