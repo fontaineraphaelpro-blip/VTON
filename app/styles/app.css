@@ -258,11 +258,22 @@ body {
   border: 1.5px solid !important;
   /* Force all internal elements to align left */
   text-align: left !important;
+  /* Prevent overflow */
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  overflow-wrap: break-word !important;
+  word-wrap: break-word !important;
+  overflow-x: hidden !important;
 }
 
-/* GLOBAL FIX: Force ALL text elements in Banner to align left */
+/* GLOBAL FIX: Force ALL text elements in Banner to align left and prevent overflow */
 .Polaris-Banner * {
   text-align: left !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  overflow-wrap: break-word !important;
+  word-wrap: break-word !important;
 }
 
 /* Override for buttons and interactive elements */
@@ -270,6 +281,7 @@ body {
 .Polaris-Banner [role="button"],
 .Polaris-Banner a {
   text-align: center !important;
+  max-width: none !important;
 }
 
 .Polaris-Banner--toneSuccess {
@@ -440,10 +452,12 @@ body {
   padding: 0 !important;
   display: block !important;
   width: auto !important;
-  max-width: none !important;
+  max-width: 100% !important;
   word-wrap: break-word !important;
+  overflow-wrap: break-word !important;
   white-space: normal !important;
   box-sizing: border-box !important;
+  hyphens: auto !important;
 }
 
 /* Force dismiss button and icon to the right - target ALL possible buttons */
@@ -477,10 +491,26 @@ body {
   box-sizing: border-box !important;
 }
 
-/* Ensure Banner content is properly aligned */
+/* Ensure Banner content is properly aligned and doesn't overflow */
 .Polaris-Banner__Content {
   text-align: left !important;
   width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  overflow-wrap: break-word !important;
+  word-wrap: break-word !important;
+  overflow-x: hidden !important;
+}
+
+/* Fix Banner content paragraphs and text */
+.Polaris-Banner__Content p,
+.Polaris-Banner__Content div,
+.Polaris-Banner__Content span,
+.Polaris-Banner__Content * {
+  max-width: 100% !important;
+  overflow-wrap: break-word !important;
+  word-wrap: break-word !important;
+  box-sizing: border-box !important;
 }
 
 /* Fix Banner internal layout */
