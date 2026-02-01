@@ -324,6 +324,16 @@ body {
 .Polaris-Banner {
   max-width: 100% !important;
   width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* Prevent Banner internal containers from stretching */
+.Polaris-Banner__Ribbon,
+.Polaris-Banner__ContentWrapper,
+.Polaris-Banner__Inner {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
 }
 
 /* Fix Banner title positioning - prevent it from going to extreme right */
@@ -353,23 +363,43 @@ body {
   flex-direction: row !important;
   gap: 12px !important;
   width: 100% !important;
+  max-width: 100% !important;
   flex-wrap: nowrap !important;
+  box-sizing: border-box !important;
+}
+
+/* Prevent header from stretching with justify-content: space-between */
+.Polaris-Banner__Header,
+.Polaris-Banner__HeaderWrapper,
+.Polaris-Banner__HeaderContainer {
+  justify-content: flex-start !important;
+  align-items: flex-start !important;
+}
+
+/* Override any space-between that might be applied */
+.Polaris-Banner[style*="justify-content"],
+.Polaris-Banner__Header[style*="justify-content"] {
+  justify-content: flex-start !important;
 }
 
 /* Ensure Banner title container stays on the left side - force left alignment */
 .Polaris-Banner__TitleWrapper,
 .Polaris-Banner__TitleContainer,
 .Polaris-Banner__HeadingWrapper,
-.Polaris-Banner__Header > *:first-child,
-.Polaris-Banner__Header > *:nth-child(1),
-.Polaris-Banner__Header > *:nth-child(2) {
+.Polaris-Banner__Header > *:first-child:not(button):not([role="button"]),
+.Polaris-Banner__Header > *:nth-child(1):not(button):not([role="button"]),
+.Polaris-Banner__Header > *:nth-child(2):not(button):not([role="button"]) {
   flex: 0 1 auto !important;
-  flex-shrink: 0 !important;
+  flex-grow: 0 !important;
+  flex-shrink: 1 !important;
+  flex-basis: auto !important;
   margin-right: auto !important;
   margin-left: 0 !important;
   text-align: left !important;
-  max-width: calc(100% - 80px) !important; /* Leave space for icon and dismiss button */
+  max-width: calc(100% - 100px) !important; /* Leave space for icon and dismiss button */
+  min-width: 0 !important;
   order: 1 !important;
+  box-sizing: border-box !important;
 }
 
 /* Fix Banner title text alignment - prevent it from being pushed to the right */
@@ -377,7 +407,10 @@ body {
 .Polaris-Banner__Heading,
 .Polaris-Banner__TitleWrapper > *,
 .Polaris-Banner__TitleContainer > *,
-.Polaris-Banner__HeadingWrapper > * {
+.Polaris-Banner__HeadingWrapper > *,
+.Polaris-Banner__TitleWrapper h2,
+.Polaris-Banner__TitleWrapper h3,
+.Polaris-Banner__TitleWrapper h4 {
   text-align: left !important;
   margin: 0 !important;
   padding: 0 !important;
@@ -386,6 +419,7 @@ body {
   max-width: 100% !important;
   word-wrap: break-word !important;
   white-space: normal !important;
+  box-sizing: border-box !important;
 }
 
 /* Force dismiss button and icon to the right */
@@ -393,11 +427,15 @@ body {
 .Polaris-Banner__DismissButton,
 .Polaris-Banner__Icon,
 .Polaris-Banner__Header > button,
-.Polaris-Banner__Header > [role="button"] {
+.Polaris-Banner__Header > [role="button"],
+.Polaris-Banner__Header > .Polaris-Banner__Dismiss {
   flex: 0 0 auto !important;
+  flex-grow: 0 !important;
+  flex-shrink: 0 !important;
   margin-left: auto !important;
   margin-right: 0 !important;
   order: 999 !important;
+  box-sizing: border-box !important;
 }
 
 /* Fix Banner internal flex layout to prevent title from going to extreme right */
@@ -407,6 +445,8 @@ body {
   align-items: flex-start !important;
   justify-content: flex-start !important;
   width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
 }
 
 /* Ensure Banner content is properly aligned */
