@@ -350,14 +350,9 @@ export default function Widget() {
                       variant="primary" 
                       loading={fetcher.state === "submitting"}
                       size="large"
-                      className="save-config-button"
-                      style={{
-                        backgroundColor: "#000000",
-                        color: "#ffffff",
-                        borderColor: "#000000"
-                      }}
+                      style={{ color: "#ffffff" }}
                     >
-                      <span style={{ color: "#ffffff" }}>Save Configuration</span>
+                      Save Configuration
                     </Button>
                   </BlockStack>
                 </form>

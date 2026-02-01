@@ -409,11 +409,13 @@ export default function Products() {
                         {(fetcher.data as any).error}
                       </Banner>
                     )}
-                    <DataTable
-                      columnContentTypes={["text", "text", "numeric", "numeric", "text", "text"]}
-                      headings={["Product", "Status", "Inventory", "Try-On Usage", "Try-On Enabled", "Actions"]}
-                      rows={productRows}
-                    />
+                    <div style={{ transform: 'translateZ(0)', willChange: 'scroll-position' }}>
+                      <DataTable
+                        columnContentTypes={["text", "text", "numeric", "numeric", "text", "text"]}
+                        headings={["Product", "Status", "Inventory", "Try-On Usage", "Try-On Enabled", "Actions"]}
+                        rows={productRows}
+                      />
+                    </div>
                   </>
                 )}
               </BlockStack>

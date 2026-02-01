@@ -1,1586 +1,692 @@
 /* ============================================
-   VTON MAGIC - PROFESSIONAL SHOPIFY APP DESIGN
-   Inspired by top Shopify apps (Klaviyo, Recharge, etc.)
+   OPTIMISATIONS DE SCROLL POUR L'INTERFACE ADMIN
    ============================================ */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-
-:root {
-  /* Professional Color Palette - Enhanced */
-  --color-bg: #F9FAFB;
-  --color-surface: #FFFFFF;
-  --color-border: #E5E7EB;
-  --color-border-hover: #D1D5DB;
-  
-  --color-text-primary: #111827;
-  --color-text-secondary: #6B7280;
-  --color-text-tertiary: #9CA3AF;
-  
-  --color-primary: #008060;
-  --color-primary-hover: #006E52;
-  --color-primary-light: #D1FAE5;
-  
-  --color-success: #10B981;
-  --color-warning: #F59E0B;
-  --color-critical: #EF4444;
-  --color-info: #3B82F6;
-  
-  /* Shadows - Subtle and Professional */
-  --shadow-card: 0 1px 0 rgba(0, 0, 0, 0.05);
-  --shadow-card-hover: 0 2px 8px rgba(0, 0, 0, 0.08);
-  --shadow-button: 0 1px 0 rgba(0, 0, 0, 0.05);
-  
-  /* Spacing */
-  --spacing-xs: 4px;
-  --spacing-sm: 8px;
-  --spacing-md: 16px;
-  --spacing-lg: 24px;
-  --spacing-xl: 32px;
-  --spacing-2xl: 48px;
-  
-  /* Border Radius */
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 8px;
-  
-  /* Transitions */
-  --transition-fast: 150ms ease;
-  --transition-base: 200ms ease;
-}
-
-/* ============================================
-   NAVIGATION LOADING BAR - instant feedback
-   ============================================ */
-
-.nav-loading-bar {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  z-index: 9999;
-  background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-primary) 50%, transparent 50%);
-  background-size: 200% 100%;
-  animation: nav-loading-shimmer 0.8s ease-in-out infinite;
-}
-
-@keyframes nav-loading-shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
-
-/* ============================================
-   BASE & RESET
-   ============================================ */
-
-* {
-  box-sizing: border-box;
-}
-
-/* Prevent zoom issues in Shopify admin iframe */
-html,
-body,
-#app,
-[data-app-embed] {
-  zoom: 1 !important;
-  transform: scale(1) !important;
-  -webkit-text-size-adjust: 100% !important;
-  -moz-text-size-adjust: 100% !important;
-  -ms-text-size-adjust: 100% !important;
-  text-size-adjust: 100% !important;
-  width: 100% !important;
-  height: 100% !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  overflow-x: hidden !important;
-}
-
+/* Optimisations globales pour le scroll */
 html {
-  zoom: 1;
-  -webkit-text-size-adjust: 100%;
-  -moz-text-size-adjust: 100%;
-  -ms-text-size-adjust: 100%;
-  text-size-adjust: 100%;
-  width: 100%;
-  height: 100%;
-  margin: 0;
-  padding: 0;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
 }
 
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  background-color: var(--color-bg);
-  color: var(--color-text-primary);
-  line-height: 1.5;
+  /* Améliorer la performance du scroll */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  zoom: 1;
-  transform: scale(1);
-  -webkit-text-size-adjust: 100%;
-  -moz-text-size-adjust: 100%;
-  -ms-text-size-adjust: 100%;
-  text-size-adjust: 100%;
-  width: 100%;
-  height: 100%;
-  margin: 0;
-  padding: 0;
-  overflow-x: hidden;
+  text-rendering: optimizeLegibility;
+  /* Réduire les reflows lors du scroll */
+  contain: layout style paint;
 }
 
-/* ============================================
-   POLARIS OVERRIDES - Professional Look
-   ============================================ */
-
-.Polaris-DataTable {
-  border-radius: 12px !important;
-  overflow: hidden !important;
-  border: 1px solid var(--color-border) !important;
+/* Optimisations pour les conteneurs scrollables */
+.app-container,
+[class*="scroll"],
+[class*="overflow"] {
+  /* Utiliser la composition GPU pour le scroll */
+  transform: translateZ(0);
+  will-change: scroll-position;
+  /* Améliorer la performance du scroll */
+  -webkit-overflow-scrolling: touch;
+  overflow-scrolling: touch;
 }
 
+/* Optimisations pour les DataTables Shopify Polaris */
+.Polaris-DataTable,
+.Polaris-DataTable__ScrollContainer,
+.Polaris-DataTable__TableWrapper,
+.optimized-data-table-wrapper,
+.history-table-wrapper {
+  /* Accélération GPU pour le scroll */
+  transform: translateZ(0);
+  will-change: scroll-position;
+  /* Smooth scrolling */
+  -webkit-overflow-scrolling: touch;
+  overflow-scrolling: touch;
+  /* Réduire les reflows */
+  contain: layout style paint;
+  /* Optimiser le rendu */
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+/* Optimisations pour les tableaux */
+table,
 .Polaris-DataTable__Table {
-  border-radius: 12px !important;
+  /* Isolation de la composition */
+  transform: translateZ(0);
+  /* Réduire les reflows */
+  contain: layout style;
 }
 
-.Polaris-DataTable__Heading {
-  font-weight: 700 !important;
-  font-size: 13px !important;
-  text-transform: uppercase !important;
-  letter-spacing: 0.08em !important;
-  color: var(--color-text-secondary) !important;
-  padding: 16px 20px !important;
-  background: #f9fafb !important;
-  border-bottom: 2px solid var(--color-border) !important;
+/* Optimisations pour les lignes de tableau */
+.Polaris-DataTable__TableRow,
+tr {
+  /* Isolation de la composition pour chaque ligne */
+  transform: translateZ(0);
+  /* Réduire les reflows lors du scroll */
+  contain: layout style;
 }
 
-.Polaris-DataTable__Cell {
-  padding: 16px 20px !important;
-  border-bottom: 1px solid var(--color-border) !important;
-  transition: background-color 0.15s ease !important;
+/* Optimisations pour les cellules de tableau */
+.Polaris-DataTable__Cell,
+td,
+th {
+  /* Isolation de la composition */
+  transform: translateZ(0);
+  /* Réduire les reflows */
+  contain: layout style;
 }
 
-.Polaris-DataTable__Row:hover .Polaris-DataTable__Cell {
-  background: #f9fafb !important;
+/* Optimisations pour les listes scrollables */
+.history-table-wrapper,
+.products-list,
+.activity-list,
+.dashboard-section {
+  /* Accélération GPU */
+  transform: translateZ(0);
+  will-change: scroll-position;
+  /* Smooth scrolling */
+  -webkit-overflow-scrolling: touch;
+  overflow-scrolling: touch;
 }
 
-.Polaris-TextField__Input {
-  border-radius: 8px !important;
-  border: 1.5px solid var(--color-border) !important;
-  padding: 12px 16px !important;
-  font-size: 15px !important;
-  font-weight: 500 !important;
-  transition: all 0.2s ease !important;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+/* Optimisations pour les cartes et sections */
+.stat-card,
+.dashboard-section,
+.setting-card {
+  /* Isolation de la composition */
+  transform: translateZ(0);
+  /* Réduire les reflows */
+  contain: layout style paint;
 }
 
-.Polaris-TextField__Input:focus {
-  border-color: var(--color-primary) !important;
-  box-shadow: 0 0 0 4px rgba(0, 128, 96, 0.12), 0 2px 8px rgba(0, 128, 96, 0.15) !important;
+/* Optimisations pour les graphiques et visualisations */
+.graph-container-large,
+.graph-bars,
+.graph-bar-item {
+  /* Accélération GPU pour les animations */
+  transform: translateZ(0);
+  will-change: transform;
+  /* Réduire les reflows */
+  contain: layout style paint;
 }
 
-.Polaris-Checkbox__Input {
-  width: 20px !important;
-  height: 20px !important;
-  border-radius: 6px !important;
-  border: 2px solid var(--color-border) !important;
+/* Optimisations pour les barres de graphique */
+.graph-bar {
+  /* Isolation de la composition */
+  transform: translateZ(0);
+  will-change: height, transform;
+  /* Transition fluide */
+  transition: height 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.Polaris-Checkbox__Input:checked {
-  background: var(--color-primary) !important;
-  border-color: var(--color-primary) !important;
+/* Optimisations pour les modals et overlays */
+.Polaris-Modal,
+.Polaris-Modal__Dialog,
+[class*="modal"],
+[class*="overlay"] {
+  /* Accélération GPU */
+  transform: translateZ(0);
+  will-change: transform, opacity;
+  /* Réduire les reflows */
+  contain: layout style paint;
 }
 
-.Polaris-Badge {
-  font-weight: 700 !important;
-  font-size: 12px !important;
-  padding: 8px 14px !important;
-  border-radius: 10px !important;
-  letter-spacing: 0.08em !important;
-  text-transform: uppercase !important;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08) !important;
+/* Optimisations pour les boutons et éléments interactifs */
+button,
+.Polaris-Button,
+[role="button"] {
+  /* Isolation de la composition */
+  transform: translateZ(0);
+  /* Réduire les reflows lors des interactions */
+  contain: layout style;
 }
 
-.Polaris-Badge--toneSuccess {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
-  color: #ffffff !important;
-  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3) !important;
+/* Optimisations pour les badges et labels */
+.Polaris-Badge,
+.Polaris-Label,
+[class*="badge"],
+[class*="label"] {
+  /* Isolation de la composition */
+  transform: translateZ(0);
+  /* Réduire les reflows */
+  contain: layout style;
 }
 
-.Polaris-Badge--toneCritical {
-  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
-  color: #ffffff !important;
-  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3) !important;
+/* Optimisations pour les images lazy loading */
+img[loading="lazy"] {
+  /* Isolation de la composition */
+  transform: translateZ(0);
+  /* Réduire les reflows lors du chargement */
+  contain: layout style paint;
 }
 
-.Polaris-Badge--toneWarning {
-  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%) !important;
-  color: #ffffff !important;
-  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3) !important;
+/* Optimisations pour les conteneurs avec overflow */
+[style*="overflow"],
+[class*="overflow"] {
+  /* Smooth scrolling */
+  -webkit-overflow-scrolling: touch;
+  overflow-scrolling: touch;
+  /* Accélération GPU */
+  transform: translateZ(0);
+  will-change: scroll-position;
 }
 
-.Polaris-Badge--toneInfo {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
-  color: #ffffff !important;
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3) !important;
-}
-
-.Polaris-Text--headingLg {
-  font-size: 28px !important;
-  font-weight: 800 !important;
-  letter-spacing: -0.03em !important;
-  line-height: 1.2 !important;
-  color: var(--color-text-primary) !important;
-}
-
-.Polaris-Text--headingMd {
-  font-size: 20px !important;
-  font-weight: 700 !important;
-  letter-spacing: -0.02em !important;
-  line-height: 1.3 !important;
-  color: var(--color-text-primary) !important;
-}
-
-.Polaris-Text--bodyMd {
-  font-size: 15px !important;
-  font-weight: 500 !important;
-  line-height: 1.6 !important;
-  color: var(--color-text-primary) !important;
-}
-
-.Polaris-Text--bodySm {
-  font-size: 14px !important;
-  font-weight: 500 !important;
-  line-height: 1.5 !important;
-}
-
-.Polaris-Divider {
-  border-color: var(--color-border) !important;
-  border-width: 1.5px !important;
-  margin: 32px 0 !important;
-}
-
-.Polaris-Banner {
-  border-radius: 12px !important;
-  padding: 16px 20px !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
-  border: 1.5px solid !important;
-}
-
-.Polaris-Banner--toneSuccess {
-  background: linear-gradient(to right, #f0fdf4 0%, #ffffff 100%) !important;
-  border-color: #10b981 !important;
-}
-
-.Polaris-Banner--toneWarning {
-  background: linear-gradient(to right, #fffbeb 0%, #ffffff 100%) !important;
-  border-color: #f59e0b !important;
-}
-
-.Polaris-Banner--toneCritical {
-  background: linear-gradient(to right, #fef2f2 0%, #ffffff 100%) !important;
-  border-color: #ef4444 !important;
-}
-
-.Polaris-EmptyState {
-  padding: 64px 32px !important;
-}
-
-.Polaris-EmptyState__Image {
-  margin-bottom: 24px !important;
-}
-
-.Polaris-EmptyState__Details {
-  text-align: center !important;
-}
-
-.Polaris-EmptyState__Heading {
-  font-size: 20px !important;
-  font-weight: 700 !important;
-  letter-spacing: -0.01em !important;
-  margin-bottom: 12px !important;
-}
-
-.Polaris-Page {
-  background: var(--color-bg) !important;
-  padding: 0 !important;
-  width: 100% !important;
-  max-width: 100% !important;
-  height: 100% !important;
-  min-height: 100vh !important;
-  margin: 0 !important;
-  overflow-x: hidden !important;
-}
-
-.Polaris-Page__Content {
-  padding: 0 !important;
-  background: var(--color-bg) !important;
-  width: 100% !important;
-  max-width: 100% !important;
-  min-height: 100% !important;
-  margin: 0 !important;
-  overflow-x: hidden !important;
-}
-
-/* Force full width on all Polaris containers, but exclude Banners to prevent title stretching */
-.Polaris-Page__Content > *:not(.Polaris-Banner),
-.Polaris-Page__Content > div:not(.Polaris-Banner) {
-  max-width: 100% !important;
-  width: 100% !important;
-}
-
-/* Ensure Banners have proper width without stretching titles */
-.Polaris-Banner {
-  max-width: 100% !important;
-  width: 100% !important;
-}
-
-/* Fix Banner title positioning - prevent it from going to extreme right */
-.Polaris-Banner__Heading,
-.Polaris-Banner__Title,
-.Polaris-Banner__Header,
-.Polaris-Banner__Content > *:first-child,
-.Polaris-Banner__Content h2,
-.Polaris-Banner__Content h3,
-.Polaris-Banner__Content h4 {
-  text-align: left !important;
-  width: auto !important;
-  max-width: 100% !important;
-  margin-left: 0 !important;
-  margin-right: auto !important;
-  padding-left: 0 !important;
-  padding-right: 0 !important;
-}
-
-/* Ensure Banner content is properly aligned */
-.Polaris-Banner__Content {
-  text-align: left !important;
-  width: 100% !important;
-}
-
-/* Fix Banner internal layout */
-.Polaris-Banner__Ribbon,
-.Polaris-Banner__ContentWrapper {
-  width: 100% !important;
-  max-width: 100% !important;
-}
-
-.Polaris-Card {
-  background: var(--color-surface) !important;
-  border: 1.5px solid var(--color-border) !important;
-  border-radius: 16px !important;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06), 0 2px 4px rgba(0, 0, 0, 0.04) !important;
-  padding: 36px 32px !important;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-  background: linear-gradient(to bottom, #ffffff 0%, #fafbfc 100%) !important;
-}
-
-.Polaris-Card:hover {
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 4px 8px rgba(0, 0, 0, 0.08) !important;
-  border-color: var(--color-border-hover) !important;
-  transform: translateY(-2px) !important;
-  background: #ffffff !important;
-}
-
-.Polaris-Button--primary {
-  background: linear-gradient(135deg, var(--color-primary) 0%, #006e52 100%) !important;
-  border-color: var(--color-primary) !important;
-  color: #FFFFFF !important;
-  font-weight: 700 !important;
-  box-shadow: 0 2px 8px rgba(0, 128, 96, 0.25), 0 1px 3px rgba(0, 128, 96, 0.15) !important;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
-  border-radius: 8px !important;
-  padding: 12px 24px !important;
-  letter-spacing: 0.01em !important;
-}
-
-.Polaris-Button--primary:hover:not(:disabled) {
-  background: linear-gradient(135deg, var(--color-primary-hover) 0%, #005a43 100%) !important;
-  border-color: var(--color-primary-hover) !important;
-  box-shadow: 0 4px 16px rgba(0, 128, 96, 0.35), 0 2px 6px rgba(0, 128, 96, 0.2) !important;
-  transform: translateY(-1px) !important;
-}
-
-.Polaris-Button--secondary {
-  background: #ffffff !important;
-  border: 1.5px solid var(--color-border) !important;
-  color: var(--color-text-primary) !important;
-  font-weight: 600 !important;
-  border-radius: 8px !important;
-  padding: 12px 24px !important;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06) !important;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
-  letter-spacing: 0.01em !important;
-}
-
-.Polaris-Button--secondary:hover:not(:disabled) {
-  background: #f9fafb !important;
-  border-color: var(--color-border-hover) !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06) !important;
-  transform: translateY(-1px) !important;
-}
-
-/* Save Configuration button - Black background with white text - ONLY for this specific button */
-button.save-config-button,
-button.save-config-button.Polaris-Button--primary,
-.save-config-button.Polaris-Button--primary {
-  background: #000000 !important;
-  background-color: #000000 !important;
-  border-color: #000000 !important;
-  color: #ffffff !important;
-  font-weight: 700 !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25), 0 1px 3px rgba(0, 0, 0, 0.15) !important;
-}
-
-/* Force white text ONLY on direct children of the save button */
-button.save-config-button > *,
-button.save-config-button.Polaris-Button--primary > *,
-.save-config-button.Polaris-Button--primary > * {
-  color: #ffffff !important;
-}
-
-button.save-config-button:hover:not(:disabled),
-button.save-config-button.Polaris-Button--primary:hover:not(:disabled),
-.save-config-button.Polaris-Button--primary:hover:not(:disabled) {
-  background: #1a1a1a !important;
-  background-color: #1a1a1a !important;
-  border-color: #1a1a1a !important;
-  color: #ffffff !important;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35), 0 2px 6px rgba(0, 0, 0, 0.2) !important;
-}
-
-button.save-config-button:hover:not(:disabled) > *,
-button.save-config-button.Polaris-Button--primary:hover:not(:disabled) > *,
-.save-config-button.Polaris-Button--primary:hover:not(:disabled) > * {
-  color: #ffffff !important;
-}
-
-/* ============================================
-   LAYOUT CONTAINERS
-   ============================================ */
-
+/* Optimisations spécifiques pour les pages admin */
 .app-container {
-  max-width: 100% !important;
-  width: 100% !important;
-  margin: 0 !important;
-  padding: 24px 16px 32px !important;
-  zoom: 1;
-  transform: scale(1);
-  box-sizing: border-box;
+  /* Isolation de la composition pour tout le conteneur */
+  transform: translateZ(0);
+  /* Réduire les reflows */
+  contain: layout style paint;
+  /* Smooth scrolling */
+  -webkit-overflow-scrolling: touch;
+  overflow-scrolling: touch;
 }
 
-.app-header {
-  margin-bottom: 24px;
-  padding-bottom: 16px;
-  border-bottom: 2px solid var(--color-border);
+/* Optimisations pour les sections de dashboard */
+.dashboard-section {
+  /* Isolation de la composition */
+  transform: translateZ(0);
+  /* Réduire les reflows */
+  contain: layout style paint;
+  /* Margin pour éviter les reflows */
+  margin-bottom: var(--spacing-lg);
 }
 
-.app-title {
-  font-size: 28px;
-  font-weight: 800;
-  color: var(--color-text-primary);
-  margin: 0 0 8px 0;
-  letter-spacing: -0.03em;
-  line-height: 1.2;
-}
-
-.app-subtitle {
-  font-size: 16px;
-  color: var(--color-text-secondary);
-  margin: 0;
-  font-weight: 500;
-  line-height: 1.6;
-  letter-spacing: -0.01em;
-}
-
-/* ============================================
-   STATS GRID - Professional Cards
-   ============================================ */
-
+/* Optimisations pour les grilles de statistiques */
 .stats-grid {
+  /* Isolation de la composition */
+  transform: translateZ(0);
+  /* Réduire les reflows */
+  contain: layout style paint;
+  /* Display grid optimisé */
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 16px;
-  margin-bottom: 24px;
+  gap: var(--spacing-md);
 }
 
+/* Optimisations pour les cartes de statistiques */
 .stat-card {
-  background: var(--color-surface);
-  border: 1.5px solid var(--color-border);
-  border-radius: 12px;
-  padding: 20px 16px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.08);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  display: flex;
-  flex-direction: column;
-  position: relative;
-  overflow: hidden;
-  background: linear-gradient(to bottom, #ffffff 0%, #fafbfc 100%);
+  /* Isolation de la composition */
+  transform: translateZ(0);
+  /* Réduire les reflows */
+  contain: layout style paint;
+  /* Transition fluide */
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.stat-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 4px;
-  background: linear-gradient(90deg, var(--color-primary) 0%, #00a67e 100%);
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.stat-card:hover {
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 4px 8px rgba(0, 0, 0, 0.08);
-  border-color: var(--color-primary);
-  transform: translateY(-4px);
-  background: #ffffff;
-}
-
-.stat-card:hover::before {
-  opacity: 1;
-}
-
-.stat-icon-wrapper {
-  width: 52px;
-  height: 52px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, var(--color-primary-light) 0%, #d1fae5 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 20px;
-  box-shadow: 0 2px 8px rgba(0, 128, 96, 0.15);
-}
-
-.stat-icon-wrapper svg {
-  width: 24px;
-  height: 24px;
-  color: var(--color-primary);
-}
-
-.stat-value {
-  font-size: 32px;
-  font-weight: 800;
-  color: var(--color-text-primary);
-  line-height: 1;
-  margin: 0 0 6px 0;
-  letter-spacing: -0.04em;
-}
-
-.stat-label {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--color-text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  line-height: 1.5;
-}
-
-/* ============================================
-   DASHBOARD SECTIONS
-   ============================================ */
-
-.dashboard-section {
-  background: var(--color-surface);
-  border: 1.5px solid var(--color-border);
-  border-radius: 12px;
-  padding: 20px 16px;
-  margin-bottom: 16px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.08);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  overflow: hidden;
-}
-
-.dashboard-section::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: linear-gradient(90deg, var(--color-primary) 0%, transparent 100%);
-  opacity: 0.3;
-}
-
-.dashboard-section:hover {
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1), 0 4px 8px rgba(0, 0, 0, 0.06);
-  border-color: var(--color-border-hover);
-  transform: translateY(-2px);
-}
-
-.dashboard-section h2 {
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--color-text-primary);
-  margin: 0 0 16px 0;
-  letter-spacing: -0.02em;
-  line-height: 1.3;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--color-border);
-}
-
-.dashboard-placeholder {
-  padding: 64px 32px;
-  text-align: center;
-  color: var(--color-text-tertiary);
-  font-size: 15px;
-  background: linear-gradient(to bottom, #f9fafb 0%, #f3f4f6 100%);
-  border-radius: 12px;
-  border: 2px dashed var(--color-border);
-  font-weight: 500;
-  line-height: 1.6;
-}
-
-/* ============================================
-   GRAPH & CHARTS
-   ============================================ */
-
-.graph-container-large {
-  padding: 40px 0 32px;
-  min-height: 240px;
-  background: linear-gradient(to bottom, #fafbfc 0%, transparent 100%);
-  border-radius: 12px;
-  margin: 0 -8px;
-  padding-left: 8px;
-  padding-right: 8px;
-}
-
-.graph-bars {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 12px;
-  height: 200px;
-  padding: 0 8px;
-  border-bottom: 2px solid #e5e7eb;
-}
-
-.graph-bar-item {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
-  min-width: 0;
-  height: 100%;
-  width: 100%;
-}
-
-.graph-bar-value {
-  font-size: 16px;
-  font-weight: 700;
-  color: #111827;
-  line-height: 1.2;
-  letter-spacing: -0.01em;
-}
-
-.graph-bar {
-  width: 100%;
-  background: linear-gradient(180deg, #5c6ac4 0%, #4c51bf 100%);
-  border-radius: 8px 8px 0 0;
-  min-height: 6px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  cursor: pointer;
-  box-shadow: 0 4px 12px rgba(92, 106, 196, 0.25), 0 2px 4px rgba(92, 106, 196, 0.15);
-  position: relative;
-}
-
-.graph-bar::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 100%;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.3) 0%, transparent 100%);
-  border-radius: 8px 8px 0 0;
-}
-
-.graph-bar:hover {
-  background: linear-gradient(180deg, #4c51bf 0%, #3b4fb8 100%);
-  box-shadow: 0 8px 20px rgba(92, 106, 196, 0.4), 0 4px 8px rgba(92, 106, 196, 0.25);
-  transform: translateY(-4px) scale(1.02);
-}
-
-.graph-bar-today {
-  background: #202e78;
-}
-
-.graph-bar-label {
-  font-size: 12px;
-  color: #6b7280;
-  text-align: center;
-  font-weight: 600;
-  line-height: 1.3;
-  margin-top: 8px;
-}
-
-.graph-bar-label-today {
-  color: #202e78;
-  font-weight: 700;
-  font-size: 13px;
-}
-
-/* ============================================
-   LISTS (Products, Activity)
-   ============================================ */
-
+/* Optimisations pour les listes de produits */
 .products-list,
 .activity-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
+  /* Smooth scrolling */
+  -webkit-overflow-scrolling: touch;
+  overflow-scrolling: touch;
+  /* Accélération GPU */
+  transform: translateZ(0);
+  will-change: scroll-position;
+  /* Réduire les reflows */
+  contain: layout style paint;
 }
 
+/* Optimisations pour les éléments de liste */
 .product-item,
 .activity-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: var(--spacing-md) 0;
-  border-bottom: 1px solid var(--color-border);
-  transition: background-color var(--transition-fast);
-  border-radius: 4px;
-  margin: 0 calc(var(--spacing-md) * -1);
-  padding-left: var(--spacing-md);
-  padding-right: var(--spacing-md);
+  /* Isolation de la composition */
+  transform: translateZ(0);
+  /* Réduire les reflows */
+  contain: layout style;
+  /* Transition fluide */
+  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.product-item:hover,
-.activity-item:hover {
-  background-color: var(--color-bg);
+/* Optimisations pour les formulaires */
+form,
+.Polaris-FormLayout {
+  /* Isolation de la composition */
+  transform: translateZ(0);
+  /* Réduire les reflows */
+  contain: layout style;
 }
 
-.product-item:last-child,
-.activity-item:last-child {
-  border-bottom: none;
+/* Optimisations pour les inputs */
+input,
+textarea,
+select,
+.Polaris-TextField__Input {
+  /* Isolation de la composition */
+  transform: translateZ(0);
+  /* Réduire les reflows lors de la saisie */
+  contain: layout style;
 }
 
-.product-name {
-  flex: 1;
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--color-text-primary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  margin-right: var(--spacing-md);
-  line-height: 1.5;
+/* Optimisations pour les pages avec beaucoup de contenu */
+.Page,
+.Polaris-Page {
+  /* Isolation de la composition */
+  transform: translateZ(0);
+  /* Réduire les reflows */
+  contain: layout style paint;
 }
 
-.activity-info {
-  flex: 1;
-  min-width: 0;
+/* Optimisations pour les layouts */
+.Layout,
+.Polaris-Layout {
+  /* Isolation de la composition */
+  transform: translateZ(0);
+  /* Réduire les reflows */
+  contain: layout style paint;
 }
 
-.activity-title {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--color-text-primary);
-  margin: 0 0 6px 0;
-  letter-spacing: -0.01em;
+/* Optimisations pour les sections de layout */
+.Layout__Section,
+.Polaris-Layout__Section {
+  /* Isolation de la composition */
+  transform: translateZ(0);
+  /* Réduire les reflows */
+  contain: layout style paint;
 }
 
-.activity-date {
-  font-size: 13px;
-  color: var(--color-text-secondary);
-  margin: 0;
-  font-weight: 500;
+/* Optimisations pour les cartes */
+.Card,
+.Polaris-Card {
+  /* Isolation de la composition */
+  transform: translateZ(0);
+  /* Réduire les reflows */
+  contain: layout style paint;
 }
 
-/* ============================================
-   SETTINGS GRID
-   ============================================ */
+/* Optimisations pour les banners */
+.Banner,
+.Polaris-Banner {
+  /* Isolation de la composition */
+  transform: translateZ(0);
+  /* Réduire les reflows */
+  contain: layout style paint;
+}
 
+/* Optimisations pour les textes */
+.Text,
+.Polaris-Text {
+  /* Isolation de la composition */
+  transform: translateZ(0);
+  /* Réduire les reflows */
+  contain: layout style;
+}
+
+/* Optimisations pour les block stacks */
+.BlockStack,
+.Polaris-BlockStack {
+  /* Isolation de la composition */
+  transform: translateZ(0);
+  /* Réduire les reflows */
+  contain: layout style paint;
+}
+
+/* Optimisations pour les inline stacks */
+.InlineStack,
+.Polaris-InlineStack {
+  /* Isolation de la composition */
+  transform: translateZ(0);
+  /* Réduire les reflows */
+  contain: layout style;
+}
+
+/* Optimisations pour les thumbnails */
+.Thumbnail,
+.Polaris-Thumbnail {
+  /* Isolation de la composition */
+  transform: translateZ(0);
+  /* Réduire les reflows */
+  contain: layout style paint;
+}
+
+/* Optimisations pour les checkboxes */
+.Checkbox,
+.Polaris-Checkbox {
+  /* Isolation de la composition */
+  transform: translateZ(0);
+  /* Réduire les reflows */
+  contain: layout style;
+}
+
+/* Optimisations pour les diviseurs */
+.Divider,
+.Polaris-Divider {
+  /* Isolation de la composition */
+  transform: translateZ(0);
+  /* Réduire les reflows */
+  contain: layout style;
+}
+
+/* Optimisations pour les empty states */
+.EmptyState,
+.Polaris-EmptyState {
+  /* Isolation de la composition */
+  transform: translateZ(0);
+  /* Réduire les reflows */
+  contain: layout style paint;
+}
+
+/* Optimisations pour les pricing grids */
+.pricing-grid,
+.plan-card {
+  /* Isolation de la composition */
+  transform: translateZ(0);
+  /* Réduire les reflows */
+  contain: layout style paint;
+}
+
+/* Optimisations pour les crédits */
+.credits-balance,
+.credits-amount {
+  /* Isolation de la composition */
+  transform: translateZ(0);
+  /* Réduire les reflows */
+  contain: layout style;
+}
+
+/* Optimisations pour les settings grids */
 .settings-grid {
+  /* Isolation de la composition */
+  transform: translateZ(0);
+  /* Réduire les reflows */
+  contain: layout style paint;
+  /* Display grid optimisé */
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 16px;
-  margin-bottom: 20px;
+  gap: var(--spacing-md);
 }
 
-.setting-card {
-  background: var(--color-surface);
-  border: 1.5px solid var(--color-border);
-  border-radius: 12px;
-  padding: 20px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-  background: linear-gradient(to bottom, #ffffff 0%, #fafbfc 100%);
+/* Optimisations pour les conversion sections */
+.conversion-hero,
+.conversion-reassurance {
+  /* Isolation de la composition */
+  transform: translateZ(0);
+  /* Réduire les reflows */
+  contain: layout style paint;
 }
 
-.setting-card:hover {
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1), 0 4px 8px rgba(0, 0, 0, 0.06);
-  border-color: var(--color-primary);
-  transform: translateY(-2px);
-  background: #ffffff;
-}
-
-.setting-card label {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--color-text-primary);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  margin-bottom: 4px;
-}
-
-.setting-card input[type="number"],
-.setting-card input[type="text"],
-.setting-card select {
-  width: 100%;
-  padding: 14px 16px;
-  border: 1.5px solid var(--color-border);
-  border-radius: 8px;
-  font-size: 15px;
-  font-weight: 500;
-  color: var(--color-text-primary);
-  background: #ffffff;
-  transition: all 0.2s ease;
-  line-height: 1.5;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-}
-
-.setting-card input:hover,
-.setting-card select:hover {
-  border-color: var(--color-border-hover);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
-}
-
-.setting-card input:focus,
-.setting-card select:focus {
-  outline: none;
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 4px rgba(0, 128, 96, 0.12), 0 2px 8px rgba(0, 128, 96, 0.15);
-  background: #ffffff;
-}
-
-.vton-input {
-  width: 100%;
-  padding: 14px 16px;
-  border: 1.5px solid var(--color-border);
-  border-radius: 8px;
-  font-size: 15px;
-  font-weight: 500;
-  color: var(--color-text-primary);
-  background: #ffffff;
-  transition: all 0.2s ease;
-  line-height: 1.5;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-}
-
-.vton-input:hover {
-  border-color: var(--color-border-hover);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
-}
-
-.vton-input:focus {
-  outline: none;
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 4px rgba(0, 128, 96, 0.12), 0 2px 8px rgba(0, 128, 96, 0.15);
-  background: #ffffff;
-}
-
-.setting-card button {
-  padding: 10px 16px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-border);
-  background: var(--color-surface);
-  color: var(--color-text-primary);
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  font-family: 'Inter', sans-serif;
-}
-
-.setting-card button:hover:not(:disabled) {
-  background: var(--color-bg);
-  border-color: var(--color-border-hover);
-}
-
-.setting-card button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-/* ============================================
-   CREDITS PAGE
-   ============================================ */
-
-.credits-balance {
-  background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%);
-  border: 2px solid var(--color-primary);
-  border-radius: 20px;
-  padding: 48px 40px;
-  margin-bottom: 40px;
-  box-shadow: 0 8px 32px rgba(0, 128, 96, 0.15), 0 4px 12px rgba(0, 128, 96, 0.1);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  overflow: hidden;
-}
-
-.credits-balance::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 4px;
-  background: linear-gradient(90deg, var(--color-primary) 0%, #00a67e 50%, var(--color-primary) 100%);
-}
-
-.credits-balance:hover {
-  box-shadow: 0 12px 40px rgba(0, 128, 96, 0.2), 0 6px 16px rgba(0, 128, 96, 0.15);
-  transform: translateY(-2px);
-}
-
-.credits-amount {
-  font-size: 64px;
-  font-weight: 900;
-  color: var(--color-text-primary);
-  line-height: 1;
-  margin: 0 0 8px 0;
-  letter-spacing: -0.04em;
-  background: linear-gradient(135deg, var(--color-primary) 0%, #00a67e 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.credits-label {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--color-text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-}
-
-.pricing-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 24px;
-  margin-bottom: 48px;
-  position: relative;
-  width: 100%;
-}
-
-@media (min-width: 1200px) {
-  .pricing-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 28px;
-  }
-}
-
-@media (max-width: 768px) {
-  .pricing-grid {
-    grid-template-columns: 1fr;
-    gap: 20px;
-  }
-}
-
+/* Optimisations pour les plan cards */
 .plan-card {
-  background: var(--color-surface);
-  border: 2px solid var(--color-border);
-  border-radius: 20px;
-  padding: 40px 36px;
-  position: relative;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06), 0 2px 4px rgba(0, 0, 0, 0.04);
-  background: linear-gradient(to bottom, #ffffff 0%, #fafbfc 100%);
+  /* Isolation de la composition */
+  transform: translateZ(0);
+  /* Réduire les reflows */
+  contain: layout style paint;
+  /* Transition fluide */
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.plan-card:hover {
-  border-color: var(--color-primary);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12), 0 6px 12px rgba(0, 0, 0, 0.08);
-  transform: translateY(-4px);
-  background: #ffffff;
-}
-
-.plan-card.featured {
-  border-color: var(--color-primary);
-  border-width: 3px;
-  box-shadow: 0 8px 32px rgba(0, 128, 96, 0.2), 0 4px 16px rgba(0, 128, 96, 0.15);
-  background: linear-gradient(to bottom, #ffffff 0%, #f0fdf4 100%);
-  transform: scale(1.02);
-  position: relative;
-}
-
-.plan-card.featured::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 5px;
-  background: linear-gradient(90deg, var(--color-primary) 0%, #00a67e 100%);
-  border-radius: 20px 20px 0 0;
-}
-
-.plan-card.best-value {
-  border-color: #f59e0b;
-  border-width: 2px;
-  position: relative;
-}
-
-.plan-card.best-value::after {
-  content: '';
-  position: absolute;
-  top: -2px;
-  left: -2px;
-  right: -2px;
-  bottom: -2px;
-  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-  border-radius: 20px;
-  z-index: -1;
-  opacity: 0.1;
-}
-
-.plan-badge {
-  position: absolute;
-  top: -14px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: linear-gradient(135deg, var(--color-primary) 0%, #006e52 100%);
-  color: #FFFFFF;
-  font-size: 12px;
-  font-weight: 800;
-  padding: 8px 20px;
-  border-radius: 20px;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  box-shadow: 0 4px 12px rgba(0, 128, 96, 0.3);
-  z-index: 10;
-}
-
-.plan-badge-popular {
-  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%) !important;
-  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4) !important;
-}
-
-.plan-badge-value {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4) !important;
-}
-
-.plan-badge-current {
-  background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%) !important;
-  box-shadow: 0 4px 12px rgba(107, 114, 128, 0.3) !important;
-}
-
-.plan-name {
-  font-size: 24px;
-  font-weight: 800;
-  color: var(--color-text-primary);
-  margin: 0 0 20px 0;
-  letter-spacing: -0.02em;
-  line-height: 1.2;
-}
-
-.plan-price {
-  font-size: 48px;
-  font-weight: 800;
-  color: var(--color-text-primary);
-  margin: 0 0 24px 0;
-  line-height: 1;
-  letter-spacing: -0.03em;
-}
-
-.plan-price span {
-  font-size: 16px;
-  font-weight: 500;
-  color: var(--color-text-secondary);
-}
-
-.plan-value-indicator {
-  text-align: center;
-  margin: -12px 0 24px 0;
-  padding: 12px 16px;
-  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
-  border-radius: 10px;
-  border: 1.5px solid #86efac;
-}
-
-.plan-card.featured .plan-value-indicator {
-  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-  border-color: #fbbf24;
-}
-
-.plan-value-text {
-  font-size: 20px;
-  font-weight: 800;
-  color: var(--color-primary);
-  display: block;
-  line-height: 1.2;
-  letter-spacing: -0.01em;
-}
-
-.plan-card.featured .plan-value-text {
-  color: #d97706;
-}
-
-.plan-value-label {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--color-text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  display: block;
-  margin-top: 4px;
-}
-
-.plan-credits {
-  text-align: center;
-  margin: var(--spacing-md) 0;
-  padding: var(--spacing-md);
-  background: var(--color-primary-light);
-  border-radius: var(--radius-md);
-}
-
-.plan-credits-amount {
-  font-size: 48px;
-  font-weight: 700;
-  color: var(--color-primary);
-  line-height: 1;
-  margin-bottom: var(--spacing-xs);
-}
-
-.plan-credits-label {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--color-text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.plan-card.popular {
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(var(--color-primary-rgb, 59, 130, 246), 0.1);
-}
-
-.plan-features {
-  flex: 1;
-  margin-bottom: var(--spacing-lg);
-  min-height: 120px;
-}
-
-.plan-feature {
-  font-size: 15px;
-  color: var(--color-text-primary);
-  margin-bottom: 12px;
-  padding-left: 28px;
-  position: relative;
-  font-weight: 500;
-  line-height: 1.5;
-}
-
-.plan-feature::before {
-  content: '✓';
-  position: absolute;
-  left: 0;
-  color: var(--color-primary);
-  font-weight: 700;
-  font-size: 16px;
-  width: 20px;
-  height: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
-  border-radius: 50%;
-  font-size: 12px;
-}
-
-.plan-feature-highlight {
-  font-size: 16px !important;
-  font-weight: 700 !important;
-  color: var(--color-text-primary) !important;
-  margin-bottom: 16px !important;
-  padding: 12px 16px !important;
-  padding-left: 28px !important;
-  background: linear-gradient(to right, #f0fdf4 0%, transparent 100%);
-  border-radius: 8px;
-  border-left: 3px solid var(--color-primary);
-}
-
-.plan-card.featured .plan-feature-highlight {
-  background: linear-gradient(to right, #fef3c7 0%, transparent 100%);
-  border-left-color: #f59e0b;
-}
-
-.plan-cta {
-  margin-top: auto;
-}
-
+/* Optimisations pour les plan buttons */
 .plan-button {
-  width: 100%;
-  padding: 18px 32px;
-  border-radius: 12px;
-  border: none;
-  background: linear-gradient(135deg, var(--color-primary) 0%, #006e52 100%);
-  color: #FFFFFF;
-  font-size: 17px;
-  font-weight: 800;
-  cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  font-family: 'Inter', sans-serif;
-  box-shadow: 0 6px 20px rgba(0, 128, 96, 0.35), 0 3px 6px rgba(0, 128, 96, 0.25);
-  letter-spacing: 0.03em;
-  text-transform: none;
-  position: relative;
-  overflow: hidden;
+  /* Isolation de la composition */
+  transform: translateZ(0);
+  /* Réduire les reflows */
+  contain: layout style;
+  /* Transition fluide */
+  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1),
+              background-color 0.15s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.plan-button::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-  transition: left 0.5s;
+/* Optimisations pour les plan badges */
+.plan-badge {
+  /* Isolation de la composition */
+  transform: translateZ(0);
+  /* Réduire les reflows */
+  contain: layout style;
 }
 
-.plan-button:hover:not(:disabled)::before {
-  left: 100%;
+/* Optimisations pour les plan features */
+.plan-feature {
+  /* Isolation de la composition */
+  transform: translateZ(0);
+  /* Réduire les reflows */
+  contain: layout style;
 }
 
-.plan-button:hover:not(:disabled) {
-  transform: translateY(-3px) scale(1.02);
-  box-shadow: 0 10px 32px rgba(0, 128, 96, 0.45), 0 6px 12px rgba(0, 128, 96, 0.3);
-  background: linear-gradient(135deg, #006e52 0%, #005a43 100%);
+/* Optimisations pour les plan value indicators */
+.plan-value-indicator {
+  /* Isolation de la composition */
+  transform: translateZ(0);
+  /* Réduire les reflows */
+  contain: layout style;
 }
 
-.plan-button:active:not(:disabled) {
-  transform: translateY(-1px) scale(1);
+/* Optimisations pour les plan CTAs */
+.plan-cta {
+  /* Isolation de la composition */
+  transform: translateZ(0);
+  /* Réduire les reflows */
+  contain: layout style;
 }
 
-.plan-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  transform: none !important;
+/* Optimisations pour les graph bars */
+.graph-bar-item {
+  /* Isolation de la composition */
+  transform: translateZ(0);
+  /* Réduire les reflows */
+  contain: layout style paint;
 }
 
-.plan-button-featured {
-  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%) !important;
-  box-shadow: 0 6px 20px rgba(245, 158, 11, 0.4), 0 3px 6px rgba(245, 158, 11, 0.3) !important;
-  font-size: 18px !important;
-  padding: 20px 32px !important;
+/* Optimisations pour les graph bar labels */
+.graph-bar-label {
+  /* Isolation de la composition */
+  transform: translateZ(0);
+  /* Réduire les reflows */
+  contain: layout style;
 }
 
-.plan-button-featured:hover:not(:disabled) {
-  background: linear-gradient(135deg, #d97706 0%, #b45309 100%) !important;
-  box-shadow: 0 12px 36px rgba(245, 158, 11, 0.5), 0 6px 12px rgba(245, 158, 11, 0.35) !important;
+/* Optimisations pour les graph bar values */
+.graph-bar-value {
+  /* Isolation de la composition */
+  transform: translateZ(0);
+  /* Réduire les reflows */
+  contain: layout style;
 }
 
-.plan-button-current {
-  background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%) !important;
-  box-shadow: 0 4px 12px rgba(107, 114, 128, 0.25) !important;
-  cursor: not-allowed !important;
-}
-
-.plan-button-disabled {
-  background: #e5e7eb !important;
-  color: #9ca3af !important;
-  box-shadow: none !important;
-  cursor: not-allowed !important;
-}
-
-/* ============================================
-   RESPONSIVE
-   ============================================ */
-
-/* ============================================
-   ADDITIONAL ENHANCEMENTS
-   ============================================ */
-
-.Polaris-Page {
-  padding: 0 !important;
-}
-
-.Polaris-Page__Content {
-  padding: 0 !important;
-}
-
-.Polaris-Layout {
-  margin-top: 0 !important;
-  margin-left: 0 !important;
-  margin-right: 0 !important;
-  width: 100% !important;
-  max-width: 100% !important;
-  overflow-x: hidden !important;
-  padding-left: 0 !important;
-  padding-right: 0 !important;
-}
-
-.Polaris-Layout__Section {
-  margin-top: 0 !important;
-  margin-left: 0 !important;
-  margin-right: 0 !important;
-  width: 100% !important;
-  max-width: 100% !important;
-  overflow-x: hidden !important;
-  padding-left: 0 !important;
-  padding-right: 0 !important;
-}
-
-.Polaris-InlineStack {
-  gap: 12px !important;
-  width: 100% !important;
-  max-width: 100% !important;
-}
-
-.Polaris-BlockStack {
-  gap: 16px !important;
-  width: 100% !important;
-  max-width: 100% !important;
-}
-
-/* Enhanced Link Styles */
-a {
-  color: var(--color-primary) !important;
-  font-weight: 600 !important;
-  text-decoration: none !important;
-  transition: all 0.2s ease !important;
-}
-
-a:hover {
-  color: var(--color-primary-hover) !important;
-  text-decoration: underline !important;
-}
-
-/* Enhanced Scrollbar */
-::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
-}
-
-::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 10px;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
-  border-radius: 10px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
-}
-
-/* ============================================
-   HISTORY PAGE SPECIFIC
-   ============================================ */
-
-.history-table-wrapper {
-  margin-top: 24px;
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-  background: #ffffff;
-  border: 1.5px solid var(--color-border);
-}
-
-.history-table-wrapper .Polaris-DataTable {
-  border-radius: 12px;
-  overflow: hidden;
-}
-
-.history-table-wrapper .Polaris-DataTable__Table {
-  border-collapse: separate;
-  border-spacing: 0;
-}
-
-.history-table-wrapper .Polaris-DataTable__Cell {
-  padding: 16px 20px;
-  border-bottom: 1px solid #f1f3f5;
-  font-size: 14px;
-  line-height: 1.5;
-}
-
-.history-table-wrapper .Polaris-DataTable__Cell:first-child {
-  padding-left: 24px;
-}
-
-.history-table-wrapper .Polaris-DataTable__Cell:last-child {
-  padding-right: 24px;
-}
-
-.history-table-wrapper .Polaris-DataTable__Heading {
-  padding: 18px 20px;
-  background: linear-gradient(to bottom, #fafbfc 0%, #f5f7fa 100%);
-  font-weight: 700;
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--color-text-secondary);
-  border-bottom: 2px solid var(--color-border);
-}
-
-.history-table-wrapper .Polaris-DataTable__Heading:first-child {
-  padding-left: 24px;
-}
-
-.history-table-wrapper .Polaris-DataTable__Heading:last-child {
-  padding-right: 24px;
-}
-
-.history-table-wrapper .Polaris-DataTable__Row:hover {
-  background: #fafbfc;
-  transition: background 0.2s ease;
-}
-
-.history-table-wrapper .Polaris-DataTable__Row:last-child .Polaris-DataTable__Cell {
-  border-bottom: none;
-}
-
-.history-table-wrapper .Polaris-Badge {
-  font-weight: 600;
-  font-size: 12px;
-  padding: 6px 12px;
-  border-radius: 6px;
-  letter-spacing: 0.02em;
-}
-
+/* Optimisations pour les placeholders */
 .dashboard-placeholder {
-  padding: 80px 40px;
-  text-align: center;
-  background: linear-gradient(to bottom, #fafbfc 0%, #ffffff 100%);
-  border-radius: 12px;
-  border: 1.5px solid var(--color-border);
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
+  /* Isolation de la composition */
+  transform: translateZ(0);
+  /* Réduire les reflows */
+  contain: layout style paint;
 }
 
-@media (max-width: 1024px) {
-  .stats-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
-  }
-  
-  .pricing-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 16px;
-  }
-  
-  .settings-grid {
-    grid-template-columns: 1fr;
-    gap: 12px;
-  }
-  
-  .app-container {
-    padding: 16px 12px 24px;
-  }
-  
-  .app-title {
-    font-size: 24px;
+/* Optimisations pour les headers */
+.app-header,
+.app-title,
+.app-subtitle {
+  /* Isolation de la composition */
+  transform: translateZ(0);
+  /* Réduire les reflows */
+  contain: layout style;
+}
+
+/* Optimisations pour les stat icons */
+.stat-icon-wrapper {
+  /* Isolation de la composition */
+  transform: translateZ(0);
+  /* Réduire les reflows */
+  contain: layout style paint;
+}
+
+/* Optimisations pour les stat values */
+.stat-value {
+  /* Isolation de la composition */
+  transform: translateZ(0);
+  /* Réduire les reflows */
+  contain: layout style;
+}
+
+/* Optimisations pour les stat labels */
+.stat-label {
+  /* Isolation de la composition */
+  transform: translateZ(0);
+  /* Réduire les reflows */
+  contain: layout style;
+}
+
+/* Optimisations pour les product names */
+.product-name {
+  /* Isolation de la composition */
+  transform: translateZ(0);
+  /* Réduire les reflows */
+  contain: layout style;
+}
+
+/* Optimisations pour les activity info */
+.activity-info {
+  /* Isolation de la composition */
+  transform: translateZ(0);
+  /* Réduire les reflows */
+  contain: layout style;
+}
+
+/* Optimisations pour les activity titles */
+.activity-title {
+  /* Isolation de la composition */
+  transform: translateZ(0);
+  /* Réduire les reflows */
+  contain: layout style;
+}
+
+/* Optimisations pour les activity dates */
+.activity-date {
+  /* Isolation de la composition */
+  transform: translateZ(0);
+  /* Réduire les reflows */
+  contain: layout style;
+}
+
+/* Optimisations pour les credits labels */
+.credits-label {
+  /* Isolation de la composition */
+  transform: translateZ(0);
+  /* Réduire les reflows */
+  contain: layout style;
+}
+
+/* Optimisations pour les vton inputs */
+.vton-input {
+  /* Isolation de la composition */
+  transform: translateZ(0);
+  /* Réduire les reflows */
+  contain: layout style;
+}
+
+/* Optimisations pour les setting cards */
+.setting-card {
+  /* Isolation de la composition */
+  transform: translateZ(0);
+  /* Réduire les reflows */
+  contain: layout style paint;
+}
+
+/* Optimisations pour les setting card labels */
+.setting-card label {
+  /* Isolation de la composition */
+  transform: translateZ(0);
+  /* Réduire les reflows */
+  contain: layout style;
+}
+
+/* Optimisations pour les plan names */
+.plan-name {
+  /* Isolation de la composition */
+  transform: translateZ(0);
+  /* Réduire les reflows */
+  contain: layout style;
+}
+
+/* Optimisations pour les plan prices */
+.plan-price {
+  /* Isolation de la composition */
+  transform: translateZ(0);
+  /* Réduire les reflows */
+  contain: layout style;
+}
+
+/* Optimisations pour les plan value texts */
+.plan-value-text {
+  /* Isolation de la composition */
+  transform: translateZ(0);
+  /* Réduire les reflows */
+  contain: layout style;
+}
+
+/* Optimisations pour les plan value labels */
+.plan-value-label {
+  /* Isolation de la composition */
+  transform: translateZ(0);
+  /* Réduire les reflows */
+  contain: layout style;
+}
+
+/* Optimisations pour les plan features lists */
+.plan-features {
+  /* Isolation de la composition */
+  transform: translateZ(0);
+  /* Réduire les reflows */
+  contain: layout style paint;
+}
+
+/* Media queries pour les optimisations responsives */
+@media (prefers-reduced-motion: reduce) {
+  /* Désactiver les animations pour les utilisateurs qui préfèrent moins de mouvement */
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
 
-@media (max-width: 640px) {
-  .app-container {
-    padding: 12px 8px 16px;
-  }
-  
-  .stats-grid,
-  .pricing-grid {
-    grid-template-columns: 1fr;
-    gap: 12px;
-  }
-  
-  .credits-balance {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: var(--spacing-md);
-    padding: 24px 16px;
-  }
-  
-  .credits-amount {
-    font-size: 32px;
-  }
-  
-  .app-title {
-    font-size: 20px;
+/* Optimisations pour les appareils à faible puissance */
+@media (prefers-reduced-motion: no-preference) {
+  /* Activer les optimisations GPU uniquement si l'utilisateur n'a pas de préférence pour réduire le mouvement */
+  .app-container,
+  [class*="scroll"],
+  [class*="overflow"] {
+    will-change: scroll-position;
   }
 }
 
-/* ============================================
-   IFRAME OPTIMIZATION FOR SHOPIFY ADMIN
-   ============================================ */
-
-/* Ensure all containers respect iframe boundaries */
-#app,
-[data-app-embed],
-iframe {
-  width: 100% !important;
-  max-width: 100% !important;
-  overflow-x: hidden !important;
+/* Optimisations pour les écrans haute résolution */
+@media (-webkit-min-device-pixel-ratio: 2),
+       (min-resolution: 192dpi) {
+  /* Optimisations supplémentaires pour les écrans Retina */
+  .app-container,
+  .stat-card,
+  .dashboard-section {
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+  }
 }
 
-/* Prevent horizontal scroll and remove side margins */
-* {
-  max-width: 100%;
-  box-sizing: border-box;
+/* Optimisations pour les navigateurs WebKit */
+@supports (-webkit-overflow-scrolling: touch) {
+  .app-container,
+  [class*="scroll"],
+  [class*="overflow"] {
+    -webkit-overflow-scrolling: touch;
+  }
 }
 
-/* Remove all side margins and padding from main containers */
-body > div,
-#app > div,
-[data-app-embed] > div {
-  margin-left: 0 !important;
-  margin-right: 0 !important;
-  padding-left: 0 !important;
-  padding-right: 0 !important;
-  max-width: 100% !important;
+/* Optimisations pour les navigateurs modernes */
+@supports (contain: layout) {
+  .app-container,
+  .dashboard-section,
+  .stat-card {
+    contain: layout style paint;
+  }
 }
 
-/* Optimize table and list widths */
-.Polaris-DataTable,
-.products-list,
-.activity-list {
-  width: 100% !important;
-  max-width: 100% !important;
-  overflow-x: auto !important;
-}
-
-/* Remove any default Polaris spacing that creates side gaps */
-.Polaris-Page__Content > .Polaris-Layout,
-.Polaris-Page__Content > div > .Polaris-Layout {
-  margin-left: 0 !important;
-  margin-right: 0 !important;
-  padding-left: 0 !important;
-  padding-right: 0 !important;
-}
-
-/* ============================================
-   UTILITIES
-   ============================================ */
-
-.text-center {
-  text-align: center;
-}
-
-.mb-0 { margin-bottom: 0; }
-.mb-1 { margin-bottom: var(--spacing-xs); }
-.mb-2 { margin-bottom: var(--spacing-sm); }
-.mb-3 { margin-bottom: var(--spacing-md); }
-.mb-4 { margin-bottom: var(--spacing-lg); }
-
-.mt-auto {
-  margin-top: auto;
-}
-
-.w-full {
-  width: 100%;
+/* Optimisations pour les navigateurs avec support de will-change */
+@supports (will-change: scroll-position) {
+  .app-container,
+  [class*="scroll"],
+  [class*="overflow"] {
+    will-change: scroll-position;
+  }
 }

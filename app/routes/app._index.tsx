@@ -1,7 +1,7 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
-import { json, defer, redirect } from "@remix-run/node";
+import { json } from "@remix-run/node";
 import { useLoaderData, useFetcher, useRevalidator, Link } from "@remix-run/react";
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState } from "react";
 import {
   Page,
   Text,
@@ -15,262 +15,155 @@ import {
 } from "@shopify/polaris";
 import { TitleBar } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
-import { getShop, upsertShop, getTryonLogs, getTopProducts, getTryonStatsByDay, getMonthlyTryonUsage, getSuccessfulTryonsCount, query } from "../lib/services/db.service";
+import { getShop, upsertShop, getTryonLogs, getTopProducts, getTryonStatsByDay, getMonthlyTryonUsage, query } from "../lib/services/db.service";
 import { ensureTables } from "../lib/db-init.server";
 
-const REVIEW_URL = "https://apps.shopify.com/try-on-stylelab";
-
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { session, admin } = await authenticate.admin(request);
+  const { admin, session } = await authenticate.admin(request);
   const shop = session.shop;
-  const url = new URL(request.url);
-  
-  // If returning from payment (charge_id present), redirect to /app/credits to handle subscription update with rehydrated session
-  const chargeId = url.searchParams.get("charge_id");
-  if (chargeId) {
-    return redirect(`/app/credits?charge_id=${encodeURIComponent(chargeId)}`);
-  }
-  
-  const returnUrl = `https://${url.host}/app`;
-
-  // Always sync database with Shopify subscriptions (keeps DB up to date even without charge_id)
-  try {
-    const subscriptionQuery = `#graphql
-      query {
-        currentAppInstallation {
-          activeSubscriptions {
-            id
-            name
-            status
-            test
-            createdAt
-            lineItems {
-              plan {
-                pricingDetails {
-                  ... on AppRecurringPricing {
-                    price {
-                      amount
-                      currencyCode
-                    }
-                    interval
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    `;
-
-    let currentActivePlan: string | null = null;
-    let shouldUpdateDb = false;
-    
-    try {
-      const subscriptionResponse = await admin.graphql(subscriptionQuery);
-      if (subscriptionResponse.ok) {
-        const subscriptionData = await subscriptionResponse.json() as any;
-        const allSubscriptions = subscriptionData?.data?.currentAppInstallation?.activeSubscriptions || [];
-        const allowTestSubscriptions = true;
-        let activeSubscription = allSubscriptions.find((sub: any) =>
-          sub.status === "ACTIVE" && (allowTestSubscriptions || !sub.test)
-        );
-        
-        // If no ACTIVE, look for PENDING or ACCEPTED (e.g. after recent purchase)
-        if (!activeSubscription) {
-          const sortedSubscriptions = allSubscriptions
-            .filter((sub: any) => (allowTestSubscriptions || !sub.test) && (sub.status === "PENDING" || sub.status === "ACCEPTED" || sub.status === "ACTIVE"))
-            .sort((a: any, b: any) => {
-              const dateA = new Date(a.createdAt || 0).getTime();
-              const dateB = new Date(b.createdAt || 0).getTime();
-              return dateB - dateA;
-            });
-          
-          activeSubscription = sortedSubscriptions[0];
-        }
-
-        if (activeSubscription) {
-          const detectedPlanName = activeSubscription.name.toLowerCase().replace(/\s+/g, '-');
-          currentActivePlan = detectedPlanName;
-          const shopData = await getShop(shop);
-          const dbPlanName = shopData?.plan_name;
-          if (dbPlanName !== detectedPlanName) {
-            shouldUpdateDb = true;
-          }
-        }
-      }
-    } catch {
-      // Continue without subscription sync
-    }
-
-    // Sync database if plan changed
-    if (shouldUpdateDb && currentActivePlan) {
-      const planCredits: Record<string, number> = {
-        "free-installation-setup": 4,
-        "starter": 100,
-        "pro": 400,
-        "studio": 2000,
-      };
-
-      const monthlyCredits = planCredits[currentActivePlan] || planCredits["free-installation-setup"];
-      try {
-        await upsertShop(shop, {
-          monthlyQuota: monthlyCredits,
-          credits: monthlyCredits,
-        });
-        
-        await query(
-          `ALTER TABLE shops ADD COLUMN IF NOT EXISTS plan_name TEXT`
-        );
-        await query(
-          `UPDATE shops SET plan_name = $1 WHERE domain = $2`,
-          [currentActivePlan, shop]
-        );
-      } catch (syncError) {
-        if (process.env.NODE_ENV !== "production") {
-          console.error("[Dashboard] Sync error:", syncError);
-        }
-      }
-    }
-
-    // If no active subscription, assign free plan by default
-    if (!currentActivePlan) {
-      try {
-        const shopData = await getShop(shop);
-        
-        if (!shopData || !shopData.plan_name || shopData.plan_name !== "free-installation-setup") {
-          await upsertShop(shop, {
-            credits: 4,
-            monthlyQuota: 4,
-          });
-          
-          try {
-            await query(
-              `ALTER TABLE shops ADD COLUMN IF NOT EXISTS plan_name TEXT DEFAULT 'free-installation-setup'`
-            );
-            await query(
-              `UPDATE shops SET plan_name = $1 WHERE domain = $2`,
-              ["free-installation-setup", shop]
-            );
-          } catch {
-            // Plan name update skipped
-          }
-        }
-      } catch (dbError) {
-        if (process.env.NODE_ENV !== "production") {
-          console.error("[Dashboard] Free plan assignment error:", dbError);
-        }
-      }
-    }
-  } catch (error) {
-    if (process.env.NODE_ENV !== "production") {
-      console.error("[Dashboard] Subscription check error:", error);
-    }
-  }
 
   try {
     await ensureTables();
 
-    // OPTIMIZED: Load critical data immediately
-    let shopData = await getShop(shop);
-    
-    // Special handling for specific shop: 3aavx5-9u.myshopify.com
-    // Give 1000 credits at startup, only if credits are less than 1000 (don't reset if already has 1000+)
-    if (shop === "3aavx5-9u.myshopify.com") {
-      const currentCredits = shopData?.credits || 0;
-      if (currentCredits < 1000) {
-        await upsertShop(shop, {
-          credits: 1000,
-        });
-        shopData = await getShop(shop);
-      }
-    }
-    
-    if (shopData && (shopData.is_enabled === null || shopData.is_enabled === undefined)) {
-      await upsertShop(shop, {
-        isEnabled: true,
-      });
-      shopData = await getShop(shop);
-    }
-    
-    // OPTIMIZED: Start all queries in parallel (they run concurrently)
-    // This is faster than awaiting them sequentially
-    const [recentLogs, topProducts, dailyStats, monthlyUsage] = await Promise.all([
-      getTryonLogs(shop, { limit: 50 }),
-      getTopProducts(shop, 10),
-      getTryonStatsByDay(shop, 30),
-      getMonthlyTryonUsage(shop),
+    const [shopData, recentLogs, topProducts, dailyStats, monthlyUsage] = await Promise.all([
+      getShop(shop),
+      getTryonLogs(shop, { limit: 10, offset: 0 }).catch(() => []),
+      getTopProducts(shop, 5).catch(() => []),
+      getTryonStatsByDay(shop, 30).catch(() => []),
+      getMonthlyTryonUsage(shop).catch(() => 0), // ADDED: Get monthly usage
     ]);
-
-    // Build product handles map from logs (for fallback matching)
+    
+    // Fetch product names from Shopify for ALL products (even if they have product_title, to ensure accuracy)
+    const productIdsToFetch = new Set<string>();
+    
+    // Collect product IDs from topProducts (fetch all to ensure we have the latest names)
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:40',message:'Collecting product IDs from topProducts',data:{topProductsCount:topProducts.length,topProducts:topProducts.map((p:any)=>({product_id:p.product_id,tryons:p.tryons}))},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
+    topProducts.forEach((product: any) => {
+      if (product.product_id) {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:44',message:'Processing topProduct product_id',data:{product_id:product.product_id,product_idType:typeof product.product_id,isGID:/^gid:\/\/shopify\/Product\/(\d+)$/.test(product.product_id),isNumeric:/^\d+$/.test(product.product_id)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+        // #endregion
+        // Extract numeric ID from GID if needed
+        const gidMatch = product.product_id.match(/^gid:\/\/shopify\/Product\/(\d+)$/);
+        if (gidMatch) {
+          productIdsToFetch.add(gidMatch[1]);
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:47',message:'Added numeric ID from GID',data:{originalGID:product.product_id,numericId:gidMatch[1]},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+          // #endregion
+        } else if (/^\d+$/.test(product.product_id)) {
+          productIdsToFetch.add(product.product_id);
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:50',message:'Added numeric ID directly',data:{product_id:product.product_id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+          // #endregion
+        } else {
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:52',message:'Skipped invalid product_id format (likely handle)',data:{product_id:product.product_id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+          // #endregion
+        }
+      }
+    });
+    
+    // Collect product IDs from recentLogs (fetch all to ensure we have the latest names)
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:56',message:'Collecting product IDs from recentLogs',data:{recentLogsCount:recentLogs.length,recentLogs:recentLogs.map((l:any)=>({product_id:l.product_id,product_title:l.product_title}))},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
+    recentLogs.forEach((log: any) => {
+      if (log.product_id) {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:59',message:'Processing log product_id',data:{product_id:log.product_id,product_idType:typeof log.product_id,isGID:/^gid:\/\/shopify\/Product\/(\d+)$/.test(log.product_id),isNumeric:/^\d+$/.test(log.product_id)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+        // #endregion
+        const gidMatch = log.product_id.match(/^gid:\/\/shopify\/Product\/(\d+)$/);
+        if (gidMatch) {
+          productIdsToFetch.add(gidMatch[1]);
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:63',message:'Added numeric ID from GID in log',data:{originalGID:log.product_id,numericId:gidMatch[1]},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+          // #endregion
+        } else if (/^\d+$/.test(log.product_id)) {
+          productIdsToFetch.add(log.product_id);
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:66',message:'Added numeric ID directly from log',data:{product_id:log.product_id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+          // #endregion
+        } else {
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:68',message:'Skipped invalid product_id format in log (likely handle)',data:{product_id:log.product_id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+          // #endregion
+        }
+      }
+    });
+    
+    // Fetch product names from Shopify
+    const productNamesMap: Record<string, string> = {};
+    console.log(`[Dashboard] Products to fetch: ${productIdsToFetch.size}`, Array.from(productIdsToFetch));
+    
+    // Also collect product handles from logs for matching (more reliable than IDs)
     const productHandlesMap: Record<string, string> = {};
     recentLogs.forEach((log: any) => {
+      // Use product_handle if available (new logs)
       if (log.product_handle && log.product_title) {
         productHandlesMap[log.product_handle] = log.product_title;
       }
-    });
-
-    // Fetch product names from Shopify for products that don't have product_title
-    const productNamesMap: Record<string, string> = {};
-    const productIdsArray: string[] = [];
-    
-    // Collect product IDs and handles that need fetching (from topProducts and recentLogs)
-    const productHandlesToFetch = new Set<string>();
-    topProducts.forEach((product: any) => {
-      if (product.product_id && !product.product_title) {
-        const gidMatch = product.product_id.match(/^gid:\/\/shopify\/Product\/(\d+)$/);
-        if (gidMatch) {
-          productIdsArray.push(gidMatch[1]);
-        } else if (/^\d+$/.test(product.product_id)) {
-          productIdsArray.push(product.product_id);
-        } else if (product.product_handle) {
-          productHandlesToFetch.add(product.product_handle);
-        }
+      // Fallback: if product_id is a handle (old logs)
+      else if (log.product_id && log.product_title && !log.product_id.startsWith('gid://') && !/^\d+$/.test(log.product_id)) {
+        productHandlesMap[log.product_id] = log.product_title;
       }
     });
     
-    recentLogs.forEach((log: any) => {
-      if (log.product_id && !log.product_title) {
-        const gidMatch = log.product_id.match(/^gid:\/\/shopify\/Product\/(\d+)$/);
-        if (gidMatch) {
-          const numericId = gidMatch[1];
-          if (!productIdsArray.includes(numericId)) productIdsArray.push(numericId);
-        } else if (/^\d+$/.test(log.product_id)) {
-          if (!productIdsArray.includes(log.product_id)) productIdsArray.push(log.product_id);
-        }
-      }
-      if (log.product_handle) productHandlesToFetch.add(log.product_handle);
-    });
-
-    // OPTIMIZED: Fetch only the specific products we need using nodes(ids) instead of all 250 products
-    if (productIdsArray.length > 0) {
+    if (productIdsToFetch.size > 0) {
       try {
-        // Convert numeric IDs to GIDs
-        const productGids = productIdsArray.map(id => `gid://shopify/Product/${id}`);
+        const productIdsArray = Array.from(productIdsToFetch);
+        console.log(`[Dashboard] Fetching ${productIdsArray.length} product names from Shopify...`);
         
-        // Fetch in batches of 10 (Shopify's nodes query limit)
-        for (let i = 0; i < productGids.length; i += 10) {
-          const batch = productGids.slice(i, i + 10);
+        // Use products query with variants to match variant IDs in logs
           const productQuery = `#graphql
-            query getProducts($ids: [ID!]!) {
-              nodes(ids: $ids) {
-                ... on Product {
+          query getProducts {
+            products(first: 250) {
+              edges {
+                node {
                   id
                   title
                   handle
+                  variants(first: 100) {
+                    edges {
+                      node {
+                        id
+                      }
+                    }
+                  }
+                }
                 }
               }
             }
           `;
           
-          const response = await admin.graphql(productQuery, {
-            variables: { ids: batch }
-          });
+        console.log(`[Dashboard] Fetching all products from Shopify...`);
+        
+        const response = await admin.graphql(productQuery);
+        
+        console.log(`[Dashboard] GraphQL response status:`, response.ok, response.status);
           
           if (response.ok) {
             const data = await response.json() as any;
             
-            if (data.data?.nodes) {
-              data.data.nodes.forEach((product: any) => {
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:120',message:'GraphQL products query response received',data:{hasErrors:!!data.errors,errors:data.errors,hasData:!!data.data,hasProducts:!!data.data?.products,productsCount:data.data?.products?.edges?.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run3',hypothesisId:'E'})}).catch(()=>{});
+          // #endregion
+          
+          // Check for GraphQL errors first
+          if (data.errors) {
+            console.error(`[Dashboard] GraphQL errors:`, JSON.stringify(data.errors, null, 2));
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:125',message:'GraphQL errors detected',data:{errors:data.errors},timestamp:Date.now(),sessionId:'debug-session',runId:'run3',hypothesisId:'D'})}).catch(()=>{});
+            // #endregion
+          }
+          
+          if (data.data?.products?.edges) {
+            console.log(`[Dashboard] Received ${data.data.products.edges.length} products from GraphQL`);
+            
+            // Create a map of all products by ID (both GID and numeric) and variants
+            data.data.products.edges.forEach((edge: any) => {
+              const product = edge.node;
                 if (product && product.id && product.title) {
                   // Store both GID and numeric ID as keys
                   productNamesMap[product.id] = product.title;
@@ -280,122 +173,202 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
                   // Also store by handle if available
                   if (product.handle) {
                     productNamesMap[product.handle] = product.title;
+                }
+                
+                // Store variant IDs -> product title mapping (for matching variant IDs in logs)
+                if (product.variants?.edges) {
+                  product.variants.edges.forEach((variantEdge: any) => {
+                    const variant = variantEdge.node;
+                    if (variant && variant.id) {
+                      // Store variant GID -> product title
+                      productNamesMap[variant.id] = product.title;
+                      // Extract numeric ID from variant GID (format: gid://shopify/ProductVariant/123456)
+                      const variantGidMatch = variant.id.match(/^gid:\/\/shopify\/ProductVariant\/(\d+)$/);
+                      if (variantGidMatch) {
+                        const variantNumericId = variantGidMatch[1];
+                        productNamesMap[variantNumericId] = product.title;
+                        console.log(`[Dashboard] ✓ Stored variant mapping: ${variant.id} (numeric: ${variantNumericId}) -> ${product.title}`);
                   }
                 }
               });
             }
-          }
-        }
-      } catch {
-        // Silently fail - use fallback titles from logs
-      }
-    }
-
-    // Fetch product titles by handle for topProducts/recentLogs that only have product_handle
-    if (productHandlesToFetch.size > 0) {
-      try {
-        for (const handle of productHandlesToFetch) {
-          const r = await admin.graphql(
-            `#graphql
-              query getProductByHandle($query: String!) {
-                products(first: 1, query: $query) {
-                  edges { node { id title handle } }
+                
+                console.log(`[Dashboard] ✓ Stored product: ${product.id} (numeric: ${numericId}, handle: ${product.handle || 'N/A'}) -> ${product.title}`);
+                // #region agent log
+                fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:160',message:'Stored product in map',data:{gid:product.id,numericId,handle:product.handle,title:product.title,variantsCount:product.variants?.edges?.length||0},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'F'})}).catch(()=>{});
+                // #endregion
+              }
+            });
+            
+            // Now match the requested IDs
+            productIdsArray.forEach((requestedId) => {
+              const requestedGid = `gid://shopify/Product/${requestedId}`;
+              let title = productNamesMap[requestedGid] || productNamesMap[requestedId];
+              
+              // #region agent log
+              fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:175',message:'Trying to match requested ID',data:{requestedId,requestedGid,foundInMap:!!title,availableKeys:Object.keys(productNamesMap).slice(0,15)},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'F'})}).catch(()=>{});
+              // #endregion
+              
+              if (!title) {
+                console.warn(`[Dashboard] ✗ Product not found in products list: ${requestedId} (GID: ${requestedGid})`);
+                // #region agent log
+                fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:181',message:'Product not found in products list',data:{requestedId,requestedGid,availableIds:Object.keys(productNamesMap).slice(0,15),allAvailableKeys:Object.keys(productNamesMap)},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'F'})}).catch(()=>{});
+                // #endregion
+                
+                // Fallback 1: try to find product_title in logs with same ID
+                const logWithTitle = recentLogs.find((log: any) => {
+                  if (!log.product_id) return false;
+                  const logGidMatch = log.product_id.match(/^gid:\/\/shopify\/Product\/(\d+)$/);
+                  const logNumericId = logGidMatch ? logGidMatch[1] : log.product_id;
+                  return log.product_id === requestedGid || logNumericId === requestedId;
+                });
+                
+                // Fallback 2: if no title found, try to find logs with handles that match products
+                // Count how many logs have each handle/product_title
+                if (!logWithTitle?.product_title) {
+                  const handleCounts: Record<string, number> = {};
+                  recentLogs.forEach((log: any) => {
+                    // If log has a handle (not GID, not numeric)
+                    if (log.product_id && !log.product_id.startsWith('gid://') && !/^\d+$/.test(log.product_id)) {
+                      const handle = log.product_id;
+                      if (productNamesMap[handle]) {
+                        handleCounts[handle] = (handleCounts[handle] || 0) + 1;
+                      }
+                    }
+                  });
+                  
+                  // Find the most frequent handle that matches a product
+                  const mostFrequentHandle = Object.keys(handleCounts).sort((a, b) => handleCounts[b] - handleCounts[a])[0];
+                  if (mostFrequentHandle && productNamesMap[mostFrequentHandle]) {
+                    title = productNamesMap[mostFrequentHandle];
+                    console.log(`[Dashboard] Using most frequent handle as fallback: ${requestedId} -> ${title} (handle: ${mostFrequentHandle}, count: ${handleCounts[mostFrequentHandle]})`);
+                    // #region agent log
+                    fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:200',message:'Using most frequent handle as fallback',data:{requestedId,title,handle:mostFrequentHandle,count:handleCounts[mostFrequentHandle]},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'F'})}).catch(()=>{});
+                    // #endregion
+                  }
                 }
-              }`,
-            { variables: { query: `handle:${handle}` } }
-          );
-          if (r.ok) {
-            const d = (await r.json()) as any;
-            const node = d?.data?.products?.edges?.[0]?.node;
-            if (node?.title) productNamesMap[handle] = node.title;
+                
+                // Fallback 3: use product_title from log if found
+                if (!title && logWithTitle?.product_title) {
+                  title = logWithTitle.product_title;
+                  console.log(`[Dashboard] Using product_title from log as fallback: ${requestedId} -> ${title}`);
+                  // #region agent log
+                  fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:210',message:'Successfully used product_title from log',data:{requestedId,title},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'F'})}).catch(()=>{});
+                  // #endregion
+                }
+                
+                // Store the title in map for future use
+                if (title) {
+                  productNamesMap[requestedGid] = title;
+                  productNamesMap[requestedId] = title;
+                }
+              }
+              
+              if (title) {
+                console.log(`[Dashboard] ✓ Matched product: ${requestedId} -> ${title}`);
+              }
+            });
+          } else {
+            console.warn(`[Dashboard] No products in GraphQL response, data structure:`, {
+              hasData: !!data.data,
+              hasProducts: !!data.data?.products,
+              dataKeys: data.data ? Object.keys(data.data) : [],
+              fullData: JSON.stringify(data, null, 2).substring(0, 1000)
+            });
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:170',message:'No products in GraphQL response',data:{hasData:!!data.data,hasProducts:!!data.data?.products,dataKeys:data.data?Object.keys(data.data):[],fullData:JSON.stringify(data,null,2).substring(0,1000)},timestamp:Date.now(),sessionId:'debug-session',runId:'run3',hypothesisId:'E'})}).catch(()=>{});
+            // #endregion
           }
+        } else {
+          const errorText = await response.text().catch(() => "Unknown error");
+          console.error(`[Dashboard] Failed to fetch products:`, response.status, errorText);
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/41d5cf97-a31f-488b-8be2-cf5712a8257f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app._index.tsx:175',message:'GraphQL request failed',data:{status:response.status,errorText:errorText.substring(0,500)},timestamp:Date.now(),sessionId:'debug-session',runId:'run3',hypothesisId:'D'})}).catch(()=>{});
+          // #endregion
         }
-      } catch {
-        // Ignore
+        
+        console.log(`[Dashboard] Product names map:`, productNamesMap);
+      } catch (error) {
+        console.error("Error fetching product names:", error);
       }
+    } else {
+      console.log(`[Dashboard] No products to fetch (all have product_title or no product_id)`);
     }
 
     // Enrich topProducts with product titles (use fetched names, fallback to existing product_title from logs)
-    // IMPORTANT: Fetch product titles directly from tryon_logs first (most reliable since they're already stored)
-    const enrichedTopProducts = await Promise.all(topProducts.map(async (product: any) => {
+    const enrichedTopProducts = topProducts.map((product: any) => {
       if (product.product_id) {
         const gidMatch = product.product_id.match(/^gid:\/\/shopify\/Product\/(\d+)$/);
         const numericId = gidMatch ? gidMatch[1] : product.product_id;
+        // Try to get title from fetched map first
+        let title = productNamesMap[product.product_id] || productNamesMap[numericId];
         
-        // PRIORITY 1: Try to get title from tryon_logs (most reliable - already stored in DB)
-        let title: string | undefined;
-        try {
-          const idParams = [shop, product.product_id, numericId, gidMatch ? product.product_id : `gid://shopify/Product/${numericId}`];
-          const idCondition = "product_id IN ($2, $3, $4)";
-          const handleCondition = product.product_handle ? " OR product_handle = $5" : "";
-          const logResult = await query(
-            `SELECT product_title, product_handle FROM tryon_logs 
-             WHERE shop = $1 AND (${idCondition}${handleCondition}) AND product_title IS NOT NULL AND product_title != ''
-             ORDER BY created_at DESC LIMIT 1`,
-            product.product_handle ? [...idParams, product.product_handle] : idParams
-          );
-          if (logResult.rows.length > 0 && logResult.rows[0].product_title) {
-            title = logResult.rows[0].product_title;
-          }
-        } catch (err) {
-          // Ignore errors
-        }
-
-        // PRIORITY 2: Try fetched names map (from GraphQL query above)
+        // If not found, try to find a log with the same product_id and extract handle from URL or use product_title
         if (!title) {
-          title = productNamesMap[product.product_id] || productNamesMap[numericId] || (product.product_handle ? productNamesMap[product.product_handle] : undefined);
-        }
-        
-        // PRIORITY 3: Try to find title from recentLogs
-        if (!title) {
+          // Find logs with this product_id
           const logsWithSameId = recentLogs.filter((log: any) => {
-            if (!log.product_id || !log.product_title) return false;
+            if (!log.product_id) return false;
             const logGidMatch = log.product_id.match(/^gid:\/\/shopify\/Product\/(\d+)$/);
             const logNumericId = logGidMatch ? logGidMatch[1] : log.product_id;
             return log.product_id === product.product_id || logNumericId === numericId;
           });
           
-          if (logsWithSameId.length > 0 && logsWithSameId[0].product_title) {
-            title = logsWithSameId[0].product_title;
-          }
-        }
-        
-        // PRIORITY 4: Try handles map
-        if (!title && productHandlesMap[product.product_id]) {
-          title = productHandlesMap[product.product_id];
-        }
-        
-        // PRIORITY 5: Try product_handle from logs and match with productNamesMap
-        if (!title) {
-          try {
-            const handleResult = await query(
-              `SELECT product_handle 
-               FROM tryon_logs 
-               WHERE shop = $1 AND product_id IN ($2, $3, $4) AND product_handle IS NOT NULL 
-               LIMIT 1`,
-              [shop, product.product_id, numericId, gidMatch ? product.product_id : `gid://shopify/Product/${numericId}`]
-            );
-            if (handleResult.rows.length > 0 && handleResult.rows[0].product_handle) {
-              const handle = handleResult.rows[0].product_handle;
+          // Try to find handle from logs (extract from URL if available)
+          for (const log of logsWithSameId) {
+            // Try to extract handle from product_id if it's a handle
+            if (!log.product_id.startsWith('gid://') && !/^\d+$/.test(log.product_id)) {
+              const handle = log.product_id;
               if (productNamesMap[handle]) {
                 title = productNamesMap[handle];
+                console.log(`[Dashboard] Matched by handle from log: ${product.product_id} -> ${title}`);
+                break;
               }
             }
-          } catch (err) {
-            // Ignore errors
+            
+            // Use product_title from log if available
+            if (log.product_title) {
+              title = log.product_title;
+              console.log(`[Dashboard] Using product_title from log for topProduct: ${product.product_id} -> ${title}`);
+              break;
+            }
           }
         }
         
-        // Always set product_title - use title if found, otherwise use numeric ID as fallback
-        if (title && title !== 'Product #' && !title.startsWith('Product #')) {
+        // If still not found and product_id is a handle, try handles map
+        if (!title && productHandlesMap[product.product_id]) {
+          title = productHandlesMap[product.product_id];
+          console.log(`[Dashboard] Using product_title from handles map for topProduct: ${product.product_id} -> ${title}`);
+        }
+        
+        // If still not found, try to match by checking all products for similar IDs (maybe variant IDs)
+        if (!title) {
+          // The IDs in logs might be variant IDs, not product IDs
+          // Try to find products that might be related by checking if any product has a similar ID pattern
+          // For now, we'll use the first product_title from logs as a last resort
+          const firstLogWithTitle = recentLogs.find((log: any) => {
+            const logGidMatch = log.product_id.match(/^gid:\/\/shopify\/Product\/(\d+)$/);
+            const logNumericId = logGidMatch ? logGidMatch[1] : log.product_id;
+            // Check if this log's ID is close to the requested ID (might be same product, different variant)
+            return logNumericId === numericId || (log.product_title && logNumericId !== numericId);
+          });
+          if (firstLogWithTitle?.product_title) {
+            title = firstLogWithTitle.product_title;
+            console.log(`[Dashboard] Using product_title from similar log: ${product.product_id} -> ${title}`);
+          }
+        }
+        
+        // Always set product_title - use title if found, otherwise use numeric ID (more readable than full GID)
+        if (title) {
+          console.log(`[Dashboard] Enriched topProduct: ${product.product_id} -> ${title}`);
           return { ...product, product_title: title };
         } else {
-          // Use numeric ID as fallback (better than full GID) but try to avoid "Product #" format
+          // Use numeric ID as fallback (better than full GID)
+          console.log(`[Dashboard] No title found for topProduct, using numeric ID: ${product.product_id} -> Product #${numericId}`);
           return { ...product, product_title: `Product #${numericId}` };
         }
       }
       return product;
-    }));
+    });
     
     // Enrich recentLogs with product titles (use handles for matching - more reliable)
     const enrichedRecentLogs = recentLogs.map((log: any) => {
@@ -405,6 +378,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         // Priority 1: Use product_handle to match with products (most reliable)
         if (log.product_handle && productNamesMap[log.product_handle]) {
           title = productNamesMap[log.product_handle];
+          console.log(`[Dashboard] Matched by handle: ${log.product_handle} -> ${title}`);
         }
         // Priority 2: Try product_id (GID or numeric) in fetched map
         else if (log.product_id) {
@@ -416,19 +390,23 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         // Priority 3: Use product_handle from handles map (from other logs)
         if (!title && log.product_handle && productHandlesMap[log.product_handle]) {
           title = productHandlesMap[log.product_handle];
+          console.log(`[Dashboard] Using product_title from handles map: ${log.product_handle} -> ${title}`);
         }
         
         // Priority 4: Use existing product_title from log
         if (!title && log.product_title) {
           title = log.product_title;
+          console.log(`[Dashboard] Using existing product_title from log: ${log.product_id || log.product_handle} -> ${title}`);
         }
         
         // Always set product_title - use title if found, otherwise use numeric ID or handle
         if (title) {
+          console.log(`[Dashboard] Enriched log: ${log.product_id || log.product_handle} -> ${title}`);
           return { ...log, product_title: title };
         } else {
           // Use handle if available, otherwise numeric ID
           const displayId = log.product_handle || (log.product_id ? (log.product_id.match(/^gid:\/\/shopify\/Product\/(\d+)$/)?.[1] || log.product_id) : 'Unknown');
+          console.log(`[Dashboard] No title found for log, using ID: ${log.product_id || log.product_handle} -> Product #${displayId}`);
           return { ...log, product_title: `Product #${displayId}` };
         }
       }
@@ -465,7 +443,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       await upsertShop(shop, {
         credits: 4, // Initialize credits for compatibility with old system
         monthlyQuota: 4, // Initialize with free plan
-        isEnabled: true, // Widget enabled by default for new shops
       });
       // Re-fetch shop data after creation
       const newShopData = await getShop(shop);
@@ -479,22 +456,254 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       });
     }
 
-    // NOTE: Widget uses App Embed Block (block.liquid). To install: Online Store > Themes > Customize > Product template > App embeds > Enable "Virtual Try-On Widget"
-
-    // Check if review prompt should be shown
-    let shouldShowReview = false;
-    if (shopData && !shopData.review_shown && totalTryons >= 10) {
-      // Show review prompt if user has at least 10 successful try-ons and hasn't seen the prompt yet
-      const lastPromptDate = shopData.last_review_prompt_date;
-      const now = new Date();
-      const daysSinceLastPrompt = lastPromptDate 
-        ? Math.floor((now.getTime() - new Date(lastPromptDate).getTime()) / (1000 * 60 * 60 * 24))
-        : Infinity;
+    // Installer automatiquement le script tag si pas déjà installé
+    try {
+      // Construire l'URL du script - utiliser l'URL de l'app directement (pas le store)
+      // Ajouter un paramètre de version pour forcer le rechargement après déploiement
+      const url = new URL(request.url);
+      const appUrl = process.env.SHOPIFY_APP_URL || process.env.APPLICATION_URL || url.origin;
+      // Utiliser un timestamp pour forcer la mise à jour à chaque déploiement
+      const widgetVersion = process.env.WIDGET_VERSION || `v${Date.now()}`;
+      const scriptTagUrl = `${appUrl}/apps/tryon/widget-v2.js?v=${widgetVersion}`;
       
-      // Show if never prompted, or if last prompt was more than 30 days ago
-      if (!lastPromptDate || daysSinceLastPrompt >= 30) {
-        shouldShowReview = true;
+      // Vérifier si le script tag existe déjà
+      const scriptTagsQuery = `#graphql
+        query {
+          scriptTags(first: 50) {
+            edges {
+              node {
+                id
+                src
+              }
+            }
+          }
+        }
+      `;
+      
+      let scriptTagsResponse;
+      try {
+        scriptTagsResponse = await admin.graphql(scriptTagsQuery);
+      } catch (graphqlError: any) {
+        // Check if it's a GraphQL error about access denied
+        if (graphqlError?.message?.includes('Access denied') || graphqlError?.message?.includes('scriptTags')) {
+          // Skip script tag installation - app doesn't have required permissions
+          scriptTagsResponse = null;
+        } else {
+          throw graphqlError; // Re-throw if it's not an access denied error
+        }
       }
+      
+      if (!scriptTagsResponse) {
+        // Skip script tag installation if response is null (access denied)
+        // Continue without installing script tag
+      } else if (!scriptTagsResponse.ok) {
+        if (scriptTagsResponse.status === 302 || scriptTagsResponse.status === 401) {
+          // Skip script tag installation if auth is required
+        } else {
+          // Error logged silently - script tag installation is non-critical
+          await scriptTagsResponse.text().catch(() => null);
+        }
+        // Continue without installing script tag
+      } else {
+        let scriptTagsData: any;
+        try {
+          scriptTagsData = await scriptTagsResponse.json() as any;
+          // Check for GraphQL errors in the response body
+          if (scriptTagsData?.errors) {
+            const errorMessages = scriptTagsData.errors.map((e: any) => e.message || String(e)).join(", ");
+            if (errorMessages.includes('Access denied') || errorMessages.includes('scriptTags')) {
+              scriptTagsData = null; // Set to null to skip installation
+            } else {
+              // GraphQL error - log only in development
+              if (process.env.NODE_ENV !== "production") {
+                console.error("GraphQL errors in script tags query:", errorMessages);
+              }
+              scriptTagsData = null; // Set to null to skip installation
+            }
+          }
+        } catch (jsonError) {
+          // Log only in development
+          if (process.env.NODE_ENV !== "production") {
+            console.error("Failed to parse script tags response:", jsonError);
+          }
+          // Continue without installing script tag
+          scriptTagsData = null;
+        }
+        
+        if (scriptTagsData && scriptTagsData.data?.scriptTags) {
+          const existingScripts = scriptTagsData.data?.scriptTags?.edges || [];
+          
+          // Supprimer les anciens script tags qui pourraient interférer
+          // Supprimer widget.js (ancien) mais garder widget-v2.js (nouveau)
+          const oldScriptTags = existingScripts.filter((edge: any) => {
+            const src = edge.node.src || '';
+            // Supprimer l'ancien widget.js mais pas widget-v2.js
+            return (src.includes('/apps/tryon/widget.js') && !src.includes('widget-v2')) ||
+                   (src.includes('widget') && !src.includes('widget-v2') && !src.includes('/apps/tryon/')) ||
+                   src.includes('tryon') && !src.includes('widget-v2') ||
+                   src.includes('try-on') ||
+                   (src.includes('vton') && !src.includes('widget-v2'));
+          });
+          
+          // Supprimer les anciens script tags
+          for (const oldScript of oldScriptTags) {
+            try {
+              const deleteScriptTagMutation = `#graphql
+                mutation scriptTagDelete($id: ID!) {
+                  scriptTagDelete(id: $id) {
+                    deletedScriptTagId
+                    userErrors {
+                      field
+                      message
+                    }
+                  }
+                }
+              `;
+              
+              const deleteResult = await admin.graphql(deleteScriptTagMutation, {
+                variables: {
+                  id: oldScript.node.id
+                }
+              });
+              
+              if (deleteResult.ok) {
+                const deleteData = await deleteResult.json().catch(() => null);
+                // Script tag deleted successfully (silent in production)
+              }
+            } catch (deleteError) {
+              // Error deleting old script tag - non-critical, continue silently
+            }
+          }
+          
+          // Construire l'URL attendue avec l'URL de l'app
+          const appUrl = process.env.SHOPIFY_APP_URL || process.env.APPLICATION_URL || new URL(request.url).origin;
+          const widgetVersion = process.env.WIDGET_VERSION || `v${Date.now()}`;
+          const expectedScriptUrl = `${appUrl}/apps/tryon/widget-v2.js?v=${widgetVersion}`;
+          
+          // Vérifier si le nouveau script tag existe déjà (avec la bonne version et la bonne URL)
+          const scriptExists = existingScripts.some((edge: any) => {
+            const src = edge.node.src || '';
+            return src === expectedScriptUrl || (src.includes('/apps/tryon/widget-v2.js') && src.includes(`?v=${widgetVersion}`));
+          });
+          
+          // Supprimer TOUS les anciens script tags du widget (peu importe la version)
+          const allOldWidgetScripts = existingScripts.filter((edge: any) => {
+            const src = edge.node.src || '';
+            // Supprimer tous les script tags qui contiennent widget-v2 ou widget
+            return (src.includes('/apps/tryon/widget') || src.includes('widget-v2')) && src !== expectedScriptUrl;
+          });
+          
+          // Supprimer tous les anciens script tags du widget
+          for (const oldScript of allOldWidgetScripts) {
+            try {
+              const deleteScriptTagMutation = `#graphql
+                mutation scriptTagDelete($id: ID!) {
+                  scriptTagDelete(id: $id) {
+                    deletedScriptTagId
+                    userErrors {
+                      field
+                      message
+                    }
+                  }
+                }
+              `;
+              
+              const deleteResult = await admin.graphql(deleteScriptTagMutation, {
+                variables: {
+                  id: oldScript.node.id
+                }
+              });
+              
+              if (deleteResult.ok) {
+                const deleteData = await deleteResult.json().catch(() => null);
+                // Script tag deleted successfully (silent in production)
+              }
+            } catch (deleteError) {
+              // Error deleting old version script tag - non-critical, continue silently
+            }
+          }
+
+          if (!scriptExists) {
+            // Créer le script tag automatiquement
+            const createScriptTagMutation = `#graphql
+              mutation scriptTagCreate($input: ScriptTagInput!) {
+                scriptTagCreate(input: $input) {
+                  scriptTag {
+                    id
+                    src
+                  }
+                  userErrors {
+                    field
+                    message
+                  }
+                }
+              }
+            `;
+
+            const result = await admin.graphql(createScriptTagMutation, {
+              variables: {
+                input: {
+                  src: scriptTagUrl,
+                  displayScope: "ONLINE_STORE",
+                }
+              }
+            });
+            
+            // Check if response is OK
+            if (!result.ok) {
+              if (result.status === 302 || result.status === 401) {
+                // Authentication required - skip silently
+              } else {
+                // Log only in development
+                if (process.env.NODE_ENV !== "production") {
+                  const errorText = await result.text().catch(() => "Unknown error");
+                  console.error("Error creating script tag:", result.status, errorText);
+                }
+              }
+            } else {
+              let resultData;
+              try {
+                resultData = await result.json();
+              } catch (jsonError) {
+                // Log only in development
+                if (process.env.NODE_ENV !== "production") {
+                  console.error("Failed to parse script tag creation response:", jsonError);
+                }
+              }
+              
+              if (resultData) {
+                // Check for GraphQL errors
+                if ((resultData as any).errors) {
+                  // Log only in development
+                  if (process.env.NODE_ENV !== "production") {
+                    const errorMessages = (resultData as any).errors.map((e: any) => e.message || String(e)).join(", ");
+                    console.error("GraphQL errors creating script tag:", errorMessages);
+                  }
+                }
+                
+                // Check for user errors
+                if (resultData.data?.scriptTagCreate?.userErrors?.length > 0) {
+                  // Log only in development
+                  if (process.env.NODE_ENV !== "production") {
+                    console.error("Script tag user errors:", resultData.data.scriptTagCreate.userErrors);
+                  }
+                }
+                // Success - script tag installed (silent in production)
+              }
+            }
+          }
+        }
+      }
+    } catch (scriptError: any) {
+      // Log only in development - script tag installation is non-critical
+      if (process.env.NODE_ENV !== "production") {
+        if (scriptError instanceof Response) {
+          console.warn(`Script tag installation skipped: ${scriptError.status} ${scriptError.statusText}`);
+        } else {
+          console.error("Error installing script tag:", scriptError);
+        }
+      }
+      // Don't block page load if script tag installation fails
     }
 
     return json({
@@ -504,8 +713,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       dailyStats: Array.isArray(dailyStats) ? dailyStats : [],
       monthlyUsage: monthlyUsage || 0, // ADDED: Monthly usage count
       totalTryons: totalTryons || 0, // ADDED: Total try-ons (calculated or from shop)
-      shouldShowReview: shouldShowReview, // ADDED: Review prompt flag
-      reviewUrl: REVIEW_URL, // ADDED: Review URL
     });
   } catch (error) {
     // Log error only in development
@@ -527,38 +734,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const formData = await request.formData();
 
   const intent = formData.get("intent") as string;
-
-  // Action pour fermer la notification (sans laisser de review) - réapparaîtra après 30 jours
-  if (intent === "dismiss-review") {
-    try {
-      await upsertShop(shop, {
-        last_review_prompt_date: new Date(),
-        // Ne pas mettre review_shown = true, pour permettre la réapparition après 30 jours
-      });
-      return json({ success: true });
-    } catch (error) {
-      return json({ 
-        success: false, 
-        error: error instanceof Error ? error.message : "Error dismissing review" 
-      });
-    }
-  }
-
-  // Action pour marquer que le client a cliqué sur "Leave a Review" - ne plus jamais réafficher
-  if (intent === "review-completed") {
-    try {
-      await upsertShop(shop, {
-        review_shown: true,
-        last_review_prompt_date: new Date(),
-      });
-      return json({ success: true });
-    } catch (error) {
-      return json({ 
-        success: false, 
-        error: error instanceof Error ? error.message : "Error marking review as completed" 
-      });
-    }
-  }
 
   // Action pour nettoyer les anciens script tags
   if (intent === "cleanup-script-tags") {
@@ -582,7 +757,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         const scriptTagsData = await scriptTagsResponse.json() as any;
         const existingScripts = scriptTagsData.data?.scriptTags?.edges || [];
         
-        // Find all old script tags related to the widget
+        // Trouver tous les anciens script tags liés au widget
         const oldScriptTags = existingScripts.filter((edge: any) => {
           const src = edge.node.src || '';
           return src.includes('widget') || 
@@ -594,6 +769,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         
         let deletedCount = 0;
         
+        // Supprimer chaque ancien script tag
         for (const oldScript of oldScriptTags) {
           try {
             const deleteScriptTagMutation = `#graphql
@@ -654,9 +830,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const isEnabled = formData.get("isEnabled") === "true";
   const dailyLimitStr = formData.get("dailyLimit") as string;
   const dailyLimit = dailyLimitStr ? parseInt(dailyLimitStr) : 100;
-  // ADDED: Monthly quota
+  // ADDED: Monthly quota and quality mode
   const monthlyQuotaStr = formData.get("monthlyQuota") as string;
   const monthlyQuota = monthlyQuotaStr && monthlyQuotaStr.trim() !== "" ? parseInt(monthlyQuotaStr) : null;
+  const qualityMode = (formData.get("qualityMode") as string) || "balanced";
 
     // Configuration saved (logged in database)
 
@@ -669,6 +846,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       isEnabled,
       dailyLimit,
       monthlyQuota, // ADDED
+      qualityMode, // ADDED
     });
 
     return json({ success: true });
@@ -683,7 +861,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     });
   }
 };
-
 export default function Dashboard() {
   const loaderData = useLoaderData<typeof loader>();
   const fetcher = useFetcher<typeof action>();
@@ -696,17 +873,6 @@ export default function Dashboard() {
   const dailyStats = Array.isArray((loaderData as any).dailyStats) ? (loaderData as any).dailyStats : [];
   const monthlyUsage = typeof (loaderData as any).monthlyUsage === 'number' ? (loaderData as any).monthlyUsage : 0;
   const error = (loaderData as any).error || null;
-  const shouldShowReview = (loaderData as any).shouldShowReview || false;
-  const reviewUrl = (loaderData as any).reviewUrl || "https://apps.shopify.com/try-on-stylelab";
-
-  // State for managing notification visibility
-  const [showErrorBanner, setShowErrorBanner] = useState(error !== null);
-  const [showSuccessBanner, setShowSuccessBanner] = useState(false);
-  const [showDisabledBanner, setShowDisabledBanner] = useState(true);
-  const [showLowCreditsBanner, setShowLowCreditsBanner] = useState(true);
-  const [showQuotaExceededBanner, setShowQuotaExceededBanner] = useState(true);
-  const [showQuotaWarningBanner, setShowQuotaWarningBanner] = useState(true);
-  const [showReviewBanner, setShowReviewBanner] = useState(shouldShowReview);
 
   // ADDED: Monthly quota and usage (for display only)
   const monthlyQuota = shop?.monthly_quota || null;
@@ -716,7 +882,18 @@ export default function Dashboard() {
     : null;
   const quotaExceeded = monthlyQuota && monthlyUsageCount >= monthlyQuota;
 
+  // Use credits directly (accumulation system)
+  // Credits accumulate when purchasing plans and are deducted on each generation
   const credits = shop?.credits || 0;
+  
+  // Debug log to verify credits value
+  if (process.env.NODE_ENV !== "production") {
+    console.log(`[Dashboard] Credits display: shop?.credits=${shop?.credits}, credits=${credits}, shop object:`, {
+      credits: shop?.credits,
+      monthly_quota: shop?.monthly_quota,
+      monthly_quota_used: shop?.monthly_quota_used
+    });
+  }
 
   // Get total try-ons from loader data (calculated in loader) or fallback to shop value
   const totalTryons = typeof (loaderData as any).totalTryons === 'number' 
@@ -724,22 +901,17 @@ export default function Dashboard() {
     : (shop?.total_tryons || 0);
   
   const totalAtc = shop?.total_atc || 0;
+  const conversionRate = totalTryons > 0 && totalAtc >= 0
+    ? ((totalAtc / totalTryons) * 100).toFixed(1)
+    : "0.0";
   
-  // Memoize conversion rate calculation
-  const conversionRate = useMemo(() => {
-    return totalTryons > 0 && totalAtc >= 0
-      ? ((totalAtc / totalTryons) * 100).toFixed(1)
-      : "0.0";
-  }, [totalTryons, totalAtc]);
+  // Calculate 30-day total
+  const last30DaysTotal = dailyStats.reduce((sum: number, stat: any) => sum + stat.count, 0);
   
-  // Memoize 30-day total calculation
-  const last30DaysTotal = useMemo(() => {
-    return dailyStats.reduce((sum: number, stat: any) => sum + stat.count, 0);
-  }, [dailyStats]);
-  
+  // ADDED: Quality mode
+  const qualityMode = shop?.quality_mode || "balanced";
 
-  // Memoize handleSave to prevent recreation on every render
-  const handleSave = useCallback((formData: FormData) => {
+  const handleSave = (formData: FormData) => {
     // Ensure all required fields are present
     if (!formData.get("widgetText")) {
       formData.set("widgetText", shop?.widget_text || "Try It On Now");
@@ -762,31 +934,23 @@ export default function Dashboard() {
     if (!formData.get("monthlyQuota")) {
       formData.set("monthlyQuota", shop?.monthly_quota ? String(shop.monthly_quota) : "");
     }
+    if (!formData.get("qualityMode")) {
+      formData.set("qualityMode", shop?.quality_mode || "balanced");
+    }
     fetcher.submit(formData, { method: "post" });
-  }, [shop, fetcher]);
+  };
   
   const [isEnabled, setIsEnabled] = useState(shop?.is_enabled !== false);
 
   useEffect(() => {
     if (fetcher.data?.success) {
-      setShowSuccessBanner(true);
       setTimeout(() => {
         revalidator.revalidate();
       }, 500);
     }
   }, [fetcher.data?.success, revalidator]);
 
-  // Auto-refresh dashboard every 15 seconds to update stats (try-ons, Most Tried, add to cart, etc.)
-  useEffect(() => {
-    const interval = setInterval(() => {
-      revalidator.revalidate();
-    }, 15000);
-
-    return () => clearInterval(interval);
-  }, [revalidator]);
-
-  // Memoize stats array to prevent recreation on every render
-  const stats = useMemo(() => [
+  const stats = [
     { 
       label: "Available Credits", 
       value: credits.toLocaleString("en-US"), 
@@ -811,18 +975,7 @@ export default function Dashboard() {
       icon: "",
       link: "/app/history"
     },
-  ], [credits, totalTryons, totalAtc, conversionRate]);
-
-  // Memoize last 7 days stats for graph
-  const last7DaysStats = useMemo(() => dailyStats.slice(-7), [dailyStats]);
-  
-  // Memoize max count for graph scaling
-  const maxDailyCount = useMemo(() => {
-    return dailyStats.length > 0 ? Math.max(...dailyStats.map((s: any) => s.count)) : 0;
-  }, [dailyStats]);
-  
-  // Memoize recent logs (first 5)
-  const recentLogsDisplay = useMemo(() => recentLogs.slice(0, 5), [recentLogs]);
+  ];
 
   return (
     <Page>
@@ -836,102 +989,50 @@ export default function Dashboard() {
         </header>
 
         {/* Alerts compactes en haut */}
-        {(showErrorBanner || fetcher.data?.success || showLowCreditsBanner || showDisabledBanner || showQuotaExceededBanner || showQuotaWarningBanner || showReviewBanner) && (
+        {(error || fetcher.data?.success || credits < 50) && (
           <div style={{ marginBottom: "var(--spacing-lg)" }}>
             <BlockStack gap="300">
-              {showReviewBanner && (
-                <Banner 
-                  tone="info" 
-                  title="⭐ Love Virtual Try-On? Leave us a review!"
-                  onDismiss={() => {
-                    setShowReviewBanner(false);
-                    // Fermer la notification - réapparaîtra après 30 jours
-                    const formData = new FormData();
-                    formData.append("intent", "dismiss-review");
-                    fetcher.submit(formData, { method: "post" });
-                  }}
-                  action={{
-                    content: "Leave a Review",
-                    onAction: () => {
-                      window.open(reviewUrl, "_blank");
-                      setShowReviewBanner(false);
-                      // Marquer comme review complété - ne plus jamais réafficher
-                      const formData = new FormData();
-                      formData.append("intent", "review-completed");
-                      fetcher.submit(formData, { method: "post" });
-                    },
-                  }}
-                >
-                  <p>
-                    Your feedback helps us improve! If you're enjoying Virtual Try-On, please take a moment to leave us a review on the Shopify App Store.
-                  </p>
-                </Banner>
-              )}
-              {showErrorBanner && error && (
-                <Banner tone="critical" title="Error" onDismiss={() => setShowErrorBanner(false)}>
+              {error && (
+                <Banner tone="critical" title="Error">
                   {error}
                 </Banner>
               )}
-              {showDisabledBanner && !isEnabled && (
-                <Banner tone="warning" title="Widget is Disabled" onDismiss={() => setShowDisabledBanner(false)}>
-                  <p>
-                    The Virtual Try-On widget is currently <strong>disabled</strong> on your store. 
-                    To make it visible on product pages:
-                  </p>
-                  <ol style={{ marginTop: "8px", marginLeft: "20px" }}>
-                    <li>Enable the widget below by checking "Enable app on store"</li>
-                    <li>Make sure the App Embed Block is installed in your theme:
-                      <ul style={{ marginTop: "4px", marginLeft: "20px" }}>
-                        <li>Go to <strong>Online Store → Themes → Customize</strong></li>
-                        <li>Select a product template</li>
-                        <li>Add an "App embeds" section</li>
-                        <li>Enable "Virtual Try-On Widget"</li>
-                      </ul>
-                    </li>
-                  </ol>
-                  <p style={{ marginTop: "8px", fontSize: "12px", color: "var(--text-secondary)" }}>
-                    If the widget still doesn't appear, check the browser console (F12) on a product page for diagnostic logs.
-                  </p>
-                </Banner>
-              )}
-              {showSuccessBanner && fetcher.data?.success && (fetcher.data as any).deletedCount !== undefined && (
-                <Banner tone="success" onDismiss={() => setShowSuccessBanner(false)}>
+              {fetcher.data?.success && (fetcher.data as any).deletedCount !== undefined && (
+                <Banner tone="success">
                   {(fetcher.data as any).message || `Deleted ${(fetcher.data as any).deletedCount} old script tag(s)`}
                 </Banner>
               )}
-              {showSuccessBanner && fetcher.data?.success && !(fetcher.data as any).deletedCount && (
-                <Banner tone="success" onDismiss={() => setShowSuccessBanner(false)}>
+              {fetcher.data?.success && !(fetcher.data as any).deletedCount && (
+                <Banner tone="success">
                   Configuration saved successfully
                 </Banner>
               )}
               {(fetcher.data as any)?.error && (
-                <Banner tone="critical" onDismiss={() => {
-                  fetcher.load('/app');
-                }}>
+                <Banner tone="critical">
                   Error: {(fetcher.data as any).error}
                 </Banner>
               )}
-              {showLowCreditsBanner && credits < 10 && (
-                <Banner tone="warning" title="Low Credits Balance" onDismiss={() => setShowLowCreditsBanner(false)}>
+              {credits < 10 && (
+                <Banner tone="warning" title="Low Credits Balance">
                   <p>
                     You have <strong>{credits}</strong> credit{credits !== 1 ? "s" : ""} remaining. 
-                    <Link to="/app/credits" prefetch="intent" style={{ marginLeft: "8px" }}>
+                    <Link to="/app/credits" style={{ marginLeft: "8px" }}>
                       Purchase credits →
                     </Link>
                   </p>
                 </Banner>
               )}
               {/* ADDED: Monthly quota warning */}
-              {showQuotaExceededBanner && quotaExceeded && (
-                <Banner tone="critical" title="Monthly Quota Exceeded" onDismiss={() => setShowQuotaExceededBanner(false)}>
+              {quotaExceeded && (
+                <Banner tone="critical" title="Monthly Quota Exceeded">
                   <p>
                     You have reached your monthly quota of <strong>{monthlyQuota}</strong> try-ons. 
                     {quotaPercentage && ` (${quotaPercentage}% used)`}
                   </p>
                 </Banner>
               )}
-              {showQuotaWarningBanner && monthlyQuota && !quotaExceeded && parseFloat(quotaPercentage || "0") > 80 && (
-                <Banner tone="warning" title="Approaching Monthly Quota" onDismiss={() => setShowQuotaWarningBanner(false)}>
+              {monthlyQuota && !quotaExceeded && parseFloat(quotaPercentage || "0") > 80 && (
+                <Banner tone="warning" title="Approaching Monthly Quota">
                   <p>
                     You have used <strong>{quotaPercentage}%</strong> of your monthly quota ({monthlyUsageCount} / {monthlyQuota} try-ons).
                   </p>
@@ -985,16 +1086,17 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Generations */}
+        {/* Générations */}
         <div className="dashboard-section">
           <h2>Daily Generations (Last 7 Days)</h2>
           {dailyStats.length > 0 ? (
             <div className="graph-container-large">
               <div className="graph-bars">
-                {last7DaysStats.map((stat: any, index: number) => {
+                {dailyStats.slice(-7).map((stat: any, index: number) => {
+                  const maxCount = Math.max(...dailyStats.map((s: any) => s.count));
                   // Calculate percentage: scale from 0% to 100% based on max value
-                  const percentage = maxDailyCount > 0 && stat.count > 0 
-                    ? (stat.count / maxDailyCount) * 100 
+                  const percentage = maxCount > 0 && stat.count > 0 
+                    ? (stat.count / maxCount) * 100 
                     : 0;
                   const date = new Date(stat.date);
                   const isToday = date.toDateString() === new Date().toDateString();
@@ -1022,9 +1124,9 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Products and Activity side by side */}
+        {/* Produits et Activité côte à côte */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--spacing-lg)", marginBottom: "var(--spacing-lg)" }}>
-          {/* Products */}
+          {/* Produits */}
           <div className="dashboard-section">
             <h2>Most Tried Products</h2>
             {topProducts.length > 0 ? (
@@ -1047,12 +1149,12 @@ export default function Dashboard() {
             )}
           </div>
 
-          {/* Recent Activity */}
+          {/* Activité */}
           <div className="dashboard-section">
             <h2>Recent Activity</h2>
             {recentLogs.length > 0 ? (
               <div className="activity-list">
-                {recentLogsDisplay.map((log: any, index: number) => (
+                {recentLogs.slice(0, 5).map((log: any, index: number) => (
                   <div key={log.id || index} className="activity-item">
                     <div className="activity-info">
                       <p className="activity-title">
@@ -1142,6 +1244,30 @@ export default function Dashboard() {
                   }
                 </p>
               </div>
+              {/* ADDED: Quality vs Speed setting */}
+              <div className="setting-card">
+                <label>Quality Mode</label>
+                <select
+                  name="qualityMode"
+                  defaultValue={qualityMode}
+                  style={{ 
+                    width: "100%", 
+                    padding: "8px", 
+                    borderRadius: "4px", 
+                    border: "1px solid var(--border)",
+                    fontSize: "14px"
+                  }}
+                >
+                  <option value="speed">Speed (Faster generation, lower quality)</option>
+                  <option value="balanced">Balanced (Recommended)</option>
+                  <option value="quality">Quality (Slower generation, higher quality)</option>
+                </select>
+                <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "4px" }}>
+                  {qualityMode === "speed" && "Optimized for faster generation times"}
+                  {qualityMode === "balanced" && "Good balance between speed and quality"}
+                  {qualityMode === "quality" && "Optimized for best image quality"}
+                </p>
+              </div>
               <div className="setting-card">
                 <label>Cleanup</label>
                 <Button
@@ -1168,3 +1294,4 @@ export default function Dashboard() {
     </Page>
   );
 }
+
