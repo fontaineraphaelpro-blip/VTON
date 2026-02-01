@@ -868,8 +868,8 @@ export default function Dashboard() {
                   onDismiss={() => setShowAppEmbedBanner(false)}
                 >
                   <p>
-                    <strong>Don't forget to add the App Embed block to your product pages through the theme editor!</strong> 
-                    Otherwise, the Virtual Try-On widget will not appear on your storefront. 
+                    <strong>Don't forget to add the App Embed block to your product pages.</strong>
+                    <br />
                     Go to <strong>Online Store → Themes → Customize</strong>, then add the "Virtual Try-On Widget" block to your product template.
                   </p>
                 </Banner>
@@ -898,7 +898,9 @@ export default function Dashboard() {
                   }}
                 >
                   <p>
-                    Your feedback helps us improve! If you're enjoying Virtual Try-On, please take a moment to leave us a review on the Shopify App Store.
+                    Your feedback helps us improve!
+                    <br />
+                    If you're enjoying Virtual Try-On, please leave us a review.
                   </p>
                 </Banner>
               )}
@@ -910,22 +912,9 @@ export default function Dashboard() {
               {showDisabledBanner && !isEnabled && (
                 <Banner tone="warning" title="Widget is Disabled" onDismiss={() => setShowDisabledBanner(false)}>
                   <p>
-                    The Virtual Try-On widget is currently <strong>disabled</strong> on your store. 
-                    To make it visible on product pages:
-                  </p>
-                  <ol style={{ marginTop: "8px", marginLeft: "20px" }}>
-                    <li>Enable the widget below by checking "Enable app on store"</li>
-                    <li>Make sure the App Embed Block is installed in your theme:
-                      <ul style={{ marginTop: "4px", marginLeft: "20px" }}>
-                        <li>Go to <strong>Online Store → Themes → Customize</strong></li>
-                        <li>Select a product template</li>
-                        <li>Add an "App embeds" section</li>
-                        <li>Enable "Virtual Try-On Widget"</li>
-                      </ul>
-                    </li>
-                  </ol>
-                  <p style={{ marginTop: "8px", fontSize: "12px", color: "var(--text-secondary)" }}>
-                    If the widget still doesn't appear, check the browser console (F12) on a product page for diagnostic logs.
+                    The widget is currently <strong>disabled</strong> on your store.
+                    <br />
+                    Enable it below and add the App Embed block in your theme editor.
                   </p>
                 </Banner>
               )}

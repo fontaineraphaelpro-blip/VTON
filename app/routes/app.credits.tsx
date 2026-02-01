@@ -545,11 +545,12 @@ export default function Credits() {
           <Banner tone="info" title="💡 How do credits work?">
             <div style={{ lineHeight: "1.6" }}>
               <p style={{ margin: "0 0 8px 0" }}>
-                Credits are automatically reset each month based on your subscription plan.
+                Credits reset monthly based on your subscription plan.
               </p>
               <p style={{ margin: "8px 0 0 0" }}>
-                <strong>Important:</strong> Unused credits are not carried over to the next month. 
-                Each month, your balance is reset to zero and you receive a new credit quota according to your active plan.
+                <strong>Important:</strong> Unused credits are not carried over.
+                <br />
+                Your balance resets each month with a new quota.
               </p>
             </div>
           </Banner>
