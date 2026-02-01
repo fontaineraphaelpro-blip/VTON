@@ -344,35 +344,60 @@ body {
 }
 
 /* Fix Banner header layout - keep title on left, not pushed to right */
-.Polaris-Banner__Header {
+.Polaris-Banner__Header,
+.Polaris-Banner__HeaderWrapper,
+.Polaris-Banner__HeaderContainer {
   display: flex !important;
   align-items: flex-start !important;
   justify-content: flex-start !important;
   flex-direction: row !important;
   gap: 12px !important;
   width: 100% !important;
+  flex-wrap: nowrap !important;
 }
 
-/* Ensure Banner title container stays on the left side */
+/* Ensure Banner title container stays on the left side - force left alignment */
 .Polaris-Banner__TitleWrapper,
 .Polaris-Banner__TitleContainer,
-.Polaris-Banner__HeadingWrapper {
-  flex: 0 0 auto !important;
+.Polaris-Banner__HeadingWrapper,
+.Polaris-Banner__Header > *:first-child,
+.Polaris-Banner__Header > *:nth-child(1),
+.Polaris-Banner__Header > *:nth-child(2) {
+  flex: 0 1 auto !important;
+  flex-shrink: 0 !important;
   margin-right: auto !important;
+  margin-left: 0 !important;
   text-align: left !important;
-  max-width: calc(100% - 60px) !important; /* Leave space for icon and dismiss button */
+  max-width: calc(100% - 80px) !important; /* Leave space for icon and dismiss button */
+  order: 1 !important;
 }
 
 /* Fix Banner title text alignment - prevent it from being pushed to the right */
 .Polaris-Banner__Title,
-.Polaris-Banner__Heading {
+.Polaris-Banner__Heading,
+.Polaris-Banner__TitleWrapper > *,
+.Polaris-Banner__TitleContainer > *,
+.Polaris-Banner__HeadingWrapper > * {
   text-align: left !important;
   margin: 0 !important;
   padding: 0 !important;
   display: block !important;
-  width: 100% !important;
+  width: auto !important;
   max-width: 100% !important;
   word-wrap: break-word !important;
+  white-space: normal !important;
+}
+
+/* Force dismiss button and icon to the right */
+.Polaris-Banner__Dismiss,
+.Polaris-Banner__DismissButton,
+.Polaris-Banner__Icon,
+.Polaris-Banner__Header > button,
+.Polaris-Banner__Header > [role="button"] {
+  flex: 0 0 auto !important;
+  margin-left: auto !important;
+  margin-right: 0 !important;
+  order: 999 !important;
 }
 
 /* Fix Banner internal flex layout to prevent title from going to extreme right */
