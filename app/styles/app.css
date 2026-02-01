@@ -350,6 +350,47 @@ body {
   padding-right: 0 !important;
 }
 
+/* Fix Banner header layout - keep title on left, not pushed to right */
+.Polaris-Banner__Header {
+  display: flex !important;
+  align-items: flex-start !important;
+  justify-content: flex-start !important;
+  flex-direction: row !important;
+  gap: 12px !important;
+  width: 100% !important;
+}
+
+/* Ensure Banner title container stays on the left side */
+.Polaris-Banner__TitleWrapper,
+.Polaris-Banner__TitleContainer,
+.Polaris-Banner__HeadingWrapper {
+  flex: 0 0 auto !important;
+  margin-right: auto !important;
+  text-align: left !important;
+  max-width: calc(100% - 60px) !important; /* Leave space for icon and dismiss button */
+}
+
+/* Fix Banner title text alignment - prevent it from being pushed to the right */
+.Polaris-Banner__Title,
+.Polaris-Banner__Heading {
+  text-align: left !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  display: block !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  word-wrap: break-word !important;
+}
+
+/* Fix Banner internal flex layout to prevent title from going to extreme right */
+.Polaris-Banner__ContentWrapper {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  justify-content: flex-start !important;
+  width: 100% !important;
+}
+
 /* Ensure Banner content is properly aligned */
 .Polaris-Banner__Content {
   text-align: left !important;
