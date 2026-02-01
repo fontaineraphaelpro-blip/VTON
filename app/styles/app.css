@@ -354,9 +354,12 @@ body {
 }
 
 /* Fix Banner header layout - keep title on left, not pushed to right */
+/* Target ALL possible header containers */
 .Polaris-Banner__Header,
 .Polaris-Banner__HeaderWrapper,
-.Polaris-Banner__HeaderContainer {
+.Polaris-Banner__HeaderContainer,
+.Polaris-Banner > div:first-child,
+.Polaris-Banner > *:first-child {
   display: flex !important;
   align-items: flex-start !important;
   justify-content: flex-start !important;
@@ -368,36 +371,36 @@ body {
   box-sizing: border-box !important;
 }
 
-/* Prevent header from stretching with justify-content: space-between */
+/* Override ANY justify-content that might stretch the title */
 .Polaris-Banner__Header,
 .Polaris-Banner__HeaderWrapper,
-.Polaris-Banner__HeaderContainer {
+.Polaris-Banner__HeaderContainer,
+.Polaris-Banner > div:first-child,
+.Polaris-Banner > *:first-child,
+.Polaris-Banner [class*="Header"] {
   justify-content: flex-start !important;
   align-items: flex-start !important;
 }
 
-/* Override any space-between that might be applied */
-.Polaris-Banner[style*="justify-content"],
-.Polaris-Banner__Header[style*="justify-content"] {
-  justify-content: flex-start !important;
-}
-
-/* Ensure Banner title container stays on the left side - force left alignment */
+/* Force title container to stay on left - target ALL possible title containers */
 .Polaris-Banner__TitleWrapper,
 .Polaris-Banner__TitleContainer,
 .Polaris-Banner__HeadingWrapper,
-.Polaris-Banner__Header > *:first-child:not(button):not([role="button"]),
-.Polaris-Banner__Header > *:nth-child(1):not(button):not([role="button"]),
-.Polaris-Banner__Header > *:nth-child(2):not(button):not([role="button"]) {
-  flex: 0 1 auto !important;
+.Polaris-Banner__Header > *:not(button):not([role="button"]):not(.Polaris-Banner__Dismiss):first-child,
+.Polaris-Banner__Header > *:not(button):not([role="button"]):not(.Polaris-Banner__Dismiss):nth-child(1),
+.Polaris-Banner__Header > *:not(button):not([role="button"]):not(.Polaris-Banner__Dismiss):nth-child(2),
+.Polaris-Banner [class*="Title"]:not(button):not([role="button"]),
+.Polaris-Banner [class*="Heading"]:not(button):not([role="button"]) {
+  flex: 0 0 auto !important;
   flex-grow: 0 !important;
-  flex-shrink: 1 !important;
+  flex-shrink: 0 !important;
   flex-basis: auto !important;
   margin-right: auto !important;
   margin-left: 0 !important;
   text-align: left !important;
-  max-width: calc(100% - 100px) !important; /* Leave space for icon and dismiss button */
+  max-width: none !important;
   min-width: 0 !important;
+  width: auto !important;
   order: 1 !important;
   box-sizing: border-box !important;
 }
@@ -410,25 +413,34 @@ body {
 .Polaris-Banner__HeadingWrapper > *,
 .Polaris-Banner__TitleWrapper h2,
 .Polaris-Banner__TitleWrapper h3,
-.Polaris-Banner__TitleWrapper h4 {
+.Polaris-Banner__TitleWrapper h4,
+.Polaris-Banner [class*="Title"] h2,
+.Polaris-Banner [class*="Title"] h3,
+.Polaris-Banner [class*="Title"] h4,
+.Polaris-Banner [class*="Heading"] h2,
+.Polaris-Banner [class*="Heading"] h3,
+.Polaris-Banner [class*="Heading"] h4 {
   text-align: left !important;
   margin: 0 !important;
   padding: 0 !important;
   display: block !important;
   width: auto !important;
-  max-width: 100% !important;
+  max-width: none !important;
   word-wrap: break-word !important;
   white-space: normal !important;
   box-sizing: border-box !important;
 }
 
-/* Force dismiss button and icon to the right */
+/* Force dismiss button and icon to the right - target ALL possible buttons */
 .Polaris-Banner__Dismiss,
 .Polaris-Banner__DismissButton,
 .Polaris-Banner__Icon,
 .Polaris-Banner__Header > button,
 .Polaris-Banner__Header > [role="button"],
-.Polaris-Banner__Header > .Polaris-Banner__Dismiss {
+.Polaris-Banner__Header > .Polaris-Banner__Dismiss,
+.Polaris-Banner button,
+.Polaris-Banner [role="button"],
+.Polaris-Banner [class*="Dismiss"] {
   flex: 0 0 auto !important;
   flex-grow: 0 !important;
   flex-shrink: 0 !important;
@@ -439,7 +451,8 @@ body {
 }
 
 /* Fix Banner internal flex layout to prevent title from going to extreme right */
-.Polaris-Banner__ContentWrapper {
+.Polaris-Banner__ContentWrapper,
+.Polaris-Banner__Ribbon {
   display: flex !important;
   flex-direction: column !important;
   align-items: flex-start !important;
