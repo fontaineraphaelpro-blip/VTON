@@ -43,9 +43,7 @@
   --radius-md: 6px;
   --radius-lg: 8px;
   
-  /* Transitions */
-  --transition-fast: 150ms ease;
-  --transition-base: 200ms ease;
+  /* Transitions - DISABLED for performance */
 }
 
 /* ============================================
@@ -59,14 +57,8 @@
   right: 0;
   height: 3px;
   z-index: 9999;
-  background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-primary) 50%, transparent 50%);
-  background-size: 200% 100%;
-  animation: nav-loading-shimmer 0.8s ease-in-out infinite;
-}
-
-@keyframes nav-loading-shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
+  background: var(--color-primary);
+  /* Animation disabled for performance */
 }
 
 /* ============================================
@@ -155,7 +147,7 @@ body {
 .Polaris-DataTable__Cell {
   padding: 16px 20px !important;
   border-bottom: 1px solid var(--color-border) !important;
-  transition: background-color 0.15s ease !important;
+  /* transition disabled for performance */
 }
 
 .Polaris-DataTable__Row:hover .Polaris-DataTable__Cell {
@@ -168,7 +160,7 @@ body {
   padding: 12px 16px !important;
   font-size: 15px !important;
   font-weight: 500 !important;
-  transition: all 0.2s ease !important;
+  /* transition disabled for performance */
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
 }
 
@@ -410,14 +402,14 @@ body {
   border-radius: 16px !important;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06), 0 2px 4px rgba(0, 0, 0, 0.04) !important;
   padding: 36px 32px !important;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  /* transition disabled for performance */
   background: linear-gradient(to bottom, #ffffff 0%, #fafbfc 100%) !important;
 }
 
 .Polaris-Card:hover {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 4px 8px rgba(0, 0, 0, 0.08) !important;
   border-color: var(--color-border-hover) !important;
-  transform: translateY(-2px) !important;
+  /* transform disabled for performance */
   background: #ffffff !important;
 }
 
@@ -427,7 +419,7 @@ body {
   color: #FFFFFF !important;
   font-weight: 700 !important;
   box-shadow: 0 2px 8px rgba(0, 128, 96, 0.25), 0 1px 3px rgba(0, 128, 96, 0.15) !important;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  /* transition disabled for performance */
   border-radius: 8px !important;
   padding: 12px 24px !important;
   letter-spacing: 0.01em !important;
@@ -437,7 +429,7 @@ body {
   background: linear-gradient(135deg, var(--color-primary-hover) 0%, #005a43 100%) !important;
   border-color: var(--color-primary-hover) !important;
   box-shadow: 0 4px 16px rgba(0, 128, 96, 0.35), 0 2px 6px rgba(0, 128, 96, 0.2) !important;
-  transform: translateY(-1px) !important;
+  /* transform disabled for performance */
 }
 
 .Polaris-Button--secondary {
@@ -448,7 +440,7 @@ body {
   border-radius: 8px !important;
   padding: 12px 24px !important;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06) !important;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  /* transition disabled for performance */
   letter-spacing: 0.01em !important;
 }
 
@@ -456,7 +448,7 @@ body {
   background: #f9fafb !important;
   border-color: var(--color-border-hover) !important;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06) !important;
-  transform: translateY(-1px) !important;
+  /* transform disabled for performance */
 }
 
 /* Save Configuration button - Black background with white text - ONLY for this specific button */
@@ -549,7 +541,7 @@ button.save-config-button.Polaris-Button--primary:hover:not(:disabled) > *,
   border-radius: 12px;
   padding: 20px 16px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.08);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  /* transition disabled for performance */
   display: flex;
   flex-direction: column;
   position: relative;
@@ -566,13 +558,13 @@ button.save-config-button.Polaris-Button--primary:hover:not(:disabled) > *,
   height: 4px;
   background: linear-gradient(90deg, var(--color-primary) 0%, #00a67e 100%);
   opacity: 0;
-  transition: opacity 0.3s ease;
+  /* transition disabled for performance */
 }
 
 .stat-card:hover {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 4px 8px rgba(0, 0, 0, 0.08);
   border-color: var(--color-primary);
-  transform: translateY(-4px);
+  /* transform disabled for performance */
   background: #ffffff;
 }
 
@@ -627,7 +619,7 @@ button.save-config-button.Polaris-Button--primary:hover:not(:disabled) > *,
   padding: 20px 16px;
   margin-bottom: 16px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.08);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  /* transition disabled for performance */
   position: relative;
   overflow: hidden;
 }
@@ -646,7 +638,7 @@ button.save-config-button.Polaris-Button--primary:hover:not(:disabled) > *,
 .dashboard-section:hover {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1), 0 4px 8px rgba(0, 0, 0, 0.06);
   border-color: var(--color-border-hover);
-  transform: translateY(-2px);
+  /* transform disabled for performance */
 }
 
 .dashboard-section h2 {
@@ -721,7 +713,7 @@ button.save-config-button.Polaris-Button--primary:hover:not(:disabled) > *,
   background: linear-gradient(180deg, #5c6ac4 0%, #4c51bf 100%);
   border-radius: 8px 8px 0 0;
   min-height: 6px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  /* transition disabled for performance */
   cursor: pointer;
   box-shadow: 0 4px 12px rgba(92, 106, 196, 0.25), 0 2px 4px rgba(92, 106, 196, 0.15);
   position: relative;
@@ -741,7 +733,7 @@ button.save-config-button.Polaris-Button--primary:hover:not(:disabled) > *,
 .graph-bar:hover {
   background: linear-gradient(180deg, #4c51bf 0%, #3b4fb8 100%);
   box-shadow: 0 8px 20px rgba(92, 106, 196, 0.4), 0 4px 8px rgba(92, 106, 196, 0.25);
-  transform: translateY(-4px) scale(1.02);
+  /* transform disabled for performance */
 }
 
 .graph-bar-today {
@@ -781,7 +773,7 @@ button.save-config-button.Polaris-Button--primary:hover:not(:disabled) > *,
   align-items: center;
   padding: var(--spacing-md) 0;
   border-bottom: 1px solid var(--color-border);
-  transition: background-color var(--transition-fast);
+  /* transition disabled for performance */
   border-radius: 4px;
   margin: 0 calc(var(--spacing-md) * -1);
   padding-left: var(--spacing-md);
@@ -849,7 +841,7 @@ button.save-config-button.Polaris-Button--primary:hover:not(:disabled) > *,
   display: flex;
   flex-direction: column;
   gap: 12px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  /* transition disabled for performance */
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   background: linear-gradient(to bottom, #ffffff 0%, #fafbfc 100%);
 }
@@ -857,7 +849,7 @@ button.save-config-button.Polaris-Button--primary:hover:not(:disabled) > *,
 .setting-card:hover {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1), 0 4px 8px rgba(0, 0, 0, 0.06);
   border-color: var(--color-primary);
-  transform: translateY(-2px);
+  /* transform disabled for performance */
   background: #ffffff;
 }
 
@@ -881,7 +873,7 @@ button.save-config-button.Polaris-Button--primary:hover:not(:disabled) > *,
   font-weight: 500;
   color: var(--color-text-primary);
   background: #ffffff;
-  transition: all 0.2s ease;
+  /* transition disabled for performance */
   line-height: 1.5;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
@@ -909,7 +901,7 @@ button.save-config-button.Polaris-Button--primary:hover:not(:disabled) > *,
   font-weight: 500;
   color: var(--color-text-primary);
   background: #ffffff;
-  transition: all 0.2s ease;
+  /* transition disabled for performance */
   line-height: 1.5;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
@@ -935,7 +927,7 @@ button.save-config-button.Polaris-Button--primary:hover:not(:disabled) > *,
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  /* transition disabled for performance */
   font-family: 'Inter', sans-serif;
 }
 
@@ -963,7 +955,7 @@ button.save-config-button.Polaris-Button--primary:hover:not(:disabled) > *,
   display: flex;
   justify-content: space-between;
   align-items: center;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  /* transition disabled for performance */
   position: relative;
   overflow: hidden;
 }
@@ -980,7 +972,7 @@ button.save-config-button.Polaris-Button--primary:hover:not(:disabled) > *,
 
 .credits-balance:hover {
   box-shadow: 0 12px 40px rgba(0, 128, 96, 0.2), 0 6px 16px rgba(0, 128, 96, 0.15);
-  transform: translateY(-2px);
+  /* transform disabled for performance */
 }
 
 .credits-amount {
@@ -1033,7 +1025,7 @@ button.save-config-button.Polaris-Button--primary:hover:not(:disabled) > *,
   border-radius: 20px;
   padding: 40px 36px;
   position: relative;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  /* transition disabled for performance */
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -1044,7 +1036,7 @@ button.save-config-button.Polaris-Button--primary:hover:not(:disabled) > *,
 .plan-card:hover {
   border-color: var(--color-primary);
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12), 0 6px 12px rgba(0, 0, 0, 0.08);
-  transform: translateY(-4px);
+  /* transform disabled for performance */
   background: #ffffff;
 }
 
@@ -1053,7 +1045,7 @@ button.save-config-button.Polaris-Button--primary:hover:not(:disabled) > *,
   border-width: 3px;
   box-shadow: 0 8px 32px rgba(0, 128, 96, 0.2), 0 4px 16px rgba(0, 128, 96, 0.15);
   background: linear-gradient(to bottom, #ffffff 0%, #f0fdf4 100%);
-  transform: scale(1.02);
+  /* transform disabled for performance */
   position: relative;
 }
 
@@ -1273,7 +1265,7 @@ button.save-config-button.Polaris-Button--primary:hover:not(:disabled) > *,
   font-size: 17px;
   font-weight: 800;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  /* transition disabled for performance */
   font-family: 'Inter', sans-serif;
   box-shadow: 0 6px 20px rgba(0, 128, 96, 0.35), 0 3px 6px rgba(0, 128, 96, 0.25);
   letter-spacing: 0.03em;
@@ -1290,7 +1282,7 @@ button.save-config-button.Polaris-Button--primary:hover:not(:disabled) > *,
   width: 100%;
   height: 100%;
   background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-  transition: left 0.5s;
+  /* transition disabled for performance */
 }
 
 .plan-button:hover:not(:disabled)::before {
@@ -1298,13 +1290,13 @@ button.save-config-button.Polaris-Button--primary:hover:not(:disabled) > *,
 }
 
 .plan-button:hover:not(:disabled) {
-  transform: translateY(-3px) scale(1.02);
+  /* transform disabled for performance */
   box-shadow: 0 10px 32px rgba(0, 128, 96, 0.45), 0 6px 12px rgba(0, 128, 96, 0.3);
   background: linear-gradient(135deg, #006e52 0%, #005a43 100%);
 }
 
 .plan-button:active:not(:disabled) {
-  transform: translateY(-1px) scale(1);
+  /* transform disabled for performance */
 }
 
 .plan-button:disabled {
@@ -1393,7 +1385,7 @@ a {
   color: var(--color-primary) !important;
   font-weight: 600 !important;
   text-decoration: none !important;
-  transition: all 0.2s ease !important;
+  /* transition disabled for performance */
 }
 
 a:hover {
@@ -1480,7 +1472,7 @@ a:hover {
 
 .history-table-wrapper .Polaris-DataTable__Row:hover {
   background: #fafbfc;
-  transition: background 0.2s ease;
+  /* transition disabled for performance */
 }
 
 .history-table-wrapper .Polaris-DataTable__Row:last-child .Polaris-DataTable__Cell {
