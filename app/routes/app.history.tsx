@@ -353,7 +353,7 @@ export default function History() {
               </EmptyState>
             </div>
           ) : (
-            <div className="history-table-wrapper" style={{ transform: 'translateZ(0)', willChange: 'scroll-position' }}>
+            <div className="history-table-wrapper">
               <DataTable
                 columnContentTypes={[
                   "text",
