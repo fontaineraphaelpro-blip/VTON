@@ -1,356 +1,274 @@
 /**
- * ==========================================
- * REPLICATE SERVICE
- * ==========================================
- * 
- * Service for interacting with Replicate API (try-on generation).
- * Uses bytedance/seedream-4.5 model optimized for fast generation (~30 seconds).
+ * Replicate API — virtual try-on via bytedance/seedream-4.5
  */
 
 import Replicate from "replicate";
 import { logger } from "../logger.server";
 
-// ==========================================
-// CONFIGURATION
-// ==========================================
+const MODEL_ID = process.env.REPLICATE_MODEL || "bytedance/seedream-4.5";
+const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+const FETCH_TIMEOUT_MS = 20_000;
+const POLL_INTERVAL_MS = 2000;
+const MAX_POLLS = 90;
 
-const MODEL_ID = "bytedance/seedream-4.5";
+const GARMENT_TRANSFER_PROMPT =
+  "Virtual try-on: dress the person in the exact garment from the reference image. Preserve garment colors, pattern and fit. Photorealistic, natural pose, same person identity.";
 
-// Prompt for garment transfer task
-const GARMENT_TRANSFER_PROMPT = 
-  " This is NOT a redesign task.\n\nIt is a garment transfer task.\n\nUse the clothing from the second image exactly as-is with zero creative interpretation.\n\nThe output must look like the REAL clothing item was physically worn by the person.\n\nNo invented graphics, no color changes, no simplification. ";
-
-// OPTIMIZED: Reduced image sizes for faster processing
-// Input and output resolutions are reduced to speed up processing and lower costs
-const OPTIMIZED_CONFIG = {
-  // Reduced image size (was likely 1024x1024 or higher)
-  width: 512,
-  height: 512,
-  
-  // Reduced quality for faster processing (still acceptable for try-on)
-  quality: 85, // JPEG quality (0-100), 85 is good balance
-  
-  // Model-specific optimizations
-  numInferenceSteps: 20, // Reduced from default (usually 30-50)
-  guidanceScale: 7.5, // Standard value, can be reduced slightly
-};
-
-// Check if Replicate API token is configured
 if (!process.env.REPLICATE_API_TOKEN) {
-  logger.warn("⚠️ REPLICATE_API_TOKEN is not set. Try-on generation will fail.");
+  logger.warn("REPLICATE_API_TOKEN is not set. Try-on generation will fail.");
 }
 
 const replicate = new Replicate({
   auth: process.env.REPLICATE_API_TOKEN || "",
 });
 
-// ==========================================
-// SERVICE
-// ==========================================
+type FileCreateResponse = {
+  urls?: { get?: string };
+  url?: string;
+  id?: string;
+};
 
-/**
- * Generates a virtual try-on using bytedance/seedream-4.5 with garment transfer prompt.
- * Optimized for fast generation (~30 seconds) with 1K resolution.
- * 
- * @param personImage - Person image (URL or base64 data URL)
- * @param garmentImage - Garment image (URL or base64 data URL)
- * @returns Object with resultUrl and config
- * @throws Error if generation fails
- */
-export async function generateTryOn(
-  personImageUrl: string,
-  garmentImageUrl: string
-): Promise<{ resultUrl: string; config?: any }> {
-  if (!process.env.REPLICATE_API_TOKEN) {
-    throw new Error("REPLICATE_API_TOKEN is not configured. Please set it in your environment variables.");
+function extractFileUrl(file: unknown): string | null {
+  if (typeof file === "string") return file;
+  if (!file || typeof file !== "object") return null;
+  const f = file as FileCreateResponse;
+  if (f.urls?.get) return f.urls.get;
+  if (f.url) return f.url;
+  return null;
+}
+
+async function uploadBufferToReplicate(buffer: Buffer, label: string): Promise<string> {
+  if (buffer.length > MAX_IMAGE_BYTES) {
+    throw new Error(
+      `${label} is too large (${Math.round(buffer.length / 1024 / 1024)}MB). Use a photo under 8MB.`
+    );
   }
+  const file = await replicate.files.create(buffer);
+  const url = extractFileUrl(file);
+  if (!url) {
+    throw new Error(
+      `Replicate files.create() did not return a URL for ${label}: ${JSON.stringify(file)}`
+    );
+  }
+  return url;
+}
 
-  // Fastest optimized settings: 512 resolution, JPEG format
-  const config = {
-    width: 512,
-    height: 512,
-      quality: 75,
-      numInferenceSteps: 15,
-      guidanceScale: 7.0,
-    };
+async function dataUrlToBuffer(dataUrl: string): Promise<Buffer> {
+  const match = /^data:image\/[^;]+;base64,(.+)$/i.exec(dataUrl);
+  if (!match?.[1]) {
+    throw new Error("Invalid data URL — expected base64 image data");
+  }
+  return Buffer.from(match[1], "base64");
+}
 
+/** Shopify CDN: force HTTPS and a reasonable width for Replicate. */
+export function normalizeGarmentImageUrl(url: string): string {
+  let normalized = url.trim();
+  if (normalized.startsWith("//")) {
+    normalized = `https:${normalized}`;
+  }
+  if (normalized.startsWith("http://")) {
+    normalized = `https://${normalized.slice(7)}`;
+  }
   try {
-    // Convert data URLs to Replicate file URLs if needed
-    // Replicate doesn't accept data URLs directly - we need to upload them first
-    let personInput: string = personImageUrl;
-    let garmentInput: string = garmentImageUrl;
-
-    logger.log("[Replicate] Processing images - person type:", personImageUrl.substring(0, 50), "garment type:", garmentImageUrl.substring(0, 50));
-    
-    // If person image is a data URL, upload it to Replicate files
-    if (personImageUrl.startsWith("data:image/")) {
-      logger.log("[Replicate] Uploading person image (data URL) to Replicate files...");
-      try {
-        // Extract base64 data from data URL
-        const base64Data = personImageUrl.split(",")[1];
-        if (!base64Data) {
-          throw new Error("Invalid data URL format - no base64 data found");
-        }
-        const buffer = Buffer.from(base64Data, "base64");
-        
-        // Upload to Replicate files - files.create() expects a Buffer directly
-        logger.log("[Replicate] Uploading buffer, size:", buffer.length, "bytes");
-        const file = await replicate.files.create(buffer);
-        
-        logger.log("[Replicate] File upload response:", JSON.stringify(file, null, 2));
-        
-        // Handle different response formats from Replicate
-        // Replicate returns: { id: "...", urls: { get: "https://api.replicate.com/v1/files/..." } }
-        // Use urls.get directly - Replicate can use this URL internally for model inputs
-        let uploadedUrl: string | undefined;
-        if (typeof file === "string") {
-          uploadedUrl = file;
-        } else if (file && typeof file === "object") {
-          // Extract URLs.get which is the URL Replicate can use
-          if (file.urls && typeof file.urls === "object" && file.urls.get) {
-            uploadedUrl = file.urls.get;
-          } else if ((file as any).url) {
-            uploadedUrl = (file as any).url;
-          } else if ((file as any).id) {
-            // Fallback: try using the ID (some models might accept it)
-            uploadedUrl = (file as any).id;
-          }
-        }
-        
-        if (!uploadedUrl || typeof uploadedUrl !== "string") {
-          console.error("[Replicate] Invalid file response:", file);
-          throw new Error(`Replicate files.create() did not return a valid URL. Response: ${JSON.stringify(file)}`);
-        }
-        
-        personInput = uploadedUrl;
-        logger.log("[Replicate] Using URL for person image:", personInput);
-      } catch (uploadError) {
-        console.error("[Replicate] Failed to upload person image:", uploadError);
-        throw new Error(`Failed to upload person image: ${uploadError instanceof Error ? uploadError.message : "Unknown error"}`);
+    const parsed = new URL(normalized);
+    if (parsed.hostname.includes("cdn.shopify.com") || parsed.hostname.includes("shopify")) {
+      if (!parsed.searchParams.has("width")) {
+        parsed.searchParams.set("width", "1024");
       }
+      normalized = parsed.toString();
     }
-    
-    // If garment image is a data URL, upload it to Replicate files
-    if (garmentImageUrl.startsWith("data:image/")) {
-      logger.log("[Replicate] Uploading garment image (data URL) to Replicate files...");
-      try {
-        // Extract base64 data from data URL
-        const base64Data = garmentImageUrl.split(",")[1];
-        if (!base64Data) {
-          throw new Error("Invalid data URL format - no base64 data found");
-        }
-        const buffer = Buffer.from(base64Data, "base64");
-        
-        // Upload to Replicate files - files.create() expects a Buffer directly
-        logger.log("[Replicate] Uploading buffer, size:", buffer.length, "bytes");
-        const file = await replicate.files.create(buffer);
-        
-        logger.log("[Replicate] File upload response:", JSON.stringify(file, null, 2));
-        
-        // Handle different response formats from Replicate
-        // Replicate returns: { id: "...", urls: { get: "https://api.replicate.com/v1/files/..." } }
-        // Use urls.get directly - Replicate can use this URL internally for model inputs
-        let uploadedUrl: string | undefined;
-        if (typeof file === "string") {
-          uploadedUrl = file;
-        } else if (file && typeof file === "object") {
-          // Extract URLs.get which is the URL Replicate can use
-          if (file.urls && typeof file.urls === "object" && file.urls.get) {
-            uploadedUrl = file.urls.get;
-          } else if ((file as any).url) {
-            uploadedUrl = (file as any).url;
-          } else if ((file as any).id) {
-            // Fallback: try using the ID (some models might accept it)
-            uploadedUrl = (file as any).id;
-          }
-        }
-        
-        if (!uploadedUrl || typeof uploadedUrl !== "string") {
-          console.error("[Replicate] Invalid file response:", file);
-          throw new Error(`Replicate files.create() did not return a valid URL. Response: ${JSON.stringify(file)}`);
-        }
-        
-        garmentInput = uploadedUrl;
-        logger.log("[Replicate] Using URL for garment image:", garmentInput);
-      } catch (uploadError) {
-        console.error("[Replicate] Failed to upload garment image:", uploadError);
-        throw new Error(`Failed to upload garment image: ${uploadError instanceof Error ? uploadError.message : "Unknown error"}`);
-      }
-    }
+  } catch {
+    // keep original if not a valid URL
+  }
+  return normalized;
+}
 
-    // Validate that both inputs are defined
-    if (!personInput || typeof personInput !== "string") {
-      throw new Error(`Invalid person image input: ${personInput}`);
-    }
-    if (!garmentInput || typeof garmentInput !== "string") {
-      throw new Error(`Invalid garment image input: ${garmentInput}`);
-    }
-
-    logger.log("Calling Replicate API with model:", MODEL_ID);
-    logger.log("Input types - person:", typeof personInput, "garment:", typeof garmentInput);
-    logger.log("Person URL:", personInput?.substring(0, 100) + "...");
-    logger.log("Garment URL:", garmentInput?.substring(0, 100) + "...");
-    logger.log("Using prompt:", GARMENT_TRANSFER_PROMPT);
-    logger.log("Using optimized config:", config);
-    
-    // bytedance/seedream-4.5 expects image_input as an array with [person_image, garment_image]
-    // and uses size (must be "2K" or "4K"), plus other optional params like aspect_ratio/max_images.
-    logger.log("Creating prediction with Replicate...");
-    
-    // Replicate now validates input.size strictly for this model.
-    // Use "2K" by default for best speed/cost tradeoff.
-    const size: "2K" | "4K" = "2K";
-    
-    const prediction = await replicate.predictions.create({
-      model: MODEL_ID,
-      input: {
-        size: size,
-        prompt: GARMENT_TRANSFER_PROMPT,
-        max_images: 10,
-        image_input: [personInput, garmentInput], // Array with [person, garment]
-        aspect_ratio: "1:1",
-        sequential_image_generation: "disabled",
-      },
+async function fetchImageBuffer(url: string): Promise<Buffer> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  try {
+    const response = await fetch(url, {
+      signal: controller.signal,
+      headers: { Accept: "image/*", "User-Agent": "VTON-Shopify/1.0" },
     });
-    
-    logger.log("Prediction created with image_input array format");
-    
-    logger.log("Created prediction:", prediction.id, "Status:", prediction.status);
-    
-    // Poll for completion with optimized interval (1.5s for faster response)
-    let pollCount = 0;
-    const maxPolls = 120;
-    const pollInterval = 1500; // 1.5s for fastest response
-    let output: any = null;
-    
-    while ((prediction.status === "starting" || prediction.status === "processing") && pollCount < maxPolls) {
-      await new Promise(resolve => setTimeout(resolve, pollInterval));
-      const updated = await replicate.predictions.get(prediction.id);
-      prediction.status = updated.status;
-      prediction.output = updated.output;
-      prediction.error = updated.error;
-      pollCount++;
-      
-      logger.log(`Poll ${pollCount}/${maxPolls} - Prediction status:`, prediction.status);
-      
-      if (prediction.status === "succeeded" && prediction.output) {
-        output = prediction.output;
-        logger.log("Prediction succeeded, output:", JSON.stringify(output, null, 2));
-        break;
-      } else if (prediction.status === "failed" || prediction.status === "canceled") {
-        const errorMsg = prediction.error || "Unknown error";
-        console.error("Prediction failed:", errorMsg);
-        throw new Error(`Prediction ${prediction.status}: ${errorMsg}`);
-      }
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status} fetching image`);
     }
-    
-    if (prediction.status !== "succeeded" || !output) {
-      throw new Error(`Prediction did not complete in time. Final status: ${prediction.status}, output: ${JSON.stringify(output)}`);
-    }
-
-    logger.log("Replicate output type:", typeof output);
-    logger.log("Replicate output:", JSON.stringify(output, null, 2));
-
-    // Replicate can return different formats:
-    // 1. A string (URL)
-    // 2. An array of strings (URLs)
-    // 3. An object with a URL property
-    // 4. null or undefined
-    
-    let resultUrl: string | null = null;
-
-    if (typeof output === "string") {
-      resultUrl = output;
-    } else if (Array.isArray(output)) {
-      // If array, get first element (or use image_input if it's an array of image inputs)
-      if (output.length > 0) {
-        const first = output[0];
-        resultUrl = typeof first === "string" ? first : (first?.url || String(first));
-      }
-    } else if (output && typeof output === "object") {
-      // If object, try to find URL property
-      if ("url" in output && typeof output.url === "string") {
-        resultUrl = output.url;
-      } else if ("output" in output) {
-        // Sometimes nested in "output" property
-        const nested = output.output;
-        if (typeof nested === "string") {
-          resultUrl = nested;
-        } else if (Array.isArray(nested) && nested.length > 0) {
-          const first = nested[0];
-          resultUrl = typeof first === "string" ? first : (first?.url || String(first));
-        }
-      } else if ("output_url" in output && typeof output.output_url === "string") {
-        resultUrl = output.output_url;
-      } else if ("image" in output && typeof output.image === "string") {
-        resultUrl = output.image;
-      } else {
-        // Try to stringify the first value
-        const values = Object.values(output);
-        if (values.length > 0) {
-          const firstValue = values[0];
-          if (typeof firstValue === "string") {
-            resultUrl = firstValue;
-          } else if (Array.isArray(firstValue) && firstValue.length > 0) {
-            const first = firstValue[0];
-            resultUrl = typeof first === "string" ? first : (first?.url || String(first));
-          } else if (firstValue && typeof firstValue === "object" && "url" in firstValue) {
-            resultUrl = firstValue.url;
-          }
-        }
-      }
-    }
-
-    if (!resultUrl) {
-      console.error("Replicate output format not recognized:", output);
-      console.error("Output keys:", output && typeof output === "object" ? Object.keys(output) : "N/A");
-      throw new Error(`Replicate returned unexpected format: ${JSON.stringify(output)}`);
-    }
-
-    // Validate that resultUrl is a valid URL
-    try {
-      new URL(resultUrl);
-    } catch {
-      // If not a valid URL, it might be a base64 data URL or file path
-      // Check if it starts with http:// or https://
-      if (!resultUrl.startsWith("http://") && !resultUrl.startsWith("https://") && !resultUrl.startsWith("data:")) {
-        logger.warn("Result URL doesn't look like a valid URL:", resultUrl);
-        // Try to construct a full URL if it's a relative path
-        if (resultUrl.startsWith("/")) {
-          resultUrl = `https://replicate.delivery${resultUrl}`;
-        } else {
-          throw new Error(`Invalid result URL format: ${resultUrl}`);
-        }
-      }
-    }
-
-    logger.log("Replicate generation successful, result URL:", resultUrl);
-    return {
-      resultUrl,
-      config: {
-        inputSize: `${config.width}x${config.height}`,
-        outputSize: `${config.width}x${config.height}`,
-        quality: config.quality,
-      },
-    };
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error("Replicate generation error:", errorMessage);
-    throw new Error(`Replicate generation failed: ${errorMessage}`);
+    const buf = Buffer.from(await response.arrayBuffer());
+    if (buf.length === 0) throw new Error("empty image response");
+    return buf;
+  } finally {
+    clearTimeout(timer);
   }
 }
 
 /**
- * Resize image before sending to Replicate to reduce processing time
- * This reduces the data transfer and processing time
+ * Replicate handles some URLs poorly — upload HTTP(S) and data URLs to Replicate Files.
  */
-export async function resizeImageForReplicate(
-  imageUrl: string,
-  maxWidth: number = 512,
-  maxHeight: number = 512
+async function ensureReplicateImageInput(
+  source: string,
+  label: string
 ): Promise<string> {
-  // If image is already small enough, return as-is
-  // In production, you might want to use an image resizing service
-  // For now, we'll let Replicate handle resizing via parameters
+  if (source.startsWith("data:image/")) {
+    return uploadBufferToReplicate(await dataUrlToBuffer(source), label);
+  }
+
+  if (source.startsWith("http://") || source.startsWith("https://")) {
+    const normalized = label === "garment" ? normalizeGarmentImageUrl(source) : source;
+    try {
+      const buffer = await fetchImageBuffer(normalized);
+      return uploadBufferToReplicate(buffer, label);
+    } catch (fetchError) {
+      logger.warn(
+        `[Replicate] ${label} fetch/upload failed, using direct URL:`,
+        fetchError instanceof Error ? fetchError.message : fetchError
+      );
+      return normalized;
+    }
+  }
+
+  throw new Error(`Invalid ${label} image: expected data URL or http(s) URL`);
+}
+
+function parsePredictionOutput(output: unknown): string | null {
+  if (typeof output === "string") return output;
+  if (Array.isArray(output) && output.length > 0) {
+    const first = output[0];
+    if (typeof first === "string") return first;
+    if (first && typeof first === "object" && "url" in first && typeof first.url === "string") {
+      return first.url;
+    }
+  }
+  if (output && typeof output === "object") {
+    const o = output as Record<string, unknown>;
+    if (typeof o.url === "string") return o.url;
+    if (typeof o.output_url === "string") return o.output_url;
+    if (typeof o.image === "string") return o.image;
+    const nested = o.output;
+    if (typeof nested === "string") return nested;
+    if (Array.isArray(nested) && nested.length > 0) {
+      const first = nested[0];
+      if (typeof first === "string") return first;
+      if (first && typeof first === "object" && "url" in first && typeof (first as { url: string }).url === "string") {
+        return (first as { url: string }).url;
+      }
+    }
+  }
+  return null;
+}
+
+function isRetryableReplicateError(message: string): boolean {
+  const lower = message.toLowerCase();
+  return (
+    lower.includes("e9243") ||
+    lower.includes("director") ||
+    lower.includes("unexpected error") ||
+    lower.includes("interrupted") ||
+    lower.includes("timeout")
+  );
+}
+
+async function runPrediction(personInput: string, garmentInput: string) {
+  const input = {
+    size: "2K" as const,
+    prompt: GARMENT_TRANSFER_PROMPT,
+    max_images: 1,
+    image_input: [personInput, garmentInput],
+    aspect_ratio: "1:1",
+    sequential_image_generation: "disabled" as const,
+  };
+
+  logger.log("[Replicate] Creating prediction", MODEL_ID, {
+    person: personInput.slice(0, 80),
+    garment: garmentInput.slice(0, 80),
+  });
+
+  const prediction = await replicate.predictions.create({
+    model: MODEL_ID,
+    input,
+  });
+
+  let status = prediction.status;
+  let output = prediction.output;
+  let lastError = prediction.error;
+
+  for (let poll = 0; poll < MAX_POLLS && (status === "starting" || status === "processing"); poll++) {
+    await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
+    const updated = await replicate.predictions.get(prediction.id);
+    status = updated.status;
+    output = updated.output;
+    lastError = updated.error;
+    if (status === "succeeded" && output) break;
+    if (status === "failed" || status === "canceled") {
+      throw new Error(String(lastError || `Prediction ${status}`));
+    }
+  }
+
+  if (status !== "succeeded" || !output) {
+    throw new Error(
+      lastError
+        ? String(lastError)
+        : `Prediction did not complete (status: ${status})`
+    );
+  }
+
+  return output;
+}
+
+export async function generateTryOn(
+  personImageUrl: string,
+  garmentImageUrl: string
+): Promise<{ resultUrl: string; config?: Record<string, string> }> {
+  if (!process.env.REPLICATE_API_TOKEN) {
+    throw new Error("REPLICATE_API_TOKEN is not configured.");
+  }
+
+  const personInput = await ensureReplicateImageInput(personImageUrl, "person");
+  const garmentInput = await ensureReplicateImageInput(
+    normalizeGarmentImageUrl(garmentImageUrl),
+    "garment"
+  );
+
+  let lastError: Error | null = null;
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const output = await runPrediction(personInput, garmentInput);
+      let resultUrl = parsePredictionOutput(output);
+      if (!resultUrl) {
+        throw new Error(`Unexpected Replicate output: ${JSON.stringify(output).slice(0, 500)}`);
+      }
+      if (
+        !resultUrl.startsWith("http://") &&
+        !resultUrl.startsWith("https://") &&
+        !resultUrl.startsWith("data:")
+      ) {
+        if (resultUrl.startsWith("/")) {
+          resultUrl = `https://replicate.delivery${resultUrl}`;
+        } else {
+          throw new Error(`Invalid result URL: ${resultUrl}`);
+        }
+      }
+      logger.log("[Replicate] Success:", resultUrl.slice(0, 120));
+      return {
+        resultUrl,
+        config: { model: MODEL_ID, size: "2K" },
+      };
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      const msg = lastError.message;
+      if (attempt < 2 && isRetryableReplicateError(msg)) {
+        logger.warn("[Replicate] Retry after error:", msg);
+        await new Promise((r) => setTimeout(r, 1500));
+        continue;
+      }
+      break;
+    }
+  }
+
+  throw new Error(`Replicate generation failed: ${lastError?.message || "Unknown error"}`);
+}
+
+export async function resizeImageForReplicate(imageUrl: string): Promise<string> {
   return imageUrl;
 }

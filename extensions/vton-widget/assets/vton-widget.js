@@ -64,9 +64,13 @@
       function startWidgetBoot() {
         var bootIdleMs =
           isProductPageContext() && (window.VTON_LIQUID && window.VTON_LIQUID.productId)
-            ? 100
-            : 800;
-        runWhenIdle(bootWidgetWithRetries, bootIdleMs);
+            ? 0
+            : 200;
+        if (bootIdleMs === 0) {
+          bootWidgetWithRetries();
+        } else {
+          runWhenIdle(bootWidgetWithRetries, bootIdleMs);
+        }
       }
 
       function waitForConfigThenBoot() {
@@ -202,10 +206,13 @@
           applyTryonStatus(cachedStatus, shop, productId, productHandle);
           runWhenIdle(function() {
             refreshTryonStatus(shop, productId, productHandle);
-          }, 5000);
+          }, 2000);
           return;
         }
 
+        if (isProductPageContext()) {
+          queueWidgetRender(shop, productId, productHandle, {});
+        }
         refreshTryonStatus(shop, productId, productHandle);
       }
       
@@ -402,14 +409,14 @@
 
       function fetchStatusUrl(url) {
         var controller = new AbortController();
-        var timeoutId = setTimeout(function() { controller.abort(); }, 6000);
+        var timeoutId = setTimeout(function() { controller.abort(); }, 3500);
 
         return fetch(url, {
           method: 'GET',
           headers: { Accept: 'application/json' },
           signal: controller.signal,
           credentials: 'same-origin',
-          cache: 'no-store'
+          cache: 'default'
         })
           .then(function(response) {
             clearTimeout(timeoutId);
@@ -431,19 +438,27 @@
         var appBase = (liquid.appUrl || '').replace(/\/$/, '');
         var directUrl = appBase ? appBase + '/apps/tryon/status?' + query : null;
 
-        return fetchStatusUrl(proxyUrl)
-          .catch(function(proxyErr) {
-            warn('[VTON] App Proxy status failed:', proxyErr.message || proxyErr);
-            if (!directUrl) throw proxyErr;
-            return fetchStatusUrl(directUrl);
-          })
+        var attempts = [fetchStatusUrl(proxyUrl)];
+        if (directUrl) {
+          attempts.push(fetchStatusUrl(directUrl));
+        }
+
+        return Promise.any(attempts)
           .catch(function(err) {
-            if (err.name === 'AbortError') {
-              warn('[VTON] Status check timed out');
-              return { enabled: false, error: 'timeout' };
+            if (err && err.errors && err.errors.length) {
+              var last = err.errors[err.errors.length - 1];
+              if (last && last.name === 'AbortError') {
+                warn('[VTON] Status check timed out');
+                return { enabled: true, error: 'timeout' };
+              }
+              warn('[VTON] Status check error:', last.message || last);
+              return { enabled: true, error: last.message || 'status_check_failed' };
+            }
+            if (err && err.name === 'AbortError') {
+              return { enabled: true, error: 'timeout' };
             }
             warn('[VTON] Status check error:', err);
-            return { enabled: false, error: err.message || 'status_check_failed' };
+            return { enabled: true, error: (err && err.message) || 'status_check_failed' };
           });
       }
       
