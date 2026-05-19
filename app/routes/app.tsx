@@ -1,9 +1,13 @@
 import type { HeadersFunction, LoaderFunctionArgs } from "@remix-run/node";
-import { Link, Outlet, useLoaderData, useNavigation } from "@remix-run/react";
+import { Link, Outlet, useLoaderData, useLocation, useNavigation } from "@remix-run/react";
 import { useEffect, useMemo } from "react";
 import { boundary } from "@shopify/shopify-app-remix/server";
 import { AppProvider } from "@shopify/shopify-app-remix/react";
 import { NavMenu } from "@shopify/app-bridge-react";
+import { authenticate } from "../shopify.server";
+import { getShop, getMonthlyTryonUsage } from "../lib/services/db.service";
+import { computeCreditsAlert } from "../lib/credits-alert";
+import { CreditsAlertBanner } from "../components/CreditsAlertBanner";
 import polarisStyles from "@shopify/polaris/build/esm/styles.css?url";
 import appStyles from "../styles/app.css?url";
 import adminUiStyles from "../styles/admin-ui.css?url";
@@ -14,14 +18,39 @@ export const links = () => [
   { rel: "stylesheet", href: adminUiStyles },
 ];
 
-/** Child routes authenticate; parent only supplies the API key (avoids double auth per navigation). */
-export const loader = async (_args: LoaderFunctionArgs) => {
-  return { apiKey: process.env.SHOPIFY_API_KEY || "" };
+export const loader = async ({ request }: LoaderFunctionArgs) => {
+  const apiKey = process.env.SHOPIFY_API_KEY || "";
+
+  const { session } = await authenticate.admin(request);
+
+  try {
+    const shopData = await getShop(session.shop);
+    const monthlyUsage = await getMonthlyTryonUsage(session.shop).catch(() => 0);
+    const creditsAlert = computeCreditsAlert({
+      credits: shopData?.credits ?? 0,
+      monthlyUsage,
+      monthlyQuota: shopData?.monthly_quota ?? null,
+    });
+
+    return { apiKey, creditsAlert };
+  } catch {
+    return {
+      apiKey,
+      creditsAlert: computeCreditsAlert({
+        credits: 0,
+        monthlyUsage: 0,
+        monthlyQuota: null,
+      }),
+    };
+  }
 };
 
 export default function App() {
-  const { apiKey } = useLoaderData<typeof loader>();
+  const { apiKey, creditsAlert } = useLoaderData<typeof loader>();
+  const location = useLocation();
   const navigation = useNavigation();
+  const showGlobalCreditsAlert =
+    creditsAlert.level !== "ok" && !location.pathname.startsWith("/app/credits");
   const isLoading = useMemo(() => navigation.state === "loading", [navigation.state]);
 
   useEffect(() => {
@@ -81,6 +110,9 @@ export default function App() {
         </Link>
       </NavMenu>
       <div className="vton-admin">
+        {showGlobalCreditsAlert && (
+          <CreditsAlertBanner alert={creditsAlert} variant="global" />
+        )}
         <Outlet />
       </div>
     </AppProvider>

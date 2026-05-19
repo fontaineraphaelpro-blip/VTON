@@ -185,3 +185,31 @@ export async function ensureStorefrontWidgetScriptTag(
 
   return { installed: Boolean(createJson.data?.scriptTagCreate?.scriptTag?.id) };
 }
+
+/** Read-only check — does not create a script tag. */
+export async function hasStorefrontWidgetScriptTag(
+  admin: AdminGraphql
+): Promise<boolean> {
+  try {
+    const scriptSrc = `${getAppBaseUrl()}${SCRIPT_PATH}`;
+    const listResponse = await adminGraphqlWithTimeout(admin, `#graphql
+      query VtonScriptTagsCheck {
+        scriptTags(first: 50) {
+          edges {
+            node {
+              src
+            }
+          }
+        }
+      }
+    `);
+    if (!listResponse.ok) return false;
+    const listJson = (await listResponse.json()) as {
+      data?: { scriptTags?: { edges?: { node: { src: string } }[] } };
+    };
+    const edges = listJson.data?.scriptTags?.edges || [];
+    return edges.some((edge) => edge.node?.src === scriptSrc);
+  } catch {
+    return false;
+  }
+}

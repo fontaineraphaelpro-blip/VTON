@@ -13,7 +13,17 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { generateTryOn } from "../lib/services/replicate.service";
-import { getShop, upsertShop, createTryonLog, updateTryonLog, getMonthlyTryonUsage, getDailyTryonUsage, getCustomerDailyTryonUsage, getProductTryonImageUrl, query } from "../lib/services/db.service";
+import {
+  getShop,
+  createTryonLog,
+  updateTryonLog,
+  getMonthlyTryonUsage,
+  getDailyTryonUsage,
+  getCustomerDailyTryonUsage,
+  getProductTryonImageUrl,
+  isTryonLogEligibleForFreeRetry,
+} from "../lib/services/db.service";
+import { chargeTryonCreditOnSuccess } from "../lib/tryon-billing.server";
 import { normalizeProductGid } from "../lib/product-id.server";
 import {
   isAuthorizedStorefrontApiRequest,
@@ -139,6 +149,18 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       productId = normalizeProductGid(String(productId));
     }
 
+    const retryOfJobIdRaw = body.retry_of_job_id ?? body.retryOfJobId;
+    let freeRetryOfJobId: number | null = null;
+    if (retryOfJobIdRaw != null && String(retryOfJobIdRaw).trim() !== "") {
+      const parsed = parseInt(String(retryOfJobIdRaw), 10);
+      if (!Number.isNaN(parsed) && parsed > 0) {
+        const eligible = await isTryonLogEligibleForFreeRetry(shop, parsed);
+        if (eligible) {
+          freeRetryOfJobId = parsed;
+        }
+      }
+    }
+
     if (!userPhoto) {
       return json({ error: "user_photo is required" }, { status: 400, headers: corsHeaders });
     }
@@ -259,16 +281,12 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       // Calculate latency
       const latencyMs = Date.now() - generationStartTime;
 
-      // Deduct credit and update usage only if successful
+      // Bill only after Replicate succeeds — failures never consume a credit
       if (success) {
         try {
-          await upsertShop(shop, {
-            addCredits: -1, // Deduct one credit
-            incrementTotalTryons: true,
-            monthly_quota_used: (shopData.monthly_quota_used || 0) + 1,
-          });
+          await chargeTryonCreditOnSuccess(shop, shopData);
         } catch (creditError) {
-          console.error("[Generate] Error deducting credit:", creditError);
+          console.error("[Generate] Error charging credit after success:", creditError);
         }
       }
 
@@ -297,9 +315,14 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
     // 9. Return immediately with job_id (don't wait for generation to complete)
     const headers = corsHeaders;
-    return json({
-      job_id: logId.toString(), // Return log ID as job ID for tracking
-    }, { headers });
+    return json(
+      {
+        job_id: logId.toString(),
+        credit_policy: "charged_only_on_success",
+        free_retry: freeRetryOfJobId != null,
+      },
+      { headers }
+    );
   } catch (error) {
     if (process.env.NODE_ENV !== "production") {
       console.error("[Generate] Error:", error);

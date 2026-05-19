@@ -1,6 +1,6 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
-import { useLoaderData, useFetcher, Link } from "@remix-run/react";
+import { useLoaderData, useFetcher, Link, useRevalidator } from "@remix-run/react";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import {
   Page,
@@ -27,7 +27,11 @@ import {
 import {
   scheduleStorefrontWidgetScriptTag,
   sessionCanInstallScriptTag,
+  hasStorefrontWidgetScriptTag,
 } from "../lib/storefront-widget-install.server";
+import { buildOnboardingState, mergeOnboardingOverride } from "../lib/onboarding.server";
+import type { OnboardingStepId } from "../lib/onboarding.server";
+import { OnboardingGuide } from "../components/OnboardingGuide";
 
 const REVIEW_URL = "https://apps.shopify.com/try-on-stylelab";
 
@@ -444,6 +448,16 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
     const apiKey = process.env.SHOPIFY_API_KEY || "";
 
+    const scriptTagInstalled = sessionCanInstallScriptTag(session.scope)
+      ? await hasStorefrontWidgetScriptTag(admin).catch(() => false)
+      : false;
+
+    const onboarding = await buildOnboardingState(shop, admin, {
+      shopRow: shopData,
+      totalTryons: totalTryons || 0,
+      scriptTagInstalled,
+    });
+
     return json({
       shop: shopData || null,
       recentLogs: Array.isArray(enrichedRecentLogs) ? enrichedRecentLogs.slice(0, 5) : [],
@@ -455,6 +469,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       reviewUrl: REVIEW_URL, // ADDED: Review URL
       themeEditorAppEmbedsUrl: getThemeEditorAppEmbedsUrl(shop),
       themeEditorActivateUrl: getAppEmbedActivationUrl(shop, apiKey, "vton-widget"),
+      onboarding,
     });
   } catch (error) {
     // Log error only in development
@@ -476,6 +491,49 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const formData = await request.formData();
 
   const intent = formData.get("intent") as string;
+
+  if (intent === "dismiss-onboarding") {
+    try {
+      await upsertShop(shop, { onboardingDismissedAt: new Date() });
+      return json({ success: true });
+    } catch (error) {
+      return json({
+        success: false,
+        error:
+          error instanceof Error ? error.message : "Could not dismiss setup guide",
+      });
+    }
+  }
+
+  if (intent === "reopen-onboarding") {
+    try {
+      await upsertShop(shop, { clearOnboardingDismissed: true });
+      return json({ success: true });
+    } catch (error) {
+      return json({
+        success: false,
+        error:
+          error instanceof Error ? error.message : "Could not reopen setup guide",
+      });
+    }
+  }
+
+  if (intent === "mark-onboarding-step") {
+    const step = formData.get("step") as OnboardingStepId;
+    if (step !== "embed" && step !== "tryon" && step !== "garment") {
+      return json({ success: false, error: "Invalid setup step" });
+    }
+    try {
+      await mergeOnboardingOverride(shop, step, true);
+      return json({ success: true, step });
+    } catch (error) {
+      return json({
+        success: false,
+        error:
+          error instanceof Error ? error.message : "Could not update setup step",
+      });
+    }
+  }
 
   // Action pour fermer la notification (sans laisser de review) - réapparaîtra après 30 jours
   if (intent === "dismiss-review") {
@@ -756,8 +814,12 @@ export default function Dashboard() {
   const reviewUrl = (loaderData as any).reviewUrl || "https://apps.shopify.com/try-on-stylelab";
   const themeEditorAppEmbedsUrl = (loaderData as any).themeEditorAppEmbedsUrl || "";
   const themeEditorActivateUrl = (loaderData as any).themeEditorActivateUrl || "";
+  const onboarding = (loaderData as any).onboarding ?? null;
+  const showOnboardingPanel =
+    onboarding && !(onboarding.dismissed && onboarding.allDone);
 
   const notifications = useAdminNotifications();
+  const revalidator = useRevalidator();
   const { notifications: notifyItems, dismiss } = notifications;
 
   const [embedDismissed, setEmbedDismissed] = useState(false);
@@ -847,6 +909,12 @@ export default function Dashboard() {
     }
   }, [showAppEmbedBanner]);
 
+  useEffect(() => {
+    if (fetcher.state === "idle" && (fetcher.data as { success?: boolean })?.success) {
+      revalidator.revalidate();
+    }
+  }, [fetcher.state, fetcher.data, revalidator]);
+
   useFetcherNotifications(fetcher, notifications, {
     successId: "dashboard-save-success",
     errorId: "dashboard-save-error",
@@ -874,7 +942,7 @@ export default function Dashboard() {
     return [
       {
         id: "dashboard-app-embed",
-        show: showAppEmbedBanner,
+        show: showAppEmbedBanner && !showOnboardingPanel,
         tone: "info" as const,
         priority: 15,
         title: "Widget installé sur vos pages produit",
@@ -932,68 +1000,16 @@ export default function Dashboard() {
         persistDismiss: true,
         autoHideMs: false as const,
       },
-      {
-        id: "dashboard-low-credits",
-        show: credits < 10,
-        tone: "warning" as const,
-        priority: 6,
-        title: "Low credits",
-        message: (
-          <>
-            You have <strong>{credits}</strong> credit{credits !== 1 ? "s" : ""} left.{" "}
-            <Link to="/app/credits">Upgrade your plan →</Link>
-          </>
-        ),
-        persistDismiss: true,
-        autoHideMs: false as const,
-      },
-      {
-        id: "dashboard-quota-exceeded",
-        show: Boolean(quotaExceeded),
-        tone: "critical" as const,
-        priority: 3,
-        title: "Monthly quota reached",
-        message: (
-          <>
-            You have used your monthly limit of <strong>{monthlyQuota}</strong> try-ons
-            {quotaPercentage ? ` (${quotaPercentage}% used)` : ""}.
-          </>
-        ),
-        persistDismiss: true,
-        autoHideMs: false as const,
-      },
-      {
-        id: "dashboard-quota-warning",
-        show: Boolean(
-          monthlyQuota &&
-            !quotaExceeded &&
-            parseFloat(quotaPercentage || "0") > 80,
-        ),
-        tone: "warning" as const,
-        priority: 7,
-        title: "Approaching monthly quota",
-        message: (
-          <>
-            {quotaPercentage}% used ({monthlyUsageCount.toLocaleString()} /{" "}
-            {monthlyQuota?.toLocaleString()} try-ons).
-          </>
-        ),
-        persistDismiss: true,
-        autoHideMs: false as const,
-      },
     ];
   }, [
     showAppEmbedBanner,
+    showOnboardingPanel,
     shouldShowReview,
     reviewUrl,
     themeEditorActivateUrl,
     error,
     isEnabled,
     credits,
-    quotaExceeded,
-    monthlyQuota,
-    quotaPercentage,
-    monthlyUsageCount,
     fetcher,
   ]);
 
@@ -1074,6 +1090,15 @@ export default function Dashboard() {
         </div>
 
         <AdminNotifications items={notifyItems} onDismiss={handleNotificationDismiss} />
+
+        {showOnboardingPanel && onboarding && (
+          <OnboardingGuide
+            onboarding={onboarding}
+            themeEditorActivateUrl={themeEditorActivateUrl}
+            themeEditorAppEmbedsUrl={themeEditorAppEmbedsUrl}
+            fetcher={fetcher}
+          />
+        )}
 
         <div className="vton-metric-grid">
           {stats.map((stat) => (

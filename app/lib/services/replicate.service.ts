@@ -231,7 +231,7 @@ export async function generateTryOn(
   );
 
   let lastError: Error | null = null;
-  for (let attempt = 1; attempt <= 2; attempt++) {
+  for (let attempt = 1; attempt <= 3; attempt++) {
     try {
       const output = await runPrediction(personInput, garmentInput);
       let resultUrl = parsePredictionOutput(output);
@@ -257,7 +257,7 @@ export async function generateTryOn(
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
       const msg = lastError.message;
-      if (attempt < 2 && isRetryableReplicateError(msg)) {
+      if (attempt < 3 && isRetryableReplicateError(msg)) {
         logger.warn("[Replicate] Retry after error:", msg);
         await new Promise((r) => setTimeout(r, 1500));
         continue;

@@ -331,7 +331,7 @@
 
         if (cachedStatus && !isTryonEnabledStatus(cachedStatus)) {
           suppressWidget(shop, productId, cachedStatus);
-          refreshTryonStatus(shop, productId, productHandle);
+            refreshTryonStatus(shop, productId, productHandle);
           return;
         }
 
@@ -533,7 +533,7 @@
           q += '&product_handle=' + encodeURIComponent(productHandle);
         }
         return q;
-      }
+        }
 
       function fetchStatusUrl(url) {
         var controller = new AbortController();
@@ -894,13 +894,13 @@
             scanTimer = setTimeout(function() {
               scanTimer = null;
               if (resolved) return;
-              var anchor = vtonFindInjectionAnchor(customSelector, { allowHidden: false });
-              if (!anchor) anchor = vtonFindInjectionAnchor(customSelector, { allowHidden: true });
-              if (anchor) {
-                resolved = true;
-                try { obs.disconnect(); } catch (e) {}
-                resolve(anchor);
-              }
+            var anchor = vtonFindInjectionAnchor(customSelector, { allowHidden: false });
+            if (!anchor) anchor = vtonFindInjectionAnchor(customSelector, { allowHidden: true });
+            if (anchor) {
+              resolved = true;
+              try { obs.disconnect(); } catch (e) {}
+              resolve(anchor);
+            }
             }, 120);
           });
 
@@ -947,7 +947,7 @@
         observer.observe(parent, { childList: true });
         setTimeout(function() {
           try {
-            observer.disconnect();
+          observer.disconnect();
           } catch (e) {}
           if (_vtonReinjectObserver === observer) {
             _vtonReinjectObserver = null;
@@ -1524,7 +1524,7 @@
               min-height: 0;
             }
             .vton-result-content {
-              width: 100%;
+                width: 100%;
               display: flex;
               flex-direction: column;
               align-items: stretch;
@@ -1686,6 +1686,59 @@
               color: #d1d5db;
               font-size: 12px;
             }
+            .vton-share-block {
+              width: 100%;
+              max-width: 420px;
+              margin-top: 8px;
+              padding-top: 14px;
+              border-top: 1px solid #e5e7eb;
+            }
+            .vton-share-heading {
+              margin: 0 0 10px 0;
+              font-size: 12px;
+              font-weight: 600;
+              color: #6b7280;
+              text-align: center;
+              text-transform: uppercase;
+              letter-spacing: 0.04em;
+            }
+            .vton-share-btns {
+              display: flex;
+              flex-wrap: wrap;
+              gap: 8px;
+              justify-content: center;
+            }
+            .vton-share-btn {
+              flex: 1 1 auto;
+              min-width: 0;
+              padding: 10px 12px;
+              border-radius: 10px;
+              border: 1.5px solid #d1d5db;
+              background: #fff;
+              color: #111827;
+              font-size: 12px;
+              font-weight: 600;
+              cursor: pointer;
+              line-height: 1.2;
+            }
+            .vton-share-btn:hover {
+              border-color: #9ca3af;
+              background: #f9fafb;
+            }
+            .vton-share-btn--wa {
+              border-color: #86efac;
+              background: #f0fdf4;
+              color: #166534;
+            }
+            .vton-share-btn--wa:hover {
+              background: #dcfce7;
+              border-color: #4ade80;
+            }
+            .vton-share-btn.is-copied {
+              border-color: #93c5fd;
+              background: #eff6ff;
+              color: #1d4ed8;
+            }
             .vton-secondary-btn {
               flex: 1 1 140px;
               padding: 12px 16px;
@@ -1770,6 +1823,25 @@
               color: #1e40af;
               background: #eff6ff;
               border: 1px solid #bfdbfe;
+            }
+            .vton-error-text {
+              margin: 0 0 12px 0;
+            }
+            .vton-free-retry-btn {
+              display: block;
+              width: 100%;
+              margin-top: 4px;
+              padding: 12px 16px;
+              border: none;
+              border-radius: 8px;
+              font-size: 14px;
+              font-weight: 600;
+              cursor: pointer;
+              background: #111827;
+              color: #ffffff;
+            }
+            .vton-free-retry-btn:hover {
+              opacity: 0.92;
             }
             @media (max-width: 640px) {
               .vton-widget-container {
@@ -1996,7 +2068,7 @@
         var panel = shadowRoot.getElementById('vton-panel-' + panelName);
         if (panel) panel.classList.add('active');
       }
-
+      
       function openModal(shadowRoot, state) {
         const overlay = shadowRoot.getElementById('vton-modal-overlay');
         if (overlay) {
@@ -2063,6 +2135,7 @@
         const reader = new FileReader();
         reader.onload = function(e) {
           state.userPhoto = e.target.result;
+          vtonResetRetryState(state);
           const uploadArea = shadowRoot.getElementById('vton-upload-area');
           const generateBtn = shadowRoot.getElementById('vton-generate-btn');
           if (uploadArea) {
@@ -2075,7 +2148,7 @@
         };
         reader.readAsDataURL(file);
       }
-
+      
       function vtonEscapeHtml(str) {
         return String(str || '')
           .replace(/&/g, '&amp;')
@@ -2341,6 +2414,118 @@
         }
       }
 
+      function vtonGetProductPageUrl() {
+        if (window.Shopify && window.Shopify.product && window.Shopify.product.url) {
+          var productUrl = String(window.Shopify.product.url);
+          if (productUrl.indexOf('http://') === 0 || productUrl.indexOf('https://') === 0) {
+            return productUrl;
+          }
+          return window.location.origin + productUrl;
+        }
+        return window.location.href.split('#')[0].split('?')[0];
+      }
+
+      function vtonBuildShareMessage(state) {
+        var productTitle =
+          (window.Shopify && window.Shopify.product && window.Shopify.product.title) ||
+          'this product';
+        var pageUrl = vtonGetProductPageUrl();
+        var imageUrl = state.resultImageUrl || '';
+        var lines = [
+          'Check out my virtual try-on for ' + productTitle + '!',
+          pageUrl
+        ];
+        if (imageUrl) {
+          lines.push(imageUrl);
+        }
+        return lines.join('\n');
+      }
+
+      function vtonShareViaNative(state) {
+        if (!state.resultImageUrl) {
+          return;
+        }
+        var shareData = {
+          title: 'My virtual try-on',
+          text: vtonBuildShareMessage(state),
+          url: state.resultImageUrl
+        };
+        if (navigator.share) {
+          navigator.share(shareData).catch(function() {
+            window.open(state.resultImageUrl, '_blank', 'noopener,noreferrer');
+          });
+        } else {
+          window.open(state.resultImageUrl, '_blank', 'noopener,noreferrer');
+        }
+      }
+
+      function vtonShareViaWhatsApp(state) {
+        if (!state.resultImageUrl) {
+          return;
+        }
+        var text = vtonBuildShareMessage(state);
+        window.open(
+          'https://wa.me/?text=' + encodeURIComponent(text),
+          '_blank',
+          'noopener,noreferrer'
+        );
+      }
+
+      function vtonCopyTextFallback(text) {
+        var textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.setAttribute('readonly', '');
+        textarea.style.position = 'fixed';
+        textarea.style.left = '-9999px';
+        document.body.appendChild(textarea);
+        textarea.select();
+        var ok = false;
+        try {
+          ok = document.execCommand('copy');
+        } catch (e) {
+          ok = false;
+        }
+        document.body.removeChild(textarea);
+        return ok;
+      }
+
+      function vtonCopyImageLink(state, buttonEl) {
+        if (!state.resultImageUrl) {
+          return Promise.resolve(false);
+        }
+        var url = state.resultImageUrl;
+        var done = function(success) {
+          if (!buttonEl || !success) {
+            return;
+          }
+          var original = buttonEl.getAttribute('data-vton-label') || buttonEl.textContent;
+          buttonEl.setAttribute('data-vton-label', original);
+          buttonEl.textContent = 'Copied!';
+          buttonEl.classList.add('is-copied');
+          setTimeout(function() {
+            buttonEl.textContent = original;
+            buttonEl.classList.remove('is-copied');
+          }, 2200);
+        };
+
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          return navigator.clipboard
+            .writeText(url)
+            .then(function() {
+              done(true);
+              return true;
+            })
+            .catch(function() {
+              var ok = vtonCopyTextFallback(url);
+              done(ok);
+              return ok;
+            });
+        }
+        var fallbackOk = vtonCopyTextFallback(url);
+        done(fallbackOk);
+        return Promise.resolve(fallbackOk);
+      }
+
       function buildResultPanelHtml(state) {
         var buttonBg = state.widgetSettings.widget_bg || '#000000';
         var buttonColor = state.widgetSettings.widget_color || '#ffffff';
@@ -2382,8 +2567,17 @@
           ';">Add to cart</button>' +
           '<div class="vton-result-actions">' +
           '<button type="button" class="vton-link-btn" data-vton-action="retry">New photo</button>' +
-          '<span class="vton-result-actions-sep" aria-hidden="true">·</span>' +
-          '<button type="button" class="vton-link-btn" data-vton-action="share">Share</button>' +
+          (typeof navigator !== 'undefined' && navigator.share
+            ? '<span class="vton-result-actions-sep" aria-hidden="true">·</span>' +
+              '<button type="button" class="vton-link-btn" data-vton-action="share-native">Share</button>'
+            : '') +
+          '</div>' +
+          '<div class="vton-share-block">' +
+          '<p class="vton-share-heading">Share your look</p>' +
+          '<div class="vton-share-btns">' +
+          '<button type="button" class="vton-share-btn vton-share-btn--wa" data-vton-action="share-whatsapp">WhatsApp</button>' +
+          '<button type="button" class="vton-share-btn" data-vton-action="share-copy">Copy image link</button>' +
+          '</div>' +
           '</div>' +
           '</div>'
         );
@@ -2416,22 +2610,24 @@
           });
         }
 
-        var shareBtn = shadowRoot.querySelector('[data-vton-action="share"]');
-        if (shareBtn) {
-          shareBtn.addEventListener('click', function() {
-            if (!state.resultImageUrl) {
-              return;
-            }
-            if (navigator.share) {
-              navigator
-                .share({
-                  title: 'My virtual try-on',
-                  url: state.resultImageUrl
-                })
-                .catch(function() {});
-            } else {
-              window.open(state.resultImageUrl, '_blank', 'noopener,noreferrer');
-            }
+        var shareNativeBtn = shadowRoot.querySelector('[data-vton-action="share-native"]');
+        if (shareNativeBtn) {
+          shareNativeBtn.addEventListener('click', function() {
+            vtonShareViaNative(state);
+          });
+        }
+
+        var shareWhatsAppBtn = shadowRoot.querySelector('[data-vton-action="share-whatsapp"]');
+        if (shareWhatsAppBtn) {
+          shareWhatsAppBtn.addEventListener('click', function() {
+            vtonShareViaWhatsApp(state);
+          });
+        }
+
+        var shareCopyBtn = shadowRoot.querySelector('[data-vton-action="share-copy"]');
+        if (shareCopyBtn) {
+          shareCopyBtn.addEventListener('click', function() {
+            vtonCopyImageLink(state, shareCopyBtn);
           });
         }
       }
@@ -2465,8 +2661,92 @@
           errorEl.textContent = '';
         }
         state.userPhoto = null;
+        vtonResetRetryState(state);
         state.isGenerating = false;
         vtonShowFunnelPanel(shadowRoot, 'upload');
+      }
+
+      function vtonResetRetryState(state) {
+        state.lastFailedJobId = null;
+        state.retryOfJobId = null;
+        state._autoRetryUsed = false;
+      }
+
+      function vtonShowAiFailure(shadowRoot, state, message, failedJobId, options) {
+        options = options || {};
+        state.isGenerating = false;
+        stopLoadingMessages(shadowRoot);
+
+        if (failedJobId) {
+          state.lastFailedJobId = String(failedJobId);
+        }
+
+        var generateBtn = shadowRoot.getElementById('vton-generate-btn');
+        if (generateBtn) {
+          generateBtn.disabled = false;
+        }
+
+        var canAutoRetry =
+          !state._autoRetryUsed &&
+          state.userPhoto &&
+          state.lastFailedJobId &&
+          options.allowAutoRetry !== false;
+
+        if (canAutoRetry) {
+          state._autoRetryUsed = true;
+          state.retryOfJobId = state.lastFailedJobId;
+          var errorElement = shadowRoot.getElementById('vton-error');
+          if (errorElement) {
+            errorElement.classList.add('active');
+            errorElement.classList.remove('info');
+            errorElement.textContent =
+              'Retrying your try-on… you were not charged for the failed attempt.';
+          }
+          vtonShowFunnelPanel(shadowRoot, 'loading');
+          startLoadingMessages(shadowRoot);
+          if (generateBtn) {
+            generateBtn.disabled = true;
+          }
+          setTimeout(function() {
+            state.isGenerating = false;
+            generateTryOn(shadowRoot, state);
+          }, 1200);
+          return;
+        }
+
+        vtonShowFunnelPanel(shadowRoot, 'upload');
+        var errorEl = shadowRoot.getElementById('vton-error');
+        if (!errorEl) {
+          return;
+        }
+
+        errorEl.classList.add('active');
+        errorEl.classList.remove('info');
+        var baseMsg = message || 'Generation failed.';
+        errorEl.innerHTML =
+          '<p class="vton-error-text">' +
+          vtonEscapeHtml(baseMsg + ' You were not charged.') +
+          '</p>';
+
+        var oldBtn = shadowRoot.getElementById('vton-free-retry-btn');
+        if (oldBtn) {
+          oldBtn.remove();
+        }
+
+        if (state.userPhoto) {
+          var retryBtn = document.createElement('button');
+          retryBtn.type = 'button';
+          retryBtn.id = 'vton-free-retry-btn';
+          retryBtn.className = 'vton-free-retry-btn';
+          retryBtn.textContent = 'Try again — free';
+          retryBtn.addEventListener('click', function() {
+            if (state.lastFailedJobId) {
+              state.retryOfJobId = state.lastFailedJobId;
+            }
+            generateTryOn(shadowRoot, state);
+          });
+          errorEl.appendChild(retryBtn);
+        }
       }
 
       function renderTryonResultPanel(shadowRoot, state) {
@@ -2494,7 +2774,7 @@
           atcError.textContent = '';
         }
 
-        if (atcButton) {
+          if (atcButton) {
           atcButton.disabled = true;
           atcButton.textContent = 'Adding to cart...';
         }
@@ -2508,8 +2788,8 @@
 
         if (!variantId) {
           warn('[VTON] Variant ID not resolved');
-          if (atcButton) {
-            atcButton.disabled = false;
+              if (atcButton) {
+                atcButton.disabled = false;
             atcButton.textContent = originalButtonText;
           }
           if (atcError) {
@@ -2529,7 +2809,7 @@
             if (atcButton) {
               atcButton.textContent = 'Added to cart!';
               atcButton.style.background = '#16a34a';
-              setTimeout(function() {
+            setTimeout(function() {
                 atcButton.textContent = originalButtonText;
                 atcButton.style.background = buttonBg;
                 atcButton.disabled = false;
@@ -2542,26 +2822,26 @@
             }
             vtonPublishCartUpdate(data);
             vtonTryOpenCartDrawer();
-          })
-          .catch(function(err) {
-            error('[VTON] Error adding to cart:', err);
-            if (atcButton) {
-              atcButton.disabled = false;
+        })
+        .catch(function(err) {
+          error('[VTON] Error adding to cart:', err);
+          if (atcButton) {
+            atcButton.disabled = false;
               atcButton.textContent = 'Try again';
               atcButton.style.background = '#dc2626';
-              setTimeout(function() {
+            setTimeout(function() {
                 atcButton.textContent = originalButtonText;
                 atcButton.style.background = buttonBg;
               }, 2800);
-            }
+              }
             if (atcError) {
               atcError.textContent =
                 (err && err.message) || 'Unable to add to cart.';
               atcError.classList.add('active');
-            }
-          });
+          }
+        });
       }
-
+      
       function trackAddToCart(state) {
         var atcUrl =
           window.location.origin +
@@ -2798,15 +3078,13 @@
 
           if (attempts > maxAttempts) {
             if (pollInterval) clearInterval(pollInterval);
-            state.isGenerating = false;
-            stopLoadingMessages(shadowRoot);
-            vtonShowFunnelPanel(shadowRoot, 'upload');
-            const errorElement = shadowRoot.getElementById('vton-error');
-            if (errorElement) {
-              errorElement.classList.add('active');
-              errorElement.textContent = 'Generation timed out. Please try again.';
-            }
-            if (generateBtn) generateBtn.disabled = false;
+            vtonShowAiFailure(
+              shadowRoot,
+              state,
+              'Generation timed out.',
+              jobId,
+              { allowAutoRetry: true }
+            );
             return;
           }
 
@@ -2849,15 +3127,13 @@
                 displayResult(shadowRoot, state, statusData.result_url, loading, result, generateBtn);
               } else if (statusData.status === 'failed' || statusData.status === 'error') {
                 if (pollInterval) clearInterval(pollInterval);
-                state.isGenerating = false;
-                stopLoadingMessages(shadowRoot);
-                vtonShowFunnelPanel(shadowRoot, 'upload');
-                const errorElement = shadowRoot.getElementById('vton-error');
-                if (errorElement) {
-                  errorElement.classList.add('active');
-                  errorElement.textContent = statusData.error || 'Generation failed. Please try again.';
-                }
-                if (generateBtn) generateBtn.disabled = false;
+                vtonShowAiFailure(
+                  shadowRoot,
+                  state,
+                  statusData.error || 'Generation failed.',
+                  jobId,
+                  { allowAutoRetry: true }
+                );
               } else if (statusData.status === 'pending' || statusData.status === 'processing') {
                 // Continue polling
                 log('[VTON] Job still pending/processing, continuing to poll...');
@@ -2866,15 +3142,13 @@
                 warn('[VTON] Unknown status:', statusData.status);
                 if (attempts > 10) {
                   if (pollInterval) clearInterval(pollInterval);
-                  state.isGenerating = false;
-                  stopLoadingMessages(shadowRoot);
-                  vtonShowFunnelPanel(shadowRoot, 'upload');
-                  const errorElement = shadowRoot.getElementById('vton-error');
-                  if (errorElement) {
-                    errorElement.classList.add('active');
-                    errorElement.textContent = 'Unexpected status: ' + (statusData.status || 'unknown') + '. Please try again.';
-                  }
-                  if (generateBtn) generateBtn.disabled = false;
+                  vtonShowAiFailure(
+                    shadowRoot,
+                    state,
+                    'Unexpected status: ' + (statusData.status || 'unknown') + '.',
+                    jobId,
+                    { allowAutoRetry: true }
+                  );
                 }
               }
             })
@@ -2886,15 +3160,13 @@
               if (consecutiveErrors >= 5) {
                 error('[VTON] Multiple consecutive polling errors, stopping...');
                 if (pollInterval) clearInterval(pollInterval);
-                state.isGenerating = false;
-                stopLoadingMessages(shadowRoot);
-                vtonShowFunnelPanel(shadowRoot, 'upload');
-                const errorElement = shadowRoot.getElementById('vton-error');
-                if (errorElement) {
-                  errorElement.classList.add('active');
-                  errorElement.textContent = 'Connection error. Please try again.';
-                }
-                if (generateBtn) generateBtn.disabled = false;
+                vtonShowAiFailure(
+                  shadowRoot,
+                  state,
+                  'Connection error.',
+                  jobId,
+                  { allowAutoRetry: true }
+                );
               }
             });
         }
@@ -2905,6 +3177,7 @@
       
       function displayResult(shadowRoot, state, resultUrl, loading, result, generateBtn) {
         state.resultImageUrl = resultUrl;
+        vtonResetRetryState(state);
 
         if (state.abBucket) {
           trackAbEvent(state.shop, state.productId, state.abBucket, 'tryon');
@@ -2945,7 +3218,7 @@
         
         // Stop loading messages
         stopLoadingMessages(shadowRoot);
-
+        
         if (
           result &&
           state.resultImageUrl &&
@@ -3030,12 +3303,19 @@
           headers: {
                 'Content-Type': 'application/json'
               },
-              body: JSON.stringify({
-              user_photo: state.userPhoto,
-              product_id: state.productId,
-              product_handle: state.productHandle,
-              product_image_url: state.productImageUrl
-            }),
+              body: JSON.stringify((function() {
+                var payload = {
+                  user_photo: state.userPhoto,
+                  product_id: state.productId,
+                  product_handle: state.productHandle,
+                  product_image_url: state.productImageUrl
+                };
+                if (state.retryOfJobId) {
+                  payload.retry_of_job_id = state.retryOfJobId;
+                  state.retryOfJobId = null;
+                }
+                return payload;
+              })()),
             credentials: 'same-origin',
             signal: controller.signal
           }).then(function(response) {
@@ -3104,6 +3384,7 @@
           if (jobId) {
             // Asynchronous mode: start polling for job status
             log('[VTON] Job ID received, starting polling:', jobId);
+            state.lastFailedJobId = String(jobId);
             pollJobStatus(shadowRoot, state, jobId, loading, result, generateBtn);
             return; // Exit early, polling will handle the rest
           }
@@ -3120,50 +3401,51 @@
           }
           if (generateBtn) generateBtn.disabled = false;
         }).catch(function(err) {
-          state.isGenerating = false;
           error('[VTON] Generation error:', err);
-          
-          // Stop loading messages
-          stopLoadingMessages(shadowRoot);
-          
-          vtonShowFunnelPanel(shadowRoot, 'upload');
-          if (generateBtn) generateBtn.disabled = false;
-          const errorElement = shadowRoot.getElementById('vton-error');
-          if (errorElement) {
-            errorElement.classList.add('active');
-            // Extract error message from the error object
-            let errorMessage = 'An error occurred. Please try again.';
-            let isDailyLimitError = false;
-            
-            if (err.message) {
-              // Use the error message from the backend if available
-              errorMessage = err.message;
-              // Check if this is a daily limit error (should be displayed as info, not error)
-              // Check both the message content and the status code (402 = Payment Required, used for limits)
-              if (err.isDailyLimit || 
-                  err.message.includes('used all your available credits') || 
-                  (err.message.includes('limit') && err.message.includes('per day')) ||
-                  err.message.includes('Please try again tomorrow') ||
-                  (err.status === 402 && (err.message.includes('limit') || err.message.includes('credits')))) {
-                isDailyLimitError = true;
-              }
-            } else if (err.name === 'AbortError' || (err.message && (err.message.includes('timeout') || err.message.includes('504')))) {
-              errorMessage = 'Generation is taking longer than expected. Please wait a moment and check back, or try again.';
+
+          var errorMessage = 'An error occurred. Please try again.';
+          var isDailyLimitError = false;
+
+          if (err.message) {
+            errorMessage = err.message;
+            if (
+              err.isDailyLimit ||
+              err.message.includes('used all your available credits') ||
+              (err.message.includes('limit') && err.message.includes('per day')) ||
+              err.message.includes('Please try again tomorrow') ||
+              (err.status === 402 &&
+                (err.message.includes('limit') || err.message.includes('credits')))
+            ) {
+              isDailyLimitError = true;
             }
-            
-            // If it's a daily limit error, use info style instead of error style
-            if (isDailyLimitError) {
-              errorElement.classList.add('info');
-            } else {
-              errorElement.classList.remove('info');
-            }
-            
-            errorElement.textContent = errorMessage;
+          } else if (
+            err.name === 'AbortError' ||
+            (err.message &&
+              (err.message.includes('timeout') || err.message.includes('504')))
+          ) {
+            errorMessage =
+              'Generation is taking longer than expected. Please wait a moment and try again.';
           }
-          if (generateBtn) generateBtn.disabled = false;
+
+          if (isDailyLimitError) {
+            state.isGenerating = false;
+            stopLoadingMessages(shadowRoot);
+            vtonShowFunnelPanel(shadowRoot, 'upload');
+            if (generateBtn) generateBtn.disabled = false;
+            var limitEl = shadowRoot.getElementById('vton-error');
+            if (limitEl) {
+              limitEl.classList.add('active', 'info');
+              limitEl.textContent = errorMessage;
+            }
+            return;
+          }
+
+          vtonShowAiFailure(shadowRoot, state, errorMessage, state.lastFailedJobId, {
+            allowAutoRetry: true,
+          });
         });
       }
     } catch (vtonFatal) {
       console.error('[VTON] Widget failed to start:', vtonFatal);
-    }
+      }
     })();

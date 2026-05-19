@@ -58,6 +58,7 @@ export const loader = async ({ params, request }: LoaderFunctionArgs) => {
         status: "completed",
         result_url: log.result_image_url,
         jobId: log.id,
+        credit_charged: true,
       }, {
         headers: {
           "Access-Control-Allow-Origin": "*",
@@ -67,11 +68,13 @@ export const loader = async ({ params, request }: LoaderFunctionArgs) => {
       });
     }
 
-    // Job failed
+    // Job failed — no credit was charged
     return json({
       status: "failed",
       error: log.error_message || "Generation failed",
       jobId: log.id,
+      credit_charged: false,
+      retry_eligible: true,
     }, {
       headers: {
         "Access-Control-Allow-Origin": "*",

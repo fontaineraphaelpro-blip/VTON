@@ -154,6 +154,12 @@ export async function ensureTables() {
     `);
 
     await pool.query(`
+      ALTER TABLE shops
+      ADD COLUMN IF NOT EXISTS onboarding_dismissed_at TIMESTAMP,
+      ADD COLUMN IF NOT EXISTS onboarding_step_overrides JSONB DEFAULT '{}'::jsonb
+    `);
+
+    await pool.query(`
       CREATE TABLE IF NOT EXISTS ab_events (
         id SERIAL PRIMARY KEY,
         shop TEXT NOT NULL,

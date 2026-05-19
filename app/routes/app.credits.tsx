@@ -17,6 +17,8 @@ import {
   query,
   getMonthlyTryonUsage,
 } from "../lib/services/db.service";
+import { computeCreditsAlert } from "../lib/credits-alert";
+import { CreditsAlertBanner } from "../components/CreditsAlertBanner";
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
   const chargeId = url.searchParams.get("charge_id");
@@ -595,19 +597,26 @@ export default function Credits() {
       : null;
 
   const monthlyQuota = stats.monthlyQuota ?? creditsMap[currentActivePlan || ""] ?? 4;
-  const monthlyUsagePercent =
-    monthlyQuota > 0
-      ? Math.min(100, Math.round((stats.monthlyUsage / monthlyQuota) * 100))
-      : 0;
-
-  const isLowCredits = currentCredits <= Math.max(5, Math.ceil(monthlyQuota * 0.15));
-  const isOutOfCredits = currentCredits <= 0;
+  const creditsAlert = useMemo(
+    () =>
+      computeCreditsAlert({
+        credits: currentCredits,
+        monthlyUsage: stats.monthlyUsage,
+        monthlyQuota,
+      }),
+    [currentCredits, stats.monthlyUsage, monthlyQuota]
+  );
+  const monthlyUsagePercent = creditsAlert.usagePercent ?? 0;
 
   const faqItems = useMemo(
     () => [
       {
         q: "What is one credit?",
         a: "One successful virtual try-on on your storefront.",
+      },
+      {
+        q: "Failed AI generations?",
+        a: "No credit is used. Shoppers can retry for free until a try-on succeeds.",
       },
       {
         q: "What if I run out?",
@@ -646,35 +655,7 @@ export default function Credits() {
         >
           <AdminNotifications items={notifyItems} onDismiss={dismiss} />
 
-        {(isOutOfCredits || isLowCredits) && (
-          <div
-            className={`credits-alert ${isOutOfCredits ? "credits-alert--critical" : "credits-alert--warning"}`}
-            role="status"
-          >
-            <div>
-              <strong>
-                {isOutOfCredits
-                  ? "You're out of credits"
-                  : "Credits running low"}
-              </strong>
-              <p>
-                {isOutOfCredits
-                  ? "Shoppers can't generate new try-ons. Upgrade now to restore the experience immediately."
-                  : `You have ${currentCredits} credit${currentCredits > 1 ? "s" : ""} left. Avoid downtime during your next campaign.`}
-              </p>
-            </div>
-            {currentActivePlan !== "studio" && (
-              <button
-                type="button"
-                className="credits-alert__cta"
-                onClick={() => handleSubscriptionPurchase(recommendedPlanId)}
-                disabled={isSubmitting || submittingPackId !== null}
-              >
-                Upgrade plan
-              </button>
-            )}
-          </div>
-        )}
+        <CreditsAlertBanner alert={creditsAlert} variant="inline" />
 
         <div className="credits-funnel" aria-label="Credits checkout flow">
           <div className="credits-funnel-steps" aria-hidden="true">

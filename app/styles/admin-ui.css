@@ -853,6 +853,21 @@
   border-color: var(--vton-brand) !important;
 }
 
+/* Products — catalog search & pagination */
+.vton-products-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.vton-products-toolbar__search {
+  flex: 1 1 220px;
+  min-width: 200px;
+  max-width: 420px;
+}
+
 /* Products — garment photo picker for AI try-on */
 .vton-admin .vton-garment-picker-trigger {
   display: block;
@@ -1081,6 +1096,109 @@
 .vton-admin .credits-alert__cta:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+/* Global + inline credit alerts (80% warning / 0% critical) */
+.vton-admin .vton-credits-alert {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 14px 18px;
+  margin-bottom: 18px;
+  border-radius: var(--vton-radius);
+  border: 1px solid var(--vton-border);
+}
+
+.vton-admin .vton-credits-alert--global {
+  margin: 0 0 16px;
+  border-radius: 0;
+  border-left: none;
+  border-right: none;
+  border-top: none;
+  position: sticky;
+  top: 0;
+  z-index: 40;
+}
+
+.vton-admin .vton-credits-alert--warning {
+  background: #fffbeb;
+  border-color: #fcd34d;
+}
+
+.vton-admin .vton-credits-alert--critical {
+  background: #fef2f2;
+  border-color: #fca5a5;
+}
+
+.vton-admin .vton-credits-alert__title {
+  margin: 0 0 6px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--vton-text);
+}
+
+.vton-admin .vton-credits-alert__message {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--vton-muted);
+  max-width: 720px;
+}
+
+.vton-admin .vton-credits-alert__meter {
+  height: 6px;
+  background: rgba(0, 0, 0, 0.08);
+  border-radius: 999px;
+  margin-top: 10px;
+  max-width: 320px;
+  overflow: hidden;
+}
+
+.vton-admin .vton-credits-alert__meter-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--vton-brand);
+  transition: width 0.3s ease;
+}
+
+.vton-admin .vton-credits-alert--critical .vton-credits-alert__meter-fill {
+  background: #dc2626;
+}
+
+.vton-admin .vton-credits-alert--warning .vton-credits-alert__meter-fill {
+  background: #d97706;
+}
+
+.vton-admin .vton-credits-alert__actions {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+.vton-admin .vton-credits-alert__cta {
+  display: inline-block;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  background: var(--vton-brand);
+  color: #fff;
+}
+
+.vton-admin .vton-credits-alert__cta:hover {
+  background: var(--vton-brand-dark);
+  color: #fff;
+}
+
+.vton-admin .vton-credits-alert--critical .vton-credits-alert__cta {
+  background: #dc2626;
+}
+
+.vton-admin .vton-credits-alert--critical .vton-credits-alert__cta:hover {
+  background: #b91c1c;
 }
 
 .vton-admin .credits-conv-hero {
@@ -1698,6 +1816,245 @@
 
   .vton-admin .credits-alert__cta {
     width: 100%;
+  }
+}
+
+/* Dashboard — first-time setup guide */
+.vton-admin .vton-onboarding {
+  background: var(--vton-surface);
+  border: 1px solid var(--vton-border);
+  border-radius: var(--vton-radius);
+  padding: 22px 24px 20px;
+  margin-bottom: 22px;
+  box-shadow: var(--vton-shadow);
+}
+
+.vton-admin .vton-onboarding-collapsed {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 14px 18px;
+  margin-bottom: 20px;
+  background: var(--vton-brand-soft);
+  border: 1px solid var(--vton-brand);
+  border-radius: var(--vton-radius);
+  font-size: 14px;
+}
+
+.vton-admin .vton-onboarding__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.vton-admin .vton-onboarding__eyebrow {
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--vton-brand-dark);
+}
+
+.vton-admin .vton-onboarding__title {
+  margin: 0 0 6px;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--vton-text);
+  line-height: 1.25;
+}
+
+.vton-admin .vton-onboarding__subtitle {
+  margin: 0;
+  font-size: 14px;
+  color: var(--vton-muted);
+  line-height: 1.45;
+  max-width: 560px;
+}
+
+.vton-admin .vton-onboarding__progress-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.vton-admin .vton-onboarding__progress-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--vton-text);
+}
+
+.vton-admin .vton-onboarding__dismiss {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 13px;
+  color: var(--vton-muted);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.vton-admin .vton-onboarding__dismiss:hover {
+  color: var(--vton-text);
+}
+
+.vton-admin .vton-onboarding__progress {
+  height: 8px;
+  background: #e5e7eb;
+  border-radius: 999px;
+  overflow: hidden;
+  margin-bottom: 18px;
+}
+
+.vton-admin .vton-onboarding__progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--vton-brand) 0%, #34d399 100%);
+  border-radius: 999px;
+  transition: width 0.35s ease;
+}
+
+.vton-admin .vton-onboarding__steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.vton-admin .vton-onboarding__step {
+  border: 1px solid var(--vton-border);
+  border-radius: 10px;
+  background: var(--vton-bg);
+  overflow: hidden;
+}
+
+.vton-admin .vton-onboarding__step.is-done {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+
+.vton-admin .vton-onboarding__step.is-expanded {
+  border-color: var(--vton-brand);
+  box-shadow: 0 0 0 1px var(--vton-brand-soft);
+}
+
+.vton-admin .vton-onboarding__step-head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+}
+
+.vton-admin .vton-onboarding__step-badge {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.vton-admin .vton-onboarding__step-badge.is-done {
+  background: var(--vton-brand);
+  color: #fff;
+}
+
+.vton-admin .vton-onboarding__step-title {
+  flex: 1;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--vton-text);
+}
+
+.vton-admin .vton-onboarding__step-status {
+  font-size: 12px;
+  font-weight: 700;
+  color: #15803d;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.vton-admin .vton-onboarding__step-body {
+  padding: 0 16px 16px 56px;
+  font-size: 14px;
+  color: var(--vton-muted);
+  line-height: 1.5;
+}
+
+.vton-admin .vton-onboarding__step-body > p {
+  margin: 0 0 10px;
+}
+
+.vton-admin .vton-onboarding__bullets {
+  margin: 0 0 14px;
+  padding-left: 18px;
+}
+
+.vton-admin .vton-onboarding__bullets li {
+  margin-bottom: 6px;
+}
+
+.vton-admin .vton-onboarding__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.vton-admin .vton-onboarding__link {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--vton-brand);
+  text-decoration: none;
+}
+
+.vton-admin .vton-onboarding__link:hover {
+  text-decoration: underline;
+}
+
+.vton-admin .vton-onboarding__auto-note {
+  margin: 10px 0 0;
+  font-size: 12px;
+  color: #15803d;
+  font-weight: 600;
+}
+
+.vton-admin .vton-onboarding__complete {
+  margin-top: 16px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: var(--vton-brand-soft);
+  border: 1px solid var(--vton-brand);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.vton-admin .vton-onboarding__complete p {
+  margin: 0 0 12px;
+}
+
+@media (max-width: 700px) {
+  .vton-admin .vton-onboarding__step-body {
+    padding-left: 16px;
   }
 }
 

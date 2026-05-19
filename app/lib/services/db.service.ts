@@ -77,6 +77,8 @@ export async function upsertShop(domain: string, data: {
   last_review_prompt_date?: Date | null;
   abTestEnabled?: boolean;
   abTestPercent?: number;
+  onboardingDismissedAt?: Date | null;
+  clearOnboardingDismissed?: boolean;
 }) {
   const shop = await getShop(domain);
   
@@ -169,6 +171,13 @@ export async function upsertShop(domain: string, data: {
     if (data.abTestPercent !== undefined) {
       updates.push(`ab_test_percent = $${paramIndex++}`);
       params.push(data.abTestPercent);
+    }
+    if (data.onboardingDismissedAt !== undefined) {
+      updates.push(`onboarding_dismissed_at = $${paramIndex++}`);
+      params.push(data.onboardingDismissedAt);
+    }
+    if (data.clearOnboardingDismissed) {
+      updates.push(`onboarding_dismissed_at = NULL`);
     }
     
     updates.push(`last_active_at = CURRENT_TIMESTAMP`);
@@ -319,6 +328,49 @@ export async function updateTryonLog(logId: number, data: {
       logId,
     ]
   );
+}
+
+export type TryonLogRow = {
+  id: number;
+  shop: string;
+  success: boolean;
+  error_message: string | null;
+  result_image_url: string | null;
+  customer_ip: string | null;
+  product_id: string | null;
+  created_at: Date | string;
+};
+
+export async function getTryonLogById(
+  shop: string,
+  logId: number
+): Promise<TryonLogRow | null> {
+  const result = await query(
+    `SELECT id, shop, success, error_message, result_image_url, customer_ip, product_id, created_at
+     FROM tryon_logs
+     WHERE id = $1 AND shop = $2
+     LIMIT 1`,
+    [logId, shop]
+  );
+  return (result.rows[0] as TryonLogRow | undefined) ?? null;
+}
+
+/** Failed try-on jobs may be retried without charging until one succeeds. */
+export async function isTryonLogEligibleForFreeRetry(
+  shop: string,
+  logId: number
+): Promise<boolean> {
+  const log = await getTryonLogById(shop, logId);
+  if (!log) return false;
+  if (log.success || log.result_image_url) return false;
+  if (!log.error_message) return false;
+  const created =
+    log.created_at instanceof Date
+      ? log.created_at.getTime()
+      : new Date(log.created_at).getTime();
+  if (Number.isNaN(created)) return false;
+  const maxAgeMs = 24 * 60 * 60 * 1000;
+  return Date.now() - created <= maxAgeMs;
 }
 
 /**

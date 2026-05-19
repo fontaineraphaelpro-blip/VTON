@@ -1,6 +1,11 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
-import { useLoaderData, useFetcher } from "@remix-run/react";
+import {
+  useLoaderData,
+  useFetcher,
+  Form,
+  useNavigate,
+} from "@remix-run/react";
 import { useMemo, useCallback, useState, useRef, useEffect } from "react";
 import {
   Page,
@@ -14,6 +19,8 @@ import {
   Badge,
   Checkbox,
   Popover,
+  TextField,
+  Pagination,
 } from "@shopify/polaris";
 import { TitleBar } from "@shopify/app-bridge-react";
 import { AdminPage } from "../components/AdminPage";
@@ -27,19 +34,13 @@ import {
   setProductTryonImageUrl,
   getProductSettingsBatch,
 } from "../lib/services/db.service";
-import { uploadProductGarmentImage } from "../lib/shopify-product-image-upload.server";
-
-type ProductMediaImage = { id: string; url: string; altText?: string | null };
-
-type ProductRow = {
-  id: string;
-  title: string;
-  handle?: string;
-  featuredImage?: { url: string; altText?: string | null } | null;
-  totalInventory?: number;
-  status?: string;
-  mediaImages: ProductMediaImage[];
-};
+import { uploadGarmentImageToShopifyFiles } from "../lib/shopify-garment-file-upload.server";
+import {
+  PRODUCTS_PAGE_SIZE,
+  buildProductsListUrl,
+  type ShopifyProductRow as ProductRow,
+  type ProductsPageInfo,
+} from "../lib/shopify-products.shared";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
@@ -54,124 +55,56 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       });
     }
 
-    const productsQuery = `#graphql
-      query getProducts {
-        products(first: 25) {
-          edges {
-            node {
-              id
-              title
-              handle
-              featuredImage { url altText }
-              totalInventory
-              status
-              media(first: 12) {
-                edges {
-                  node {
-                    ... on MediaImage {
-                      id
-                      image { url altText }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }`;
+    const url = new URL(request.url);
+    const searchQuery = url.searchParams.get("q")?.trim() ?? "";
+    const after = url.searchParams.get("after");
+    const before = url.searchParams.get("before");
 
-    const response = await admin.graphql(productsQuery);
+    let products: ProductRow[] = [];
+    let pageInfo: ProductsPageInfo = {
+      hasNextPage: false,
+      hasPreviousPage: false,
+      startCursor: null,
+      endCursor: null,
+    };
 
-    if (!response.ok) {
-      if (response.status === 401) {
-        const reauthUrl = response.headers.get(
-          "x-shopify-api-request-failure-reauthorize-url"
-        );
+    const { fetchProductsPage, ShopifyProductsFetchError } = await import(
+      "../lib/shopify-products.server"
+    );
+
+    try {
+      const page = await fetchProductsPage(admin, {
+        search: searchQuery,
+        after,
+        before,
+        pageSize: PRODUCTS_PAGE_SIZE,
+      });
+      products = page.products;
+      pageInfo = page.pageInfo;
+    } catch (fetchError) {
+      if (
+        fetchError instanceof ShopifyProductsFetchError &&
+        fetchError.status === 401
+      ) {
         return json({
           products: [] as ProductRow[],
           shop: session.shop,
           error:
             "Your session has expired. Please refresh the page to re-authenticate.",
           requiresAuth: true,
-          reauthUrl: reauthUrl || null,
+          reauthUrl: fetchError.reauthUrl || null,
         });
       }
-      const errorText = await response
-        .text()
-        .catch(() => `HTTP ${response.status}`);
+      const message =
+        fetchError instanceof Error ? fetchError.message : "Unknown error";
       return json({
         products: [] as ProductRow[],
         shop: session.shop,
-        error: `Shopify API error (${response.status}): ${errorText.substring(0, 200)}`,
+        error: message,
+        searchQuery,
+        pageInfo,
       });
     }
-
-    const responseJson = (await response.json()) as {
-      data?: {
-        products?: {
-          edges?: { node: Record<string, unknown> }[];
-        };
-      };
-      errors?: { message: string }[];
-    };
-
-    if (responseJson.errors?.length) {
-      return json({
-        products: [] as ProductRow[],
-        shop: session.shop,
-        error: `GraphQL error: ${responseJson.errors.map((e) => e.message).join(", ")}`,
-      });
-    }
-
-    const products: ProductRow[] =
-      responseJson.data?.products?.edges?.map((edge) => {
-        const node = edge.node as {
-          id: string;
-          title: string;
-          handle?: string;
-          featuredImage?: { url: string; altText?: string | null };
-          totalInventory?: number;
-          status?: string;
-          media?: {
-            edges?: {
-              node?: {
-                id?: string;
-                image?: { url?: string; altText?: string | null };
-              };
-            }[];
-          };
-        };
-
-        const mediaImages: ProductMediaImage[] = [];
-        const seen = new Set<string>();
-
-        const pushUrl = (id: string, url?: string, altText?: string | null) => {
-          if (!url || seen.has(url)) return;
-          seen.add(url);
-          mediaImages.push({ id, url, altText });
-        };
-
-        if (node.featuredImage?.url) {
-          pushUrl("featured", node.featuredImage.url, node.featuredImage.altText);
-        }
-
-        node.media?.edges?.forEach((m, idx) => {
-          const img = m.node?.image;
-          if (img?.url) {
-            pushUrl(m.node?.id || `media-${idx}`, img.url, img.altText);
-          }
-        });
-
-        return {
-          id: node.id,
-          title: node.title,
-          handle: node.handle,
-          featuredImage: node.featuredImage,
-          totalInventory: node.totalInventory,
-          status: node.status,
-          mediaImages,
-        };
-      }) || [];
 
     const shop = session.shop;
     let tryonCounts: Record<string, number> = {};
@@ -205,6 +138,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       shop,
       tryonCounts: tryonCounts || {},
       productSettings: productSettings || {},
+      searchQuery,
+      pageInfo,
+      pageSize: PRODUCTS_PAGE_SIZE,
     });
   } catch (error) {
     if (error instanceof Response) {
@@ -258,7 +194,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     }
 
     try {
-      const imageUrl = await uploadProductGarmentImage(admin, productId, file);
+      const imageUrl = await uploadGarmentImageToShopifyFiles(admin, file);
       await setProductTryonImageUrl(shop, productId, imageUrl, productHandle);
       return json({ success: true, productId, imageUrl });
     } catch (error) {
@@ -357,9 +293,8 @@ function GarmentPhotoPicker({
       <div className="vton-garment-popover">
         <BlockStack gap="300">
           <Text as="p" variant="bodySm" tone="subdued">
-            Flat lay or packshot works best. This image is for AI only — your
-            storefront gallery stays unchanged unless you upload a new file
-            (added to product media).
+            Flat lay or packshot works best. Uploads are stored in Shopify Files
+            for AI only — they never appear in your product gallery.
           </Text>
 
           {activeUrl && (
@@ -444,7 +379,18 @@ function GarmentPhotoPicker({
 export default function Products() {
   const loaderData = useLoaderData<typeof loader>();
   const products = (loaderData.products || []) as ProductRow[];
+  const searchQuery = (loaderData as { searchQuery?: string }).searchQuery ?? "";
+  const pageInfo = (loaderData as { pageInfo?: ProductsPageInfo }).pageInfo ?? {
+    hasNextPage: false,
+    hasPreviousPage: false,
+    startCursor: null,
+    endCursor: null,
+  };
+  const pageSize =
+    (loaderData as { pageSize?: number }).pageSize ?? PRODUCTS_PAGE_SIZE;
   const error = loaderData.error || null;
+  const navigate = useNavigate();
+  const [searchInput, setSearchInput] = useState(searchQuery);
   const tryonCounts = loaderData.tryonCounts || {};
   const productSettings = loaderData.productSettings || {};
   const fetcher = useFetcher<typeof action>();
@@ -542,6 +488,24 @@ export default function Products() {
       setUploadingProductId(null);
     }
   }, [fetcher.state, uploadingProductId]);
+
+  useEffect(() => {
+    setSearchInput(searchQuery);
+  }, [searchQuery]);
+
+  const handleSearchSubmit = useCallback(
+    (event: React.FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+      const q = searchInput.trim();
+      navigate(buildProductsListUrl({ q: q || undefined }));
+    },
+    [navigate, searchInput]
+  );
+
+  const handleClearSearch = useCallback(() => {
+    setSearchInput("");
+    navigate("/app/products");
+  }, [navigate]);
 
   const productRows = useMemo(() => {
     return products
@@ -647,8 +611,8 @@ export default function Products() {
               <div>
                 <h2 className="vton-panel-title">Catalog</h2>
                 <p className="vton-field-hint" style={{ margin: "4px 0 0" }}>
-                  {products.length} product{products.length !== 1 ? "s" : ""} —
-                  try-on is active by default on every storefront product page
+                  {products.length} product{products.length !== 1 ? "s" : ""} on
+                  this page ({pageSize} per page) — try-on is on by default
                 </p>
               </div>
               <Button
@@ -659,23 +623,58 @@ export default function Products() {
                 Create product
               </Button>
             </div>
+
+            <Form
+              method="get"
+              className="vton-products-toolbar"
+              onSubmit={handleSearchSubmit}
+            >
+              <div className="vton-products-toolbar__search">
+                <TextField
+                  label="Search products"
+                  labelHidden
+                  value={searchInput}
+                  onChange={setSearchInput}
+                  placeholder="Search by title or handle"
+                  autoComplete="off"
+                  clearButton
+                  onClearButtonClick={handleClearSearch}
+                />
+              </div>
+              <Button submit>Search</Button>
+              {searchQuery ? (
+                <Button variant="plain" onClick={handleClearSearch}>
+                  Clear
+                </Button>
+              ) : null}
+            </Form>
+
             <BlockStack gap="400">
               {products.length === 0 ? (
                 <EmptyState
-                  heading="No Products"
-                  action={{
-                    content: "Create Product",
-                    url: "shopify:admin/products/new",
-                    target: "_blank",
-                  }}
+                  heading={searchQuery ? "No matching products" : "No products"}
+                  action={
+                    searchQuery
+                      ? {
+                          content: "Clear search",
+                          onAction: handleClearSearch,
+                        }
+                      : {
+                          content: "Create product",
+                          url: "shopify:admin/products/new",
+                          target: "_blank",
+                        }
+                  }
                   image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
                 >
                   <p>
-                    Create a product in Shopify to enable virtual try-on on its
-                    product page.
+                    {searchQuery
+                      ? `No products match "${searchQuery}". Try another term or clear the search.`
+                      : "Create a product in Shopify to enable virtual try-on on its product page."}
                   </p>
                 </EmptyState>
               ) : (
+                <>
                 <DataTable
                   columnContentTypes={[
                     "text",
@@ -697,6 +696,31 @@ export default function Products() {
                   ]}
                   rows={productRows}
                 />
+                {(pageInfo.hasNextPage || pageInfo.hasPreviousPage) && (
+                  <InlineStack align="center">
+                    <Pagination
+                      hasPrevious={pageInfo.hasPreviousPage}
+                      onPrevious={() =>
+                        navigate(
+                          buildProductsListUrl({
+                            q: searchQuery || undefined,
+                            before: pageInfo.startCursor,
+                          })
+                        )
+                      }
+                      hasNext={pageInfo.hasNextPage}
+                      onNext={() =>
+                        navigate(
+                          buildProductsListUrl({
+                            q: searchQuery || undefined,
+                            after: pageInfo.endCursor,
+                          })
+                        )
+                      }
+                    />
+                  </InlineStack>
+                )}
+                </>
               )}
             </BlockStack>
           </div>
