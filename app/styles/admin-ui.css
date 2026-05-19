@@ -157,6 +157,32 @@
   opacity: 0.92;
 }
 
+/* Remix <Link> renders <a> — app.css forces green links with !important */
+.vton-admin a.vton-btn {
+  text-decoration: none !important;
+}
+
+.vton-admin a.vton-btn--ghost {
+  color: #fff !important;
+  background: rgba(255, 255, 255, 0.12) !important;
+  border: 1px solid rgba(255, 255, 255, 0.25) !important;
+}
+
+.vton-admin a.vton-btn--primary {
+  color: var(--vton-brand-dark) !important;
+  background: #fff !important;
+}
+
+.vton-admin a.vton-btn--secondary {
+  color: var(--vton-text) !important;
+  background: var(--vton-surface) !important;
+  border: 1px solid var(--vton-border) !important;
+}
+
+.vton-admin a.vton-btn:hover {
+  text-decoration: none !important;
+}
+
 /* Metrics */
 .vton-metric-grid {
   display: grid;

@@ -1673,17 +1673,16 @@ button.save-config-button.Polaris-Button--primary:hover:not(:disabled) > *,
   max-width: 100% !important;
 }
 
-/* Enhanced Link Styles */
-a {
-  color: var(--color-primary) !important;
-  font-weight: 600 !important;
-  text-decoration: none !important;
-  /* transition disabled for performance */
+/* Text links (exclude admin button-styled links — see admin-ui.css .vton-btn) */
+.vton-admin a:not(.vton-btn):not(.vton-metric-card) {
+  color: var(--color-primary);
+  font-weight: 600;
+  text-decoration: none;
 }
 
-a:hover {
-  color: var(--color-primary-hover) !important;
-  text-decoration: underline !important;
+.vton-admin a:not(.vton-btn):not(.vton-metric-card):hover {
+  color: var(--color-primary-hover);
+  text-decoration: underline;
 }
 
 /* Enhanced Scrollbar */
