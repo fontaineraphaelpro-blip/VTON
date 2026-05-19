@@ -121,20 +121,19 @@ export default function Widget() {
         show: true,
         tone: "info" as const,
         priority: 10,
-        title: "Activer le widget sur votre thème",
+        title: "Bouton try-on sur vos fiches produit",
         message: (
           <>
-            Boutique en ligne → <strong>Thèmes → Personnaliser</strong> → icône{" "}
-            <strong>Intégrations d&apos;applications</strong> (barre de gauche, pas « Ajouter un
-            bloc »). Activez <strong>Virtual Try-On</strong> sous l&apos;app Virtual Try-On, puis
-            enregistrez.
+            Le bouton est installé automatiquement à l&apos;installation de l&apos;app. Désactivez-le
+            produit par produit dans <strong>Products</strong>. L&apos;intégration thème reste
+            optionnelle pour affiner le placement.
           </>
         ),
         persistDismiss: true,
         autoHideMs: false as const,
         action: themeEditorActivateUrl
           ? {
-              label: "Activer Virtual Try-On",
+              label: "Options thème (optionnel)",
               onAction: () => window.open(themeEditorActivateUrl, "_top"),
             }
           : undefined,
@@ -200,10 +199,11 @@ export default function Widget() {
 
           {(themeEditorActivateUrl || themeEditorAppEmbedsUrl) && (
             <div className="vton-panel" style={{ marginBottom: 16 }}>
-              <h2 className="vton-panel-title">Installation sur le thème</h2>
+              <h2 className="vton-panel-title">Installation (automatique)</h2>
               <p className="vton-field-hint" style={{ marginBottom: 12 }}>
-                Le widget n&apos;apparaît pas via « Ajouter un bloc ». Utilisez les intégrations
-                d&apos;applications dans l&apos;éditeur de thème.
+                Le bouton try-on est ajouté automatiquement sur toutes les pages produit. Pour le
+                désactiver sur un article, allez dans <strong>Products</strong>. L&apos;intégration
+                thème ci-dessous est optionnelle.
               </p>
               <BlockStack gap="200">
                 {themeEditorActivateUrl ? (

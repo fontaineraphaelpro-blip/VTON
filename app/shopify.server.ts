@@ -8,6 +8,7 @@ import {
 import { PrismaSessionStorage } from "@shopify/shopify-app-session-storage-prisma";
 import prisma from "./db.server";
 import { ensureTables } from "./lib/db-init.server";
+import { ensureStorefrontWidgetScriptTag } from "./lib/storefront-widget-install.server";
 
 // Warm DB schema once at boot so storefront /status never pays migration cost per request
 void ensureTables().catch(() => {});
@@ -48,6 +49,17 @@ const shopify = shopifyApp({
       amount: 399.0,
       currencyCode: "USD",
       interval: BillingInterval.Every30Days as any,
+    },
+  },
+  hooks: {
+    afterAuth: async ({ admin }) => {
+      try {
+        await ensureStorefrontWidgetScriptTag(admin);
+      } catch (installError) {
+        if (process.env.NODE_ENV !== "production") {
+          console.error("[VTON] afterAuth storefront widget install:", installError);
+        }
+      }
     },
   },
 });

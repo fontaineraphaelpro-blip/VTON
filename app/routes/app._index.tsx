@@ -24,6 +24,7 @@ import {
   getAppEmbedActivationUrl,
   getThemeEditorAppEmbedsUrl,
 } from "../lib/theme-editor-url.server";
+import { ensureStorefrontWidgetScriptTag } from "../lib/storefront-widget-install.server";
 
 const REVIEW_URL = "https://apps.shopify.com/try-on-stylelab";
 
@@ -41,6 +42,14 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const returnUrl = `https://${url.host}/app`;
 
   let shopData = await getShop(shop);
+
+  try {
+    await ensureStorefrontWidgetScriptTag(admin);
+  } catch (installError) {
+    if (process.env.NODE_ENV !== "production") {
+      console.error("[VTON] Storefront widget auto-install:", installError);
+    }
+  }
 
   // Sync subscription only when plan is unknown (Credits page handles billing return)
   if (!shopData?.plan_name) {
@@ -760,19 +769,19 @@ export default function Dashboard() {
         show: showAppEmbedBanner,
         tone: "info" as const,
         priority: 15,
-        title: "Activer le widget sur votre thème",
+        title: "Widget installé sur vos pages produit",
         message: (
           <>
-            Thèmes → Personnaliser → <strong>Intégrations d&apos;applications</strong> (icône à
-            gauche). Activez <strong>Virtual Try-On</strong> sous l&apos;app Virtual Try-On, puis
-            enregistrez.
+            Le bouton try-on est activé automatiquement sur toutes les fiches produit. Désactivez-le
+            produit par produit dans <strong>Products</strong>. L&apos;intégration thème (optionnelle)
+            améliore parfois le placement du bouton.
           </>
         ),
         persistDismiss: true,
         autoHideMs: false as const,
         action: themeEditorActivateUrl
           ? {
-              label: "Activer Virtual Try-On",
+              label: "Options thème (optionnel)",
               onAction: () => window.open(themeEditorActivateUrl, "_top"),
             }
           : undefined,
@@ -811,7 +820,7 @@ export default function Dashboard() {
         priority: 8,
         title: "Widget is disabled",
         message:
-          "The try-on button is hidden on your store. Enable it in settings below and activate the app embed in your theme.",
+          "The try-on button is hidden on your store. Re-enable it in Store settings below.",
         persistDismiss: true,
         autoHideMs: false as const,
       },
