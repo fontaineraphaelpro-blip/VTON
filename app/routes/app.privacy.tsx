@@ -1,9 +1,7 @@
 import type { LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
-import { useLoaderData } from "@remix-run/react";
-import { Page, Layout, Card, BlockStack, Text } from "@shopify/polaris";
-import { TitleBar } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
+import { AdminDocShell } from "../components/AdminDocShell";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   await authenticate.admin(request);
@@ -11,169 +9,85 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 };
 
 export default function Privacy() {
+  const updatedAt = new Date().toLocaleDateString();
+
   return (
-    <Page>
-      <TitleBar title="Privacy Policy" />
-      <Layout>
-        <Layout.Section>
-          <Card>
-            <BlockStack gap="400">
-              <Text as="h1" variant="headingXl">
-                Privacy Policy
-              </Text>
-              <Text as="p" variant="bodyMd">
-                <strong>Last updated:</strong> {new Date().toLocaleDateString()}
-              </Text>
+    <AdminDocShell
+      titleBar="Privacy Policy - VTON Magic"
+      title="Privacy Policy"
+      subtitle="How we collect, use, and protect your store and customer data."
+      updatedAt={updatedAt}
+    >
+      <section className="vton-doc__section">
+        <h2>1. Information we collect</h2>
+        <p>When you use our Virtual Try-On application, we collect the following information:</p>
+        <ul>
+          <li>
+            <strong>Shop information:</strong> Your Shopify shop domain and basic shop settings
+          </li>
+          <li>
+            <strong>Product data:</strong> Product IDs and images that you enable for virtual try-on
+          </li>
+          <li>
+            <strong>Usage statistics:</strong> Aggregated data about try-on usage, conversion rates, and widget interactions
+          </li>
+          <li>
+            <strong>Customer photos:</strong> Photos uploaded by customers for virtual try-on are processed securely and deleted immediately after generation. We do not store customer photos.
+          </li>
+        </ul>
+      </section>
 
-              <BlockStack gap="300">
-                <Text as="h2" variant="headingLg">
-                  1. Information We Collect
-                </Text>
-                <Text as="p" variant="bodyMd">
-                  When you use our Virtual Try-On application, we collect the following information:
-                </Text>
-                <ul>
-                  <li>
-                    <Text as="p" variant="bodyMd">
-                      <strong>Shop Information:</strong> Your Shopify shop domain and basic shop settings
-                    </Text>
-                  </li>
-                  <li>
-                    <Text as="p" variant="bodyMd">
-                      <strong>Product Data:</strong> Product IDs and images that you enable for virtual try-on
-                    </Text>
-                  </li>
-                  <li>
-                    <Text as="p" variant="bodyMd">
-                      <strong>Usage Statistics:</strong> Aggregated data about try-on usage, conversion rates, and widget interactions
-                    </Text>
-                  </li>
-                  <li>
-                    <Text as="p" variant="bodyMd">
-                      <strong>Customer Photos:</strong> Photos uploaded by customers for virtual try-on are processed securely and deleted immediately after generation. We do not store customer photos.
-                    </Text>
-                  </li>
-                </ul>
-              </BlockStack>
+      <section className="vton-doc__section">
+        <h2>2. How we use your information</h2>
+        <p>We use the information we collect to:</p>
+        <ul>
+          <li>Provide and improve our virtual try-on service</li>
+          <li>Process customer photos for virtual try-on generation</li>
+          <li>Generate usage statistics and analytics for your shop</li>
+          <li>Communicate with you about your account and our services</li>
+        </ul>
+      </section>
 
-              <BlockStack gap="300">
-                <Text as="h2" variant="headingLg">
-                  2. How We Use Your Information
-                </Text>
-                <Text as="p" variant="bodyMd">
-                  We use the information we collect to:
-                </Text>
-                <ul>
-                  <li>
-                    <Text as="p" variant="bodyMd">
-                      Provide and improve our virtual try-on service
-                    </Text>
-                  </li>
-                  <li>
-                    <Text as="p" variant="bodyMd">
-                      Process customer photos for virtual try-on generation
-                    </Text>
-                  </li>
-                  <li>
-                    <Text as="p" variant="bodyMd">
-                      Generate usage statistics and analytics for your shop
-                    </Text>
-                  </li>
-                  <li>
-                    <Text as="p" variant="bodyMd">
-                      Communicate with you about your account and our services
-                    </Text>
-                  </li>
-                </ul>
-              </BlockStack>
+      <section className="vton-doc__section">
+        <h2>3. Data storage and security</h2>
+        <p>We take data security seriously:</p>
+        <ul>
+          <li>All data is stored securely using industry-standard encryption</li>
+          <li>Customer photos are processed through secure APIs and deleted immediately after generation</li>
+          <li>We do not share your data with third parties except as necessary to provide our service</li>
+        </ul>
+      </section>
 
-              <BlockStack gap="300">
-                <Text as="h2" variant="headingLg">
-                  3. Data Storage and Security
-                </Text>
-                <Text as="p" variant="bodyMd">
-                  We take data security seriously:
-                </Text>
-                <ul>
-                  <li>
-                    <Text as="p" variant="bodyMd">
-                      All data is stored securely using industry-standard encryption
-                    </Text>
-                  </li>
-                  <li>
-                    <Text as="p" variant="bodyMd">
-                      Customer photos are processed through secure APIs and deleted immediately after generation
-                    </Text>
-                  </li>
-                  <li>
-                    <Text as="p" variant="bodyMd">
-                      We do not share your data with third parties except as necessary to provide our service
-                    </Text>
-                  </li>
-                </ul>
-              </BlockStack>
+      <section className="vton-doc__section">
+        <h2>4. Your rights</h2>
+        <p>Under GDPR and other privacy laws, you have the right to:</p>
+        <ul>
+          <li>Access your personal data</li>
+          <li>Request correction of inaccurate data</li>
+          <li>Request deletion of your data</li>
+          <li>Object to processing of your data</li>
+        </ul>
+        <p>
+          To exercise these rights, please contact us at{" "}
+          <a href="mailto:fontaineraphaelpro@gmail.com">fontaineraphaelpro@gmail.com</a>
+        </p>
+      </section>
 
-              <BlockStack gap="300">
-                <Text as="h2" variant="headingLg">
-                  4. Your Rights
-                </Text>
-                <Text as="p" variant="bodyMd">
-                  Under GDPR and other privacy laws, you have the right to:
-                </Text>
-                <ul>
-                  <li>
-                    <Text as="p" variant="bodyMd">
-                      Access your personal data
-                    </Text>
-                  </li>
-                  <li>
-                    <Text as="p" variant="bodyMd">
-                      Request correction of inaccurate data
-                    </Text>
-                  </li>
-                  <li>
-                    <Text as="p" variant="bodyMd">
-                      Request deletion of your data
-                    </Text>
-                  </li>
-                  <li>
-                    <Text as="p" variant="bodyMd">
-                      Object to processing of your data
-                    </Text>
-                  </li>
-                </ul>
-                <Text as="p" variant="bodyMd">
-                  To exercise these rights, please contact us at{" "}
-                  <a href="mailto:fontaineraphaelpro@gmail.com">fontaineraphaelpro@gmail.com</a>
-                </Text>
-              </BlockStack>
+      <section className="vton-doc__section">
+        <h2>5. Data retention</h2>
+        <p>
+          We retain your shop data for as long as your account is active. When you uninstall the app, all your data is permanently deleted within 30 days.
+        </p>
+      </section>
 
-              <BlockStack gap="300">
-                <Text as="h2" variant="headingLg">
-                  5. Data Retention
-                </Text>
-                <Text as="p" variant="bodyMd">
-                  We retain your shop data for as long as your account is active. When you uninstall the app, all your data is permanently deleted within 30 days.
-                </Text>
-              </BlockStack>
-
-              <BlockStack gap="300">
-                <Text as="h2" variant="headingLg">
-                  6. Contact Us
-                </Text>
-                <Text as="p" variant="bodyMd">
-                  If you have questions about this Privacy Policy, please contact us at:
-                </Text>
-                <Text as="p" variant="bodyMd">
-                  <strong>Email:</strong>{" "}
-                  <a href="mailto:fontaineraphaelpro@gmail.com">fontaineraphaelpro@gmail.com</a>
-                </Text>
-              </BlockStack>
-            </BlockStack>
-          </Card>
-        </Layout.Section>
-      </Layout>
-    </Page>
+      <section className="vton-doc__section">
+        <h2>6. Contact us</h2>
+        <p>If you have questions about this Privacy Policy, please contact us at:</p>
+        <p>
+          <strong>Email:</strong>{" "}
+          <a href="mailto:fontaineraphaelpro@gmail.com">fontaineraphaelpro@gmail.com</a>
+        </p>
+      </section>
+    </AdminDocShell>
   );
 }
-

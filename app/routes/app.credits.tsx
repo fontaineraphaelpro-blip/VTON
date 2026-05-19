@@ -638,7 +638,7 @@ export default function Credits() {
         : "pro";
 
   return (
-    <Page fullWidth>
+    <Page>
       <TitleBar title="Credits - VTON Magic" />
       <div className="app-container credits-page">
         <AdminPage
