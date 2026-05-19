@@ -7,11 +7,12 @@ import {
   Text,
   DataTable,
   Badge,
-  Banner,
   EmptyState,
 } from "@shopify/polaris";
 import { TitleBar } from "@shopify/app-bridge-react";
 import { AdminPage } from "../components/AdminPage";
+import { AdminNotifications } from "../components/AdminNotifications";
+import { useAdminNotifications, useNotificationSync } from "../hooks/useAdminNotifications";
 import { authenticate } from "../shopify.server";
 import { getTryonLogs } from "../lib/services/db.service";
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -302,25 +303,41 @@ export default function History() {
     });
   }, [logs, formatDate, formatLatency]);
 
+  const notifications = useAdminNotifications();
+  const { notifications: notifyItems, dismiss } = notifications;
+
+  useNotificationSync(
+    useMemo(
+      () => [
+        {
+          id: "history-loader-error",
+          show: Boolean(error),
+          tone: "critical" as const,
+          priority: 1,
+          title: "Could not load history",
+          message: error ? `Error loading history: ${error}` : undefined,
+          action: {
+            label: "Retry",
+            onAction: () => {
+              window.location.href = window.location.pathname;
+            },
+          },
+        },
+      ],
+      [error],
+    ),
+    notifications,
+  );
+
   return (
     <Page>
       <TitleBar title="History - VTON Magic" />
       <div className="app-container">
-        {error && (
-          <div style={{ marginBottom: "var(--spacing-lg)" }}>
-            <Banner tone="critical" title="Error" onDismiss={() => {
-              // Error from loader, reload to clear
-              window.location.href = window.location.pathname;
-            }}>
-              Error loading history: {error}
-            </Banner>
-          </div>
-        )}
-
         <AdminPage
           title="History"
           subtitle="All virtual try-on sessions on your store"
         >
+          <AdminNotifications items={notifyItems} onDismiss={dismiss} />
 
         <div className="vton-metric-grid">
           {stats.map((stat) => (

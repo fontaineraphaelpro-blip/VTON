@@ -416,12 +416,179 @@
   margin: 6px 0 0;
 }
 
-/* Alerts stack */
+/* Notifications stack */
+.vton-notify-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.vton-notify {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 14px 14px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--vton-border);
+  background: var(--vton-surface);
+  box-shadow: var(--vton-shadow);
+  animation: vton-notify-in 0.25s ease-out;
+}
+
+@keyframes vton-notify-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.vton-notify__icon {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.vton-notify__content {
+  flex: 1;
+  min-width: 0;
+}
+
+.vton-notify__title {
+  margin: 0 0 4px;
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--vton-text);
+  line-height: 1.35;
+}
+
+.vton-notify__message {
+  margin: 0;
+  font-size: 13px;
+  color: var(--vton-muted);
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+.vton-notify__message a {
+  color: var(--vton-brand);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.vton-notify__message a:hover {
+  text-decoration: underline;
+}
+
+.vton-notify__actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.vton-notify__btn {
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.vton-notify__close {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--vton-soft);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.vton-notify__close:hover {
+  background: rgba(0, 0, 0, 0.06);
+  color: var(--vton-text);
+}
+
+.vton-notify--success {
+  border-color: #b8e6d0;
+  background: linear-gradient(135deg, #f0fdf7 0%, #ffffff 100%);
+}
+
+.vton-notify--success .vton-notify__icon {
+  background: #d1fae5;
+  color: #047857;
+}
+
+.vton-notify--info {
+  border-color: #c9d8f0;
+  background: linear-gradient(135deg, #f5f9ff 0%, #ffffff 100%);
+}
+
+.vton-notify--info .vton-notify__icon {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.vton-notify--warning {
+  border-color: #f5d9a8;
+  background: linear-gradient(135deg, #fffbeb 0%, #ffffff 100%);
+}
+
+.vton-notify--warning .vton-notify__icon {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.vton-notify--warning .vton-notify__btn {
+  background: #fff;
+  border-color: #f5d9a8;
+  color: #b45309;
+}
+
+.vton-notify--critical {
+  border-color: #f5c4c4;
+  background: linear-gradient(135deg, #fef2f2 0%, #ffffff 100%);
+}
+
+.vton-notify--critical .vton-notify__icon {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.vton-notify--success .vton-notify__btn {
+  background: var(--vton-brand);
+  color: #fff;
+}
+
+.vton-notify--info .vton-notify__btn {
+  background: #1d4ed8;
+  color: #fff;
+}
+
+/* Legacy alias */
 .vton-alerts {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-bottom: 16px;
+  gap: 10px;
+  margin-bottom: 18px;
 }
 
 /* Credits page alignment */
@@ -511,6 +678,16 @@
 
   .vton-panel-header {
     flex-wrap: wrap;
+  }
+
+  .vton-notify {
+    flex-wrap: wrap;
+  }
+
+  .vton-notify__actions {
+    width: 100%;
+    justify-content: flex-end;
+    padding-top: 4px;
   }
 }
 

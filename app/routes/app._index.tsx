@@ -15,6 +15,9 @@ import {
 } from "@shopify/polaris";
 import { TitleBar } from "@shopify/app-bridge-react";
 import { AdminPage } from "../components/AdminPage";
+import { AdminNotifications } from "../components/AdminNotifications";
+import { useAdminNotifications, useNotificationSync } from "../hooks/useAdminNotifications";
+import { useFetcherNotifications } from "../hooks/useFetcherNotifications";
 import { authenticate } from "../shopify.server";
 import { getShop, upsertShop, getTryonLogs, getTopProducts, getTryonStatsByDay, getMonthlyTryonUsage, query } from "../lib/services/db.service";
 
@@ -627,21 +630,18 @@ export default function Dashboard() {
   const shouldShowReview = (loaderData as any).shouldShowReview || false;
   const reviewUrl = (loaderData as any).reviewUrl || "https://apps.shopify.com/try-on-stylelab";
 
-  // State for managing notification visibility
-  const [showErrorBanner, setShowErrorBanner] = useState(error !== null);
-  const [showSuccessBanner, setShowSuccessBanner] = useState(false);
-  const [showDisabledBanner, setShowDisabledBanner] = useState(true);
-  const [showLowCreditsBanner, setShowLowCreditsBanner] = useState(true);
-  const [showQuotaExceededBanner, setShowQuotaExceededBanner] = useState(true);
-  const [showQuotaWarningBanner, setShowQuotaWarningBanner] = useState(true);
-  const [showReviewBanner, setShowReviewBanner] = useState(shouldShowReview);
-  
-  // App Embed banner - show only 2 times
-  const [showAppEmbedBanner, setShowAppEmbedBanner] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    const displayCount = parseInt(localStorage.getItem('appEmbedBannerDisplayCount') || '0', 10);
+  const notifications = useAdminNotifications();
+  const { notifications: notifyItems, dismiss } = notifications;
+
+  const [embedDismissed, setEmbedDismissed] = useState(false);
+  const showAppEmbedBanner = useMemo(() => {
+    if (embedDismissed || typeof window === "undefined") return false;
+    const displayCount = parseInt(
+      localStorage.getItem("appEmbedBannerDisplayCount") || "0",
+      10,
+    );
     return displayCount < 2;
-  });
+  }, [embedDismissed]);
 
   // ADDED: Monthly quota and usage (for display only)
   const monthlyQuota = shop?.monthly_quota || null;
@@ -703,25 +703,181 @@ export default function Dashboard() {
   const [isEnabled, setIsEnabled] = useState(shop?.is_enabled !== false);
 
   useEffect(() => {
-    if (fetcher.data?.success) {
-      setShowSuccessBanner(true);
-    }
-  }, [fetcher.data?.success]);
-
-  // Increment App Embed banner display count when it's shown
-  useEffect(() => {
-    if (showAppEmbedBanner && typeof window !== 'undefined') {
-      const currentCount = parseInt(localStorage.getItem('appEmbedBannerDisplayCount') || '0', 10);
+    if (showAppEmbedBanner && typeof window !== "undefined") {
+      const currentCount = parseInt(
+        localStorage.getItem("appEmbedBannerDisplayCount") || "0",
+        10,
+      );
       if (currentCount < 2) {
-        // Increment count when banner is displayed
-        localStorage.setItem('appEmbedBannerDisplayCount', String(currentCount + 1));
-        // Hide banner if it's been shown 2 times
+        localStorage.setItem(
+          "appEmbedBannerDisplayCount",
+          String(currentCount + 1),
+        );
         if (currentCount + 1 >= 2) {
-          setShowAppEmbedBanner(false);
+          setEmbedDismissed(true);
         }
       }
     }
   }, [showAppEmbedBanner]);
+
+  useFetcherNotifications(fetcher, notifications, {
+    successId: "dashboard-save-success",
+    errorId: "dashboard-save-error",
+    onSuccess: (data) => {
+      const d = data as { deletedCount?: number; message?: string };
+      if (d.deletedCount !== undefined) {
+        return {
+          title: "Cleanup complete",
+          message:
+            d.message || `Deleted ${d.deletedCount} old script tag(s).`,
+        };
+      }
+      return {
+        title: "Settings saved",
+        message: "Your store settings were updated successfully.",
+      };
+    },
+    onError: (data) => ({
+      title: "Could not save",
+      message: String((data as { error?: string }).error ?? "Unknown error"),
+    }),
+  });
+
+  const dashboardNotifications = useMemo(() => {
+    return [
+      {
+        id: "dashboard-app-embed",
+        show: showAppEmbedBanner,
+        tone: "info" as const,
+        priority: 15,
+        title: "Add the widget to your theme",
+        message: (
+          <>
+            In <strong>Online Store → Themes → Customize → App embeds</strong>, enable
+            &quot;Virtual Try-On Widget&quot; on your product template.
+          </>
+        ),
+        persistDismiss: true,
+        autoHideMs: false as const,
+      },
+      {
+        id: "dashboard-review",
+        show: shouldShowReview,
+        tone: "info" as const,
+        priority: 20,
+        title: "Enjoying Virtual Try-On?",
+        message: "Your feedback helps us improve the app for your store.",
+        persistDismiss: true,
+        autoHideMs: false as const,
+        action: {
+          label: "Leave a review",
+          onAction: () => {
+            window.open(reviewUrl, "_blank");
+            const formData = new FormData();
+            formData.append("intent", "review-completed");
+            fetcher.submit(formData, { method: "post" });
+          },
+        },
+      },
+      {
+        id: "dashboard-loader-error",
+        show: Boolean(error),
+        tone: "critical" as const,
+        priority: 1,
+        title: "Error",
+        message: error,
+      },
+      {
+        id: "dashboard-widget-disabled",
+        show: !isEnabled,
+        tone: "warning" as const,
+        priority: 8,
+        title: "Widget is disabled",
+        message:
+          "The try-on button is hidden on your store. Enable it in settings below and activate the app embed in your theme.",
+        persistDismiss: true,
+        autoHideMs: false as const,
+      },
+      {
+        id: "dashboard-low-credits",
+        show: credits < 10,
+        tone: "warning" as const,
+        priority: 6,
+        title: "Low credits",
+        message: (
+          <>
+            You have <strong>{credits}</strong> credit{credits !== 1 ? "s" : ""} left.{" "}
+            <Link to="/app/credits">Upgrade your plan →</Link>
+          </>
+        ),
+        persistDismiss: true,
+        autoHideMs: false as const,
+      },
+      {
+        id: "dashboard-quota-exceeded",
+        show: Boolean(quotaExceeded),
+        tone: "critical" as const,
+        priority: 3,
+        title: "Monthly quota reached",
+        message: (
+          <>
+            You have used your monthly limit of <strong>{monthlyQuota}</strong> try-ons
+            {quotaPercentage ? ` (${quotaPercentage}% used)` : ""}.
+          </>
+        ),
+        persistDismiss: true,
+        autoHideMs: false as const,
+      },
+      {
+        id: "dashboard-quota-warning",
+        show: Boolean(
+          monthlyQuota &&
+            !quotaExceeded &&
+            parseFloat(quotaPercentage || "0") > 80,
+        ),
+        tone: "warning" as const,
+        priority: 7,
+        title: "Approaching monthly quota",
+        message: (
+          <>
+            {quotaPercentage}% used ({monthlyUsageCount.toLocaleString()} /{" "}
+            {monthlyQuota?.toLocaleString()} try-ons).
+          </>
+        ),
+        persistDismiss: true,
+        autoHideMs: false as const,
+      },
+    ];
+  }, [
+    showAppEmbedBanner,
+    shouldShowReview,
+    reviewUrl,
+    error,
+    isEnabled,
+    credits,
+    quotaExceeded,
+    monthlyQuota,
+    quotaPercentage,
+    monthlyUsageCount,
+    fetcher,
+  ]);
+
+  useNotificationSync(dashboardNotifications, notifications);
+
+  const handleNotificationDismiss = useCallback(
+    (id: string, options?: { persist?: boolean }) => {
+      if (id === "dashboard-review") {
+        const formData = new FormData();
+        formData.append("intent", "dismiss-review");
+        fetcher.submit(formData, { method: "post" });
+      }
+      if (id === "dashboard-app-embed") {
+        setEmbedDismissed(true);
+      }
+      dismiss(id, options);
+    },
+    [dismiss, fetcher],
+  );
 
   // Memoize stats array to prevent recreation on every render
   const stats = useMemo(() => [
@@ -787,112 +943,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {(showErrorBanner || fetcher.data?.success || showLowCreditsBanner || showDisabledBanner || showQuotaExceededBanner || showQuotaWarningBanner || showReviewBanner || showAppEmbedBanner) && (
-          <div className="vton-alerts">
-            <BlockStack gap="300">
-              {showAppEmbedBanner && (
-                <Banner 
-                  tone="info" 
-                  title="⚠️ Important: Add App Embed to Product Pages"
-                  onDismiss={() => setShowAppEmbedBanner(false)}
-                >
-                  <p>
-                    <strong>Don't forget to add the App Embed block to your product pages.</strong>
-                    <br />
-                    Go to <strong>Online Store → Themes → Customize</strong>, then add the "Virtual Try-On Widget" block to your product template.
-                  </p>
-                </Banner>
-              )}
-              {showReviewBanner && (
-                <Banner 
-                  tone="info" 
-                  title="⭐ Love Virtual Try-On? Leave us a review!"
-                  onDismiss={() => {
-                    setShowReviewBanner(false);
-                    // Fermer la notification - réapparaîtra après 30 jours
-                    const formData = new FormData();
-                    formData.append("intent", "dismiss-review");
-                    fetcher.submit(formData, { method: "post" });
-                  }}
-                  action={{
-                    content: "Leave a Review",
-                    onAction: () => {
-                      window.open(reviewUrl, "_blank");
-                      setShowReviewBanner(false);
-                      // Marquer comme review complété - ne plus jamais réafficher
-                      const formData = new FormData();
-                      formData.append("intent", "review-completed");
-                      fetcher.submit(formData, { method: "post" });
-                    },
-                  }}
-                >
-                  <p>
-                    Your feedback helps us improve!
-                    <br />
-                    If you're enjoying Virtual Try-On, please leave us a review.
-                  </p>
-                </Banner>
-              )}
-              {showErrorBanner && error && (
-                <Banner tone="critical" title="Error" onDismiss={() => setShowErrorBanner(false)}>
-                  {error}
-                </Banner>
-              )}
-              {showDisabledBanner && !isEnabled && (
-                <Banner tone="warning" title="Widget is Disabled" onDismiss={() => setShowDisabledBanner(false)}>
-                  <p>
-                    The widget is currently <strong>disabled</strong> on your store.
-                    <br />
-                    Enable it below and add the App Embed block in your theme editor.
-                  </p>
-                </Banner>
-              )}
-              {showSuccessBanner && fetcher.data?.success && (fetcher.data as any).deletedCount !== undefined && (
-                <Banner tone="success" onDismiss={() => setShowSuccessBanner(false)}>
-                  {(fetcher.data as any).message || `Deleted ${(fetcher.data as any).deletedCount} old script tag(s)`}
-                </Banner>
-              )}
-              {showSuccessBanner && fetcher.data?.success && !(fetcher.data as any).deletedCount && (
-                <Banner tone="success" onDismiss={() => setShowSuccessBanner(false)}>
-                  Configuration saved successfully
-                </Banner>
-              )}
-              {(fetcher.data as any)?.error && (
-                <Banner tone="critical" onDismiss={() => {
-                  fetcher.load('/app');
-                }}>
-                  Error: {(fetcher.data as any).error}
-                </Banner>
-              )}
-              {showLowCreditsBanner && credits < 10 && (
-                <Banner tone="warning" title="Low Credits Balance" onDismiss={() => setShowLowCreditsBanner(false)}>
-                  <p>
-                    You have <strong>{credits}</strong> credit{credits !== 1 ? "s" : ""} remaining. 
-                    <Link to="/app/credits" prefetch="intent" style={{ marginLeft: "8px" }}>
-                      Purchase credits →
-                    </Link>
-                  </p>
-                </Banner>
-              )}
-              {/* ADDED: Monthly quota warning */}
-              {showQuotaExceededBanner && quotaExceeded && (
-                <Banner tone="critical" title="Monthly Quota Exceeded" onDismiss={() => setShowQuotaExceededBanner(false)}>
-                  <p>
-                    You have reached your monthly quota of <strong>{monthlyQuota}</strong> try-ons. 
-                    {quotaPercentage && ` (${quotaPercentage}% used)`}
-                  </p>
-                </Banner>
-              )}
-              {showQuotaWarningBanner && monthlyQuota && !quotaExceeded && parseFloat(quotaPercentage || "0") > 80 && (
-                <Banner tone="warning" title="Approaching Monthly Quota" onDismiss={() => setShowQuotaWarningBanner(false)}>
-                  <p>
-                    You have used <strong>{quotaPercentage}%</strong> of your monthly quota ({monthlyUsageCount} / {monthlyQuota} try-ons).
-                  </p>
-                </Banner>
-              )}
-            </BlockStack>
-          </div>
-        )}
+        <AdminNotifications items={notifyItems} onDismiss={handleNotificationDismiss} />
 
         <div className="vton-metric-grid">
           {stats.map((stat) => (

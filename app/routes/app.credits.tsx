@@ -4,11 +4,11 @@ import { useLoaderData, useFetcher, useNavigation, useRevalidator } from "@remix
 import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   Page,
-  Button,
-  Banner,
 } from "@shopify/polaris";
 import { TitleBar } from "@shopify/app-bridge-react";
 import { AdminPage } from "../components/AdminPage";
+import { AdminNotifications } from "../components/AdminNotifications";
+import { useAdminNotifications, useNotificationSync } from "../hooks/useAdminNotifications";
 import { authenticate } from "../shopify.server";
 import { getShop, upsertShop, query } from "../lib/services/db.service";
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -396,19 +396,65 @@ export default function Credits() {
   const currentCredits = shop?.credits || 0;
   const [submittingPackId, setSubmittingPackId] = useState<string | null>(null);
   
-  // State for managing notification visibility
-  const [showErrorBanner, setShowErrorBanner] = useState(error !== null);
-  const [showSuccessBanner, setShowSuccessBanner] = useState(subscriptionUpdated && planName !== null);
-  const [showFetcherErrorBanner, setShowFetcherErrorBanner] = useState(false);
+  const notifications = useAdminNotifications();
+  const { notifications: notifyItems, dismiss } = notifications;
 
   const isSubmitting = fetcher.state === "submitting" || navigation.state === "submitting";
-  
-  // Update banner visibility when fetcher error appears
-  useEffect(() => {
-    if ((fetcher.data as any)?.error) {
-      setShowFetcherErrorBanner(true);
-    }
-  }, [(fetcher.data as any)?.error]);
+
+  const creditsNotifications = useMemo(() => {
+    const fetcherData = fetcher.data as {
+      error?: string;
+      requiresAuth?: boolean;
+      reauthUrl?: string;
+    } | null;
+
+    return [
+      {
+        id: "credits-loader-error",
+        show: Boolean(error),
+        tone: "critical" as const,
+        priority: 1,
+        title: "Error",
+        message: error,
+      },
+      {
+        id: "credits-subscription-success",
+        show: Boolean(subscriptionUpdated && planName),
+        tone: "success" as const,
+        priority: 5,
+        title: "Subscription activated",
+        message: `Your ${planName} plan is active. Monthly credits have been updated.`,
+        autoHideMs: 8000 as const,
+      },
+      {
+        id: "credits-fetcher-error",
+        show: Boolean(fetcherData?.error && fetcher.state === "idle"),
+        tone: "critical" as const,
+        priority: 2,
+        title: fetcherData?.requiresAuth ? "Authentication required" : "Error",
+        message: fetcherData?.error,
+        action:
+          fetcherData?.requiresAuth && fetcherData?.reauthUrl
+            ? {
+                label: "Re-authenticate",
+                onAction: () => {
+                  try {
+                    if (window.top && window.top !== window) {
+                      window.top.location.href = fetcherData.reauthUrl!;
+                    } else {
+                      window.location.href = fetcherData.reauthUrl!;
+                    }
+                  } catch {
+                    window.location.href = fetcherData.reauthUrl!;
+                  }
+                },
+              }
+            : undefined,
+      },
+    ];
+  }, [error, subscriptionUpdated, planName, fetcher.data, fetcher.state]);
+
+  useNotificationSync(creditsNotifications, notifications);
 
   useEffect(() => {
     if (fetcher.state === "idle" && submittingPackId !== null) {
@@ -500,70 +546,10 @@ export default function Credits() {
     []
   );
 
-  const hasAlerts =
-    (showErrorBanner && error) ||
-    (showSuccessBanner && subscriptionUpdated && planName) ||
-    (showFetcherErrorBanner && (fetcher.data as any)?.error);
-
   return (
     <Page fullWidth>
       <TitleBar title="Credits - VTON Magic" />
       <div className="app-container credits-page">
-        {hasAlerts && (
-          <div className="vton-alerts credits-alerts">
-        {showErrorBanner && error && (
-            <Banner tone="critical" title="Error" onDismiss={() => setShowErrorBanner(false)}>
-              {error}
-            </Banner>
-        )}
-
-        {showSuccessBanner && subscriptionUpdated && planName && (
-            <Banner tone="success" title="Subscription activated!" onDismiss={() => setShowSuccessBanner(false)}>
-              Your <strong>{planName}</strong> subscription has been activated successfully. Your monthly credits have been updated.
-            </Banner>
-        )}
-
-        {showFetcherErrorBanner && (fetcher.data as any)?.error && (
-            <Banner 
-              tone="critical" 
-              title={(fetcher.data as any)?.requiresAuth ? "Authentication required" : "Error"}
-              onDismiss={() => {
-                setShowFetcherErrorBanner(false);
-                fetcher.load('/app/credits');
-              }}
-              action={(fetcher.data as any)?.requiresAuth ? {
-                content: (fetcher.data as any)?.reauthUrl ? "Re-authenticate" : "Refresh page",
-                onAction: () => {
-                  if ((fetcher.data as any)?.reauthUrl) {
-                    try {
-                      if (window.top && window.top !== window) {
-                        window.top.location.href = (fetcher.data as any).reauthUrl;
-                      } else {
-                        window.location.href = (fetcher.data as any).reauthUrl;
-                      }
-                    } catch (e) {
-                      window.location.href = (fetcher.data as any).reauthUrl;
-                    }
-                  } else {
-                    try {
-                      if (window.top && window.top !== window) {
-                        window.top.location.reload();
-                      } else {
-                        window.location.reload();
-                      }
-                    } catch (e) {
-                      window.location.reload();
-                    }
-                  }
-                },
-              } : undefined}
-            >
-              {(fetcher.data as any)?.error}
-            </Banner>
-        )}
-          </div>
-        )}
-
         <AdminPage
           title="Plans & credits"
           subtitle="Monthly quota resets each cycle. Unused credits do not roll over."
@@ -576,6 +562,8 @@ export default function Credits() {
             </div>
           }
         >
+          <AdminNotifications items={notifyItems} onDismiss={dismiss} />
+
         <div className="pricing-grid pricing-grid--compact">
           {subscriptionPlans.map((plan) => {
             const isCurrentPlan = currentActivePlan === plan.id;

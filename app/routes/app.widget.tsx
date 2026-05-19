@@ -1,17 +1,19 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useLoaderData, useFetcher } from "@remix-run/react";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Page,
   Text,
   Button,
-  Banner,
   TextField,
   BlockStack,
 } from "@shopify/polaris";
 import { TitleBar } from "@shopify/app-bridge-react";
 import { AdminPage } from "../components/AdminPage";
+import { AdminNotifications } from "../components/AdminNotifications";
+import { useAdminNotifications, useNotificationSync } from "../hooks/useAdminNotifications";
+import { useFetcherNotifications } from "../hooks/useFetcherNotifications";
 import { authenticate } from "../shopify.server";
 import { getShop, upsertShop } from "../lib/services/db.service";
 
@@ -64,11 +66,12 @@ export default function Widget() {
   const shop = loaderData.shop ?? null;
   const error = "error" in loaderData ? loaderData.error : null;
 
+  const notifications = useAdminNotifications();
+  const { notifications: items, dismiss } = notifications;
+
   const [widgetText, setWidgetText] = useState(() => shop?.widget_text || "Try It On Now ✨");
   const [widgetBg, setWidgetBg] = useState(() => shop?.widget_bg || "#000000");
   const [widgetColor, setWidgetColor] = useState(() => shop?.widget_color || "#ffffff");
-  const [showSuccessBanner, setShowSuccessBanner] = useState(false);
-  const [showErrorBanner, setShowErrorBanner] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
@@ -80,31 +83,55 @@ export default function Widget() {
     }
   }, [shop, isInitialized]);
 
-  const previousSuccessRef = useRef<string | null>(null);
   useEffect(() => {
-    if (fetcher.data?.success && fetcher.data?.savedValues) {
-      const saveKey = `${fetcher.data.savedValues.widget_text}-${fetcher.data.savedValues.widget_bg}-${fetcher.data.savedValues.widget_color}`;
-      if (previousSuccessRef.current !== saveKey) {
-        setWidgetText(fetcher.data.savedValues.widget_text || "Try It On Now ✨");
-        setWidgetBg(fetcher.data.savedValues.widget_bg || "#000000");
-        setWidgetColor(fetcher.data.savedValues.widget_color || "#ffffff");
-        previousSuccessRef.current = saveKey;
-        setShowSuccessBanner(true);
-        const timer = setTimeout(() => setShowSuccessBanner(false), 5000);
-        return () => clearTimeout(timer);
-      }
+    if (fetcher.data?.success && fetcher.data.savedValues) {
+      setWidgetText(fetcher.data.savedValues.widget_text || "Try It On Now ✨");
+      setWidgetBg(fetcher.data.savedValues.widget_bg || "#000000");
+      setWidgetColor(fetcher.data.savedValues.widget_color || "#ffffff");
     }
-    if (fetcher.data && "error" in fetcher.data && fetcher.data.error) {
-      setShowErrorBanner(true);
-      const timer = setTimeout(() => setShowErrorBanner(false), 7000);
-      return () => clearTimeout(timer);
-    }
-    if (fetcher.state === "submitting") {
-      previousSuccessRef.current = null;
-      setShowSuccessBanner(false);
-      setShowErrorBanner(false);
-    }
-  }, [fetcher.data, fetcher.state]);
+  }, [fetcher.data?.success, fetcher.data?.savedValues]);
+
+  useFetcherNotifications(fetcher, notifications, {
+    onSuccess: () => ({
+      title: "Widget saved",
+      message: "Refresh a product page on your store to see the new button style.",
+    }),
+    onError: (data) => ({
+      title: "Could not save",
+      message: String((data as { error?: string }).error ?? "Unknown error"),
+    }),
+  });
+
+  const staticNotifications = useMemo(
+    () => [
+      {
+        id: "widget-theme-setup",
+        show: true,
+        tone: "info" as const,
+        priority: 10,
+        title: "Enable on your theme",
+        message: (
+          <>
+            Go to <strong>Online Store → Themes → Customize → App embeds</strong> and turn on
+            &quot;Virtual Try-On Widget&quot; for each theme you use.
+          </>
+        ),
+        persistDismiss: true,
+        autoHideMs: false as const,
+      },
+      {
+        id: "widget-loader-error",
+        show: Boolean(error),
+        tone: "critical" as const,
+        priority: 1,
+        title: "Could not load settings",
+        message: error,
+      },
+    ],
+    [error],
+  );
+
+  useNotificationSync(staticNotifications, notifications);
 
   const getLuminance = (hex: string): number => {
     const rgb = hexToRgb(hex);
@@ -149,29 +176,7 @@ export default function Widget() {
           title="Widget"
           subtitle="Customize the try-on button on your product pages"
         >
-          <div className="vton-alerts">
-            <Banner tone="info" title="Enable on your theme">
-              <Text as="p" variant="bodyMd">
-                <strong>Online Store → Themes → Customize → App embeds</strong> → activate
-                &quot;Virtual Try-On Widget&quot; on each theme you use.
-              </Text>
-            </Banner>
-            {error ? (
-              <Banner tone="critical" title="Error">
-                {error}
-              </Banner>
-            ) : null}
-            {fetcher.data?.success && fetcher.state === "idle" && showSuccessBanner ? (
-              <Banner tone="success" onDismiss={() => setShowSuccessBanner(false)}>
-                Configuration saved. Refresh a product page to see changes.
-              </Banner>
-            ) : null}
-            {fetcher.data && "error" in fetcher.data && fetcher.data.error && showErrorBanner ? (
-              <Banner tone="critical" onDismiss={() => setShowErrorBanner(false)}>
-                {String(fetcher.data.error)}
-              </Banner>
-            ) : null}
-          </div>
+          <AdminNotifications items={items} onDismiss={dismiss} />
 
           <div className="vton-preview-wrap">
             <div className="vton-preview-card">

@@ -1,25 +1,22 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useLoaderData, useFetcher } from "@remix-run/react";
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useMemo, useCallback } from "react";
 import {
   Page,
-  Layout,
-  Card,
   BlockStack,
-  Text,
   DataTable,
   Button,
-  InlineStack,
   EmptyState,
   Thumbnail,
   Badge,
-  Divider,
-  Banner,
   Checkbox,
 } from "@shopify/polaris";
 import { TitleBar } from "@shopify/app-bridge-react";
 import { AdminPage } from "../components/AdminPage";
+import { AdminNotifications } from "../components/AdminNotifications";
+import { useAdminNotifications, useNotificationSync } from "../hooks/useAdminNotifications";
+import { useFetcherNotifications } from "../hooks/useFetcherNotifications";
 import { authenticate } from "../shopify.server";
 import { getProductTryonCounts, setProductTryonSetting, getProductTryonSettingsBatch } from "../lib/services/db.service";
 
@@ -207,40 +204,45 @@ export default function Products() {
   const tryonCounts = (loaderData as any)?.tryonCounts || {};
   const productSettings = (loaderData as any)?.productSettings || {};
   const fetcher = useFetcher<typeof action>();
-  
-  // State for managing success/error notifications
-  const [showSuccessBanner, setShowSuccessBanner] = useState(false);
-  const [showErrorBanner, setShowErrorBanner] = useState(false);
-  
-  // Show success banner when fetcher.data?.success changes
-  useEffect(() => {
-    if (fetcher.data?.success) {
-      setShowSuccessBanner(true);
-      // Auto-hide after 5 seconds
-      const timer = setTimeout(() => {
-        setShowSuccessBanner(false);
-      }, 5000);
-      return () => clearTimeout(timer);
-    } else if (fetcher.state === 'idle' && !fetcher.data?.success) {
-      // Reset banner when fetcher is idle and no success
-      setShowSuccessBanner(false);
-    }
-  }, [fetcher.data?.success, fetcher.state]);
-  
-  // Show error banner when fetcher.data?.error changes
-  useEffect(() => {
-    if ((fetcher.data as any)?.error) {
-      setShowErrorBanner(true);
-      // Auto-hide after 7 seconds (errors stay a bit longer)
-      const timer = setTimeout(() => {
-        setShowErrorBanner(false);
-      }, 7000);
-      return () => clearTimeout(timer);
-    } else if (fetcher.state === 'idle' && !(fetcher.data as any)?.error) {
-      // Reset banner when fetcher is idle and no error
-      setShowErrorBanner(false);
-    }
-  }, [(fetcher.data as any)?.error, fetcher.state]);
+  const notifications = useAdminNotifications();
+  const { notifications: notifyItems, dismiss } = notifications;
+
+  useFetcherNotifications(fetcher, notifications, {
+    onSuccess: () => ({
+      title: "Product updated",
+      message: "Try-on setting saved for this product.",
+    }),
+    onError: (data) => ({
+      title: "Update failed",
+      message: String((data as { error?: string }).error ?? "Unknown error"),
+    }),
+  });
+
+  const loaderNotifications = useMemo(() => {
+    const requiresAuth = Boolean((loaderData as { requiresAuth?: boolean })?.requiresAuth);
+    const reauthUrl = (loaderData as { reauthUrl?: string })?.reauthUrl;
+    return [
+      {
+        id: "products-loader-error",
+        show: Boolean(error),
+        tone: "critical" as const,
+        priority: 1,
+        title: requiresAuth ? "Authentication required" : "Error",
+        message: error,
+        action:
+          requiresAuth && reauthUrl
+            ? {
+                label: "Re-authenticate",
+                onAction: () => {
+                  window.open(reauthUrl, "_top");
+                },
+              }
+            : undefined,
+      },
+    ];
+  }, [error, loaderData]);
+
+  useNotificationSync(loaderNotifications, notifications);
 
   // Memoize handleToggle to prevent recreation on every render
   const handleToggle = useCallback((productId: string, productHandle: string | undefined, checked: boolean) => {
@@ -327,25 +329,7 @@ export default function Products() {
           title="Products"
           subtitle="Enable or disable virtual try-on per product"
         >
-          {error && (
-            <div className="vton-alerts">
-              <Banner
-                tone="critical"
-                title={(loaderData as any)?.requiresAuth ? "Authentication Required" : "Error"}
-                action={
-                  (loaderData as any)?.requiresAuth && (loaderData as any)?.reauthUrl
-                    ? {
-                        content: "Re-authenticate",
-                        url: (loaderData as any).reauthUrl,
-                        target: "_top",
-                      }
-                    : undefined
-                }
-              >
-                {error}
-              </Banner>
-            </div>
-          )}
+          <AdminNotifications items={notifyItems} onDismiss={dismiss} />
 
           <div className="vton-panel">
             <div className="vton-panel-header">
@@ -376,41 +360,11 @@ export default function Products() {
                     </p>
                   </EmptyState>
                 ) : (
-                  <>
-                    {(showSuccessBanner || fetcher.data?.success) && (
-                      <Banner 
-                        tone="success" 
-                        onDismiss={() => {
-                          setShowSuccessBanner(false);
-                          // Clear fetcher data to prevent re-showing
-                          if (fetcher.data?.success) {
-                            fetcher.load('/app/products');
-                          }
-                        }}
-                      >
-                        Product try-on setting updated successfully
-                      </Banner>
-                    )}
-                    {(showErrorBanner || (fetcher.data as any)?.error) && (
-                      <Banner 
-                        tone="critical" 
-                        onDismiss={() => {
-                          setShowErrorBanner(false);
-                          // Clear fetcher data to prevent re-showing
-                          if ((fetcher.data as any)?.error) {
-                            fetcher.load('/app/products');
-                          }
-                        }}
-                      >
-                        {(fetcher.data as any).error}
-                      </Banner>
-                    )}
-                    <DataTable
-                      columnContentTypes={["text", "text", "numeric", "numeric", "text", "text"]}
-                      headings={["Product", "Status", "Inventory", "Try-On Usage", "Try-On Enabled", "Actions"]}
-                      rows={productRows}
-                    />
-                  </>
+                  <DataTable
+                    columnContentTypes={["text", "text", "numeric", "numeric", "text", "text"]}
+                    headings={["Product", "Status", "Inventory", "Try-On Usage", "Try-On Enabled", "Actions"]}
+                    rows={productRows}
+                  />
                 )}
               </BlockStack>
           </div>
