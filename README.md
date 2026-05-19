@@ -1,271 +1,215 @@
-# Virtual Try-On Shopify App
+# Virtual Try-On — Shopify App
 
-A Shopify app that enables virtual try-on functionality for your store, allowing customers to visualize products on themselves using AI-powered image generation powered by Replicate.
+Application Shopify embarquée qui permet aux clients d’essayer virtuellement les produits (photo client + image vêtement) via **Replicate**, avec admin analytics, abonnements et extension thème.
 
-## 🎯 Overview
-
-This app provides a seamless virtual try-on experience for Shopify stores. Customers can upload their photos and see how products look on them in real-time, powered by advanced AI image generation technology.
-
-### Key Features
-
-- **AI-Powered Virtual Try-On**: Customers can upload photos and see products on themselves using Replicate's AI models
-- **Automatic Widget Installation**: Widget automatically installs on product pages
-- **Product-Level Control**: Enable/disable try-on for individual products
-- **Usage Analytics**: Track try-on usage, conversion rates, and popular products
-- **Subscription Plans**: Flexible monthly plans with quotas (Free Discovery, Starter, Pro, Enterprise)
-- **GDPR Compliant**: Full GDPR compliance with data request and deletion webhooks
-- **Secure**: HMAC signature verification for all public endpoints
-- **Privacy-First**: Customer photos are processed securely and deleted immediately after generation
-
-## 🚀 Quick Start
-
-### Prerequisites
-
-- Node.js 18.20+ or 20.10+ or 21.0+
-- Shopify Partners account
-- PostgreSQL database
-- Replicate API token
-
-### Installation
-
-1. **Clone and install dependencies**:
-   ```bash
-   cd vton-shopify-remix
-   npm install
-   ```
-
-2. **Configure environment variables**:
-   
-   Create a `.env` file:
-   ```env
-   SHOPIFY_API_KEY=your_api_key_here
-   SHOPIFY_API_SECRET=your_api_secret_here
-   SCOPES=read_products,write_script_tags
-   SHOPIFY_APP_URL=https://your-app-url.up.railway.app
-   DATABASE_URL=postgresql://username:password@host:5432/database
-   REPLICATE_API_TOKEN=your_replicate_token_here
-   ```
-
-3. **Initialize Prisma**:
-   ```bash
-   npx prisma generate
-   npx prisma migrate deploy
-   ```
-
-4. **Run in development**:
-   ```bash
-   npm run dev
-   ```
-
-## 📁 Project Structure
-
-```
-vton-shopify-remix/
-├── app/
-│   ├── routes/
-│   │   ├── app._index.tsx          # Main dashboard
-│   │   ├── app.products.tsx        # Product management
-│   │   ├── app.credits.tsx         # Subscription & billing
-│   │   ├── app.history.tsx         # Usage history
-│   │   ├── app.widget.tsx          # Widget configuration
-│   │   ├── app.privacy.tsx         # Privacy Policy
-│   │   ├── app.terms.tsx           # Terms of Service
-│   │   ├── app.support.tsx        # Support page
-│   │   ├── apps.tryon.generate.tsx # Try-on generation endpoint
-│   │   ├── apps.tryon.status.tsx   # Widget status endpoint
-│   │   ├── apps.tryon.atc.tsx      # Add to cart tracking
-│   │   ├── webhooks.app.uninstalled.tsx # Uninstall cleanup
-│   │   └── webhooks.gdpr.tsx       # GDPR webhooks
-│   ├── lib/
-│   │   ├── services/
-│   │   │   ├── replicate.service.ts # Replicate API service
-│   │   │   ├── db.service.ts       # Database operations
-│   │   │   └── shopify.service.ts   # Shopify API helpers
-│   │   └── db-init.server.ts        # Database initialization
-│   └── shopify.server.ts            # Shopify app configuration
-├── extensions/
-│   └── vton-widget/                 # Theme extension (widget)
-├── prisma/
-│   └── schema.prisma                # Prisma schema (sessions)
-└── package.json
-```
-
-## 🔧 Available Commands
-
-```bash
-# Development
-npm run dev              # Start development server with Shopify CLI
-
-# Production
-npm run build            # Build for production
-npm start                # Start production server
-
-# Database
-npm run setup            # Generate Prisma client and run migrations
-npx prisma studio        # Open Prisma Studio (database GUI)
-
-# Shopify CLI
-npm run deploy           # Deploy to Shopify
-npm run config:link      # Link app configuration
-```
-
-## 🎨 Features Explained
-
-### Virtual Try-On Widget
-
-The widget automatically appears on product pages. Customers can:
-- Upload their photo
-- See the product on themselves in real-time
-- Download the result
-- Add to cart directly from the result
-
-### Dashboard
-
-The admin dashboard provides:
-- **Statistics**: Total try-ons, conversion rates, add-to-cart events
-- **Product Management**: Enable/disable try-on per product
-- **Usage Analytics**: Daily/weekly/monthly usage charts
-- **Widget Configuration**: Customize button text, colors, and settings
-
-### Subscription Plans
-
-- **Free Discovery**: 4 free try-ons/month with watermark (for testing)
-- **Starter**: 50 try-ons/month - $29/month (Perfect for launches)
-- **Pro**: 200 try-ons/month - $99/month (For active merchants)
-- **Enterprise**: 1000 try-ons/month - $399/month (Designed for high volume)
-
-All plans include:
-- Monthly quota with automatic reset
-- No watermark (except Free plan)
-- Hard cap to prevent overages
-
-### GDPR Compliance
-
-The app is fully GDPR compliant:
-- **Data Request**: Customers can request their data
-- **Data Deletion**: Customers can request data deletion
-- **Shop Deletion**: Complete data cleanup on uninstall
-- **Privacy Policy**: Comprehensive privacy policy page
-- **Terms of Service**: Complete terms of service
-
-## 🔐 Security
-
-- **HMAC Verification**: All public endpoints verify Shopify HMAC signatures
-- **Admin Authentication**: All admin routes use `authenticate.admin()`
-- **Session Management**: Secure session handling with Prisma
-- **Data Privacy**: Customer photos are deleted immediately after processing
-- **Secure Storage**: All data encrypted at rest
-
-## 🚢 Deployment
-
-### Railway
-
-1. Push code to Git repository
-2. Connect repository in Railway
-3. Configure environment variables:
-   - `SHOPIFY_API_KEY`
-   - `SHOPIFY_API_SECRET`
-   - `SCOPES`
-   - `SHOPIFY_APP_URL`
-   - `DATABASE_URL`
-   - `REPLICATE_API_TOKEN`
-4. Deploy
-
-### Shopify Partners Configuration
-
-- **App URL**: `https://your-app-url.up.railway.app`
-- **Allowed redirection URL(s)**: `https://your-app-url.up.railway.app/auth/callback`
-- **Webhook URLs**: 
-  - Regular webhooks: `https://your-app-url.up.railway.app/webhooks`
-  - GDPR webhooks: `https://your-app-url.up.railway.app/webhooks/gdpr`
-
-## 📊 Database
-
-The app uses PostgreSQL with two types of tables:
-
-1. **Prisma-managed tables** (sessions):
-   - `Session` - OAuth session storage
-
-2. **Business tables** (auto-created):
-   - `shops` - Shop configuration and settings
-   - `tryon_logs` - Try-on generation logs
-   - `rate_limits` - Rate limiting per customer
-   - `product_settings` - Per-product try-on settings
-
-Tables are automatically created on first run via `ensureTables()`.
-
-## 🔌 API Endpoints
-
-### Public Endpoints (App Proxy)
-
-All public endpoints verify Shopify HMAC signatures:
-
-- `GET /apps/tryon/status` - Check if try-on is enabled for a product
-- `POST /apps/tryon/generate` - Generate virtual try-on image
-- `POST /apps/tryon/atc` - Track add-to-cart events
-
-### Admin Endpoints
-
-- `/app` - Dashboard
-- `/app/products` - Product management
-- `/app/credits` - Subscription & billing
-- `/app/history` - Usage history
-- `/app/widget` - Widget configuration
-- `/app/privacy` - Privacy Policy
-- `/app/terms` - Terms of Service
-- `/app/support` - Support page
-
-### Webhooks
-
-- `POST /webhooks` - Regular webhooks (products/update, app/uninstalled)
-- `POST /webhooks/gdpr` - GDPR compliance webhooks
-
-## ⚠️ Important Notes
-
-- Business tables (shops, tryon_logs, etc.) are automatically created on startup
-- Public routes `/apps/tryon/*` verify Shopify HMAC signatures
-- Dashboard uses automatic authentication via `authenticate.admin()`
-- All customer data is deleted on app uninstall
-- Script tags are automatically installed when the app is enabled
-
-## 🐛 Troubleshooting
-
-### Database Connection Error
-- Verify `DATABASE_URL` is correct
-- Ensure PostgreSQL is accessible
-- Check network/firewall settings
-
-### OAuth Error
-- Verify `SHOPIFY_API_KEY` and `SHOPIFY_API_SECRET`
-- Ensure redirect URL in Shopify Partners matches `/auth/callback`
-- Check that scopes are correctly configured
-
-### Build Error
-- Run `npm install` to ensure all dependencies are installed
-- Run `npx prisma generate` to generate Prisma client
-- Check Node.js version (18.20+, 20.10+, or 21.0+)
-
-### Widget Not Appearing
-- Verify script tags are installed (check in Shopify admin)
-- Check browser console for errors
-- Ensure product has try-on enabled in Products page
-
-## 📚 Documentation
-
-- [Remix Documentation](https://remix.run/docs)
-- [Shopify App Remix](https://shopify.dev/docs/apps/tools/cli/templates)
-- [Shopify Polaris Components](https://polaris.shopify.com/components)
-- [Replicate API](https://replicate.com/docs)
-
-## 📧 Support
-
-For questions, issues, or feedback, please contact:
-- **Email**: fontaineraphaelpro@gmail.com
-
-## 📄 License
-
-This project is private and proprietary.
+**Stack :** Remix · Shopify App Remix · Polaris · PostgreSQL · Prisma (sessions) · Extension thème `vton-widget`
 
 ---
 
-**Built with ❤️ using Remix, Shopify App Bridge, and Replicate**
+## Fonctionnalités
+
+### Storefront (widget)
+
+- Funnel try-on en **3 étapes** : upload photo → génération → résultat + ajout au panier
+- Génération **asynchrone** (`job_id` + polling) pour éviter les timeouts
+- **Retry gratuit** si l’IA échoue : pas de crédit débité tant que Replicate n’a pas réussi (retry auto + bouton « Try again — free »)
+- **Partage social** : WhatsApp, copier le lien image, partage natif (mobile)
+- Sélecteur de variante sur l’écran résultat
+- Placement configurable du bouton (thème + sélecteur CSS custom)
+- Mode debug : `?vton_debug` sur une page produit
+
+### Admin
+
+- **Dashboard** : stats 30 j, graphique ligne, top produits, quota mensuel
+- **Onboarding** (3 étapes) : embed thème → premier try-on → photo garment IA
+- **Alertes crédits** globales : avertissement à **80 %** du quota / critique à **0 crédit**
+- **Products** : pagination + recherche, activer/désactiver le try-on par produit, **photo garment IA** (flat lay) sans polluer la galerie produit
+- **Widget** : texte, couleurs, limites journalières / par client, **A/B test** (try-on vs contrôle)
+- **Credits** : plans Shopify Billing, funnel conversion simplifié
+- **History**, **Privacy**, **Terms**, **Support**
+
+### Technique
+
+- App Proxy `/apps/tryon/*` avec vérification HMAC
+- Upload garment vers **Shopify Files** (`write_files`) — invisible dans la galerie produit
+- Webhooks : `app/uninstalled`, `app/scopes_update`, GDPR
+- Logs try-on, rate limits, réglages par produit (`product_settings`)
+
+---
+
+## Prérequis
+
+- Node.js **18.20+**, **20.10+** ou **21+**
+- Compte [Shopify Partners](https://partners.shopify.com)
+- PostgreSQL
+- Token [Replicate](https://replicate.com)
+
+---
+
+## Installation locale
+
+```bash
+cd VTON-main   # ou le dossier racine du clone
+npm install
+```
+
+### Variables d’environnement (`.env`)
+
+```env
+SHOPIFY_API_KEY=
+SHOPIFY_API_SECRET=
+SCOPES=write_products,write_script_tags,write_files
+SHOPIFY_APP_URL=https://your-app-url.example.com
+DATABASE_URL=postgresql://user:pass@host:5432/db
+REPLICATE_API_TOKEN=
+
+# Optionnel
+REPLICATE_MODEL=bytedance/seedream-4.5
+```
+
+> Après ajout de `write_files`, les boutiques existantes doivent **ré-approuver** l’app (nouveau scope).
+
+### Base de données
+
+```bash
+npm run setup    # prisma generate + migrate deploy (sessions)
+npm run dev      # Shopify CLI + Remix
+```
+
+Les tables métier (`shops`, `tryon_logs`, `product_settings`, `ab_events`, etc.) sont créées au démarrage via `ensureTables()` dans `app/lib/db-init.server.ts`.
+
+---
+
+## Commandes
+
+| Commande | Description |
+|----------|-------------|
+| `npm run dev` | Dev avec Shopify CLI |
+| `npm run build` | Build production Remix |
+| `npm start` | Serveur production (`remix-serve`) |
+| `npm run setup` | Prisma generate + migrations |
+| `npm run deploy` | Strip BOM widget + `shopify app deploy` |
+| `shopify app deploy` | Publier config + extension thème |
+
+---
+
+## Structure du projet
+
+```
+VTON-main/
+├── app/
+│   ├── routes/
+│   │   ├── app._index.tsx           # Dashboard + onboarding
+│   │   ├── app.products.tsx         # Catalogue (pagination, garment)
+│   │   ├── app.credits.tsx          # Plans & billing
+│   │   ├── app.widget.tsx           # Réglages widget + A/B
+│   │   ├── app.history.tsx
+│   │   ├── apps.tryon.generate.tsx  # POST génération IA
+│   │   ├── apps.tryon.job.$jobId.tsx
+│   │   ├── apps.tryon.status.tsx
+│   │   ├── apps.tryon.atc.tsx
+│   │   ├── apps.tryon.ab-event.tsx
+│   │   └── webhooks.*
+│   ├── components/
+│   │   ├── OnboardingGuide.tsx
+│   │   └── CreditsAlertBanner.tsx
+│   ├── lib/
+│   │   ├── services/replicate.service.ts
+│   │   ├── services/db.service.ts
+│   │   ├── shopify-garment-file-upload.server.ts
+│   │   ├── shopify-products.server.ts
+│   │   ├── tryon-billing.server.ts
+│   │   ├── credits-alert.ts
+│   │   ├── onboarding.server.ts
+│   │   └── ab-test.server.ts
+│   └── shopify.server.ts
+├── extensions/vton-widget/          # Bloc thème + vton-widget.js
+├── prisma/                          # Sessions OAuth uniquement
+├── shopify.app.toml
+└── DEPLOY.md                        # Guide déploiement détaillé
+```
+
+---
+
+## Crédits & facturation
+
+- **1 crédit = 1 try-on réussi** (génération Replicate terminée avec succès)
+- **Échec IA** : aucun crédit consommé ; le client peut réessayer gratuitement
+- Quotas mensuels selon le plan (Free Discovery, Starter, Pro, Studio / Enterprise)
+- Compteurs d’usage mensuel / journalier basés sur les logs `success = true`
+
+---
+
+## API (App Proxy)
+
+Préfixe storefront : `https://{shop}/apps/tryon/...` → proxy vers l’app.
+
+| Méthode | Route | Rôle |
+|---------|-------|------|
+| `GET` | `/apps/tryon/status` | État widget / produit / A/B / URL garment |
+| `POST` | `/apps/tryon/generate` | Lance une génération (retourne `job_id`) |
+| `GET` | `/apps/tryon/job/:id` | Statut pending / completed / failed |
+| `POST` | `/apps/tryon/atc` | Suivi add-to-cart post try-on |
+| `POST` | `/apps/tryon/ab-event` | Impressions / try-on / ATC par bucket A/B |
+
+Routes racine (`/generate`, `/status`, `/job/:id`, `/atc`) : alias pour le proxy Shopify qui retire le préfixe `/apps/tryon`.
+
+---
+
+## Déploiement
+
+Voir **[DEPLOY.md](./DEPLOY.md)** pour le détail.
+
+Résumé :
+
+1. **Railway** (ou autre) : push `main`, variables d’env, `DATABASE_URL`, `SCOPES` à jour
+2. **`npm run deploy`** ou `shopify app deploy` : extension + scopes Partners
+3. **Thème** : Personnaliser → Intégrations → activer **Virtual Try-On Widget**
+4. **App proxy** : `prefix=apps`, `subpath=tryon` (déjà dans `shopify.app.toml`)
+
+URL prod actuelle (config) : `https://vton-production-890a.up.railway.app`
+
+---
+
+## Scopes Shopify
+
+```
+write_products, write_script_tags, write_files
+```
+
+- `write_products` — réglages produits
+- `write_script_tags` — installation script widget (legacy / boot)
+- `write_files` — photos garment IA dans Fichiers Shopify (hors galerie produit)
+
+---
+
+## Dépannage
+
+| Problème | Piste |
+|----------|--------|
+| Widget absent | Extension activée dans le thème ; `?vton_debug` ; sélecteur CSS dans les réglages widget |
+| 403 generate | App proxy + HMAC ; URL app dans Partners |
+| Upload garment échoue | Scope `write_files` + réinstallation app sur la boutique |
+| Plus de crédits | Page Credits / bannière admin ; upgrade plan |
+| Build | `npm run setup` puis `npm run build` |
+
+---
+
+## Documentation
+
+- [Shopify App Remix](https://shopify.dev/docs/apps/build)
+- [App proxy](https://shopify.dev/docs/apps/build/online-store/app-proxies)
+- [Replicate API](https://replicate.com/docs)
+- [Remix](https://remix.run/docs)
+
+---
+
+## Support
+
+**Email :** fontaineraphaelpro@gmail.com
+
+---
+
+## Licence
+
+Projet privé — tous droits réservés.
