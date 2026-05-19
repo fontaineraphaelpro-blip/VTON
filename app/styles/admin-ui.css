@@ -640,22 +640,84 @@
   background: var(--vton-brand) !important;
 }
 
-/* Graph — cleaner */
-.vton-admin .graph-container-large {
-  min-height: 180px;
-  padding: 16px 8px 8px;
+/* Graph — line chart (daily try-ons) */
+.vton-admin .graph-container-large.vton-line-chart-wrap {
+  min-height: 200px;
+  padding: 12px 8px 4px;
   background: var(--vton-bg);
   border-radius: 10px;
   margin: 0;
 }
 
-.vton-admin .graph-bar {
-  background: #c5e8dc !important;
-  border-radius: 6px 6px 0 0 !important;
+.vton-admin .vton-line-chart {
+  width: 100%;
 }
 
-.vton-admin .graph-bar-today {
-  background: var(--vton-brand) !important;
+.vton-admin .vton-line-chart__svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  min-height: 160px;
+}
+
+.vton-admin .vton-line-chart__grid {
+  stroke: #e5e7eb;
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.vton-admin .vton-line-chart__area {
+  fill: rgba(0, 128, 96, 0.12);
+}
+
+.vton-admin .vton-line-chart__line {
+  fill: none;
+  stroke: var(--vton-brand, #008060);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.vton-admin .vton-line-chart__dot {
+  fill: #fff;
+  stroke: var(--vton-brand, #008060);
+  stroke-width: 2;
+}
+
+.vton-admin .vton-line-chart__dot--today {
+  fill: var(--vton-brand, #008060);
+  stroke: #fff;
+  stroke-width: 2;
+}
+
+.vton-admin .vton-line-chart__value {
+  fill: #374151;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: system-ui, -apple-system, Segoe UI, sans-serif;
+}
+
+.vton-admin .vton-line-chart__labels {
+  display: flex;
+  justify-content: space-between;
+  gap: 4px;
+  margin-top: 4px;
+  padding: 0 4px;
+}
+
+.vton-admin .vton-line-chart__label {
+  flex: 1;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b7280;
+  line-height: 1.2;
+}
+
+.vton-admin .vton-line-chart__label--today {
+  color: var(--vton-brand-dark, #004c3f);
+  font-weight: 700;
 }
 
 @media (max-width: 900px) {
@@ -846,6 +908,82 @@
   height: 100%;
   object-fit: cover;
   display: block;
+}
+
+/* Popover is portaled outside .vton-admin — use global garment popover styles */
+.vton-garment-popover {
+  box-sizing: border-box;
+  width: min(320px, calc(100vw - 32px));
+  max-width: 320px;
+  padding: 12px 14px 14px;
+}
+
+.vton-garment-popover__preview {
+  width: 100%;
+  max-height: 120px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  background: #f9fafb;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.vton-garment-popover__preview img {
+  display: block;
+  max-width: 100%;
+  max-height: 120px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
+
+.vton-garment-popover__file-input {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.vton-garment-popover__grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.vton-garment-popover .vton-garment-option {
+  flex: 0 0 auto;
+  width: 56px;
+  height: 56px;
+  padding: 0;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  background: #fff;
+}
+
+.vton-garment-popover .vton-garment-option.is-selected {
+  border-color: #008060;
+  box-shadow: 0 0 0 2px rgba(0, 128, 96, 0.2);
+}
+
+.vton-garment-popover .vton-garment-option img {
+  width: 56px;
+  height: 56px;
+  max-width: 56px;
+  max-height: 56px;
+  object-fit: cover;
+  display: block;
+}
+
+.vton-garment-popover .vton-garment-option:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* Widget page — A/B test panel */

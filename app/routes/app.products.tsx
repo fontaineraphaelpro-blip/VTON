@@ -1,7 +1,7 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useLoaderData, useFetcher } from "@remix-run/react";
-import { useMemo, useCallback, useState } from "react";
+import { useMemo, useCallback, useState, useRef, useEffect } from "react";
 import {
   Page,
   BlockStack,
@@ -14,7 +14,6 @@ import {
   Badge,
   Checkbox,
   Popover,
-  Box,
 } from "@shopify/polaris";
 import { TitleBar } from "@shopify/app-bridge-react";
 import { AdminPage } from "../components/AdminPage";
@@ -28,6 +27,7 @@ import {
   setProductTryonImageUrl,
   getProductSettingsBatch,
 } from "../lib/services/db.service";
+import { uploadProductGarmentImage } from "../lib/shopify-product-image-upload.server";
 
 type ProductMediaImage = { id: string; url: string; altText?: string | null };
 
@@ -219,7 +219,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
-  const { session } = await authenticate.admin(request);
+  const { session, admin } = await authenticate.admin(request);
   const shop = session.shop;
   const formData = await request.formData();
   const intent = formData.get("intent") as string;
@@ -241,6 +241,31 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         success: false,
         error:
           error instanceof Error ? error.message : "Failed to update product setting",
+      });
+    }
+  }
+
+  if (intent === "upload-tryon-image") {
+    const productId = formData.get("productId") as string;
+    const productHandle = (formData.get("productHandle") as string) || undefined;
+    const file = formData.get("file");
+
+    if (!productId) {
+      return json({ success: false, error: "Product ID is required" });
+    }
+    if (!(file instanceof File)) {
+      return json({ success: false, error: "Please choose an image file" });
+    }
+
+    try {
+      const imageUrl = await uploadProductGarmentImage(admin, productId, file);
+      await setProductTryonImageUrl(shop, productId, imageUrl, productHandle);
+      return json({ success: true, productId, imageUrl });
+    } catch (error) {
+      return json({
+        success: false,
+        error:
+          error instanceof Error ? error.message : "Failed to upload garment photo",
       });
     }
   }
@@ -278,23 +303,32 @@ function GarmentPhotoPicker({
   product,
   selectedUrl,
   onSelect,
+  onUpload,
   disabled,
+  isUploading,
 }: {
   product: ProductRow;
   selectedUrl: string | null;
   onSelect: (url: string) => void;
+  onUpload: (file: File) => void;
   disabled: boolean;
+  isUploading?: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const activeUrl = selectedUrl || product.featuredImage?.url || null;
+  const galleryUrls = new Set(product.mediaImages.map((img) => img.url));
+  const customSelected =
+    Boolean(selectedUrl) && !galleryUrls.has(selectedUrl as string);
 
   const activator = (
     <button
       type="button"
       className="vton-garment-picker-trigger"
       onClick={() => setOpen((v) => !v)}
-      disabled={disabled}
-      title="Choose flat-lay photo for AI try-on"
+      disabled={disabled || isUploading}
+      title="Choose or upload garment photo for AI try-on"
+      aria-expanded={open}
     >
       {activeUrl ? (
         <img src={activeUrl} alt="" className="vton-garment-picker-thumb" />
@@ -304,47 +338,105 @@ function GarmentPhotoPicker({
     </button>
   );
 
+  const handleFileChange = (event: { target: HTMLInputElement }) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    onUpload(file);
+    setOpen(false);
+  };
+
   return (
-    <Popover active={open} activator={activator} onClose={() => setOpen(false)}>
-      <Box padding="300">
-        <BlockStack gap="200">
+    <Popover
+      active={open}
+      activator={activator}
+      onClose={() => setOpen(false)}
+      preferredAlignment="left"
+      autofocusTarget="none"
+    >
+      <div className="vton-garment-popover">
+        <BlockStack gap="300">
           <Text as="p" variant="bodySm" tone="subdued">
-            Garment photo for AI (flat lay works best). Shoppers still see your
-            normal product gallery.
+            Flat lay or packshot works best. This image is for AI only — your
+            storefront gallery stays unchanged unless you upload a new file
+            (added to product media).
           </Text>
+
+          {activeUrl && (
+            <div className="vton-garment-popover__preview">
+              <img src={activeUrl} alt="Selected garment for AI" />
+            </div>
+          )}
+
           <InlineStack gap="200" wrap>
-            {product.mediaImages.map((img) => {
-              const isSelected = selectedUrl === img.url;
-              return (
-                <button
-                  key={img.id}
-                  type="button"
-                  className={
-                    "vton-garment-option" + (isSelected ? " is-selected" : "")
-                  }
-                  onClick={() => {
-                    onSelect(img.url);
-                    setOpen(false);
-                  }}
-                >
-                  <img src={img.url} alt={img.altText || ""} />
-                </button>
-              );
-            })}
-          </InlineStack>
-          {selectedUrl && (
             <Button
               size="slim"
-              onClick={() => {
-                onSelect("");
-                setOpen(false);
-              }}
+              onClick={() => fileInputRef.current?.click()}
+              disabled={disabled || isUploading}
+              loading={isUploading}
             >
-              Use theme default
+              Upload image
             </Button>
+            {selectedUrl && (
+              <Button
+                size="slim"
+                variant="plain"
+                onClick={() => {
+                  onSelect("");
+                  setOpen(false);
+                }}
+                disabled={disabled || isUploading}
+              >
+                Use default
+              </Button>
+            )}
+          </InlineStack>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            className="vton-garment-popover__file-input"
+            onChange={handleFileChange}
+          />
+
+          {product.mediaImages.length > 0 && (
+            <>
+              <Text as="p" variant="bodySm" fontWeight="semibold">
+                Or pick from gallery
+              </Text>
+              <div className="vton-garment-popover__grid">
+                {product.mediaImages.map((img) => {
+                  const isSelected = selectedUrl === img.url;
+                  return (
+                    <button
+                      key={img.id}
+                      type="button"
+                      className={
+                        "vton-garment-option" +
+                        (isSelected ? " is-selected" : "")
+                      }
+                      onClick={() => {
+                        onSelect(img.url);
+                        setOpen(false);
+                      }}
+                      disabled={disabled || isUploading}
+                    >
+                      <img src={img.url} alt={img.altText || ""} />
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          )}
+
+          {customSelected && selectedUrl && (
+            <Text as="p" variant="bodySm" tone="subdued">
+              Using a custom uploaded image.
+            </Text>
           )}
         </BlockStack>
-      </Box>
+      </div>
     </Popover>
   );
 }
@@ -356,6 +448,9 @@ export default function Products() {
   const tryonCounts = loaderData.tryonCounts || {};
   const productSettings = loaderData.productSettings || {};
   const fetcher = useFetcher<typeof action>();
+  const [uploadingProductId, setUploadingProductId] = useState<string | null>(
+    null
+  );
   const notifications = useAdminNotifications();
   const { notifications: notifyItems, dismiss } = notifications;
 
@@ -429,6 +524,25 @@ export default function Products() {
     [fetcher]
   );
 
+  const handleUploadGarmentImage = useCallback(
+    (productId: string, productHandle: string | undefined, file: File) => {
+      setUploadingProductId(productId);
+      const formData = new FormData();
+      formData.append("intent", "upload-tryon-image");
+      formData.append("productId", productId);
+      if (productHandle) formData.append("productHandle", productHandle);
+      formData.append("file", file);
+      fetcher.submit(formData, { method: "post", encType: "multipart/form-data" });
+    },
+    [fetcher]
+  );
+
+  useEffect(() => {
+    if (fetcher.state === "idle" && uploadingProductId) {
+      setUploadingProductId(null);
+    }
+  }, [fetcher.state, uploadingProductId]);
+
   const productRows = useMemo(() => {
     return products
       .map((product) => {
@@ -480,7 +594,11 @@ export default function Products() {
             onSelect={(url) =>
               handleSelectGarmentImage(product.id, product.handle, url)
             }
-            disabled={fetcher.state === "submitting"}
+            onUpload={(file) =>
+              handleUploadGarmentImage(product.id, product.handle, file)
+            }
+            disabled={fetcher.state !== "idle"}
+            isUploading={uploadingProductId === product.id}
           />,
           <Checkbox
             key={`checkbox-${product.id}`}
@@ -510,6 +628,8 @@ export default function Products() {
     fetcher.state,
     handleToggle,
     handleSelectGarmentImage,
+    handleUploadGarmentImage,
+    uploadingProductId,
   ]);
 
   return (

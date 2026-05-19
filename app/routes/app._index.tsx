@@ -633,6 +633,115 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   }
 };
 
+type DailyTryonStat = { date: string; count: number };
+
+function DailyTryonsLineChart({ stats }: { stats: DailyTryonStat[] }) {
+  const maxCount = Math.max(...stats.map((s) => s.count), 1);
+  const W = 700;
+  const H = 150;
+  const padL = 36;
+  const padR = 24;
+  const padT = 28;
+  const padB = 12;
+  const innerW = W - padL - padR;
+  const innerH = H - padT - padB;
+
+  const points = stats.map((stat, i) => {
+    const x =
+      padL +
+      (stats.length <= 1 ? innerW / 2 : (i / (stats.length - 1)) * innerW);
+    const y = padT + innerH - (stat.count / maxCount) * innerH;
+    return { x, y, stat };
+  });
+
+  const lineD = points
+    .map((p, i) => `${i === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`)
+    .join(" ");
+
+  const areaD =
+    lineD +
+    ` L ${points[points.length - 1].x.toFixed(1)} ${(padT + innerH).toFixed(1)}` +
+    ` L ${points[0].x.toFixed(1)} ${(padT + innerH).toFixed(1)} Z`;
+
+  const gridLines = [0, 0.5, 1];
+
+  return (
+    <div className="vton-line-chart">
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        className="vton-line-chart__svg"
+        role="img"
+        aria-label="Daily try-ons over the last 7 days"
+      >
+        {gridLines.map((t) => {
+          const y = padT + innerH * (1 - t);
+          return (
+            <line
+              key={t}
+              x1={padL}
+              y1={y}
+              x2={W - padR}
+              y2={y}
+              className="vton-line-chart__grid"
+            />
+          );
+        })}
+        <path d={areaD} className="vton-line-chart__area" />
+        <path d={lineD} className="vton-line-chart__line" />
+        {points.map((p, i) => {
+          const date = new Date(p.stat.date);
+          const isToday =
+            date.toDateString() === new Date().toDateString();
+          return (
+            <g key={`${p.stat.date}-${i}`}>
+              <circle
+                cx={p.x}
+                cy={p.y}
+                r={isToday ? 6 : 4}
+                className={
+                  isToday
+                    ? "vton-line-chart__dot vton-line-chart__dot--today"
+                    : "vton-line-chart__dot"
+                }
+              />
+              <text
+                x={p.x}
+                y={p.y - 10}
+                textAnchor="middle"
+                className="vton-line-chart__value"
+              >
+                {p.stat.count}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
+      <div className="vton-line-chart__labels">
+        {stats.map((stat, i) => {
+          const date = new Date(stat.date);
+          const isToday =
+            date.toDateString() === new Date().toDateString();
+          return (
+            <span
+              key={`${stat.date}-label-${i}`}
+              className={
+                isToday
+                  ? "vton-line-chart__label vton-line-chart__label--today"
+                  : "vton-line-chart__label"
+              }
+            >
+              {date.toLocaleDateString("en-US", {
+                day: "numeric",
+                month: "short",
+              })}
+            </span>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const loaderData = useLoaderData<typeof loader>();
   const fetcher = useFetcher<typeof action>();
@@ -936,11 +1045,6 @@ export default function Dashboard() {
   // Memoize last 7 days stats for graph
   const last7DaysStats = useMemo(() => dailyStats.slice(-7), [dailyStats]);
   
-  // Memoize max count for graph scaling
-  const maxDailyCount = useMemo(() => {
-    return dailyStats.length > 0 ? Math.max(...dailyStats.map((s: any) => s.count)) : 0;
-  }, [dailyStats]);
-  
   // Memoize recent logs (first 5)
   const recentLogsDisplay = useMemo(() => recentLogs.slice(0, 5), [recentLogs]);
 
@@ -985,32 +1089,9 @@ export default function Dashboard() {
             <h2 className="vton-panel-title">Daily try-ons (last 7 days)</h2>
             <Link to="/app/history" className="vton-panel-link">View history</Link>
           </div>
-          {dailyStats.length > 0 ? (
-            <div className="graph-container-large">
-              <div className="graph-bars">
-                {last7DaysStats.map((stat: any, index: number) => {
-                  // Calculate percentage: scale from 0% to 100% based on max value
-                  const percentage = maxDailyCount > 0 && stat.count > 0 
-                    ? (stat.count / maxDailyCount) * 100 
-                    : 0;
-                  const date = new Date(stat.date);
-                  const isToday = date.toDateString() === new Date().toDateString();
-                  
-                  return (
-                    <div key={index} className="graph-bar-item">
-                      <div className="graph-bar-value">{stat.count}</div>
-                      <div 
-                        className={`graph-bar ${isToday ? 'graph-bar-today' : ''}`}
-                        style={{ height: `${Math.max(percentage, 2)}%` }}
-                        title={`${stat.count} generation${stat.count !== 1 ? 's' : ''} on ${date.toLocaleDateString("en-US", { month: "long", day: "numeric" })}`}
-                      />
-                      <div className={`graph-bar-label ${isToday ? 'graph-bar-label-today' : ''}`}>
-                        {date.toLocaleDateString("en-US", { day: "numeric", month: "short" })}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+          {last7DaysStats.length > 0 ? (
+            <div className="graph-container-large vton-line-chart-wrap">
+              <DailyTryonsLineChart stats={last7DaysStats} />
             </div>
           ) : (
             <div className="vton-empty">No try-ons in the last 7 days</div>
