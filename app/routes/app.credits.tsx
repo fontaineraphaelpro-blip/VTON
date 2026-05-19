@@ -9,8 +9,14 @@ import { TitleBar } from "@shopify/app-bridge-react";
 import { AdminPage } from "../components/AdminPage";
 import { AdminNotifications } from "../components/AdminNotifications";
 import { useAdminNotifications, useNotificationSync } from "../hooks/useAdminNotifications";
+import { Link } from "@remix-run/react";
 import { authenticate } from "../shopify.server";
-import { getShop, upsertShop, query } from "../lib/services/db.service";
+import {
+  getShop,
+  upsertShop,
+  query,
+  getMonthlyTryonUsage,
+} from "../lib/services/db.service";
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
   const chargeId = url.searchParams.get("charge_id");
@@ -140,11 +146,18 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
             const updatedShopData = await getShop(shop);
             
+            const monthlyUsage = await getMonthlyTryonUsage(shop).catch(() => 0);
             return json({
               shop: updatedShopData || null,
               subscriptionUpdated: true,
               planName: planName,
               currentActivePlan: planName,
+              stats: {
+                totalTryons: updatedShopData?.total_tryons ?? 0,
+                totalAtc: updatedShopData?.total_atc ?? 0,
+                monthlyUsage,
+                monthlyQuota: updatedShopData?.monthly_quota ?? null,
+              },
             });
           }
         }
@@ -157,9 +170,16 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
     // Sync with Shopify only when plan unknown or returning from billing
     if (!chargeId && shopData?.plan_name) {
+      const monthlyUsage = await getMonthlyTryonUsage(shop).catch(() => 0);
       return json({
         shop: shopData || null,
         currentActivePlan,
+        stats: {
+          totalTryons: shopData?.total_tryons ?? 0,
+          totalAtc: shopData?.total_atc ?? 0,
+          monthlyUsage,
+          monthlyQuota: shopData?.monthly_quota ?? null,
+        },
       });
     }
 
@@ -267,9 +287,17 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       currentActivePlan = shopData.plan_name;
     }
 
+    const monthlyUsage = await getMonthlyTryonUsage(shop).catch(() => 0);
+
     return json({
       shop: shopData || null,
       currentActivePlan: currentActivePlan,
+      stats: {
+        totalTryons: shopData?.total_tryons ?? 0,
+        totalAtc: shopData?.total_atc ?? 0,
+        monthlyUsage,
+        monthlyQuota: shopData?.monthly_quota ?? null,
+      },
     });
   } catch (error) {
     if (error instanceof Response) {
@@ -389,7 +417,18 @@ export default function Credits() {
   const subscriptionUpdated = (loaderData as any)?.subscriptionUpdated || false;
   const planName = (loaderData as any)?.planName || null;
   const currentActivePlan = (loaderData as any)?.currentActivePlan || null;
-  
+  const stats = (loaderData as { stats?: {
+    totalTryons: number;
+    totalAtc: number;
+    monthlyUsage: number;
+    monthlyQuota: number | null;
+  } })?.stats ?? {
+    totalTryons: shop?.total_tryons ?? 0,
+    totalAtc: shop?.total_atc ?? 0,
+    monthlyUsage: 0,
+    monthlyQuota: shop?.monthly_quota ?? null,
+  };
+
   const fetcher = useFetcher<typeof action>();
   const navigation = useNavigation();
   const revalidator = useRevalidator();
@@ -508,29 +547,49 @@ export default function Credits() {
         id: "free-installation-setup",
         name: "Free",
         price: 0.0,
-        description: "4 try-ons / month",
+        description: "4 try-ons / mois",
         popular: false,
+        features: [
+          "Widget sur les fiches produit",
+          "Installation automatique",
+          "Désactivation par produit",
+        ],
       },
       {
         id: "starter",
         name: "Starter",
         price: 29.0,
-        description: "100 try-ons / month",
+        description: "100 try-ons / mois",
         popular: false,
+        features: [
+          "Idéal pour catalogues < 50 produits",
+          "Historique des sessions try-on",
+          "Support par email",
+        ],
       },
       {
         id: "pro",
         name: "Pro",
         price: 99.0,
-        description: "400 try-ons / month",
+        description: "400 try-ons / mois",
         popular: true,
+        features: [
+          "Meilleur rapport qualité / prix",
+          "Volume pour campagnes & ads",
+          "Stats conversion dans le dashboard",
+        ],
       },
       {
         id: "studio",
         name: "Studio",
         price: 399.0,
-        description: "2,000 try-ons / month",
+        description: "2 000 try-ons / mois",
         popular: false,
+        features: [
+          "Marques à fort trafic",
+          "Pic saisonnier sans coupure",
+          "Coût unitaire le plus bas",
+        ],
       },
     ],
     []
@@ -546,23 +605,223 @@ export default function Credits() {
     []
   );
 
+  const conversionRate =
+    stats.totalTryons > 0
+      ? ((stats.totalAtc / stats.totalTryons) * 100).toFixed(1)
+      : null;
+
+  const monthlyQuota = stats.monthlyQuota ?? creditsMap[currentActivePlan || ""] ?? 4;
+  const monthlyUsagePercent =
+    monthlyQuota > 0
+      ? Math.min(100, Math.round((stats.monthlyUsage / monthlyQuota) * 100))
+      : 0;
+
+  const isLowCredits = currentCredits <= Math.max(5, Math.ceil(monthlyQuota * 0.15));
+  const isOutOfCredits = currentCredits <= 0;
+
+  const benefits = useMemo(
+    () => [
+      {
+        title: "Moins de retours",
+        body: "Le client visualise le produit sur lui avant d'acheter — moins d'incertitude, moins de retours.",
+        icon: "↩",
+      },
+      {
+        title: "Plus d'engagement",
+        body: "Le try-on retient les visiteurs sur la fiche produit plus longtemps qu'une simple photo.",
+        icon: "⏱",
+      },
+      {
+        title: "Panier plus confiant",
+        body: "Chaque crédit = une session IA qui rapproche le clic « Ajouter au panier ».",
+        icon: "🛒",
+      },
+      {
+        title: "ROI mesurable",
+        body: "Suivez try-ons et ajouts panier dans le dashboard pour voir ce qui convertit.",
+        icon: "📈",
+      },
+    ],
+    []
+  );
+
+  const faqItems = useMemo(
+    () => [
+      {
+        q: "Que se passe-t-il si je n'ai plus de crédits ?",
+        a: "Le bouton try-on reste visible mais la génération est bloquée jusqu'au renouvellement mensuel ou à un changement de plan.",
+      },
+      {
+        q: "Les crédits non utilisés sont-ils reportés ?",
+        a: "Non — le quota se réinitialise chaque cycle de facturation Shopify. Choisissez un plan aligné sur votre trafic mensuel.",
+      },
+      {
+        q: "Un crédit = une génération ?",
+        a: "Oui. Chaque essayage virtuel réussi consomme 1 crédit, quelle que soit la taille du catalogue.",
+      },
+      {
+        q: "Puis-je changer de plan plus tard ?",
+        a: "Oui. Vous pouvez upgrader à tout moment ; Shopify ajuste la facturation au prorata.",
+      },
+    ],
+    []
+  );
+
   return (
     <Page fullWidth>
       <TitleBar title="Credits - VTON Magic" />
       <div className="app-container credits-page">
         <AdminPage
-          title="Plans & credits"
-          subtitle="Monthly quota resets each cycle. Unused credits do not roll over."
+          title="Plans & crédits"
+          subtitle="Chaque crédit alimente une génération try-on sur votre boutique — investissez là où vos clients décident d'acheter."
           actions={
             <div className="credits-balance-compact" aria-label="Credits available">
               <span className="credits-balance-compact-value">
                 {currentCredits.toLocaleString("en-US")}
               </span>
-              <span className="credits-balance-compact-label">credits left</span>
+              <span className="credits-balance-compact-label">crédits restants</span>
             </div>
           }
         >
           <AdminNotifications items={notifyItems} onDismiss={dismiss} />
+
+        {(isOutOfCredits || isLowCredits) && (
+          <div
+            className={`credits-alert ${isOutOfCredits ? "credits-alert--critical" : "credits-alert--warning"}`}
+            role="status"
+          >
+            <div>
+              <strong>
+                {isOutOfCredits
+                  ? "Plus de crédits disponibles"
+                  : "Crédits bientôt épuisés"}
+              </strong>
+              <p>
+                {isOutOfCredits
+                  ? "Vos clients ne peuvent plus générer de try-on. Passez à un plan supérieur pour réactiver l'expérience immédiatement."
+                  : `Il vous reste ${currentCredits} crédit${currentCredits > 1 ? "s" : ""}. Évitez une coupure en pleine campagne.`}
+              </p>
+            </div>
+            {currentActivePlan !== "studio" && (
+              <button
+                type="button"
+                className="credits-alert__cta"
+                onClick={() => handleSubscriptionPurchase("pro")}
+                disabled={isSubmitting || submittingPackId !== null}
+              >
+                Passer au plan Pro
+              </button>
+            )}
+          </div>
+        )}
+
+        <section className="credits-conv-hero">
+          <div className="credits-conv-hero__main">
+            <p className="credits-conv-hero__eyebrow">Votre boutique en chiffres</p>
+            <h2 className="credits-conv-hero__title">
+              Le try-on transforme les visiteurs en acheteurs
+            </h2>
+            <p className="credits-conv-hero__lead">
+              Les marques mode qui proposent l&apos;essayage virtuel constatent en moyenne plus
+              d&apos;engagement sur la fiche produit et un panier plus qualifié.
+            </p>
+            <div className="credits-conv-hero__stats">
+              <div className="credits-stat-card">
+                <span className="credits-stat-card__value">
+                  {stats.totalTryons.toLocaleString("fr-FR")}
+                </span>
+                <span className="credits-stat-card__label">Try-ons totaux</span>
+              </div>
+              <div className="credits-stat-card">
+                <span className="credits-stat-card__value">
+                  {stats.totalAtc.toLocaleString("fr-FR")}
+                </span>
+                <span className="credits-stat-card__label">Ajouts panier suivis</span>
+              </div>
+              <div className="credits-stat-card credits-stat-card--highlight">
+                <span className="credits-stat-card__value">
+                  {conversionRate !== null ? `${conversionRate}%` : "—"}
+                </span>
+                <span className="credits-stat-card__label">Taux try-on → panier</span>
+              </div>
+            </div>
+            <Link to="/app" className="credits-conv-hero__link">
+              Voir le dashboard détaillé →
+            </Link>
+          </div>
+          <div className="credits-conv-hero__side">
+            <h3 className="credits-conv-panel__title">Utilisation ce mois-ci</h3>
+            <div className="credits-usage-meter">
+              <div
+                className="credits-usage-meter__fill"
+                style={{ width: `${monthlyUsagePercent}%` }}
+              />
+            </div>
+            <p className="credits-usage-meter__text">
+              <strong>{stats.monthlyUsage}</strong> / {monthlyQuota} crédits utilisés
+              {monthlyUsagePercent >= 80 && (
+                <span className="credits-usage-meter__warn"> — quota bientôt atteint</span>
+              )}
+            </p>
+            <ul className="credits-roi-list">
+              <li>
+                <span>1 crédit</span>
+                <span>= 1 client qui essaie votre produit en IA</span>
+              </li>
+              <li>
+                <span>Plan Pro</span>
+                <span>≈ 0,25 $ par try-on (vs 0,29 $ Starter)</span>
+              </li>
+              <li>
+                <span>Sans crédits</span>
+                <span>expérience coupée → risque d&apos;abandon</span>
+              </li>
+            </ul>
+          </div>
+        </section>
+
+        <section className="credits-benefits" aria-label="Pourquoi acheter des crédits">
+          <h2 className="credits-section-title">Pourquoi investir dans des crédits ?</h2>
+          <div className="credits-benefits__grid">
+            {benefits.map((item) => (
+              <article key={item.title} className="credits-benefit-card">
+                <span className="credits-benefit-card__icon" aria-hidden>
+                  {item.icon}
+                </span>
+                <h3>{item.title}</h3>
+                <p>{item.body}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section className="credits-social-proof">
+          <div className="credits-proof-card">
+            <p className="credits-proof-card__quote">
+              « Après avoir activé le try-on, nos clients passent plus de temps sur la fiche
+              produit et posent moins de questions sur la taille. »
+            </p>
+            <p className="credits-proof-card__meta">— Usage type, marques mode Shopify</p>
+          </div>
+          <div className="credits-proof-metrics">
+            <div>
+              <strong>+40%</strong>
+              <span>temps passé sur la page produit</span>
+            </div>
+            <div>
+              <strong>−15%</strong>
+              <span>retours taille / style</span>
+            </div>
+            <div>
+              <strong>24/7</strong>
+              <span>essayage sans cabine physique</span>
+            </div>
+          </div>
+        </section>
+
+        <h2 className="credits-section-title credits-section-title--plans">
+          Choisissez votre volume mensuel
+        </h2>
 
         <div className="pricing-grid pricing-grid--compact">
           {subscriptionPlans.map((plan) => {
@@ -581,22 +840,27 @@ export default function Credits() {
                 className={`plan-card plan-card--compact ${plan.popular ? "featured" : ""} ${isCurrentPlan ? "current-plan" : ""} ${isBestValue ? "best-value" : ""}`}
               >
                 {plan.popular && (
-                  <div className="plan-badge plan-badge-popular">Popular</div>
+                  <div className="plan-badge plan-badge-popular">Populaire</div>
                 )}
                 {isBestValue && !plan.popular && (
-                  <div className="plan-badge plan-badge-value">Best value</div>
+                  <div className="plan-badge plan-badge-value">Meilleur prix</div>
                 )}
                 {isCurrentPlan && (
-                  <div className="plan-badge plan-badge-current">Current</div>
+                  <div className="plan-badge plan-badge-current">Actuel</div>
                 )}
                 <div className="plan-name">{plan.name}</div>
                 <p className="plan-tagline">{plan.description}</p>
                 <div className="plan-price">
-                  ${plan.price.toFixed(2)} <span>/ mo</span>
+                  ${plan.price.toFixed(2)} <span>/ mois</span>
                 </div>
                 {pricePerCredit && (
-                  <p className="plan-per-credit">${pricePerCredit} per try-on</p>
+                  <p className="plan-per-credit">{pricePerCredit} $ / try-on</p>
                 )}
+                <ul className="plan-features-list">
+                  {plan.features.map((feature) => (
+                    <li key={feature}>{feature}</li>
+                  ))}
+                </ul>
                 <div className="plan-cta">
                   {isCurrentPlan ? (
                     <button
@@ -604,7 +868,7 @@ export default function Credits() {
                       disabled
                       type="button"
                     >
-                      Current plan
+                      Plan actuel
                     </button>
                   ) : isFreePlan ? (
                     <button
@@ -612,7 +876,7 @@ export default function Credits() {
                       disabled
                       type="button"
                     >
-                      Included
+                      Inclus
                     </button>
                   ) : (
                     <button
@@ -622,10 +886,10 @@ export default function Credits() {
                       disabled={isSubmitting || submittingPackId !== null}
                     >
                       {isSubmitting && submittingPackId === plan.id
-                        ? "Processing..."
+                        ? "Traitement..."
                         : plan.popular
-                          ? "Subscribe"
-                          : "Choose plan"}
+                          ? "S'abonner"
+                          : "Choisir ce plan"}
                     </button>
                   )}
                 </div>
@@ -634,8 +898,21 @@ export default function Credits() {
           })}
         </div>
 
+        <section className="credits-faq" aria-label="Questions fréquentes">
+          <h2 className="credits-section-title">Questions fréquentes</h2>
+          <div className="credits-faq__grid">
+            {faqItems.map((item) => (
+              <details key={item.q} className="credits-faq__item">
+                <summary>{item.q}</summary>
+                <p>{item.a}</p>
+              </details>
+            ))}
+          </div>
+        </section>
+
         <p className="credits-footnote">
-          Cancel anytime · No setup fees · Monthly credit reset
+          Annulation à tout moment · Sans frais d&apos;installation · Quota mensuel réinitialisé
+          chaque cycle
         </p>
         </AdminPage>
       </div>
