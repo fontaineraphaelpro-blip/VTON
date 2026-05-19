@@ -8,6 +8,8 @@ import {
   Button,
   TextField,
   BlockStack,
+  Checkbox,
+  RangeSlider,
 } from "@shopify/polaris";
 import { TitleBar } from "@shopify/app-bridge-react";
 import { AdminPage } from "../components/AdminPage";
@@ -15,7 +17,7 @@ import { AdminNotifications } from "../components/AdminNotifications";
 import { useAdminNotifications, useNotificationSync } from "../hooks/useAdminNotifications";
 import { useFetcherNotifications } from "../hooks/useFetcherNotifications";
 import { authenticate } from "../shopify.server";
-import { getShop, upsertShop } from "../lib/services/db.service";
+import { getShop, upsertShop, getAbTestStats } from "../lib/services/db.service";
 import {
   getAppEmbedActivationUrl,
   getThemeEditorAppEmbedsUrl,
@@ -27,8 +29,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const apiKey = process.env.SHOPIFY_API_KEY || "";
   try {
     const shopData = await getShop(shop);
+    const abStats = shopData ? await getAbTestStats(shop).catch(() => null) : null;
     return json({
       shop: shopData || null,
+      abStats,
       themeEditorAppEmbedsUrl: getThemeEditorAppEmbedsUrl(shop),
       themeEditorActivateUrl: getAppEmbedActivationUrl(shop, apiKey, "vton-widget"),
     });
@@ -44,6 +48,27 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const { session } = await authenticate.admin(request);
   const shop = session.shop;
   const formData = await request.formData();
+
+  const intent = formData.get("intent");
+
+  if (intent === "save-ab-test") {
+    const abTestEnabled = formData.get("abTestEnabled") === "true";
+    const abTestPercent = Math.min(
+      100,
+      Math.max(0, parseInt(String(formData.get("abTestPercent") || "50"), 10) || 50)
+    );
+    try {
+      await upsertShop(shop, { abTestEnabled, abTestPercent });
+      const verifyShop = await getShop(shop);
+      const abStats = await getAbTestStats(shop);
+      return json({ success: true, abStats, shop: verifyShop });
+    } catch (error) {
+      return json({
+        success: false,
+        error: error instanceof Error ? error.message : "Error saving A/B test",
+      });
+    }
+  }
 
   const widgetText = (formData.get("widgetText") as string) || "Try It On Now ✨";
   const widgetBg = (formData.get("widgetBg") as string) || "#000000";
@@ -76,7 +101,19 @@ export default function Widget() {
     "themeEditorAppEmbedsUrl" in loaderData ? loaderData.themeEditorAppEmbedsUrl : "";
   const themeEditorActivateUrl =
     "themeEditorActivateUrl" in loaderData ? loaderData.themeEditorActivateUrl : "";
+  const abStats =
+    "abStats" in loaderData && loaderData.abStats
+      ? loaderData.abStats
+      : { tryon: { impression: 0, tryon: 0, atc: 0 }, control: { impression: 0, tryon: 0, atc: 0 } };
   const error = "error" in loaderData ? loaderData.error : null;
+
+  const [abTestEnabled, setAbTestEnabled] = useState(
+    () => shop?.ab_test_enabled === true
+  );
+  const [abTestPercent, setAbTestPercent] = useState(() => {
+    const p = shop?.ab_test_percent;
+    return typeof p === "number" ? p : parseInt(String(p ?? 50), 10) || 50;
+  });
 
   const notifications = useAdminNotifications();
   const { notifications: items, dismiss } = notifications;
@@ -121,19 +158,18 @@ export default function Widget() {
         show: true,
         tone: "info" as const,
         priority: 10,
-        title: "Bouton try-on sur vos fiches produit",
+        title: "Try-on button on product pages",
         message: (
           <>
-            Le bouton est installé automatiquement à l&apos;installation de l&apos;app. Désactivez-le
-            produit par produit dans <strong>Products</strong>. L&apos;intégration thème reste
-            optionnelle pour affiner le placement.
+            The button installs automatically. Disable it per product in{" "}
+            <strong>Products</strong>. Theme embed is optional for custom placement.
           </>
         ),
         persistDismiss: true,
         autoHideMs: false as const,
         action: themeEditorActivateUrl
           ? {
-              label: "Options thème (optionnel)",
+              label: "Theme options (optional)",
               onAction: () => window.open(themeEditorActivateUrl, "_top"),
             }
           : undefined,
@@ -196,6 +232,79 @@ export default function Widget() {
           subtitle="Customize the try-on button on your product pages"
         >
           <AdminNotifications items={items} onDismiss={dismiss} />
+
+          <div className="vton-ab-panel">
+            <h2 className="vton-panel-title">A/B test: try-on vs no try-on</h2>
+            <p className="vton-field-hint" style={{ marginBottom: 12 }}>
+              Split traffic to measure impact on add-to-cart. Included on your plan — no extra fee.
+            </p>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const fd = new FormData(e.currentTarget);
+                fetcher.submit(fd, { method: "post" });
+              }}
+            >
+              <input type="hidden" name="intent" value="save-ab-test" />
+              <BlockStack gap="400">
+                <Checkbox
+                  label="Enable A/B test on the storefront"
+                  checked={abTestEnabled}
+                  onChange={setAbTestEnabled}
+                />
+                <input
+                  type="hidden"
+                  name="abTestEnabled"
+                  value={abTestEnabled ? "true" : "false"}
+                />
+                <RangeSlider
+                  label={`Show try-on to ${abTestPercent}% of visitors`}
+                  value={abTestPercent}
+                  min={10}
+                  max={90}
+                  step={5}
+                  onChange={setAbTestPercent}
+                  output
+                  disabled={!abTestEnabled}
+                />
+                <input type="hidden" name="abTestPercent" value={String(abTestPercent)} />
+                <Button submit loading={fetcher.state === "submitting"}>
+                  Save A/B settings
+                </Button>
+              </BlockStack>
+            </form>
+            {abTestEnabled && (
+              <div className="vton-ab-stats">
+                <div className="vton-ab-stat-card">
+                  <h4>With try-on ({abTestPercent}%)</h4>
+                  <ul>
+                    <li>Page views: {abStats.tryon.impression.toLocaleString("en-US")}</li>
+                    <li>Try-ons: {abStats.tryon.tryon.toLocaleString("en-US")}</li>
+                    <li>Add to cart: {abStats.tryon.atc.toLocaleString("en-US")}</li>
+                    <li>
+                      ATC rate:{" "}
+                      {abStats.tryon.tryon > 0
+                        ? `${((abStats.tryon.atc / abStats.tryon.tryon) * 100).toFixed(1)}%`
+                        : "—"}
+                    </li>
+                  </ul>
+                </div>
+                <div className="vton-ab-stat-card">
+                  <h4>Without try-on ({100 - abTestPercent}%)</h4>
+                  <ul>
+                    <li>Page views: {abStats.control.impression.toLocaleString("en-US")}</li>
+                    <li>Add to cart: {abStats.control.atc.toLocaleString("en-US")}</li>
+                    <li>
+                      ATC rate:{" "}
+                      {abStats.control.impression > 0
+                        ? `${((abStats.control.atc / abStats.control.impression) * 100).toFixed(1)}%`
+                        : "—"}
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            )}
+          </div>
 
           {(themeEditorActivateUrl || themeEditorAppEmbedsUrl) && (
             <div className="vton-panel" style={{ marginBottom: 16 }}>

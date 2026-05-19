@@ -549,11 +549,7 @@ export default function Credits() {
         price: 0.0,
         description: "4 try-ons / month",
         popular: false,
-        features: [
-          "Product page widget",
-          "Automatic installation",
-          "Per-product on/off toggle",
-        ],
+        highlight: "Widget on product pages",
       },
       {
         id: "starter",
@@ -561,11 +557,7 @@ export default function Credits() {
         price: 29.0,
         description: "100 try-ons / month",
         popular: false,
-        features: [
-          "Best for catalogs under 50 SKUs",
-          "Try-on session history",
-          "Email support",
-        ],
+        highlight: "Small catalogs",
       },
       {
         id: "pro",
@@ -573,11 +565,7 @@ export default function Credits() {
         price: 99.0,
         description: "400 try-ons / month",
         popular: true,
-        features: [
-          "Best value per try-on",
-          "Campaign & ad traffic ready",
-          "Conversion stats in dashboard",
-        ],
+        highlight: "Best value per try-on",
       },
       {
         id: "studio",
@@ -585,11 +573,7 @@ export default function Credits() {
         price: 399.0,
         description: "2,000 try-ons / month",
         popular: false,
-        features: [
-          "High-traffic fashion brands",
-          "Seasonal peaks without cutoff",
-          "Lowest cost per try-on",
-        ],
+        highlight: "High traffic & launches",
       },
     ],
     []
@@ -619,49 +603,19 @@ export default function Credits() {
   const isLowCredits = currentCredits <= Math.max(5, Math.ceil(monthlyQuota * 0.15));
   const isOutOfCredits = currentCredits <= 0;
 
-  const benefits = useMemo(
-    () => [
-      {
-        title: "Fewer returns",
-        body: "Shoppers see the product on themselves before buying — less guesswork, fewer size-related returns.",
-        icon: "↩",
-      },
-      {
-        title: "More engagement",
-        body: "Virtual try-on keeps visitors on the product page longer than static images alone.",
-        icon: "⏱",
-      },
-      {
-        title: "Higher-intent carts",
-        body: "Each credit powers one AI session that moves shoppers closer to Add to cart.",
-        icon: "🛒",
-      },
-      {
-        title: "Measurable ROI",
-        body: "Track try-ons and add-to-cart events in your dashboard to see what converts.",
-        icon: "📈",
-      },
-    ],
-    []
-  );
-
   const faqItems = useMemo(
     () => [
       {
-        q: "What happens when I run out of credits?",
-        a: "The try-on button stays visible, but generation is paused until your monthly renewal or a plan upgrade.",
+        q: "What is one credit?",
+        a: "One successful virtual try-on on your storefront.",
       },
       {
-        q: "Do unused credits roll over?",
-        a: "No — your quota resets each Shopify billing cycle. Pick a plan that matches your monthly traffic.",
+        q: "What if I run out?",
+        a: "Try-on pauses until your monthly renewal or you upgrade.",
       },
       {
-        q: "Does one credit equal one generation?",
-        a: "Yes. Every successful virtual try-on uses 1 credit, regardless of catalog size.",
-      },
-      {
-        q: "Can I change plans later?",
-        a: "Yes. Upgrade anytime; Shopify prorates billing automatically.",
+        q: "Can I change plans?",
+        a: "Yes — upgrade anytime; Shopify handles prorated billing.",
       },
     ],
     []
@@ -680,7 +634,7 @@ export default function Credits() {
       <div className="app-container credits-page">
         <AdminPage
           title="Plans & credits"
-          subtitle="Every credit powers one AI try-on on your store — scale where shoppers decide to buy."
+          subtitle="Check usage, pick a plan, and keep try-on running on your store."
           actions={
             <div className="credits-balance-compact" aria-label="Credits available">
               <span className="credits-balance-compact-value">
@@ -722,87 +676,55 @@ export default function Credits() {
           </div>
         )}
 
-        <section className="credits-conv-hero credits-conv-hero--elevated">
-          <div className="credits-conv-hero__main">
-            <p className="credits-conv-hero__eyebrow">Your store performance</p>
-            <h2 className="credits-conv-hero__title">
-              Turn product views into confident purchases
-            </h2>
-            <p className="credits-conv-hero__lead">
-              Fashion brands using virtual try-on see stronger product-page engagement and
-              higher-intent add-to-cart behavior.
-            </p>
-            <div className="credits-conv-hero__stats">
-              <div className="credits-stat-card">
-                <span className="credits-stat-card__value">
-                  {stats.totalTryons.toLocaleString("en-US")}
-                </span>
-                <span className="credits-stat-card__label">Total try-ons</span>
-              </div>
-              <div className="credits-stat-card">
-                <span className="credits-stat-card__value">
-                  {stats.totalAtc.toLocaleString("en-US")}
-                </span>
-                <span className="credits-stat-card__label">Add-to-cart tracked</span>
-              </div>
-              <div className="credits-stat-card credits-stat-card--highlight">
-                <span className="credits-stat-card__value">
-                  {conversionRate !== null ? `${conversionRate}%` : "—"}
-                </span>
-                <span className="credits-stat-card__label">Try-on → cart rate</span>
-              </div>
-            </div>
-            <Link to="/app" className="credits-conv-hero__link">
-              View full dashboard →
-            </Link>
+        <div className="credits-funnel" aria-label="Credits checkout flow">
+          <div className="credits-funnel-steps" aria-hidden="true">
+            <span className="credits-funnel-step-dot is-active" />
+            <span className="credits-funnel-step-dot" />
+            <span className="credits-funnel-step-dot" />
           </div>
-          <div className="credits-conv-hero__side">
-            <h3 className="credits-conv-panel__title">Usage this month</h3>
-            <div className="credits-usage-meter">
-              <div
-                className="credits-usage-meter__fill"
-                style={{ width: `${monthlyUsagePercent}%` }}
-              />
-            </div>
-            <p className="credits-usage-meter__text">
-              <strong>{stats.monthlyUsage}</strong> / {monthlyQuota} credits used
-              {monthlyUsagePercent >= 80 && (
-                <span className="credits-usage-meter__warn"> — approaching limit</span>
-              )}
-            </p>
-            <ul className="credits-roi-list">
-              <li>
-                <span>1 credit</span>
-                <span>= 1 shopper tries your product with AI</span>
-              </li>
-              <li>
-                <span>Pro plan</span>
-                <span>≈ $0.25 per try-on (vs $0.29 on Starter)</span>
-              </li>
-              <li>
-                <span>No credits</span>
-                <span>try-on pauses → higher bounce risk</span>
-              </li>
-            </ul>
-          </div>
-        </section>
+          <p className="credits-funnel-kicker">Step 1 · Your usage</p>
 
-        <section className="credits-pricing-intro" aria-label="Choose a plan">
-          <div className="credits-pricing-intro__copy">
-            <h2 className="credits-section-title credits-section-title--flush">
-              Pick the plan that matches your traffic
-            </h2>
-            <p>
-              Upgrade before you run out. Most growing stores choose <strong>Pro</strong> for the
-              best balance of volume and cost per try-on.
-            </p>
-          </div>
-          <div className="credits-pricing-intro__chips">
-            <span className="credits-chip">1 credit = 1 try-on</span>
-            <span className="credits-chip credits-chip--accent">Cancel anytime</span>
-            <span className="credits-chip">Billed via Shopify</span>
-          </div>
-        </section>
+          <section className="credits-funnel-panel credits-funnel-panel--usage">
+            <div className="credits-usage-strip">
+              <div className="credits-usage-strip__meter">
+                <div className="credits-usage-strip__head">
+                  <span className="credits-usage-strip__label">This month</span>
+                  <span className="credits-usage-strip__numbers">
+                    <strong>{stats.monthlyUsage}</strong> / {monthlyQuota} used
+                  </span>
+                </div>
+                <div className="credits-usage-meter credits-usage-meter--compact">
+                  <div
+                    className="credits-usage-meter__fill"
+                    style={{ width: `${monthlyUsagePercent}%` }}
+                  />
+                </div>
+                {monthlyUsagePercent >= 80 && (
+                  <p className="credits-usage-strip__warn">Approaching your monthly limit</p>
+                )}
+              </div>
+              {stats.totalTryons > 0 && (
+                <p className="credits-usage-strip__stat">
+                  Try-on → cart:{" "}
+                  <strong>{conversionRate !== null ? `${conversionRate}%` : "—"}</strong>
+                  <span className="credits-usage-strip__stat-muted">
+                    {" "}
+                    ({stats.totalAtc} ATC / {stats.totalTryons} try-ons)
+                  </span>
+                </p>
+              )}
+              <Link to="/app" className="credits-usage-strip__link">
+                Open dashboard
+              </Link>
+            </div>
+          </section>
+
+          <p className="credits-funnel-kicker credits-funnel-kicker--plans">
+            Step 2 · Choose a plan
+          </p>
+          <p className="credits-funnel-lead">
+            1 credit = 1 try-on. Most stores upgrade to <strong>Pro</strong> before campaigns.
+          </p>
 
         <div className="pricing-grid pricing-grid--compact credits-pricing-grid">
           {subscriptionPlans.map((plan) => {
@@ -837,11 +759,7 @@ export default function Credits() {
                 {pricePerCredit && (
                   <p className="plan-per-credit">{pricePerCredit} $ / try-on</p>
                 )}
-                <ul className="plan-features-list">
-                  {plan.features.map((feature) => (
-                    <li key={feature}>{feature}</li>
-                  ))}
-                </ul>
+                <p className="plan-highlight">{plan.highlight}</p>
                 <div className="plan-cta">
                   {isCurrentPlan ? (
                     <button
@@ -879,56 +797,18 @@ export default function Credits() {
           })}
         </div>
 
-        <section className="credits-benefits" aria-label="Why credits matter">
-          <h2 className="credits-section-title">Why invest in credits?</h2>
-          <div className="credits-benefits__grid">
-            {benefits.map((item) => (
-              <article key={item.title} className="credits-benefit-card">
-                <span className="credits-benefit-card__icon" aria-hidden>
-                  {item.icon}
-                </span>
-                <h3>{item.title}</h3>
-                <p>{item.body}</p>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section className="credits-social-proof">
-          <div className="credits-proof-card">
-            <p className="credits-proof-card__quote">
-              &ldquo;After enabling try-on, shoppers spend more time on the product page and ask
-              fewer sizing questions before checkout.&rdquo;
-            </p>
-            <p className="credits-proof-card__meta">— Typical results, Shopify fashion brands</p>
-          </div>
-          <div className="credits-proof-metrics">
-            <div>
-              <strong>+40%</strong>
-              <span>time on product page</span>
-            </div>
-            <div>
-              <strong>−15%</strong>
-              <span>size &amp; style returns</span>
-            </div>
-            <div>
-              <strong>24/7</strong>
-              <span>fitting room without a physical booth</span>
-            </div>
-          </div>
-        </section>
-
-        <section className="credits-faq" aria-label="Frequently asked questions">
-          <h2 className="credits-section-title">FAQ</h2>
-          <div className="credits-faq__grid">
-            {faqItems.map((item) => (
-              <details key={item.q} className="credits-faq__item">
-                <summary>{item.q}</summary>
-                <p>{item.a}</p>
-              </details>
-            ))}
-          </div>
-        </section>
+          <p className="credits-funnel-kicker credits-funnel-kicker--help">Step 3 · Good to know</p>
+          <details className="credits-funnel-help">
+            <summary>How credits work</summary>
+            <ul className="credits-funnel-help__list">
+              {faqItems.map((item) => (
+                <li key={item.q}>
+                  <strong>{item.q}</strong> {item.a}
+                </li>
+              ))}
+            </ul>
+          </details>
+        </div>
 
         <p className="credits-footnote">
           Cancel anytime · No setup fee · Monthly quota resets each billing cycle

@@ -19,6 +19,7 @@ import {
   setCachedStatusPayload,
   STATUS_HTTP_CACHE,
 } from "../lib/status-cache.server";
+import { resolveAbBucket, type AbBucket } from "../lib/ab-test.server";
 
 const SHOPIFY_API_SECRET = process.env.SHOPIFY_API_SECRET || "";
 
@@ -85,7 +86,11 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
     productId = normalizeProductGid(productId);
 
-    const cacheKey = buildStatusCacheKey(shop, productId, productHandle);
+    const visitorId = queryParams.get("visitor_id") || "";
+
+    const cacheKey =
+      buildStatusCacheKey(shop, productId, productHandle) +
+      `|ab:${visitorId || "anon"}`;
     const cachedPayload = getCachedStatusPayload(cacheKey);
     if (cachedPayload) {
       const headers = storefrontCorsHeaders(request);
@@ -99,16 +104,30 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       productHandle || undefined
     );
 
+    let enabled = status.enabled;
+    let abBucket: AbBucket | null = null;
+
+    if (status.abTestEnabled && visitorId) {
+      abBucket = resolveAbBucket(shop, visitorId, status.abTestPercent);
+      if (abBucket === "control") {
+        enabled = false;
+      }
+    }
+
     const headers = storefrontCorsHeaders(request);
     headers.set("Cache-Control", STATUS_HTTP_CACHE);
 
     const payload = {
-      enabled: status.enabled,
+      enabled,
       shop_enabled: status.shopEnabled,
       product_enabled: status.productEnabled,
       product_id: productId,
       shop,
-      widget_settings: status.widgetSettings,
+      garment_image_url: status.tryonImageUrl,
+      ab_test_enabled: status.abTestEnabled,
+      ab_test_percent: status.abTestPercent,
+      ab_bucket: abBucket,
+      widget_settings: enabled ? status.widgetSettings : null,
     };
 
     setCachedStatusPayload(cacheKey, payload);

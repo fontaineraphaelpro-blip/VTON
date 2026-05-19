@@ -142,6 +142,34 @@ export async function ensureTables() {
       }
     }
 
+    await pool.query(`
+      ALTER TABLE product_settings
+      ADD COLUMN IF NOT EXISTS tryon_image_url TEXT
+    `);
+
+    await pool.query(`
+      ALTER TABLE shops
+      ADD COLUMN IF NOT EXISTS ab_test_enabled BOOLEAN DEFAULT false,
+      ADD COLUMN IF NOT EXISTS ab_test_percent INTEGER DEFAULT 50
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS ab_events (
+        id SERIAL PRIMARY KEY,
+        shop TEXT NOT NULL,
+        product_id TEXT,
+        bucket TEXT NOT NULL,
+        event_type TEXT NOT NULL,
+        visitor_id TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_ab_events_shop_created
+      ON ab_events (shop, created_at DESC)
+    `);
+
     tablesEnsured = true;
   } catch (error) {
     tablesEnsuring = false;

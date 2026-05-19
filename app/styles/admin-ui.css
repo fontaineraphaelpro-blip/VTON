@@ -791,6 +791,102 @@
   border-color: var(--vton-brand) !important;
 }
 
+/* Products — garment photo picker for AI try-on */
+.vton-admin .vton-garment-picker-trigger {
+  display: block;
+  padding: 0;
+  border: 2px solid var(--vton-border);
+  border-radius: 8px;
+  background: var(--vton-bg);
+  cursor: pointer;
+  overflow: hidden;
+  width: 52px;
+  height: 52px;
+}
+
+.vton-admin .vton-garment-picker-trigger:hover {
+  border-color: var(--vton-brand);
+}
+
+.vton-admin .vton-garment-picker-thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.vton-admin .vton-garment-picker-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  font-size: 10px;
+  color: var(--vton-muted);
+}
+
+.vton-admin .vton-garment-option {
+  padding: 0;
+  border: 2px solid var(--vton-border);
+  border-radius: 8px;
+  width: 64px;
+  height: 64px;
+  overflow: hidden;
+  cursor: pointer;
+  background: #fff;
+}
+
+.vton-admin .vton-garment-option.is-selected {
+  border-color: var(--vton-brand);
+  box-shadow: 0 0 0 2px var(--vton-brand-soft);
+}
+
+.vton-admin .vton-garment-option img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Widget page — A/B test panel */
+.vton-admin .vton-ab-panel {
+  background: var(--vton-surface);
+  border: 1px solid var(--vton-border);
+  border-radius: var(--vton-radius);
+  padding: 20px 22px;
+  margin-bottom: 20px;
+  box-shadow: var(--vton-shadow);
+}
+
+.vton-admin .vton-ab-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.vton-admin .vton-ab-stat-card {
+  background: var(--vton-bg);
+  border: 1px solid var(--vton-border);
+  border-radius: 10px;
+  padding: 14px;
+}
+
+.vton-admin .vton-ab-stat-card h4 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.vton-admin .vton-ab-stat-card ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+  color: var(--vton-muted);
+  line-height: 1.6;
+}
+
 /* Credits page — conversion layout */
 .vton-admin .credits-page .credits-alert {
   display: flex;
@@ -926,7 +1022,169 @@
 }
 
 .vton-admin .credits-pricing-grid {
-  margin-bottom: 28px;
+  margin-bottom: 20px;
+}
+
+/* Credits — 3-step funnel */
+.vton-admin .credits-funnel {
+  max-width: 1120px;
+}
+
+.vton-admin .credits-funnel-steps {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 0 0 10px;
+}
+
+.vton-admin .credits-funnel-step-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--vton-border);
+}
+
+.vton-admin .credits-funnel-step-dot.is-active {
+  background: var(--vton-brand);
+  transform: scale(1.12);
+}
+
+.vton-admin .credits-funnel-kicker {
+  margin: 0 0 10px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--vton-muted);
+}
+
+.vton-admin .credits-funnel-kicker--plans {
+  margin-top: 22px;
+}
+
+.vton-admin .credits-funnel-kicker--help {
+  margin-top: 8px;
+}
+
+.vton-admin .credits-funnel-lead {
+  margin: 0 0 14px;
+  font-size: 14px;
+  color: var(--vton-muted);
+  line-height: 1.45;
+  max-width: 520px;
+}
+
+.vton-admin .credits-funnel-panel--usage {
+  margin-bottom: 4px;
+}
+
+.vton-admin .credits-usage-strip {
+  background: var(--vton-surface);
+  border: 1px solid var(--vton-border);
+  border-radius: var(--vton-radius);
+  padding: 16px 18px;
+  box-shadow: var(--vton-shadow);
+}
+
+.vton-admin .credits-usage-strip__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.vton-admin .credits-usage-strip__label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--vton-text);
+}
+
+.vton-admin .credits-usage-strip__numbers {
+  font-size: 13px;
+  color: var(--vton-muted);
+}
+
+.vton-admin .credits-usage-meter--compact {
+  height: 8px;
+  margin: 0;
+}
+
+.vton-admin .credits-usage-strip__warn {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: #b45309;
+}
+
+.vton-admin .credits-usage-strip__stat {
+  margin: 12px 0 0;
+  font-size: 13px;
+  color: var(--vton-text);
+}
+
+.vton-admin .credits-usage-strip__stat-muted {
+  color: var(--vton-muted);
+  font-weight: 400;
+}
+
+.vton-admin .credits-usage-strip__link {
+  display: inline-block;
+  margin-top: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--vton-brand);
+  text-decoration: none;
+}
+
+.vton-admin .credits-usage-strip__link:hover {
+  text-decoration: underline;
+}
+
+.vton-admin .credits-page .plan-highlight {
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: var(--vton-muted);
+  line-height: 1.4;
+}
+
+.vton-admin .credits-funnel-help {
+  margin: 0 0 16px;
+  padding: 12px 16px;
+  border: 1px solid var(--vton-border);
+  border-radius: var(--vton-radius);
+  background: var(--vton-bg);
+}
+
+.vton-admin .credits-funnel-help summary {
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--vton-text);
+  list-style: none;
+}
+
+.vton-admin .credits-funnel-help summary::-webkit-details-marker {
+  display: none;
+}
+
+.vton-admin .credits-funnel-help__list {
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 10px;
+}
+
+.vton-admin .credits-funnel-help__list li {
+  font-size: 13px;
+  color: var(--vton-muted);
+  line-height: 1.45;
+}
+
+.vton-admin .credits-funnel-help__list strong {
+  color: var(--vton-text);
+  font-weight: 600;
 }
 
 .vton-admin .credits-page .plan-card.best-value {

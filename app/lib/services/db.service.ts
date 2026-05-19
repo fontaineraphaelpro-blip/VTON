@@ -75,6 +75,8 @@ export async function upsertShop(domain: string, data: {
   last_quota_reset?: string;
   review_shown?: boolean;
   last_review_prompt_date?: Date | null;
+  abTestEnabled?: boolean;
+  abTestPercent?: number;
 }) {
   const shop = await getShop(domain);
   
@@ -159,6 +161,14 @@ export async function upsertShop(domain: string, data: {
     if (data.last_review_prompt_date !== undefined) {
       updates.push(`last_review_prompt_date = $${paramIndex++}`);
       params.push(data.last_review_prompt_date);
+    }
+    if (data.abTestEnabled !== undefined) {
+      updates.push(`ab_test_enabled = $${paramIndex++}`);
+      params.push(data.abTestEnabled);
+    }
+    if (data.abTestPercent !== undefined) {
+      updates.push(`ab_test_percent = $${paramIndex++}`);
+      params.push(data.abTestPercent);
     }
     
     updates.push(`last_active_at = CURRENT_TIMESTAMP`);
@@ -602,6 +612,187 @@ export async function setProductTryonSetting(shop: string, productId: string, en
   invalidateStatusCacheForProduct(shop, productId, productHandle || null);
 }
 
+export async function getProductTryonImageUrl(
+  shop: string,
+  productId: string,
+  productHandle?: string
+): Promise<string | null> {
+  const variants = productIdVariants(productId);
+  if (variants.length === 0) return null;
+
+  const idPlaceholders = variants.map((_, i) => `$${i + 2}`).join(", ");
+  const params: unknown[] = [shop, ...variants];
+  let sql = `SELECT tryon_image_url, updated_at
+     FROM product_settings
+     WHERE shop = $1 AND (
+       product_id IN (${idPlaceholders})`;
+
+  if (productHandle) {
+    sql += ` OR product_handle = $${params.length + 1}`;
+    params.push(productHandle);
+  }
+
+  sql += ") AND tryon_image_url IS NOT NULL AND tryon_image_url <> '' ORDER BY updated_at DESC LIMIT 1";
+
+  const result = await query(sql, params);
+  if (result.rows.length === 0) return null;
+  return String(result.rows[0].tryon_image_url);
+}
+
+export async function setProductTryonImageUrl(
+  shop: string,
+  productId: string,
+  imageUrl: string | null,
+  productHandle?: string
+) {
+  const formatsToSave = productIdVariants(productId);
+  const normalizedUrl = imageUrl && imageUrl.trim() ? imageUrl.trim() : null;
+
+  for (const idFormat of formatsToSave) {
+    await query(
+      `INSERT INTO product_settings (shop, product_id, product_handle, tryon_enabled, tryon_image_url, updated_at)
+       VALUES ($1, $2, $3, true, $4, CURRENT_TIMESTAMP)
+       ON CONFLICT (shop, product_id)
+       DO UPDATE SET
+         tryon_image_url = $4,
+         product_handle = COALESCE($3, product_settings.product_handle),
+         updated_at = CURRENT_TIMESTAMP`,
+      [shop, idFormat, productHandle || null, normalizedUrl]
+    );
+  }
+
+  if (formatsToSave.length > 0 && productHandle) {
+    await query(
+      `UPDATE product_settings
+       SET tryon_image_url = $2, updated_at = CURRENT_TIMESTAMP
+       WHERE shop = $1 AND (product_id = ANY($3::text[]) OR product_handle = $4)`,
+      [shop, normalizedUrl, formatsToSave, productHandle]
+    );
+  } else if (formatsToSave.length > 0) {
+    await query(
+      `UPDATE product_settings
+       SET tryon_image_url = $2, updated_at = CURRENT_TIMESTAMP
+       WHERE shop = $1 AND product_id = ANY($3::text[])`,
+      [shop, normalizedUrl, formatsToSave]
+    );
+  }
+
+  invalidateStatusCacheForShop(shop);
+  invalidateStatusCacheForProduct(shop, productId, productHandle || null);
+}
+
+export type ProductSettingsRow = {
+  enabled: boolean | null;
+  tryonImageUrl: string | null;
+};
+
+export async function getProductSettingsBatch(
+  shop: string,
+  productIds: string[]
+): Promise<Record<string, ProductSettingsRow>> {
+  const enabledMap = await getProductTryonSettingsBatch(shop, productIds);
+  const imageMap: Record<string, string | null> = {};
+
+  if (productIds.length === 0) {
+    return {};
+  }
+
+  const allFormatsToTry = new Set<string>();
+  productIds.forEach((productId) => {
+    productIdVariants(productId).forEach((v) => allFormatsToTry.add(v));
+  });
+  const formatsArray = Array.from(allFormatsToTry);
+  if (formatsArray.length === 0) {
+    return {};
+  }
+
+  const placeholders = formatsArray.map((_, i) => `$${i + 2}`).join(", ");
+  const result = await query(
+    `SELECT product_id, tryon_image_url, product_handle, updated_at
+     FROM product_settings
+     WHERE shop = $1 AND product_id IN (${placeholders})
+       AND tryon_image_url IS NOT NULL AND tryon_image_url <> ''
+     ORDER BY updated_at DESC`,
+    [shop, ...formatsArray]
+  );
+
+  const processed = new Set<string>();
+  result.rows.forEach((row: { product_id: string; tryon_image_url: string }) => {
+    const storedProductId = row.product_id;
+    const numericFromStored = storedProductId.match(/\d+/)?.[0];
+    productIds.forEach((productId) => {
+      if (processed.has(productId)) return;
+      const gidMatch = productId.match(/^gid:\/\/shopify\/Product\/(\d+)$/);
+      const numericId = gidMatch ? gidMatch[1] : productId.match(/\d+/)?.[0] || productId;
+      const matches =
+        storedProductId === productId ||
+        storedProductId === `gid://shopify/Product/${numericId}` ||
+        (numericFromStored && numericFromStored === numericId) ||
+        storedProductId === numericId;
+      if (matches) {
+        imageMap[productId] = row.tryon_image_url;
+        processed.add(productId);
+      }
+    });
+  });
+
+  const out: Record<string, ProductSettingsRow> = {};
+  productIds.forEach((id) => {
+    out[id] = {
+      enabled: enabledMap[id] ?? null,
+      tryonImageUrl: imageMap[id] ?? null,
+    };
+  });
+  return out;
+}
+
+export async function recordAbEvent(
+  shop: string,
+  data: {
+    productId?: string;
+    bucket: string;
+    eventType: "impression" | "tryon" | "atc";
+    visitorId?: string;
+  }
+) {
+  await query(
+    `INSERT INTO ab_events (shop, product_id, bucket, event_type, visitor_id)
+     VALUES ($1, $2, $3, $4, $5)`,
+    [
+      shop,
+      data.productId || null,
+      data.bucket,
+      data.eventType,
+      data.visitorId || null,
+    ]
+  );
+}
+
+export async function getAbTestStats(shop: string, days = 30) {
+  const result = await query(
+    `SELECT bucket, event_type, COUNT(*)::int AS count
+     FROM ab_events
+     WHERE shop = $1 AND created_at >= NOW() - make_interval(days => $2::int)
+     GROUP BY bucket, event_type`,
+    [shop, days]
+  );
+
+  const stats = {
+    tryon: { impression: 0, tryon: 0, atc: 0 },
+    control: { impression: 0, tryon: 0, atc: 0 },
+  };
+
+  for (const row of result.rows as { bucket: string; event_type: string; count: number }[]) {
+    const bucket = row.bucket === "control" ? "control" : "tryon";
+    const type = row.event_type as "impression" | "tryon" | "atc";
+    if (stats[bucket][type] !== undefined) {
+      stats[bucket][type] += row.count;
+    }
+  }
+
+  return stats;
+}
+
 /**
  * ADDED: Gets try-on usage count for a specific product.
  */
@@ -711,6 +902,9 @@ export async function getProductTryonStatus(shop: string, productId: string, pro
   enabled: boolean;
   shopEnabled: boolean;
   productEnabled: boolean;
+  tryonImageUrl: string | null;
+  abTestEnabled: boolean;
+  abTestPercent: number;
   widgetSettings: {
     widget_text: string;
     widget_bg: string;
@@ -718,9 +912,10 @@ export async function getProductTryonStatus(shop: string, productId: string, pro
     maxTriesPerUser: number;
   } | null;
 }> {
-  const [shopRecord, productSetting] = await Promise.all([
+  const [shopRecord, productSetting, tryonImageUrl] = await Promise.all([
     getShop(shop),
     getProductTryonSetting(shop, productId, productHandle),
+    getProductTryonImageUrl(shop, productId, productHandle),
   ]);
 
   if (!shopRecord) {
@@ -728,9 +923,18 @@ export async function getProductTryonStatus(shop: string, productId: string, pro
       enabled: false,
       shopEnabled: false,
       productEnabled: false,
+      tryonImageUrl: null,
+      abTestEnabled: false,
+      abTestPercent: 50,
       widgetSettings: null,
     };
   }
+
+  const abTestEnabled = shopRecord.ab_test_enabled === true;
+  const abTestPercent =
+    typeof shopRecord.ab_test_percent === "number"
+      ? shopRecord.ab_test_percent
+      : parseInt(String(shopRecord.ab_test_percent ?? 50), 10) || 50;
 
   const shopEnabled = shopRecord.is_enabled !== false;
 
@@ -757,6 +961,9 @@ export async function getProductTryonStatus(shop: string, productId: string, pro
     enabled,
     shopEnabled,
     productEnabled,
+    tryonImageUrl,
+    abTestEnabled,
+    abTestPercent,
     widgetSettings,
   };
 }

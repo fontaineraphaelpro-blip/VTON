@@ -13,7 +13,8 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { generateTryOn } from "../lib/services/replicate.service";
-import { getShop, upsertShop, createTryonLog, updateTryonLog, getMonthlyTryonUsage, getDailyTryonUsage, getCustomerDailyTryonUsage, query } from "../lib/services/db.service";
+import { getShop, upsertShop, createTryonLog, updateTryonLog, getMonthlyTryonUsage, getDailyTryonUsage, getCustomerDailyTryonUsage, getProductTryonImageUrl, query } from "../lib/services/db.service";
+import { normalizeProductGid } from "../lib/product-id.server";
 import {
   isAuthorizedStorefrontApiRequest,
   storefrontCorsHeaders,
@@ -128,14 +129,29 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     }
 
     const userPhoto = body.user_photo || body.person_image_base64;
-    const productImageUrl = body.product_image_url || body.clothing_url;
+    let productImageUrl = body.product_image_url || body.clothing_url;
     let productId = body.product_id ?? queryParams.get("product_id") ?? undefined;
     let productHandle = body.product_handle ?? queryParams.get("product_handle") ?? undefined;
     if (productId === "undefined" || productId === "null" || productId === "") productId = undefined;
     if (productHandle === "undefined" || productHandle === "null" || productHandle === "") productHandle = undefined;
 
+    if (productId) {
+      productId = normalizeProductGid(String(productId));
+    }
+
     if (!userPhoto) {
       return json({ error: "user_photo is required" }, { status: 400, headers: corsHeaders });
+    }
+
+    if (!productImageUrl && productId) {
+      const adminGarmentUrl = await getProductTryonImageUrl(
+        shop,
+        productId,
+        productHandle ? String(productHandle) : undefined
+      );
+      if (adminGarmentUrl) {
+        productImageUrl = adminGarmentUrl;
+      }
     }
 
     if (!productImageUrl) {
