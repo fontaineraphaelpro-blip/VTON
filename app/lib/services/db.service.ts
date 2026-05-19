@@ -8,6 +8,7 @@
  */
 
 import pg from "pg";
+import { ensureTables } from "../db-init.server";
 import { productIdVariants } from "../product-id.server";
 import {
   invalidateStatusCacheForProduct,

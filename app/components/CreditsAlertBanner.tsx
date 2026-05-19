@@ -1,4 +1,4 @@
-import { Link } from "@remix-run/react";
+﻿import { Link } from "@remix-run/react";
 import type { CreditsAlertState } from "../lib/credits-alert";
 
 type Props = {
@@ -20,14 +20,14 @@ export function CreditsAlertBanner({ alert, variant = "inline" }: Props) {
     .filter(Boolean)
     .join(" ");
 
-    return (
+  return (
     <div className={className} role="alert">
       <div className="vton-credits-alert__content">
         <p className="vton-credits-alert__title">{alert.title}</p>
         <p className="vton-credits-alert__message">{alert.message}</p>
         {alert.usagePercent != null && alert.monthlyQuota != null ? (
           <div className="vton-credits-alert__meter" aria-hidden="true">
-            <D
+            <div
               className="vton-credits-alert__meter-fill"
               style={{ width: `${alert.usagePercent}%` }}
             />
