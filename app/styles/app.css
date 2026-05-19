@@ -1674,16 +1674,55 @@ button.save-config-button.Polaris-Button--primary:hover:not(:disabled) > *,
   max-width: 100% !important;
 }
 
-/* Text links (exclude admin button-styled links — see admin-ui.css .vton-btn) */
-.vton-admin a:not(.vton-btn):not(.vton-metric-card) {
+/* Text links only — not Polaris <Button url="..."> (renders as <a class="Polaris-Button">) */
+.vton-admin a:not(.vton-btn):not(.vton-metric-card):not([class*="Polaris-Button"]) {
   color: var(--color-primary);
   font-weight: 600;
   text-decoration: none;
 }
 
-.vton-admin a:not(.vton-btn):not(.vton-metric-card):hover {
+.vton-admin a:not(.vton-btn):not(.vton-metric-card):not([class*="Polaris-Button"]):hover {
   color: var(--color-primary-hover);
   text-decoration: underline;
+}
+
+.vton-admin a.Polaris-Button,
+.vton-admin a.Polaris-Button:hover,
+.vton-admin a.Polaris-Button:focus {
+  text-decoration: none !important;
+}
+
+.vton-admin a.Polaris-Button--primary,
+.vton-admin a.Polaris-Button--primary .Polaris-Text--root,
+.vton-admin a.Polaris-Button--primary span {
+  color: #ffffff !important;
+}
+
+.vton-admin a.Polaris-Button--primary {
+  background: linear-gradient(135deg, #008060 0%, #006e52 100%) !important;
+  border-color: #008060 !important;
+}
+
+.vton-admin a.Polaris-Button--primary:hover {
+  background: linear-gradient(135deg, #006e52 0%, #005a43 100%) !important;
+  border-color: #006e52 !important;
+}
+
+.vton-admin a.Polaris-Button--secondary,
+.vton-admin a.Polaris-Button--secondary .Polaris-Text--root,
+.vton-admin a.Polaris-Button--secondary span {
+  color: #1a1c1e !important;
+}
+
+.vton-admin a.Polaris-Button--secondary {
+  background: #ffffff !important;
+  border: 1px solid #e3e5e8 !important;
+}
+
+.vton-admin a.Polaris-Button--plain,
+.vton-admin a.Polaris-Button--plain .Polaris-Text--root,
+.vton-admin a.Polaris-Button--plain span {
+  color: #008060 !important;
 }
 
 /* Enhanced Scrollbar */

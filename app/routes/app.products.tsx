@@ -342,8 +342,8 @@ export default function Products() {
                   défaut sur chaque fiche produit du storefront
                 </p>
               </div>
-              <Button url="shopify:admin/products/new" target="_blank" variant="primary">
-                Create product
+              <Button url="shopify:admin/products/new" target="_blank" variant="secondary">
+                Créer un produit
               </Button>
             </div>
               <BlockStack gap="400">

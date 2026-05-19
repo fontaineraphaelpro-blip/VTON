@@ -774,6 +774,23 @@
   font-weight: 600;
 }
 
+/* Products page — header CTA (Polaris link button) */
+.vton-admin .vton-panel-header .Polaris-Button {
+  box-shadow: var(--vton-shadow);
+}
+
+.vton-admin .vton-panel-header .Polaris-Button--secondary {
+  background: var(--vton-surface) !important;
+  border: 1px solid var(--vton-border) !important;
+  color: var(--vton-text) !important;
+  font-weight: 600;
+}
+
+.vton-admin .vton-panel-header .Polaris-Button--secondary:hover {
+  background: var(--vton-bg) !important;
+  border-color: var(--vton-brand) !important;
+}
+
 /* Credits page — conversion layout */
 .vton-admin .credits-page .credits-alert {
   display: flex;
