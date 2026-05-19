@@ -1,6 +1,11 @@
 (function() {
       'use strict';
 
+      if (window.__VTON_WIDGET_BOOTED) return;
+      window.__VTON_WIDGET_BOOTED = true;
+
+      try {
+
       var isProduction = !/localhost|127\.0\.0\.1/.test(window.location.hostname) && window.location.search.indexOf('vton_debug') === -1;
       var log = isProduction ? function() {} : console.log.bind(console);
       var warn = isProduction ? function() {} : console.warn.bind(console);
@@ -739,21 +744,25 @@
             resolve(vtonResolveInjectionTarget(customSelector));
           }
 
+          var scanTimer = null;
           var obs = new MutationObserver(function() {
-            var anchor = vtonFindInjectionAnchor(customSelector, { allowHidden: false });
-            if (!anchor) anchor = vtonFindInjectionAnchor(customSelector, { allowHidden: true });
-            if (anchor) {
-              resolved = true;
-              try { obs.disconnect(); } catch (e) {}
-              resolve(anchor);
-            }
+            if (resolved) return;
+            if (scanTimer) return;
+            scanTimer = setTimeout(function() {
+              scanTimer = null;
+              if (resolved) return;
+              var anchor = vtonFindInjectionAnchor(customSelector, { allowHidden: false });
+              if (!anchor) anchor = vtonFindInjectionAnchor(customSelector, { allowHidden: true });
+              if (anchor) {
+                resolved = true;
+                try { obs.disconnect(); } catch (e) {}
+                resolve(anchor);
+              }
+            }, 120);
           });
 
           var observeRoot = vtonGetObserverRoot();
           obs.observe(observeRoot, { childList: true, subtree: true });
-          if (observeRoot !== document.body) {
-            obs.observe(document.body, { childList: true, subtree: true });
-          }
 
           setTimeout(finish, timeoutMs);
         });
@@ -2647,4 +2656,7 @@
           if (generateBtn) generateBtn.disabled = false;
         });
       }
+    } catch (vtonFatal) {
+      console.error('[VTON] Widget failed to start:', vtonFatal);
+    }
     })();

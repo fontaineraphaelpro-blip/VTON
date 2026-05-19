@@ -1,5 +1,8 @@
 {
   "blocks": {
+    "block": {
+      "name": "Virtual Try-On Widget"
+    },
     "vton-widget": {
       "name": "Virtual Try-On Widget",
       "settings": {

@@ -1,5 +1,8 @@
 {
   "blocks": {
+    "block": {
+      "name": "Essayage virtuel"
+    },
     "vton-widget": {
       "name": "Essayage virtuel",
       "settings": {
