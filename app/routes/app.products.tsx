@@ -5,6 +5,8 @@ import { useMemo, useCallback } from "react";
 import {
   Page,
   BlockStack,
+  InlineStack,
+  Text,
   DataTable,
   Button,
   EmptyState,
