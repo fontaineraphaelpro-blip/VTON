@@ -1,6 +1,6 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
-import { useLoaderData, useFetcher, useRevalidator } from "@remix-run/react";
+import { useLoaderData, useFetcher } from "@remix-run/react";
 import { useEffect, useState, useRef } from "react";
 import {
   Page,
@@ -18,14 +18,11 @@ import {
 import { TitleBar } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
 import { getShop, upsertShop } from "../lib/services/db.service";
-import { ensureTables } from "../lib/db-init.server";
-
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
   const shop = session.shop;
 
   try {
-    await ensureTables();
     const shopData = await getShop(shop);
 
     return json({
@@ -124,12 +121,7 @@ export default function Widget() {
         const timer = setTimeout(() => {
           setShowSuccessBanner(false);
         }, 5000);
-        
-        // Silently revalidate in the background without affecting the UI
-        setTimeout(() => {
-          revalidator.revalidate();
-        }, 200);
-        
+
         return () => clearTimeout(timer);
       }
     }

@@ -13,17 +13,13 @@ import {
 import { TitleBar } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
 import { getTryonLogs } from "../lib/services/db.service";
-import { ensureTables } from "../lib/db-init.server";
-
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session, admin } = await authenticate.admin(request);
   const shop = session.shop;
 
   try {
-    await ensureTables();
-
     const url = new URL(request.url);
-    const limit = parseInt(url.searchParams.get("limit") || "50");
+    const limit = parseInt(url.searchParams.get("limit") || "25");
     const offset = parseInt(url.searchParams.get("offset") || "0");
 
     const logs = await getTryonLogs(shop, { limit, offset });

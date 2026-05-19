@@ -1,6 +1,6 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
-import { useLoaderData, useFetcher, useNavigation } from "@remix-run/react";
+import { useLoaderData, useFetcher, useNavigation, useRevalidator } from "@remix-run/react";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   Page,
@@ -10,8 +10,6 @@ import {
 import { TitleBar } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
 import { getShop, upsertShop, query } from "../lib/services/db.service";
-import { ensureTables } from "../lib/db-init.server";
-
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
   const chargeId = url.searchParams.get("charge_id");
@@ -28,7 +26,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     
     const shop = session.shop;
 
-    await ensureTables();
     let shopData = await getShop(shop);
     
     // Ensure widget is enabled by default if is_enabled is not set
@@ -155,10 +152,18 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       }
     }
 
-    // Always sync database with Shopify subscriptions
-    let currentActivePlan: string | null = null;
+    let currentActivePlan: string | null = shopData?.plan_name || null;
+
+    // Sync with Shopify only when plan unknown or returning from billing
+    if (!chargeId && shopData?.plan_name) {
+      return json({
+        shop: shopData || null,
+        currentActivePlan,
+      });
+    }
+
     let shouldUpdateDb = false;
-    
+
     try {
       const subscriptionQuery = `#graphql
         query {
@@ -386,6 +391,7 @@ export default function Credits() {
   
   const fetcher = useFetcher<typeof action>();
   const navigation = useNavigation();
+  const revalidator = useRevalidator();
   const currentCredits = shop?.credits || 0;
   const [submittingPackId, setSubmittingPackId] = useState<string | null>(null);
   
@@ -413,23 +419,24 @@ export default function Credits() {
     if (subscriptionUpdated && planName) {
       const timer = setTimeout(() => {
         const url = new URL(window.location.href);
-        url.searchParams.delete('charge_id');
-        window.location.href = url.toString();
+        url.searchParams.delete("charge_id");
+        window.history.replaceState({}, "", url.pathname + url.search);
+        revalidator.revalidate();
       }, 1500);
       return () => clearTimeout(timer);
     }
-  }, [subscriptionUpdated, planName]);
+  }, [subscriptionUpdated, planName, revalidator]);
 
   useEffect(() => {
     const url = new URL(window.location.href);
     const chargeId = url.searchParams.get("charge_id");
     if (chargeId && !subscriptionUpdated) {
       const timer = setTimeout(() => {
-        window.location.reload();
+        revalidator.revalidate();
       }, 2500);
       return () => clearTimeout(timer);
     }
-  }, [subscriptionUpdated]);
+  }, [subscriptionUpdated, revalidator]);
 
   // Memoize handleSubscriptionPurchase to prevent recreation on every render
   const handleSubscriptionPurchase = useCallback((planId: string) => {

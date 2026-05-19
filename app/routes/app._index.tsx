@@ -1,6 +1,6 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
-import { json, defer, redirect } from "@remix-run/node";
-import { useLoaderData, useFetcher, useRevalidator, Link } from "@remix-run/react";
+import { json, redirect } from "@remix-run/node";
+import { useLoaderData, useFetcher, Link } from "@remix-run/react";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import {
   Page,
@@ -15,8 +15,7 @@ import {
 } from "@shopify/polaris";
 import { TitleBar } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
-import { getShop, upsertShop, getTryonLogs, getTopProducts, getTryonStatsByDay, getMonthlyTryonUsage, getSuccessfulTryonsCount, query } from "../lib/services/db.service";
-import { ensureTables } from "../lib/db-init.server";
+import { getShop, upsertShop, getTryonLogs, getTopProducts, getTryonStatsByDay, getMonthlyTryonUsage, query } from "../lib/services/db.service";
 
 const REVIEW_URL = "https://apps.shopify.com/try-on-stylelab";
 
@@ -33,7 +32,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   
   const returnUrl = `https://${url.host}/app`;
 
-  // Always sync database with Shopify subscriptions (keeps DB up to date even without charge_id)
+  let shopData = await getShop(shop);
+
+  // Sync subscription only when plan is unknown (Credits page handles billing return)
+  if (!shopData?.plan_name) {
   try {
     const subscriptionQuery = `#graphql
       query {
@@ -166,12 +168,12 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       console.error("[Dashboard] Subscription check error:", error);
     }
   }
+  }
 
   try {
-    await ensureTables();
-
-    // OPTIMIZED: Load critical data immediately
-    let shopData = await getShop(shop);
+    if (!shopData) {
+      shopData = await getShop(shop);
+    }
     
     // Special handling for specific shop: 3aavx5-9u.myshopify.com
     // Give 1000 credits at startup, only if credits are less than 1000 (don't reset if already has 1000+)
@@ -195,7 +197,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     // OPTIMIZED: Start all queries in parallel (they run concurrently)
     // This is faster than awaiting them sequentially
     const [recentLogs, topProducts, dailyStats, monthlyUsage] = await Promise.all([
-      getTryonLogs(shop, { limit: 50 }),
+      getTryonLogs(shop, { limit: 5 }),
       getTopProducts(shop, 10),
       getTryonStatsByDay(shop, 30),
       getMonthlyTryonUsage(shop),
@@ -291,111 +293,38 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       }
     }
 
-    // Fetch product titles by handle for topProducts/recentLogs that only have product_handle
-    if (productHandlesToFetch.size > 0) {
-      try {
-        for (const handle of productHandlesToFetch) {
-          const r = await admin.graphql(
-            `#graphql
-              query getProductByHandle($query: String!) {
-                products(first: 1, query: $query) {
-                  edges { node { id title handle } }
-                }
-              }`,
-            { variables: { query: `handle:${handle}` } }
-          );
-          if (r.ok) {
-            const d = (await r.json()) as any;
-            const node = d?.data?.products?.edges?.[0]?.node;
-            if (node?.title) productNamesMap[handle] = node.title;
-          }
-        }
-      } catch {
-        // Ignore
-      }
-    }
+    // Enrich top products in-memory (no per-product DB round-trips)
+    const enrichedTopProducts = topProducts.map((product: any) => {
+      if (!product.product_id) return product;
 
-    // Enrich topProducts with product titles (use fetched names, fallback to existing product_title from logs)
-    // IMPORTANT: Fetch product titles directly from tryon_logs first (most reliable since they're already stored)
-    const enrichedTopProducts = await Promise.all(topProducts.map(async (product: any) => {
-      if (product.product_id) {
-        const gidMatch = product.product_id.match(/^gid:\/\/shopify\/Product\/(\d+)$/);
-        const numericId = gidMatch ? gidMatch[1] : product.product_id;
-        
-        // PRIORITY 1: Try to get title from tryon_logs (most reliable - already stored in DB)
-        let title: string | undefined;
-        try {
-          const idParams = [shop, product.product_id, numericId, gidMatch ? product.product_id : `gid://shopify/Product/${numericId}`];
-          const idCondition = "product_id IN ($2, $3, $4)";
-          const handleCondition = product.product_handle ? " OR product_handle = $5" : "";
-          const logResult = await query(
-            `SELECT product_title, product_handle FROM tryon_logs 
-             WHERE shop = $1 AND (${idCondition}${handleCondition}) AND product_title IS NOT NULL AND product_title != ''
-             ORDER BY created_at DESC LIMIT 1`,
-            product.product_handle ? [...idParams, product.product_handle] : idParams
-          );
-          if (logResult.rows.length > 0 && logResult.rows[0].product_title) {
-            title = logResult.rows[0].product_title;
-          }
-        } catch (err) {
-          // Ignore errors
-        }
+      const gidMatch = product.product_id.match(/^gid:\/\/shopify\/Product\/(\d+)$/);
+      const numericId = gidMatch ? gidMatch[1] : product.product_id;
 
-        // PRIORITY 2: Try fetched names map (from GraphQL query above)
-        if (!title) {
-          title = productNamesMap[product.product_id] || productNamesMap[numericId] || (product.product_handle ? productNamesMap[product.product_handle] : undefined);
-        }
-        
-        // PRIORITY 3: Try to find title from recentLogs
-        if (!title) {
-          const logsWithSameId = recentLogs.filter((log: any) => {
-            if (!log.product_id || !log.product_title) return false;
-            const logGidMatch = log.product_id.match(/^gid:\/\/shopify\/Product\/(\d+)$/);
-            const logNumericId = logGidMatch ? logGidMatch[1] : log.product_id;
-            return log.product_id === product.product_id || logNumericId === numericId;
-          });
-          
-          if (logsWithSameId.length > 0 && logsWithSameId[0].product_title) {
-            title = logsWithSameId[0].product_title;
+      let title =
+        product.product_title ||
+        productNamesMap[product.product_id] ||
+        productNamesMap[numericId] ||
+        (product.product_handle ? productNamesMap[product.product_handle] : undefined);
+
+      if (!title) {
+        const logMatch = recentLogs.find((log: any) => {
+          if (!log.product_title) return false;
+          if (log.product_handle && product.product_handle && log.product_handle === product.product_handle) {
+            return true;
           }
-        }
-        
-        // PRIORITY 4: Try handles map
-        if (!title && productHandlesMap[product.product_id]) {
-          title = productHandlesMap[product.product_id];
-        }
-        
-        // PRIORITY 5: Try product_handle from logs and match with productNamesMap
-        if (!title) {
-          try {
-            const handleResult = await query(
-              `SELECT product_handle 
-               FROM tryon_logs 
-               WHERE shop = $1 AND product_id IN ($2, $3, $4) AND product_handle IS NOT NULL 
-               LIMIT 1`,
-              [shop, product.product_id, numericId, gidMatch ? product.product_id : `gid://shopify/Product/${numericId}`]
-            );
-            if (handleResult.rows.length > 0 && handleResult.rows[0].product_handle) {
-              const handle = handleResult.rows[0].product_handle;
-              if (productNamesMap[handle]) {
-                title = productNamesMap[handle];
-              }
-            }
-          } catch (err) {
-            // Ignore errors
-          }
-        }
-        
-        // Always set product_title - use title if found, otherwise use numeric ID as fallback
-        if (title && title !== 'Product #' && !title.startsWith('Product #')) {
-          return { ...product, product_title: title };
-        } else {
-          // Use numeric ID as fallback (better than full GID) but try to avoid "Product #" format
-          return { ...product, product_title: `Product #${numericId}` };
-        }
+          if (!log.product_id) return false;
+          const logGid = log.product_id.match(/^gid:\/\/shopify\/Product\/(\d+)$/);
+          const logNumeric = logGid ? logGid[1] : log.product_id;
+          return log.product_id === product.product_id || logNumeric === numericId;
+        });
+        if (logMatch?.product_title) title = logMatch.product_title;
       }
-      return product;
-    }));
+
+      if (title && !title.startsWith("Product #")) {
+        return { ...product, product_title: title };
+      }
+      return { ...product, product_title: `Product #${numericId}` };
+    });
     
     // Enrich recentLogs with product titles (use handles for matching - more reliable)
     const enrichedRecentLogs = recentLogs.map((log: any) => {
@@ -687,8 +616,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 export default function Dashboard() {
   const loaderData = useLoaderData<typeof loader>();
   const fetcher = useFetcher<typeof action>();
-  const revalidator = useRevalidator();
-
   // Handle both success and error cases from loader
   const shop = (loaderData as any).shop || null;
   const recentLogs = Array.isArray((loaderData as any).recentLogs) ? (loaderData as any).recentLogs : [];
@@ -777,11 +704,8 @@ export default function Dashboard() {
   useEffect(() => {
     if (fetcher.data?.success) {
       setShowSuccessBanner(true);
-      setTimeout(() => {
-        revalidator.revalidate();
-      }, 500);
     }
-  }, [fetcher.data?.success, revalidator]);
+  }, [fetcher.data?.success]);
 
   // Increment App Embed banner display count when it's shown
   useEffect(() => {
@@ -797,17 +721,6 @@ export default function Dashboard() {
       }
     }
   }, [showAppEmbedBanner]);
-
-  // Refresh stats periodically without hammering the server
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (document.visibilityState === "visible") {
-        revalidator.revalidate();
-      }
-    }, 60000);
-
-    return () => clearInterval(interval);
-  }, [revalidator]);
 
   // Memoize stats array to prevent recreation on every render
   const stats = useMemo(() => [

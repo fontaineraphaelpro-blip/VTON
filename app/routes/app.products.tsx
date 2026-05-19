@@ -20,7 +20,6 @@ import {
 } from "@shopify/polaris";
 import { TitleBar } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
-import { ensureTables } from "../lib/db-init.server";
 import { getProductTryonCounts, setProductTryonSetting, getProductTryonSettingsBatch } from "../lib/services/db.service";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -38,14 +37,11 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
     const productsQuery = `#graphql
       query getProducts {
-        products(first: 100) {
+        products(first: 25) {
           edges { node { id title handle featuredImage { url altText } totalInventory status } }
         }
       }`;
-    const [response] = await Promise.all([
-      admin.graphql(productsQuery),
-      ensureTables(),
-    ]);
+    const response = await admin.graphql(productsQuery);
 
     // Check if response is OK
     if (!response.ok) {
@@ -186,7 +182,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     }
     
     try {
-      await ensureTables();
       await setProductTryonSetting(shop, productId, enabled, productHandle);
       return json({ success: true, productId, enabled });
     } catch (error) {
