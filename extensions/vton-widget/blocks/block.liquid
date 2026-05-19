@@ -43,31 +43,50 @@
       }
 
       function isProductPageContext() {
-        if (window.VTON_LIQUID && window.VTON_LIQUID.productId) return true;
+        var liquid = window.VTON_LIQUID || {};
+        if (liquid.productId) return true;
+        if (liquid.pageType === 'product') return true;
+        if (liquid.templateName && String(liquid.templateName).indexOf('product') !== -1) return true;
         if (/\/products\/[^\/\?#]+/i.test(window.location.pathname)) return true;
         if (window.Shopify && window.Shopify.product && window.Shopify.product.id) return true;
-        if (document.querySelector('form[action*="/cart/add"], product-form, [data-product-id]')) return true;
+        if (document.querySelector('form[action*="/cart/add"], product-form, [data-product-id], [data-product-handle]')) return true;
         return false;
       }
-      
+
       function bootWidget() {
         if (!isProductPageContext()) return;
         initWidget();
       }
 
+      function bootWidgetWithRetries() {
+        if (!isProductPageContext()) return;
+        bootWidget();
+        if (document.getElementById('vton-widget-container')) return;
+        [800, 2000, 4500, 9000, 15000, 22000].forEach(function(delayMs) {
+          setTimeout(function() {
+            if (!isProductPageContext()) return;
+            if (document.getElementById('vton-widget-container')) return;
+            _vtonWidgetRenderQueued = false;
+            bootWidget();
+          }, delayMs);
+        });
+      }
+
+      var bootIdleMs = (window.VTON_LIQUID && window.VTON_LIQUID.productId) ? 200 : 2000;
+
       if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', function() {
-          runWhenIdle(bootWidget, 2500);
+          runWhenIdle(bootWidgetWithRetries, bootIdleMs);
         }, { once: true });
       } else {
-        runWhenIdle(bootWidget, 2500);
+        runWhenIdle(bootWidgetWithRetries, bootIdleMs);
       }
 
       function vtonScheduleRetryBoot() {
         if (!isProductPageContext()) return;
         if (document.getElementById('vton-widget-container')) return;
         _vtonWidgetRenderQueued = false;
-        runWhenIdle(bootWidget, 500);
+        runWhenIdle(bootWidget, 300);
       }
 
       document.addEventListener('shopify:section:load', vtonScheduleRetryBoot);
@@ -80,8 +99,9 @@
         document.addEventListener(evt, vtonScheduleRetryBoot);
       });
 
-      setTimeout(vtonScheduleRetryBoot, 3000);
-      setTimeout(vtonScheduleRetryBoot, 8000);
+      setTimeout(vtonScheduleRetryBoot, 1500);
+      setTimeout(vtonScheduleRetryBoot, 5000);
+      setTimeout(vtonScheduleRetryBoot, 12000);
       
       function vtonStatusCacheKey(shop, productId) {
         return 'vton:status:' + shop + ':' + productId;
