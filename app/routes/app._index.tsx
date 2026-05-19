@@ -24,7 +24,10 @@ import {
   getAppEmbedActivationUrl,
   getThemeEditorAppEmbedsUrl,
 } from "../lib/theme-editor-url.server";
-import { ensureStorefrontWidgetScriptTag } from "../lib/storefront-widget-install.server";
+import {
+  scheduleStorefrontWidgetScriptTag,
+  sessionCanInstallScriptTag,
+} from "../lib/storefront-widget-install.server";
 
 const REVIEW_URL = "https://apps.shopify.com/try-on-stylelab";
 
@@ -43,12 +46,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
   let shopData = await getShop(shop);
 
-  try {
-    await ensureStorefrontWidgetScriptTag(admin);
-  } catch (installError) {
-    if (process.env.NODE_ENV !== "production") {
-      console.error("[VTON] Storefront widget auto-install:", installError);
-    }
+  if (sessionCanInstallScriptTag(session.scope)) {
+    scheduleStorefrontWidgetScriptTag(admin);
   }
 
   // Sync subscription only when plan is unknown (Credits page handles billing return)

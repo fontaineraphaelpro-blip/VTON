@@ -3,6 +3,7 @@
  */
 
 const SCRIPT_PATH = "/storefront/vton-boot.js";
+const GRAPHQL_TIMEOUT_MS = 8_000;
 
 function getAppBaseUrl(): string {
   const url = (process.env.SHOPIFY_APP_URL || "").replace(/\/$/, "");
@@ -29,12 +30,53 @@ type AdminGraphql = {
   ) => Promise<Response>;
 };
 
+async function adminGraphqlWithTimeout(
+  admin: AdminGraphql,
+  query: string,
+  options?: { variables?: Record<string, unknown> }
+): Promise<Response> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<Response>((_, reject) => {
+    timer = setTimeout(
+      () => reject(new Error("VTON ScriptTag GraphQL timeout")),
+      GRAPHQL_TIMEOUT_MS
+    );
+  });
+  try {
+    return await Promise.race([admin.graphql(query, options), timeout]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
+export function sessionCanInstallScriptTag(scope: string | undefined): boolean {
+  if (!scope) return false;
+  return scope.split(",").some((s) => s.trim() === "write_script_tags");
+}
+
+/** Non-blocking — safe to call from loaders / afterAuth without awaiting. */
+export function scheduleStorefrontWidgetScriptTag(admin: AdminGraphql): void {
+  void ensureStorefrontWidgetScriptTag(admin).catch((error) => {
+    if (process.env.NODE_ENV !== "production") {
+      console.error("[VTON] Background ScriptTag install:", error);
+    }
+  });
+}
+
 export async function ensureStorefrontWidgetScriptTag(
   admin: AdminGraphql
 ): Promise<{ installed: boolean; skipped?: string }> {
-  const scriptSrc = `${getAppBaseUrl()}${SCRIPT_PATH}`;
+  let scriptSrc: string;
+  try {
+    scriptSrc = `${getAppBaseUrl()}${SCRIPT_PATH}`;
+  } catch (error) {
+    return {
+      installed: false,
+      skipped: error instanceof Error ? error.message : "SHOPIFY_APP_URL missing",
+    };
+  }
 
-  const listResponse = await admin.graphql(`#graphql
+  const listResponse = await adminGraphqlWithTimeout(admin, `#graphql
     query VtonScriptTags {
       scriptTags(first: 50) {
         edges {
@@ -77,23 +119,29 @@ export async function ensureStorefrontWidgetScriptTag(
   }
 
   for (const id of staleIds) {
-    await admin.graphql(
-      `#graphql
+    try {
+      await adminGraphqlWithTimeout(
+        admin,
+        `#graphql
       mutation VtonScriptTagDelete($id: ID!) {
         scriptTagDelete(id: $id) {
           deletedScriptTagId
           userErrors { field message }
         }
       }`,
-      { variables: { id } }
-    );
+        { variables: { id } }
+      );
+    } catch {
+      // Stale cleanup is best-effort
+    }
   }
 
   if (hasCurrent) {
     return { installed: true };
   }
 
-  const createResponse = await admin.graphql(
+  const createResponse = await adminGraphqlWithTimeout(
+    admin,
     `#graphql
     mutation VtonScriptTagCreate($input: ScriptTagInput!) {
       scriptTagCreate(input: $input) {
