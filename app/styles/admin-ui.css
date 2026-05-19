@@ -371,27 +371,231 @@
   word-break: break-word;
 }
 
-/* Widget page — color row (replaces fragile Polaris Box + InlineStack on mobile) */
-.vton-color-row {
+/* Widget page — color customization */
+.vton-widget-colors {
   display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.vton-color-row input[type="color"] {
-  width: 56px;
-  height: 44px;
-  flex-shrink: 0;
+  flex-direction: column;
+  gap: 20px;
+  padding: 18px;
+  border-radius: var(--vton-radius);
+  background: linear-gradient(165deg, #fafbfc 0%, #f3f4f6 100%);
   border: 1px solid var(--vton-border);
-  border-radius: 8px;
-  cursor: pointer;
-  padding: 2px;
 }
 
-.vton-color-row .vton-color-field {
-  flex: 1 1 160px;
+.vton-widget-colors__fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.vton-color-pairings__title {
+  margin: 0 0 12px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--vton-soft);
+}
+
+.vton-color-pairings__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.vton-color-pairing {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 8px;
+  border: 1.5px solid var(--vton-border);
+  border-radius: 12px;
+  background: var(--vton-surface);
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
+}
+
+.vton-color-pairing:hover {
+  border-color: #9ca3af;
+  box-shadow: var(--vton-shadow);
+  transform: translateY(-1px);
+}
+
+.vton-color-pairing.is-selected {
+  border-color: var(--vton-brand);
+  box-shadow: 0 0 0 1px var(--vton-brand);
+}
+
+.vton-color-pairing__chip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 36px;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.vton-color-pairing__name {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--vton-text);
+}
+
+.vton-color-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 12px;
+  background: var(--vton-surface);
+  border: 1px solid var(--vton-border);
+  box-shadow: var(--vton-shadow);
+}
+
+.vton-color-picker__label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--vton-text);
+  margin: 0;
+}
+
+.vton-color-picker__hint {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--vton-soft);
+  line-height: 1.4;
+}
+
+.vton-color-picker__main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.vton-color-picker__swatch {
+  position: relative;
+  width: 52px;
+  height: 52px;
+  flex-shrink: 0;
+  padding: 0;
+  border: 2px solid #fff;
+  border-radius: 14px;
+  cursor: pointer;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.08),
+    0 4px 12px rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.vton-color-picker__swatch:hover {
+  transform: scale(1.04);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.1),
+    0 6px 16px rgba(0, 0, 0, 0.16);
+}
+
+.vton-color-picker__swatch:focus-visible {
+  outline: 2px solid var(--vton-brand);
+  outline-offset: 2px;
+}
+
+.vton-color-picker__native {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  border: none;
+  padding: 0;
+}
+
+.vton-color-picker__hex-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
   min-width: 0;
+  height: 44px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid var(--vton-border);
+  background: var(--vton-bg);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.vton-color-picker__hex-wrap:focus-within {
+  border-color: var(--vton-brand);
+  box-shadow: 0 0 0 3px rgba(17, 24, 39, 0.08);
+}
+
+.vton-color-picker__hex-prefix {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--vton-soft);
+  margin-right: 2px;
+  user-select: none;
+}
+
+.vton-color-picker__hex-input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  letter-spacing: 0.04em;
+  color: var(--vton-text);
+  text-transform: uppercase;
+  outline: none;
+}
+
+.vton-color-picker__presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.vton-color-picker__preset {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 2px solid #fff;
+  border-radius: 999px;
+  cursor: pointer;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.vton-color-picker__preset:hover {
+  transform: scale(1.1);
+}
+
+.vton-color-picker__preset.is-selected {
+  box-shadow:
+    0 0 0 2px var(--vton-brand),
+    0 0 0 1px rgba(0, 0, 0, 0.08);
+  transform: scale(1.08);
+}
+
+@media (max-width: 720px) {
+  .vton-widget-colors__fields {
+    grid-template-columns: 1fr;
+  }
+
+  .vton-color-pairings__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .vton-admin .vton-panel .Polaris-TextField,

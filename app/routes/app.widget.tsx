@@ -4,7 +4,6 @@ import { useLoaderData, useFetcher } from "@remix-run/react";
 import { useEffect, useMemo, useState } from "react";
 import {
   Page,
-  Text,
   Button,
   TextField,
   BlockStack,
@@ -13,6 +12,12 @@ import {
 } from "@shopify/polaris";
 import { TitleBar } from "@shopify/app-bridge-react";
 import { AdminPage } from "../components/AdminPage";
+import {
+  WidgetColorField,
+  WidgetColorPairings,
+  BG_PRESETS,
+  TEXT_PRESETS,
+} from "../components/WidgetColorField";
 import { AdminNotifications } from "../components/AdminNotifications";
 import { useAdminNotifications, useNotificationSync } from "../hooks/useAdminNotifications";
 import { useFetcherNotifications } from "../hooks/useFetcherNotifications";
@@ -366,52 +371,33 @@ export default function Widget() {
                     helpText="Text shown on the try-on button"
                   />
 
-                  <BlockStack gap="100">
-                    <Text as="p" variant="bodyMd" fontWeight="medium">
-                      Background color
-                    </Text>
-                    <div className="vton-color-row">
-                      <input
-                        type="color"
+                  <div className="vton-widget-colors">
+                    <WidgetColorPairings
+                      currentBg={widgetBg}
+                      currentText={widgetColor}
+                      onApply={(bg, text) => {
+                        setWidgetBg(bg);
+                        setWidgetColor(text);
+                      }}
+                    />
+
+                    <div className="vton-widget-colors__fields">
+                      <WidgetColorField
+                        label="Background"
+                        hint="Button fill on your product pages"
                         value={widgetBg}
-                        onChange={(e) => setWidgetBg(e.target.value)}
-                        aria-label="Background color picker"
+                        onChange={setWidgetBg}
+                        presets={BG_PRESETS}
                       />
-                      <div className="vton-color-field">
-                        <TextField
-                          label="Hex code"
-                          name="widgetBg"
-                          value={widgetBg}
-                          onChange={setWidgetBg}
-                          autoComplete="off"
-                        />
-                      </div>
-                    </div>
-                  </BlockStack>
-
-                  <BlockStack gap="100">
-                    <Text as="p" variant="bodyMd" fontWeight="medium">
-                      Text color
-                    </Text>
-                    <div className="vton-color-row">
-                      <input
-                        type="color"
+                      <WidgetColorField
+                        label="Text"
+                        hint="Label on the try-on button"
                         value={widgetColor}
-                        onChange={(e) => setWidgetColor(e.target.value)}
-                        aria-label="Text color picker"
+                        onChange={setWidgetColor}
+                        presets={TEXT_PRESETS}
                       />
-                      <div className="vton-color-field">
-                        <TextField
-                          label="Hex code"
-                          name="widgetColor"
-                          value={widgetColor}
-                          onChange={setWidgetColor}
-                          autoComplete="off"
-                        />
-                      </div>
                     </div>
-                  </BlockStack>
-
+                  </div>
                   <Button submit variant="primary" loading={fetcher.state === "submitting"}>
                     Save changes
                   </Button>

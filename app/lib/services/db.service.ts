@@ -39,6 +39,7 @@ export async function query(text: string, params: any[] = []) {
   if (!pool) {
     throw new Error("PostgreSQL not configured");
   }
+  await ensureTables();
   return pool.query(text, params);
 }
 
