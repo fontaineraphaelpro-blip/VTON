@@ -1,6 +1,8 @@
 /** In-memory cache for GET /apps/tryon/status (storefront hot path) */
 
-const STATUS_CACHE_MS = 60_000;
+import { productIdVariants } from "./product-id.server";
+
+const STATUS_CACHE_MS = 5_000;
 const statusCache = new Map<string, { expires: number; payload: Record<string, unknown> }>();
 
 export function buildStatusCacheKey(
@@ -46,5 +48,21 @@ export function invalidateStatusCacheForShop(shop: string) {
   }
 }
 
+/** Invalidate status cache for every product_id format variant */
+export function invalidateStatusCacheForProduct(
+  shop: string,
+  productId: string,
+  productHandle: string | null
+) {
+  const variants = productIdVariants(productId);
+  for (const id of variants) {
+    statusCache.delete(buildStatusCacheKey(shop, id, productHandle));
+    statusCache.delete(buildStatusCacheKey(shop, id, ""));
+  }
+  if (productHandle) {
+    statusCache.delete(buildStatusCacheKey(shop, productId, productHandle));
+  }
+}
+
 export const STATUS_HTTP_CACHE =
-  "public, max-age=60, stale-while-revalidate=300";
+  "private, no-cache, no-store, must-revalidate";

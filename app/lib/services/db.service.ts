@@ -8,7 +8,13 @@
  */
 
 import pg from "pg";
-import { invalidateStatusCacheForShop } from "../status-cache.server";
+import { productIdVariants } from "../product-id.server";
+import {
+  invalidateStatusCacheForProduct,
+  invalidateStatusCacheForShop,
+} from "../status-cache.server";
+
+export { productIdVariants, normalizeProductGid } from "../product-id.server";
 const { Pool } = pg;
 
 // Database connection pool
@@ -398,38 +404,44 @@ export async function getTryonStatsByDay(shop: string, days: number = 30) {
  * Note: null means not explicitly set - defaults to ENABLED (all products enabled by default at installation).
  * Admin can then explicitly enable/disable individual products.
  */
-export async function getProductTryonSetting(shop: string, productId: string, productHandle?: string): Promise<boolean | null> {
-  // Use batch function for single product (more efficient)
-  // But we also need to check by handle if provided
-  const result = await getProductTryonSettingsBatch(shop, [productId]);
-  let setting = result[productId] ?? null;
-  
-  // If not found by ID and we have a handle, try by handle
-  if (setting === null && productHandle) {
-    try {
-      const handleResult = await query(
-        `SELECT tryon_enabled 
-         FROM product_settings 
-         WHERE shop = $1 AND product_handle = $2 
-         LIMIT 1`,
-        [shop, productHandle]
-      );
-      
-      if (handleResult.rows.length > 0) {
-        const enabled = handleResult.rows[0].tryon_enabled;
-        const enabledBool = enabled === true || enabled === 'true' || enabled === 1;
-        const disabledBool = enabled === false || enabled === 'false' || enabled === 0;
-        setting = disabledBool ? false : (enabledBool ? true : null);
-      }
-    } catch (error: any) {
-      // Column might not exist - ignore
-      if (!error.message?.includes('product_handle') && !error.message?.includes('column')) {
-        throw error;
-      }
-    }
+function rowTryonEnabledValue(enabled: unknown): boolean | null {
+  if (enabled === false || enabled === "false" || enabled === 0) return false;
+  if (enabled === true || enabled === "true" || enabled === 1) return true;
+  return null;
+}
+
+export async function getProductTryonSetting(
+  shop: string,
+  productId: string,
+  productHandle?: string
+): Promise<boolean | null> {
+  const variants = productIdVariants(productId);
+  if (variants.length === 0) return null;
+
+  const idPlaceholders = variants.map((_, i) => `$${i + 2}`).join(", ");
+  const params: unknown[] = [shop, ...variants];
+  let sql = `SELECT tryon_enabled, updated_at
+     FROM product_settings
+     WHERE shop = $1 AND product_id IN (${idPlaceholders})`;
+
+  if (productHandle) {
+    sql += ` OR (shop = $1 AND product_handle = $${params.length + 1})`;
+    params.push(productHandle);
   }
-  
-  return setting;
+
+  sql += " ORDER BY updated_at DESC";
+
+  const result = await query(sql, params);
+  if (result.rows.length === 0) return null;
+
+  let sawExplicitTrue = false;
+  for (const row of result.rows) {
+    const value = rowTryonEnabledValue(row.tryon_enabled);
+    if (value === false) return false;
+    if (value === true) sawExplicitTrue = true;
+  }
+
+  return sawExplicitTrue ? true : null;
 }
 
 /**
@@ -557,48 +569,19 @@ export async function getProductTryonSettingsBatch(shop: string, productIds: str
  * ADDED: Sets product try-on enabled/disabled state.
  */
 export async function setProductTryonSetting(shop: string, productId: string, enabled: boolean, productHandle?: string) {
-  // Save with the exact ID provided first (most important)
-  await query(
-    `INSERT INTO product_settings (shop, product_id, product_handle, tryon_enabled, updated_at)
-     VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
-     ON CONFLICT (shop, product_id) 
-     DO UPDATE SET tryon_enabled = $4, product_handle = COALESCE($3, product_settings.product_handle), updated_at = CURRENT_TIMESTAMP`,
-    [shop, productId, productHandle || null, enabled]
-  );
+  const formatsToSave = productIdVariants(productId);
+  for (const idFormat of formatsToSave) {
+    await query(
+      `INSERT INTO product_settings (shop, product_id, product_handle, tryon_enabled, updated_at)
+       VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
+       ON CONFLICT (shop, product_id) 
+       DO UPDATE SET tryon_enabled = $4, product_handle = COALESCE($3, product_settings.product_handle), updated_at = CURRENT_TIMESTAMP`,
+      [shop, idFormat, productHandle || null, enabled]
+    );
+  }
 
   invalidateStatusCacheForShop(shop);
-  
-  // Also save with alternative formats to ensure we can retrieve it regardless of format used
-  const formatsToSave: string[] = [];
-  
-  // If numeric, also save as GID
-  if (/^\d+$/.test(productId)) {
-    formatsToSave.push(`gid://shopify/Product/${productId}`);
-  }
-  
-  // If GID format, extract numeric and save numeric version too
-  const gidMatch = productId.match(/^gid:\/\/shopify\/Product\/(\d+)$/);
-  if (gidMatch) {
-    formatsToSave.push(gidMatch[1]);
-  }
-  
-  // Save with alternative formats (if different from original)
-  for (const idFormat of formatsToSave) {
-    if (idFormat !== productId) {
-      try {
-        await query(
-          `INSERT INTO product_settings (shop, product_id, product_handle, tryon_enabled, updated_at)
-           VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
-           ON CONFLICT (shop, product_id) 
-           DO UPDATE SET tryon_enabled = $4, product_handle = COALESCE($3, product_settings.product_handle), updated_at = CURRENT_TIMESTAMP`,
-          [shop, idFormat, productHandle || null, enabled]
-        );
-      } catch {
-        // Ignore errors for alternative formats
-      }
-    }
-  }
-  
+  invalidateStatusCacheForProduct(shop, productId, productHandle || null);
 }
 
 /**

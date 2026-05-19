@@ -127,11 +127,15 @@
 
       function readStatusCache(shop, productId) {
         try {
-          var raw = sessionStorage.getItem(vtonStatusCacheKey(shop, productId));
+          var raw = sessionStorage.getItem(
+            vtonStatusCacheKey(shop, normalizeProductIdForStatus(productId))
+          );
           if (!raw) return null;
           var parsed = JSON.parse(raw);
           if (!parsed || Date.now() - parsed.ts > VTON_STATUS_CACHE_TTL) {
-            sessionStorage.removeItem(vtonStatusCacheKey(shop, productId));
+            sessionStorage.removeItem(
+              vtonStatusCacheKey(shop, normalizeProductIdForStatus(productId))
+            );
             return null;
           }
           return parsed.data;
@@ -142,8 +146,25 @@
 
       function writeStatusCache(shop, productId, data) {
         try {
-          sessionStorage.setItem(vtonStatusCacheKey(shop, productId), JSON.stringify({ ts: Date.now(), data: data }));
+          var key = vtonStatusCacheKey(shop, normalizeProductIdForStatus(productId));
+          sessionStorage.setItem(key, JSON.stringify({ ts: Date.now(), data: data }));
         } catch (e) {}
+      }
+
+      function normalizeProductIdForStatus(productId) {
+        if (!productId) return productId;
+        var s = String(productId);
+        var gidMatch = s.match(/^gid:\/\/shopify\/Product\/(\d+)$/i);
+        if (gidMatch) return 'gid://shopify/Product/' + gidMatch[1];
+        if (/^\d+$/.test(s)) return 'gid://shopify/Product/' + s;
+        return s;
+      }
+
+      function isTryonEnabledStatus(status) {
+        if (!status || status.error) return false;
+        if (status.product_enabled === false) return false;
+        if (status.enabled === false) return false;
+        return status.enabled === true;
       }
 
       function vtonHasWidgetContainers() {
@@ -195,29 +216,14 @@
       }
 
       function applyTryonStatus(status, shop, productId, productHandle) {
-        if (status && status.enabled === true && !status.error) {
+        if (isTryonEnabledStatus(status)) {
           _vtonSuppressed = false;
           writeStatusCache(shop, productId, status);
           queueWidgetRender(shop, productId, productHandle, status.widget_settings || {});
           return;
         }
 
-        if (status && status.error && isProductPageContext()) {
-          var cachedOnError = readStatusCache(shop, productId);
-          if (cachedOnError && cachedOnError.enabled === false) {
-            suppressWidget(shop, productId, cachedOnError);
-            return;
-          }
-          if (_vtonSuppressed) return;
-          if (vtonHasWidgetContainers()) return;
-          warn('[VTON] Status check failed — keeping or showing widget:', status.error);
-          queueWidgetRender(shop, productId, productHandle, (status && status.widget_settings) || {});
-          return;
-        }
-
-        if (!status || status.enabled !== true) {
-          suppressWidget(shop, productId, status || { enabled: false });
-        }
+        suppressWidget(shop, productId, status || { enabled: false, product_enabled: false });
       }
 
       function refreshTryonStatus(shop, productId, productHandle) {
@@ -251,18 +257,8 @@
         var productHandle = extractProductHandle();
         var cachedStatus = readStatusCache(shop, productId);
 
-        if (cachedStatus && cachedStatus.enabled === false) {
+        if (cachedStatus && !isTryonEnabledStatus(cachedStatus)) {
           suppressWidget(shop, productId, cachedStatus);
-          refreshTryonStatus(shop, productId, productHandle);
-          return;
-        }
-
-        if (cachedStatus) {
-          applyTryonStatus(cachedStatus, shop, productId, productHandle);
-          runWhenIdle(function() {
-            refreshTryonStatus(shop, productId, productHandle);
-          }, 2000);
-          return;
         }
 
         refreshTryonStatus(shop, productId, productHandle);
@@ -448,11 +444,14 @@
       }
       
       function buildStatusQuery(shop, productId, productHandle) {
+        var normalizedId = normalizeProductIdForStatus(productId);
         var q =
           'shop=' +
           encodeURIComponent(shop) +
           '&product_id=' +
-          encodeURIComponent(productId);
+          encodeURIComponent(normalizedId) +
+          '&_vton_ts=' +
+          Date.now();
         if (productHandle) {
           q += '&product_handle=' + encodeURIComponent(productHandle);
         }
@@ -468,7 +467,7 @@
           headers: { Accept: 'application/json' },
           signal: controller.signal,
           credentials: 'same-origin',
-          cache: 'default'
+          cache: 'no-store'
         })
           .then(function(response) {
             clearTimeout(timeoutId);
@@ -498,25 +497,18 @@
         return Promise.any(attempts)
           .catch(function(err) {
             var cached = readStatusCache(shop, productId);
-            if (cached && cached.enabled === false) {
-              return { enabled: false, widget_settings: cached.widget_settings || {} };
+            if (cached && !isTryonEnabledStatus(cached)) {
+              return {
+                enabled: false,
+                product_enabled: false,
+                widget_settings: cached.widget_settings || {},
+              };
             }
-            if (err && err.errors && err.errors.length) {
-              var last = err.errors[err.errors.length - 1];
-              if (last && last.name === 'AbortError') {
-                warn('[VTON] Status check timed out');
-                return { enabled: false, error: 'timeout' };
-              }
-              warn('[VTON] Status check error:', last.message || last);
-              return { enabled: false, error: last.message || 'status_check_failed' };
-            }
-            if (err && err.name === 'AbortError') {
-              return { enabled: false, error: 'timeout' };
-            }
-            warn('[VTON] Status check error:', err);
+            warn('[VTON] Status check failed:', err);
             return {
               enabled: false,
-              error: (err && err.message) || 'status_check_failed',
+              product_enabled: false,
+              error: (err && err.errors && err.errors[0] && err.errors[0].message) || err.message || 'status_check_failed',
             };
           });
       }
@@ -864,7 +856,7 @@
           reinjectTimer = setTimeout(function() {
             if (_vtonSuppressed) return;
             var cached = readStatusCache(shop, productId);
-            if (cached && cached.enabled === false) {
+            if (cached && !isTryonEnabledStatus(cached)) {
               suppressWidget(shop, productId, cached);
               return;
             }

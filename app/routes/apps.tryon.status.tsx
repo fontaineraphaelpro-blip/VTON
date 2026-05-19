@@ -12,6 +12,7 @@ import {
   isAuthorizedStorefrontApiRequest,
   storefrontCorsHeaders,
 } from "../lib/proxy-verify.server";
+import { normalizeProductGid } from "../lib/product-id.server";
 import {
   buildStatusCacheKey,
   getCachedStatusPayload,
@@ -81,6 +82,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     } catch {
       // keep original
     }
+
+    productId = normalizeProductGid(productId);
 
     const cacheKey = buildStatusCacheKey(shop, productId, productHandle);
     const cachedPayload = getCachedStatusPayload(cacheKey);
