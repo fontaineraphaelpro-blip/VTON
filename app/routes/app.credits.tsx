@@ -448,59 +448,74 @@ export default function Credits() {
   }, [isSubmitting, submittingPackId, fetcher]);
 
   // Memoize subscriptionPlans array to prevent recreation on every render
-  const subscriptionPlans = useMemo(() => [
-    { 
-      id: "free-installation-setup", 
-      name: "Free Installation Setup", 
-      price: 0.0, 
-      description: "Free plan - 4 credits per month",
-      popular: false 
-    },
-    { 
-      id: "starter", 
-      name: "Starter", 
-      price: 29.0, 
-      description: "100 generations per month",
-      popular: false 
-    },
-    { 
-      id: "pro", 
-      name: "Pro", 
-      price: 99.0, 
-      description: "400 generations per month",
-      popular: true 
-    },
-    { 
-      id: "studio", 
-      name: "Studio", 
-      price: 399.0, 
-      description: "2000 generations per month",
-      popular: false 
-    },
-  ], []);
+  const subscriptionPlans = useMemo(
+    () => [
+      {
+        id: "free-installation-setup",
+        name: "Free",
+        price: 0.0,
+        description: "4 try-ons / month",
+        popular: false,
+      },
+      {
+        id: "starter",
+        name: "Starter",
+        price: 29.0,
+        description: "100 try-ons / month",
+        popular: false,
+      },
+      {
+        id: "pro",
+        name: "Pro",
+        price: 99.0,
+        description: "400 try-ons / month",
+        popular: true,
+      },
+      {
+        id: "studio",
+        name: "Studio",
+        price: 399.0,
+        description: "2,000 try-ons / month",
+        popular: false,
+      },
+    ],
+    []
+  );
+
+  const creditsMap: Record<string, number> = useMemo(
+    () => ({
+      "free-installation-setup": 4,
+      starter: 100,
+      pro: 400,
+      studio: 2000,
+    }),
+    []
+  );
+
+  const hasAlerts =
+    (showErrorBanner && error) ||
+    (showSuccessBanner && subscriptionUpdated && planName) ||
+    (showFetcherErrorBanner && (fetcher.data as any)?.error);
 
   return (
-    <Page>
+    <Page fullWidth>
       <TitleBar title="Credits - VTON Magic" />
-      <div className="app-container">
+      <div className="app-container credits-page">
+        {hasAlerts && (
+          <div className="credits-alerts">
         {showErrorBanner && error && (
-          <div style={{ marginBottom: "var(--spacing-lg)" }}>
             <Banner tone="critical" title="Error" onDismiss={() => setShowErrorBanner(false)}>
               {error}
             </Banner>
-          </div>
         )}
 
         {showSuccessBanner && subscriptionUpdated && planName && (
-          <div style={{ marginBottom: "var(--spacing-lg)" }}>
             <Banner tone="success" title="Subscription activated!" onDismiss={() => setShowSuccessBanner(false)}>
               Your <strong>{planName}</strong> subscription has been activated successfully. Your monthly credits have been updated.
             </Banner>
-          </div>
         )}
 
         {showFetcherErrorBanner && (fetcher.data as any)?.error && (
-          <div style={{ marginBottom: "var(--spacing-lg)" }}>
             <Banner 
               tone="critical" 
               title={(fetcher.data as any)?.requiresAuth ? "Authentication required" : "Error"}
@@ -537,118 +552,87 @@ export default function Credits() {
             >
               {(fetcher.data as any)?.error}
             </Banner>
+        )}
           </div>
         )}
 
-        {/* Credit system information */}
-        <div style={{ marginBottom: "var(--spacing-lg)" }}>
-          <Banner tone="info" title="💡 How do credits work?">
-            <div style={{ lineHeight: "1.6" }}>
-              <p style={{ margin: "0 0 8px 0" }}>
-                Credits reset monthly based on your subscription plan.
-              </p>
-              <p style={{ margin: "8px 0 0 0" }}>
-                <strong>Important:</strong> Unused credits are not carried over.
-                <br />
-                Your balance resets each month with a new quota.
-              </p>
-            </div>
-          </Banner>
-        </div>
-
-        <header className="app-header">
-          <h1 className="app-title">Get More Credits</h1>
-          <p className="app-subtitle">
-            Unlock unlimited virtual try-ons and boost your sales with AI-powered fashion visualization
-          </p>
+        <header className="credits-top">
+          <div className="credits-top-main">
+            <h1 className="credits-top-title">Plans &amp; credits</h1>
+            <p className="credits-top-hint">
+              Monthly quota resets each cycle. Unused credits do not roll over.
+            </p>
+          </div>
+          <div className="credits-balance-compact" aria-label="Credits available">
+            <span className="credits-balance-compact-value">
+              {currentCredits.toLocaleString("en-US")}
+            </span>
+            <span className="credits-balance-compact-label">credits left</span>
+          </div>
         </header>
 
-        <div className="credits-balance">
-          <div>
-            <div className="credits-amount">{currentCredits.toLocaleString("en-US")}</div>
-            <div className="credits-label">Credits available</div>
-          </div>
-        </div>
-
-        {/* Value Proposition Section */}
-        <div className="conversion-hero" style={{ marginBottom: "48px", textAlign: "center" }}>
-          <h2 style={{ fontSize: "32px", fontWeight: "800", marginBottom: "16px", letterSpacing: "-0.02em", color: "var(--color-text-primary)" }}>
-            Choose Your Plan
-          </h2>
-          <p style={{ fontSize: "18px", color: "var(--color-text-secondary)", marginBottom: "8px", fontWeight: "500" }}>
-            Start generating stunning virtual try-ons today
-          </p>
-          <p style={{ fontSize: "15px", color: "var(--color-text-tertiary)", marginBottom: "0" }}>
-            All plans include instant generation, unlimited products, and cancel anytime
-          </p>
-        </div>
-
-        <div className="pricing-grid">
+        <div className="pricing-grid pricing-grid--compact">
           {subscriptionPlans.map((plan) => {
             const isCurrentPlan = currentActivePlan === plan.id;
             const isFreePlan = plan.id === "free-installation-setup";
-            
-            // Calculate value metrics (visual only - no logic change)
-            const creditsMap: Record<string, number> = {
-              "free-installation-setup": 4,
-              "starter": 100,
-              "pro": 400,
-              "studio": 2000,
-            };
-            const credits = creditsMap[plan.id] || 0;
-            const pricePerCredit = plan.price > 0 && credits > 0 ? (plan.price / credits).toFixed(3) : "0";
-            const isBestValue = plan.id === "pro"; // Pro is best value
-            
+            const credits = creditsMap[plan.id] ?? 0;
+            const pricePerCredit =
+              plan.price > 0 && credits > 0
+                ? (plan.price / credits).toFixed(2)
+                : null;
+            const isBestValue = plan.id === "pro";
+
             return (
-              <div key={plan.id} className={`plan-card ${plan.popular ? 'featured' : ''} ${isCurrentPlan ? 'current-plan' : ''} ${isBestValue ? 'best-value' : ''}`}>
+              <div
+                key={plan.id}
+                className={`plan-card plan-card--compact ${plan.popular ? "featured" : ""} ${isCurrentPlan ? "current-plan" : ""} ${isBestValue ? "best-value" : ""}`}
+              >
                 {plan.popular && (
-                  <div className="plan-badge plan-badge-popular">⭐ Most Popular</div>
+                  <div className="plan-badge plan-badge-popular">Popular</div>
                 )}
                 {isBestValue && !plan.popular && (
-                  <div className="plan-badge plan-badge-value">💰 Best Value</div>
+                  <div className="plan-badge plan-badge-value">Best value</div>
                 )}
                 {isCurrentPlan && (
-                  <div className="plan-badge plan-badge-current">✓ Current Plan</div>
+                  <div className="plan-badge plan-badge-current">Current</div>
                 )}
                 <div className="plan-name">{plan.name}</div>
+                <p className="plan-tagline">{plan.description}</p>
                 <div className="plan-price">
-                  ${plan.price.toFixed(2)} <span>/ month</span>
+                  ${plan.price.toFixed(2)} <span>/ mo</span>
                 </div>
-                {plan.price > 0 && credits > 0 && (
-                  <div className="plan-value-indicator">
-                    <span className="plan-value-text">${pricePerCredit}</span>
-                    <span className="plan-value-label">per generation</span>
-                  </div>
+                {pricePerCredit && (
+                  <p className="plan-per-credit">${pricePerCredit} per try-on</p>
                 )}
-                <div className="plan-features">
-                  <div className="plan-feature plan-feature-highlight">{plan.description}</div>
-                  <div className="plan-feature">✓ Instant AI generation</div>
-                  <div className="plan-feature">✓ Unlimited products</div>
-                  <div className="plan-feature">✓ Cancel anytime</div>
-                  <div className="plan-feature">✓ No setup fees</div>
-                </div>
                 <div className="plan-cta">
                   {isCurrentPlan ? (
-                    <button 
+                    <button
                       className="plan-button plan-button-current"
-                      disabled={true}
+                      disabled
+                      type="button"
                     >
-                      ✓ Current Plan
+                      Current plan
                     </button>
                   ) : isFreePlan ? (
-                    <button 
+                    <button
                       className="plan-button plan-button-disabled"
-                      disabled={true}
+                      disabled
+                      type="button"
                     >
-                      Already Included
+                      Included
                     </button>
                   ) : (
-                    <button 
-                      className={`plan-button ${plan.popular ? 'plan-button-featured' : ''}`}
+                    <button
+                      type="button"
+                      className={`plan-button ${plan.popular ? "plan-button-featured" : ""}`}
                       onClick={() => handleSubscriptionPurchase(plan.id)}
                       disabled={isSubmitting || submittingPackId !== null}
                     >
-                      {isSubmitting && submittingPackId === plan.id ? "Processing..." : plan.popular ? "Get Started →" : "Subscribe Now"}
+                      {isSubmitting && submittingPackId === plan.id
+                        ? "Processing..."
+                        : plan.popular
+                          ? "Subscribe"
+                          : "Choose plan"}
                     </button>
                   )}
                 </div>
@@ -656,33 +640,10 @@ export default function Credits() {
             );
           })}
         </div>
-        
-        {/* Reassurance Section */}
-        <div className="conversion-reassurance" style={{ marginTop: "64px", padding: "40px", background: "linear-gradient(to bottom, #f9fafb 0%, #ffffff 100%)", borderRadius: "16px", border: "1.5px solid var(--color-border)" }}>
-          <div style={{ textAlign: "center", maxWidth: "800px", margin: "0 auto" }}>
-            <h3 style={{ fontSize: "24px", fontWeight: "700", marginBottom: "16px", color: "var(--color-text-primary)" }}>
-              💯 100% Risk-Free
-            </h3>
-            <p style={{ fontSize: "16px", color: "var(--color-text-secondary)", lineHeight: "1.7", marginBottom: "24px" }}>
-              Cancel your subscription at any time. No questions asked. Your credits reset monthly, so you always get fresh value.
-            </p>
-            <div style={{ display: "flex", justifyContent: "center", gap: "32px", flexWrap: "wrap", marginTop: "32px" }}>
-              <div style={{ textAlign: "center" }}>
-                <div style={{ fontSize: "20px", fontWeight: "700", color: "var(--color-primary)", marginBottom: "4px" }}>✓</div>
-                <div style={{ fontSize: "14px", color: "var(--color-text-secondary)", fontWeight: "600" }}>Instant Setup</div>
-              </div>
-              <div style={{ textAlign: "center" }}>
-                <div style={{ fontSize: "20px", fontWeight: "700", color: "var(--color-primary)", marginBottom: "4px" }}>✓</div>
-                <div style={{ fontSize: "14px", color: "var(--color-text-secondary)", fontWeight: "600" }}>Cancel Anytime</div>
-              </div>
-              <div style={{ textAlign: "center" }}>
-                <div style={{ fontSize: "20px", fontWeight: "700", color: "var(--color-primary)", marginBottom: "4px" }}>✓</div>
-                <div style={{ fontSize: "14px", color: "var(--color-text-secondary)", fontWeight: "600" }}>No Hidden Fees</div>
-              </div>
-            </div>
-          </div>
-        </div>
 
+        <p className="credits-footnote">
+          Cancel anytime · No setup fees · Monthly credit reset
+        </p>
       </div>
     </Page>
   );

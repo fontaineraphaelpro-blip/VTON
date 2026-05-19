@@ -3,14 +3,15 @@
   This block injects the VTON widget script on product pages
 {% endcomment %}
 
-{% comment %} Product pages: standard template, custom product templates, and request.page_type {% endcomment %}
-{% if template.name == 'product' or request.page_type == 'product' %}
-  <script>
+<div id="vton-embed-slot" data-vton-embed-slot style="display:none;width:100%;max-width:100%;margin:16px 0;box-sizing:border-box;" aria-hidden="true"></div>
+<script>
     window.VTON_LIQUID = {
       productId: {% if product %}'gid://shopify/Product/{{ product.id }}'{% else %}null{% endif %},
       productHandle: {% if product %}{{ product.handle | json }}{% else %}null{% endif %},
       customAnchor: {{ block.settings.anchor_selector | json }},
-      appUrl: {{ block.settings.app_url | default: 'https://vton-production-890a.up.railway.app' | json }}
+      appUrl: {{ block.settings.app_url | default: 'https://vton-production-890a.up.railway.app' | json }},
+      pageType: {{ request.page_type | json }},
+      templateName: {{ template.name | json }}
     };
 
     (function() {
@@ -21,40 +22,66 @@
       var warn = isProduction ? function() {} : console.warn.bind(console);
       var error = console.error.bind(console);
 
-      var VTON_STATUS_CACHE_TTL = 120000;
+      var VTON_STATUS_CACHE_TTL = 300000;
       var _vtonWidgetRenderQueued = false;
-      
-      // App URL - try to get from meta tag or use default
-      // This should be configured in Shopify App Proxy settings
-      var APP_URL = (window.VTON_LIQUID && window.VTON_LIQUID.appUrl) || (function() {
-        var meta = document.querySelector('meta[name="vton-app-url"]');
-        return meta ? meta.getAttribute('content') : '';
-      })() || 'https://vton-production-890a.up.railway.app';
+      var _vtonStatusInFlight = null;
+
+      function runWhenIdle(fn, timeoutMs) {
+        timeoutMs = timeoutMs || 2000;
+        if (typeof requestIdleCallback === 'function') {
+          return requestIdleCallback(fn, { timeout: timeoutMs });
+        }
+        return setTimeout(fn, 16);
+      }
+
+      function vtonGetObserverRoot() {
+        return (
+          document.querySelector(
+            'main, [role="main"], #MainContent, .product, .product-main, .product__info-wrapper, .shopify-section--product, [id*="Product"], form[action*="/cart"]'
+          ) || document.body
+        );
+      }
+
+      function isProductPageContext() {
+        if (window.VTON_LIQUID && window.VTON_LIQUID.productId) return true;
+        if (/\/products\/[^\/\?#]+/i.test(window.location.pathname)) return true;
+        if (window.Shopify && window.Shopify.product && window.Shopify.product.id) return true;
+        if (document.querySelector('form[action*="/cart/add"], product-form, [data-product-id]')) return true;
+        return false;
+      }
       
       function bootWidget() {
-        if (window.VTON_LIQUID && window.VTON_LIQUID.productId) {
-          initWidget();
-          return;
-        }
-        if (window.Shopify && window.Shopify.product) {
-          initWidget();
-        } else if (document.readyState !== 'loading') {
-          initWidget();
-        }
+        if (!isProductPageContext()) return;
+        initWidget();
       }
 
       if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', bootWidget, { once: true });
+        document.addEventListener('DOMContentLoaded', function() {
+          runWhenIdle(bootWidget, 2500);
+        }, { once: true });
       } else {
-        bootWidget();
+        runWhenIdle(bootWidget, 2500);
       }
 
-      document.addEventListener('shopify:section:load', function() {
-        if (!document.getElementById('vton-widget-container') && /\/products\//.test(window.location.pathname)) {
-          _vtonWidgetRenderQueued = false;
-          setTimeout(bootWidget, 150);
-        }
+      function vtonScheduleRetryBoot() {
+        if (!isProductPageContext()) return;
+        if (document.getElementById('vton-widget-container')) return;
+        _vtonWidgetRenderQueued = false;
+        runWhenIdle(bootWidget, 500);
+      }
+
+      document.addEventListener('shopify:section:load', vtonScheduleRetryBoot);
+      document.addEventListener('shopify:section:reorder', vtonScheduleRetryBoot);
+      window.addEventListener('pageshow', function(ev) {
+        if (ev.persisted) vtonScheduleRetryBoot();
       });
+
+      ['turbo:load', 'page:loaded', 'theme:product:loaded'].forEach(function(evt) {
+        document.addEventListener(evt, vtonScheduleRetryBoot);
+      });
+
+      setTimeout(vtonScheduleRetryBoot, 3000);
+      setTimeout(vtonScheduleRetryBoot, 8000);
       
       function vtonStatusCacheKey(shop, productId) {
         return 'vton:status:' + shop + ':' + productId;
@@ -94,6 +121,38 @@
         _vtonWidgetRenderQueued = false;
       }
 
+      function applyTryonStatus(status, shop, productId, productHandle) {
+        if (status && typeof status.enabled === 'boolean' && !status.error) {
+          writeStatusCache(shop, productId, status);
+        }
+        if (status && status.enabled === true) {
+          queueWidgetRender(shop, productId, productHandle, status.widget_settings || {});
+        } else if (!status || status.enabled !== true) {
+          removeWidgetContainer();
+        }
+      }
+
+      function refreshTryonStatus(shop, productId, productHandle) {
+        if (_vtonStatusInFlight) {
+          return _vtonStatusInFlight.then(function(status) {
+            applyTryonStatus(status, shop, productId, productHandle);
+          });
+        }
+        _vtonStatusInFlight = checkStatus(shop, productId, productHandle)
+          .then(function(status) {
+            applyTryonStatus(status, shop, productId, productHandle);
+            return status;
+          })
+          .catch(function(err) {
+            warn('[VTON] Status check failed', err);
+            return null;
+          })
+          .finally(function() {
+            _vtonStatusInFlight = null;
+          });
+        return _vtonStatusInFlight;
+      }
+
       function initWidget() {
         var shop = extractShop();
         if (!shop) return;
@@ -104,23 +163,15 @@
         var productHandle = extractProductHandle();
         var cachedStatus = readStatusCache(shop, productId);
 
-        if (cachedStatus && cachedStatus.enabled === true) {
-          queueWidgetRender(shop, productId, productHandle, cachedStatus.widget_settings || {});
+        if (cachedStatus) {
+          applyTryonStatus(cachedStatus, shop, productId, productHandle);
+          runWhenIdle(function() {
+            refreshTryonStatus(shop, productId, productHandle);
+          }, 5000);
+          return;
         }
 
-        checkStatus(shop, productId, productHandle).then(function(status) {
-          if (status && typeof status.enabled === 'boolean' && !status.error) {
-            writeStatusCache(shop, productId, status);
-          }
-
-          if (status && status.enabled === true) {
-            queueWidgetRender(shop, productId, productHandle, status.widget_settings || {});
-          } else if (!status || status.enabled !== true) {
-            removeWidgetContainer();
-          }
-        }).catch(function(err) {
-          warn('[VTON] Status check failed', err);
-        });
+        refreshTryonStatus(shop, productId, productHandle);
       }
       
       function extractShop() {
@@ -303,75 +354,43 @@
       }
       
       function checkStatus(shop, productId, productHandle) {
-        // Try App Proxy first (if configured), then fallback to direct app URL
-        // App Proxy URL: https://store.myshopify.com/apps/tryon/status
-        // Direct URL: https://app-url.com/apps/tryon/status
-        
-        // Try App Proxy first
-        let appProxyUrl = window.location.origin + '/apps/tryon/status?shop=' + encodeURIComponent(shop) + '&product_id=' + encodeURIComponent(productId);
+        var appProxyUrl =
+          window.location.origin +
+          '/apps/tryon/status?shop=' +
+          encodeURIComponent(shop) +
+          '&product_id=' +
+          encodeURIComponent(productId);
         if (productHandle) {
           appProxyUrl += '&product_handle=' + encodeURIComponent(productHandle);
         }
-        
-        // Fallback: Try to get app URL from meta tag or use a known pattern
-        // For Railway deployments, the URL pattern is usually: https://app-name.up.railway.app
-        // We'll try App Proxy first, and if it fails, we'll need to use the direct URL
-        // Note: The app URL should be configured in Shopify App Proxy settings
-        
-        // Optimized: Add timeout and use AbortController for faster failure detection
-        const controller = new AbortController();
-        const timeoutId = setTimeout(function() { controller.abort(); }, 2000);
+
+        var controller = new AbortController();
+        var timeoutId = setTimeout(function() { controller.abort(); }, 1500);
 
         return fetch(appProxyUrl, {
           method: 'GET',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { Accept: 'application/json' },
           signal: controller.signal,
-          cache: 'default'
-        }).then(function(response) {
-          clearTimeout(timeoutId);
-          if (!response.ok) {
-            // If App Proxy fails (404), try direct URL as fallback
-            if (response.status === 404) {
-              warn('[VTON] App Proxy not available (404), trying direct URL...');
-              
-              // Use the configured app URL as fallback
-              const directUrl = APP_URL + '/apps/tryon/status?shop=' + encodeURIComponent(shop) + '&product_id=' + encodeURIComponent(productId);
-              const finalUrl = productHandle ? directUrl + '&product_handle=' + encodeURIComponent(productHandle) : directUrl;
-              
-              log('[VTON] Trying direct URL:', finalUrl);
-              
-              // Create new controller for fallback request
-              const fallbackController = new AbortController();
-              const fallbackTimeout = setTimeout(function() { fallbackController.abort(); }, 2000);
-
-              return fetch(finalUrl, {
-                method: 'GET',
-                headers: { 'Content-Type': 'application/json' },
-                signal: fallbackController.signal,
-                cache: 'default'
-              }).then(function(directResponse) {
-                clearTimeout(fallbackTimeout);
-                if (!directResponse.ok) {
-                  throw new Error('Status check failed: ' + directResponse.status);
-                }
-                return directResponse.json();
-              });
+          credentials: 'same-origin',
+          cache: 'default',
+          priority: 'low'
+        })
+          .then(function(response) {
+            clearTimeout(timeoutId);
+            if (!response.ok) {
+              throw new Error('Status check failed: ' + response.status);
             }
-            throw new Error('Status check failed: ' + response.status);
-          }
-          return response.json();
-        }).catch(function(err) {
-          clearTimeout(timeoutId);
-          if (err.name === 'AbortError') {
-            error('[VTON] Status check timed out');
-            // Return a default disabled status to allow page to continue loading
-            return { enabled: false, error: 'timeout' };
-          }
-          error('[VTON] Status check error:', err);
-          // Return a default status instead of throwing to allow widget to still try to display
-          // This prevents the widget from completely failing if status check fails
-          return { enabled: false, error: err.message || 'status_check_failed' };
-        });
+            return response.json();
+          })
+          .catch(function(err) {
+            clearTimeout(timeoutId);
+            if (err.name === 'AbortError') {
+              warn('[VTON] Status check timed out');
+              return { enabled: false, error: 'timeout' };
+            }
+            warn('[VTON] Status check error:', err);
+            return { enabled: false, error: err.message || 'status_check_failed' };
+          });
       }
       
       function getProductImage() {
@@ -400,22 +419,88 @@
         return null;
       }
 
-      var VTON_ATC_BUTTON_SELECTORS = 'button[type="submit"][name="add"], button[name="add"], button[type="submit"], [data-add-to-cart], .product-form__cart-submit, .product-form__submit, .btn--add-to-cart, .add-to-cart, shopify-buy-it-now-button, [aria-label*="add to cart" i], [aria-label*="ajouter" i]';
-      var VTON_FORM_SELECTORS = ['product-form form[action*="/cart"]', 'form[action*="/cart/add"]', 'form[action*="/cart/add.js"]', 'form[data-type="add-to-cart-form"]', 'form.product-form', 'form#AddToCartForm'];
-      var VTON_PRODUCT_INFO_SELECTORS = ['.product__info-wrapper', '.product__info-container', '.product__info', '.product-single__meta', '.product-info', '.product-details', '[data-product-info]', '[data-section-type="product"]', '#ProductSection', '.product-section'];
+      var VTON_ATC_BUTTON_SELECTORS = 'button[type="submit"][name="add"], button[name="add"], button[type="submit"], [data-add-to-cart], .product-form__cart-submit, .product-form__submit, .btn--add-to-cart, .add-to-cart, shopify-buy-it-now-button, [aria-label*="add to cart" i], [aria-label*="ajouter" i], .shopify-payment-button, .dynamic-checkout__content';
+      var VTON_FORM_SELECTORS = [
+        'product-form form[action*="/cart"]',
+        'form[action*="/cart/add"]',
+        'form[action*="/cart/add.js"]',
+        'form[data-type="add-to-cart-form"]',
+        'form.product-form',
+        'form#AddToCartForm',
+        'form[action="/cart/add"]',
+        '.shopify-product-form form',
+        '[data-product-form] form',
+        'form[data-productid]',
+        'form[data-product-id]'
+      ];
+      var VTON_PRODUCT_INFO_SELECTORS = [
+        '.product__info-wrapper',
+        '.product__info-container',
+        '.product__info',
+        '.product-single__meta',
+        '.product-info',
+        '.product-details',
+        '.product__content',
+        '.product-single',
+        '.product-main',
+        '[data-product-info]',
+        '[data-section-type="product"]',
+        '[id*="shopify-section"][id*="product"]',
+        '#ProductSection',
+        '.product-section',
+        '.product-form',
+        '.product-block-list',
+        '.product__column-sticky'
+      ];
+      var VTON_EXCLUDED_ANCESTORS = '.cart-drawer, .mini-cart, cart-drawer, .quick-add-modal, [data-quick-add], dialog, [role="dialog"], .drawer, #CartDrawer, .predictive-search, .search-modal, header.site-header, .announcement-bar';
+
+      function vtonIsExcluded(el) {
+        return !!(el && el.closest && el.closest(VTON_EXCLUDED_ANCESTORS));
+      }
 
       function vtonIsVisible(el) {
         if (!el || typeof el.getBoundingClientRect !== 'function') return false;
-        if (el.closest && el.closest('[aria-hidden="true"], .visually-hidden, [hidden]')) return false;
+        if (!el.isConnected) return false;
+        if (vtonIsExcluded(el)) return false;
+        if (el.closest && el.closest('[hidden]:not(#vton-embed-slot)')) return false;
         var rect = el.getBoundingClientRect();
         if (rect.width < 1 && rect.height < 1) return false;
         var style = window.getComputedStyle(el);
         return style.display !== 'none' && style.visibility !== 'hidden' && parseFloat(style.opacity) > 0.01;
       }
 
+      function vtonIsAnchorable(el) {
+        if (!el || el.nodeType !== 1 || !el.isConnected) return false;
+        if (vtonIsExcluded(el)) return false;
+        if (el.id === 'vton-widget-container' || el.id === 'vton-embed-slot') return false;
+        var style = window.getComputedStyle(el);
+        if (style.display === 'none' || style.visibility === 'hidden') return false;
+        return true;
+      }
+
       function vtonPickVisible(elements) {
         var list = Array.isArray(elements) ? elements : Array.from(elements || []);
-        return list.find(vtonIsVisible) || list[0] || null;
+        return list.find(vtonIsVisible) || list.find(vtonIsAnchorable) || list[0] || null;
+      }
+
+      function vtonQueryDeep(selector, root) {
+        var results = [];
+        function walk(node) {
+          if (!node || node.nodeType !== 1) return;
+          try {
+            if (node.matches && node.matches(selector)) results.push(node);
+            if (node.querySelectorAll) {
+              node.querySelectorAll(selector).forEach(function(el) {
+                results.push(el);
+              });
+            }
+          } catch (e) {}
+          if (node.shadowRoot) walk(node.shadowRoot);
+          var children = node.children || [];
+          for (var i = 0; i < children.length; i++) walk(children[i]);
+        }
+        walk(root || document.documentElement);
+        return results;
       }
 
       function vtonFindBestProductForm() {
@@ -426,9 +511,10 @@
         var productFormEl = document.querySelector('product-form');
         if (productFormEl) {
           var inner = productFormEl.querySelector('form') || productFormEl;
-          if (vtonIsVisible(inner)) return inner;
+          if (vtonPickVisible([inner])) return inner;
         }
-        return null;
+        var deepForms = vtonQueryDeep('form[action*="/cart/add"], form[action*="/cart/add.js"]');
+        return vtonPickVisible(deepForms);
       }
 
       function vtonFindAddToCartButton(root) {
@@ -436,55 +522,109 @@
         var parts = VTON_ATC_BUTTON_SELECTORS.split(', ');
         for (var i = 0; i < parts.length; i++) {
           var btn = scope.querySelector(parts[i]);
-          if (btn && vtonIsVisible(btn)) return btn;
+          if (btn && vtonPickVisible([btn])) return btn;
+        }
+        var deepMatches = vtonQueryDeep(
+          'button[type="submit"], button[name="add"], [data-add-to-cart]',
+          scope === document ? document.documentElement : scope
+        );
+        for (var d = 0; d < deepMatches.length; d++) {
+          if (vtonPickVisible([deepMatches[d]])) return deepMatches[d];
         }
         var allButtons = scope.querySelectorAll ? scope.querySelectorAll('button, [role="button"], input[type="submit"]') : [];
         for (var j = 0; j < allButtons.length; j++) {
           var b = allButtons[j];
-          var label = (b.textContent || b.getAttribute('aria-label') || '').toLowerCase();
-          if ((label.indexOf('cart') !== -1 || label.indexOf('panier') !== -1 || label.indexOf('add') !== -1 || label.indexOf('ajouter') !== -1) && vtonIsVisible(b)) {
+          var label = (b.textContent || b.getAttribute('aria-label') || b.getAttribute('title') || '').toLowerCase();
+          if (
+            (label.indexOf('cart') !== -1 ||
+              label.indexOf('panier') !== -1 ||
+              label.indexOf('add') !== -1 ||
+              label.indexOf('ajouter') !== -1 ||
+              label.indexOf('acheter') !== -1 ||
+              label.indexOf('buy') !== -1) &&
+            vtonPickVisible([b])
+          ) {
             return b;
           }
         }
         return null;
       }
 
-      function vtonFindInjectionAnchor(customSelector) {
+      function vtonGetEmbedSlotAnchor() {
+        var slot = document.getElementById('vton-embed-slot');
+        if (slot) return { anchor: slot, method: 'append', source: 'embed_slot' };
+        return null;
+      }
+
+      function vtonFindInjectionAnchor(customSelector, options) {
+        options = options || {};
+        var allowHidden = options.allowHidden === true;
+
+        function accept(el, method, source) {
+          if (!el) return null;
+          if (vtonPickVisible([el])) return { anchor: el, method: method || 'after', source: source };
+          if (allowHidden && vtonIsAnchorable(el)) {
+            return { anchor: el, method: method || 'after', source: source + '_relaxed' };
+          }
+          return null;
+        }
+
         if (customSelector) {
           try {
-            var customEl = document.querySelector(customSelector);
-            if (customEl && vtonIsVisible(customEl)) {
-              return { anchor: customEl, method: 'after', source: 'custom_selector' };
+            var customCandidates = document.querySelectorAll(customSelector);
+            for (var c = 0; c < customCandidates.length; c++) {
+              var customHit = accept(customCandidates[c], 'after', 'custom_selector');
+              if (customHit) return customHit;
             }
           } catch (e) {
             warn('[VTON] Invalid custom anchor selector:', customSelector);
           }
         }
+
         var form = vtonFindBestProductForm();
         if (form) {
           var atcBtn = vtonFindAddToCartButton(form);
           if (atcBtn) {
-            var wrapper = atcBtn.closest('.product-form__buttons, .product-form__actions, .product-form__cart, .shopify-product-form, .product-form__submit-wrapper');
-            return { anchor: wrapper || atcBtn, method: 'after', source: 'form_atc_button' };
+            var wrapper = atcBtn.closest(
+              '.product-form__buttons, .product-form__actions, .product-form__cart, .shopify-product-form, .product-form__submit-wrapper, .product-form__cta, .product__submit, .buy-buttons, .product-form__controls'
+            );
+            var btnHit = accept(wrapper || atcBtn, 'after', 'form_atc_button');
+            if (btnHit) return btnHit;
           }
-          if (form.parentNode) return { anchor: form, method: 'after', source: 'product_form' };
+          var formHit = accept(form, 'after', 'product_form');
+          if (formHit) return formHit;
         }
+
         var globalAtc = vtonFindAddToCartButton(document);
-        if (globalAtc && !globalAtc.closest('.cart-drawer, .quick-add-modal, [data-quick-add], dialog, [role="dialog"]')) {
-          return { anchor: globalAtc, method: 'after', source: 'global_atc_button' };
+        if (globalAtc) {
+          var globalHit = accept(globalAtc, 'after', 'global_atc_button');
+          if (globalHit) return globalHit;
         }
-        var productFormComponent = document.querySelector('product-form');
-        if (productFormComponent && vtonIsVisible(productFormComponent)) {
-          return { anchor: productFormComponent, method: 'append', source: 'product-form_element' };
+
+        var productFormComponents = document.querySelectorAll('product-form');
+        for (var p = 0; p < productFormComponents.length; p++) {
+          var compHit = accept(productFormComponents[p], 'append', 'product-form_element');
+          if (compHit) return compHit;
         }
+
         for (var k = 0; k < VTON_PRODUCT_INFO_SELECTORS.length; k++) {
-          var infoEl = document.querySelector(VTON_PRODUCT_INFO_SELECTORS[k]);
-          if (infoEl && vtonIsVisible(infoEl)) {
-            return { anchor: infoEl, method: 'append', source: 'product_info' };
+          var infoNodes = document.querySelectorAll(VTON_PRODUCT_INFO_SELECTORS[k]);
+          for (var n = 0; n < infoNodes.length; n++) {
+            var infoHit = accept(infoNodes[n], 'append', 'product_info');
+            if (infoHit) return infoHit;
           }
         }
-        var main = document.querySelector('main');
-        if (main && vtonIsVisible(main)) return { anchor: main, method: 'append', source: 'main_fallback' };
+
+        var stickyAtc = document.querySelector(
+          '.sticky-add-to-cart, .product-sticky-form, [data-sticky-product-form]'
+        );
+        var stickyHit = accept(stickyAtc, 'append', 'sticky_atc');
+        if (stickyHit) return stickyHit;
+
+        var main = document.querySelector('main, [role="main"], #MainContent');
+        var mainHit = accept(main, 'append', 'main_fallback');
+        if (mainHit) return mainHit;
+
         return null;
       }
 
@@ -492,7 +632,23 @@
         var container = document.createElement('div');
         container.id = 'vton-widget-container';
         container.setAttribute('data-vton-widget', 'true');
-        container.style.cssText = 'width:100%;max-width:100%;display:block;margin:16px 0;position:relative;z-index:2;box-sizing:border-box;';
+        container.setAttribute('data-vton-placement', target.source || 'unknown');
+
+        if (target.floating) {
+          container.style.cssText =
+            'position:fixed;bottom:max(16px,env(safe-area-inset-bottom));right:max(16px,env(safe-area-inset-right));z-index:2147483000;width:auto;max-width:min(360px,calc(100vw - 32px));margin:0;box-sizing:border-box;';
+          document.body.appendChild(container);
+          return container;
+        }
+
+        container.style.cssText =
+          'width:100%;max-width:100%;display:block;margin:16px 0;position:relative;z-index:2;box-sizing:border-box;';
+
+        if (target.source === 'embed_slot') {
+          target.anchor.style.display = 'block';
+          target.anchor.setAttribute('aria-hidden', 'false');
+        }
+
         var anchor = target.anchor;
         var method = target.method;
         if (method === 'after' && anchor.parentNode) {
@@ -509,44 +665,76 @@
         return container;
       }
 
+      function vtonResolveInjectionTarget(customSelector) {
+        var primary = vtonFindInjectionAnchor(customSelector, { allowHidden: false });
+        if (primary) return primary;
+        var relaxed = vtonFindInjectionAnchor(customSelector, { allowHidden: true });
+        if (relaxed) return relaxed;
+        var slot = vtonGetEmbedSlotAnchor();
+        if (slot) return slot;
+        return { anchor: document.body, method: 'append', source: 'floating_fallback', floating: true };
+      }
+
       function vtonWaitForInjectionAnchor(customSelector, timeoutMs) {
         return new Promise(function(resolve) {
-          var found = vtonFindInjectionAnchor(customSelector);
-          if (found) return resolve(found);
-          var start = Date.now();
+          var immediate = vtonResolveInjectionTarget(customSelector);
+          if (immediate && immediate.source !== 'floating_fallback' && immediate.source !== 'embed_slot') {
+            return resolve(immediate);
+          }
+
+          var resolved = false;
+          function finish() {
+            if (resolved) return;
+            resolved = true;
+            try { obs.disconnect(); } catch (e) {}
+            resolve(vtonResolveInjectionTarget(customSelector));
+          }
+
           var obs = new MutationObserver(function() {
-            var anchor = vtonFindInjectionAnchor(customSelector);
+            var anchor = vtonFindInjectionAnchor(customSelector, { allowHidden: false });
+            if (!anchor) anchor = vtonFindInjectionAnchor(customSelector, { allowHidden: true });
             if (anchor) {
-              obs.disconnect();
+              resolved = true;
+              try { obs.disconnect(); } catch (e) {}
               resolve(anchor);
-            } else if (Date.now() - start > timeoutMs) {
-              obs.disconnect();
-              resolve(vtonFindInjectionAnchor(customSelector));
             }
           });
-          obs.observe(document.documentElement, { childList: true, subtree: true });
-          setTimeout(function() {
-            try { obs.disconnect(); } catch (e) {}
-            resolve(vtonFindInjectionAnchor(customSelector));
-          }, timeoutMs);
+
+          var observeRoot = vtonGetObserverRoot();
+          obs.observe(observeRoot, { childList: true, subtree: true });
+          if (observeRoot !== document.body) {
+            obs.observe(document.body, { childList: true, subtree: true });
+          }
+
+          setTimeout(finish, timeoutMs);
         });
       }
 
       function vtonWatchForDomRemoval(shop, productId, productHandle, widgetSettings) {
+        var container = document.getElementById('vton-widget-container');
+        if (!container || !container.parentNode) return;
+
+        var parent = container.parentNode;
         var reinjectTimer = null;
         var reinjectCount = 0;
         var observer = new MutationObserver(function() {
           if (document.getElementById('vton-widget-container')) return;
-          if (reinjectCount >= 5) { observer.disconnect(); return; }
+          if (reinjectCount >= 3) {
+            observer.disconnect();
+            return;
+          }
           clearTimeout(reinjectTimer);
           reinjectTimer = setTimeout(function() {
             reinjectCount++;
             log('[VTON] Widget removed from DOM, re-injecting (attempt ' + reinjectCount + ')');
+            _vtonWidgetRenderQueued = false;
             initializeWidget(shop, productId, productHandle, widgetSettings);
-          }, 400);
+          }, 500);
         });
-        observer.observe(document.body, { childList: true, subtree: true });
-        setTimeout(function() { observer.disconnect(); }, 120000);
+        observer.observe(parent, { childList: true });
+        setTimeout(function() {
+          observer.disconnect();
+        }, 30000);
       }
       
       function initializeWidget(shop, productId, productHandle, widgetSettings) {
@@ -557,11 +745,17 @@
 
         var customSelector = (window.VTON_LIQUID && window.VTON_LIQUID.customAnchor) || '';
 
-        vtonWaitForInjectionAnchor(customSelector, 8000).then(function(injectionTarget) {
+        vtonWaitForInjectionAnchor(customSelector, 12000).then(function(injectionTarget) {
           if (!injectionTarget || !injectionTarget.anchor) {
             _vtonWidgetRenderQueued = false;
             error('[VTON] No injection anchor found. Enable App Embed or set a custom CSS selector in theme settings.');
             return;
+          }
+
+          if (injectionTarget.source === 'floating_fallback') {
+            warn('[VTON] Using floating fallback — set a custom CSS selector in App Embed settings for better placement.');
+          } else if (injectionTarget.source === 'embed_slot') {
+            log('[VTON] Using app embed slot fallback');
           }
 
           log('[VTON] Injection anchor:', injectionTarget.source);
@@ -668,9 +862,7 @@
               left: 0;
               right: 0;
               bottom: 0;
-              background: rgba(0, 0, 0, 0.75);
-              backdrop-filter: blur(12px) saturate(180%);
-              -webkit-backdrop-filter: blur(12px) saturate(180%);
+              background: rgba(0, 0, 0, 0.78);
               display: none;
               align-items: center;
               justify-content: center;
@@ -1703,39 +1895,34 @@
       }
       
       function trackAddToCart(state) {
-        // Track the add to cart event for analytics
-        // Try App Proxy first, fallback to direct URL
-        const APP_URL = '{{ shop.metafields.vton.app_url | default: "https://vton-production-890a.up.railway.app" }}';
-        let atcUrl = window.location.origin + '/apps/tryon/atc?shop=' + encodeURIComponent(state.shop) + '&product_id=' + encodeURIComponent(state.productId);
-        let useAppProxy = true;
-        
+        var atcUrl =
+          window.location.origin +
+          '/apps/tryon/atc?shop=' +
+          encodeURIComponent(state.shop) +
+          '&product_id=' +
+          encodeURIComponent(state.productId);
+        var payload = JSON.stringify({ product_id: state.productId });
+
+        if (navigator.sendBeacon) {
+          try {
+            navigator.sendBeacon(
+              atcUrl,
+              new Blob([payload], { type: 'application/json' })
+            );
+          } catch (e) {
+            warn('[VTON] sendBeacon failed', e);
+          }
+          return;
+        }
+
         fetch(atcUrl, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          }
-        }).then(function(response) {
-          // If App Proxy failed with 404, try direct URL as fallback
-          if (useAppProxy && response.status === 404) {
-            warn('[VTON] App Proxy not available (404) for ATC tracking, trying direct URL...');
-            useAppProxy = false;
-            const directUrl = APP_URL + '/apps/tryon/atc?shop=' + encodeURIComponent(state.shop) + '&product_id=' + encodeURIComponent(state.productId);
-            return fetch(directUrl, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json'
-              }
-            });
-          }
-          return response;
-        }).then(function(response) {
-          if (response.ok) {
-            log('[VTON] Add to Cart tracked successfully');
-                } else {
-            warn('[VTON] Add to Cart tracking returned status:', response.status);
-          }
+          headers: { 'Content-Type': 'application/json' },
+          body: payload,
+          credentials: 'same-origin',
+          keepalive: true
         }).catch(function(err) {
-          error('[VTON] Failed to track Add to Cart:', err);
+          warn('[VTON] Failed to track Add to Cart:', err);
         });
       }
       
@@ -1917,6 +2104,10 @@
           clearInterval(timerInterval);
           timerInterval = null;
         }
+        if (tipInterval) {
+          clearInterval(tipInterval);
+          tipInterval = null;
+        }
         
         if (shadowRoot) {
           // Complete progress bar
@@ -1941,9 +2132,8 @@
       }
       
       function pollJobStatus(shadowRoot, state, jobId, loading, result, generateBtn) {
-        const maxAttempts = 80;
+        const maxAttempts = 48;
         let attempts = 0;
-        let hasTriedFallback = false;
         let consecutiveErrors = 0;
         let pollInterval = null;
 
@@ -1964,34 +2154,27 @@
             return;
           }
 
-          let statusUrl = window.location.origin + '/apps/tryon/job/' + jobId + '?shop=' + encodeURIComponent(state.shop);
-          
-          // If App Proxy failed before, use direct URL
-          if (hasTriedFallback) {
-            statusUrl = APP_URL + '/apps/tryon/job/' + jobId + '?shop=' + encodeURIComponent(state.shop);
-          }
-          
+          const statusUrl =
+            window.location.origin +
+            '/apps/tryon/job/' +
+            jobId +
+            '?shop=' +
+            encodeURIComponent(state.shop);
+
           log('[VTON] Polling job status (attempt ' + attempts + '):', statusUrl);
-          
-          // Create AbortController for timeout handling (5 seconds)
+
           const controller = new AbortController();
           const timeoutId = setTimeout(function() { controller.abort(); }, 4000);
 
           fetch(statusUrl, {
             signal: controller.signal,
-            cache: 'default'
+            credentials: 'same-origin',
+            cache: 'no-store'
           })
             .then(function(response) {
               clearTimeout(timeoutId);
-              consecutiveErrors = 0; // Reset error counter on success
-              
-              // If App Proxy failed with 404, try direct URL as fallback (only once)
-              if (!hasTriedFallback && response.status === 404) {
-                warn('[VTON] App Proxy not available (404), trying direct URL...');
-                hasTriedFallback = true;
-                return; // Skip to next iteration
-              }
-              
+              consecutiveErrors = 0;
+
               if (!response.ok) {
                 throw new Error('Status check failed: ' + response.status);
               }
@@ -1999,7 +2182,6 @@
             })
             .then(function(statusData) {
               if (!statusData) {
-                // Fallback was triggered, skip this iteration
                 return;
               }
               
@@ -2044,15 +2226,7 @@
               clearTimeout(timeoutId);
               consecutiveErrors++;
               error('[VTON] Polling error (attempt ' + attempts + ', consecutive errors: ' + consecutiveErrors + '):', err);
-              
-              // If it's an abort error and we haven't tried fallback, try fallback first
-              if (err.name === 'AbortError' && !hasTriedFallback) {
-                warn('[VTON] Request aborted, trying direct URL as fallback...');
-                hasTriedFallback = true;
-                return; // Skip to next iteration
-              }
-              
-              // Stop polling after several consecutive errors
+
               if (consecutiveErrors >= 5) {
                 error('[VTON] Multiple consecutive polling errors, stopping...');
                 if (pollInterval) clearInterval(pollInterval);
@@ -2070,7 +2244,7 @@
         }
 
         pollOnce();
-        pollInterval = setInterval(pollOnce, 1500);
+        pollInterval = setInterval(pollOnce, 2500);
       }
       
       function displayResult(shadowRoot, state, resultUrl, loading, result, generateBtn) {
@@ -2202,17 +2376,16 @@
         // Start rotating loading messages
         startLoadingMessages(shadowRoot);
         
-        // Construct absolute URL for app proxy
-        // Try App Proxy first, fallback to direct URL
-        let generateUrl = window.location.origin + '/apps/tryon/generate?shop=' + encodeURIComponent(state.shop) + '&product_id=' + encodeURIComponent(state.productId);
+        var generateUrl =
+          window.location.origin +
+          '/apps/tryon/generate?shop=' +
+          encodeURIComponent(state.shop) +
+          '&product_id=' +
+          encodeURIComponent(state.productId);
         if (state.productHandle) {
           generateUrl += '&product_handle=' + encodeURIComponent(state.productHandle);
         }
-        let useAppProxy = true;
-        
-        // Helper function to make the fetch request
-        // Use a closure variable to track if we've already tried the fallback
-        let hasTriedFallback = false;
+
         function makeGenerateRequest(url) {
           // Create AbortController for timeout handling
           // Use 60 seconds timeout to allow server to respond (even if generation is async, server should respond quickly with job_id or result)
@@ -2236,6 +2409,7 @@
               product_handle: state.productHandle,
               product_image_url: state.productImageUrl
             }),
+            credentials: 'same-origin',
             signal: controller.signal
           }).then(function(response) {
             clearTimeout(requestTimeout);
@@ -2243,18 +2417,6 @@
             log('[VTON] Request sent successfully in', requestTime + 'ms');
             
             log('[VTON] Response status:', response.status, response.statusText);
-            
-            // If App Proxy failed with 404, try direct URL as fallback (only once)
-            if (useAppProxy && !hasTriedFallback && response.status === 404) {
-              warn('[VTON] App Proxy not available (404), trying direct URL...');
-              useAppProxy = false;
-              hasTriedFallback = true; // Prevent double fallback
-              // Use the configured app URL as fallback
-              let directUrl = APP_URL + '/apps/tryon/generate?shop=' + encodeURIComponent(state.shop) + '&product_id=' + encodeURIComponent(state.productId);
-              if (state.productHandle) directUrl += '&product_handle=' + encodeURIComponent(state.productHandle);
-              log('[VTON] Retrying with direct URL:', directUrl);
-              return makeGenerateRequest(directUrl);
-            }
             
             if (!response.ok) {
               // Clone the response before consuming the body, so we can read it multiple times if needed
@@ -2287,22 +2449,10 @@
             clearTimeout(requestTimeout);
             const requestTime = Date.now() - requestStartTime;
             error('[VTON] Request failed after', requestTime + 'ms:', err);
-            
-            // If it's an abort error (timeout) and we haven't tried fallback, try fallback immediately
-            if (err.name === 'AbortError' && useAppProxy && !hasTriedFallback) {
-              warn('[VTON] Request timeout, trying direct URL as fallback...');
-              useAppProxy = false;
-              hasTriedFallback = true;
-              let directUrl = APP_URL + '/apps/tryon/generate?shop=' + encodeURIComponent(state.shop) + '&product_id=' + encodeURIComponent(state.productId);
-              if (state.productHandle) directUrl += '&product_handle=' + encodeURIComponent(state.productHandle);
-              log('[VTON] Retrying with direct URL:', directUrl);
-              return makeGenerateRequest(directUrl);
-            }
             throw err;
           });
         }
         
-        // Start with App Proxy URL
         makeGenerateRequest(generateUrl).then(function(data) {
           log('[VTON] Generation response data:', JSON.stringify(data, null, 2));
           
@@ -2449,8 +2599,7 @@
         });
       }
     })();
-  </script>
-{% endif %}
+</script>
 
 {% schema %}
 {
@@ -2461,7 +2610,7 @@
       "type": "text",
       "id": "anchor_selector",
       "label": "Custom button placement (optional)",
-      "info": "CSS selector where the Try-On button should appear (e.g. .product-form__buttons or #ProductSubmit). Leave empty for automatic placement on all themes."
+      "info": "CSS selector for button placement on custom themes (e.g. .product-form__buttons). Leave empty for automatic detection + fallback."
     },
     {
       "type": "text",

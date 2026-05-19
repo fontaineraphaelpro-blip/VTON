@@ -1,6 +1,6 @@
 /** In-memory cache for GET /apps/tryon/status (storefront hot path) */
 
-const STATUS_CACHE_MS = 45_000;
+const STATUS_CACHE_MS = 60_000;
 const statusCache = new Map<string, { expires: number; payload: Record<string, unknown> }>();
 
 export function buildStatusCacheKey(
@@ -46,4 +46,5 @@ export function invalidateStatusCacheForShop(shop: string) {
   }
 }
 
-export const STATUS_HTTP_CACHE = "public, max-age=45, stale-while-revalidate=120";
+export const STATUS_HTTP_CACHE =
+  "public, max-age=60, stale-while-revalidate=300";

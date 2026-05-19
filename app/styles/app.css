@@ -1454,6 +1454,177 @@ button.save-config-button.Polaris-Button--primary:hover:not(:disabled) > *,
   cursor: not-allowed !important;
 }
 
+/* Credits page — compact single-viewport layout */
+.credits-page.app-container {
+  padding: 12px 16px 16px !important;
+}
+
+.credits-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.credits-top-title {
+  font-size: 20px;
+  font-weight: 800;
+  margin: 0 0 4px;
+  letter-spacing: -0.02em;
+  color: var(--color-text-primary);
+}
+
+.credits-top-hint {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  margin: 0;
+  line-height: 1.4;
+  max-width: 520px;
+}
+
+.credits-balance-compact {
+  flex-shrink: 0;
+  text-align: right;
+  padding: 8px 14px;
+  border: 1.5px solid var(--color-primary);
+  border-radius: 10px;
+  background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%);
+}
+
+.credits-balance-compact-value {
+  display: block;
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--color-primary);
+  letter-spacing: -0.03em;
+}
+
+.credits-balance-compact-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-secondary);
+  font-weight: 700;
+}
+
+.credits-alerts {
+  margin-bottom: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.credits-page .pricing-grid--compact {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+@media (max-width: 1100px) {
+  .credits-page .pricing-grid--compact {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .credits-page .pricing-grid--compact {
+    grid-template-columns: 1fr;
+  }
+
+  .credits-top {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .credits-balance-compact {
+    width: 100%;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    text-align: left;
+  }
+}
+
+.credits-page .plan-card--compact {
+  padding: 14px 12px 12px;
+  border-radius: 12px;
+  border-width: 1.5px;
+  min-height: 0;
+}
+
+.credits-page .plan-card--compact.best-value::after {
+  display: none;
+}
+
+.credits-page .plan-card--compact .plan-badge {
+  position: absolute;
+  top: 8px;
+  left: auto;
+  right: 8px;
+  transform: none;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  letter-spacing: 0.04em;
+}
+
+.credits-page .plan-card--compact .plan-name {
+  font-size: 15px;
+  font-weight: 800;
+  margin: 0 0 2px;
+  padding-right: 56px;
+}
+
+.credits-page .plan-tagline {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  margin: 0 0 6px;
+  line-height: 1.3;
+}
+
+.credits-page .plan-card--compact .plan-price {
+  font-size: 22px;
+  font-weight: 800;
+  margin: 0 0 2px;
+}
+
+.credits-page .plan-card--compact .plan-price span {
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.credits-page .plan-per-credit {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  margin: 0 0 8px;
+}
+
+.credits-page .plan-card--compact .plan-cta {
+  margin-top: auto;
+  padding-top: 4px;
+}
+
+.credits-page .plan-card--compact .plan-button {
+  width: 100%;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 8px;
+}
+
+.credits-footnote {
+  text-align: center;
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  margin: 0;
+  line-height: 1.4;
+}
+
 /* ============================================
    RESPONSIVE
    ============================================ */

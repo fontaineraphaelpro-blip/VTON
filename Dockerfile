@@ -7,26 +7,21 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-COPY package.json package-lock.json* ./
+COPY package.json package-lock.json ./
 
-# Install all dependencies (including devDependencies) for build
-# Use --legacy-peer-deps to handle peer dependency conflicts with Shopify packages
 RUN npm ci --legacy-peer-deps && npm cache clean --force
 
 COPY . .
 
-# Generate Prisma Client before building (required for build to succeed)
 RUN npx prisma generate
 
-# Set default env vars for build (SHOPIFY_APP_URL needed by vite.config.ts)
-ENV SHOPIFY_APP_URL=${SHOPIFY_APP_URL:-http://localhost:3000}
+# vite.config.ts reads SHOPIFY_APP_URL at build time
+ARG SHOPIFY_APP_URL=http://localhost:3000
+ENV SHOPIFY_APP_URL=$SHOPIFY_APP_URL
 
-# Build the application
 RUN npm run build
 
-# Remove dev dependencies after build to reduce image size
 RUN npm ci --omit=dev --legacy-peer-deps && npm cache clean --force
-# Remove CLI packages since we don't need them in production by default.
 RUN npm remove @shopify/cli || true
 
 CMD ["npm", "run", "docker-start"]
