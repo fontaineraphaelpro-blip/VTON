@@ -11,6 +11,7 @@ import {
   EmptyState,
 } from "@shopify/polaris";
 import { TitleBar } from "@shopify/app-bridge-react";
+import { AdminPage } from "../components/AdminPage";
 import { authenticate } from "../shopify.server";
 import { getTryonLogs } from "../lib/services/db.service";
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -316,29 +317,24 @@ export default function History() {
           </div>
         )}
 
-        <header className="app-header">
-          <h1 className="app-title">History</h1>
-          <p className="app-subtitle">
-            View the complete history of all virtual try-on attempts made on your store
-          </p>
-        </header>
+        <AdminPage
+          title="History"
+          subtitle="All virtual try-on sessions on your store"
+        >
 
-        <div className="stats-grid">
+        <div className="vton-metric-grid">
           {stats.map((stat) => (
-            <div key={stat.label} className="stat-card">
-              <div className="stat-icon-wrapper">
-                {stat.icon || "📊"}
-              </div>
-              <div className="stat-value">{stat.value}</div>
-              <div className="stat-label">{stat.label}</div>
+            <div key={stat.label} className="vton-metric-card">
+              <p className="vton-metric-label">{stat.label}</p>
+              <p className="vton-metric-value">{stat.value}</p>
             </div>
           ))}
         </div>
 
-        <div className="dashboard-section">
-          <h2>Try-On History</h2>
+        <div className="vton-panel">
+          <h2 className="vton-panel-title">Try-on log</h2>
           {logs.length === 0 ? (
-            <div className="dashboard-placeholder">
+            <div className="vton-empty">
               <EmptyState
                 heading="No History"
                 image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
@@ -372,6 +368,7 @@ export default function History() {
             </div>
           )}
         </div>
+        </AdminPage>
       </div>
     </Page>
   );

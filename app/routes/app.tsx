@@ -6,10 +6,12 @@ import { AppProvider } from "@shopify/shopify-app-remix/react";
 import { NavMenu } from "@shopify/app-bridge-react";
 import polarisStyles from "@shopify/polaris/build/esm/styles.css?url";
 import appStyles from "../styles/app.css?url";
+import adminUiStyles from "../styles/admin-ui.css?url";
 
 export const links = () => [
   { rel: "stylesheet", href: polarisStyles },
   { rel: "stylesheet", href: appStyles },
+  { rel: "stylesheet", href: adminUiStyles },
 ];
 
 /** Child routes authenticate; parent only supplies the API key (avoids double auth per navigation). */
@@ -53,7 +55,9 @@ export default function App() {
           Support
         </Link>
       </NavMenu>
-      <Outlet />
+      <div className="vton-admin">
+        <Outlet />
+      </div>
     </AppProvider>
   );
 }

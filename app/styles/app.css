@@ -1854,10 +1854,17 @@ iframe {
   overflow-x: hidden !important;
 }
 
-/* Prevent horizontal scroll and remove side margins */
-* {
-  max-width: 100%;
+/* Scoped overflow fix — do NOT use * { max-width: 100% } (breaks Polaris forms/layouts) */
+.vton-admin,
+.vton-admin * {
   box-sizing: border-box;
+}
+
+.vton-admin img,
+.vton-admin video,
+.vton-admin svg,
+.vton-admin table {
+  max-width: 100%;
 }
 
 /* Remove all side margins and padding from main containers */

@@ -8,6 +8,7 @@ import {
   Banner,
 } from "@shopify/polaris";
 import { TitleBar } from "@shopify/app-bridge-react";
+import { AdminPage } from "../components/AdminPage";
 import { authenticate } from "../shopify.server";
 import { getShop, upsertShop, query } from "../lib/services/db.service";
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -509,7 +510,7 @@ export default function Credits() {
       <TitleBar title="Credits - VTON Magic" />
       <div className="app-container credits-page">
         {hasAlerts && (
-          <div className="credits-alerts">
+          <div className="vton-alerts credits-alerts">
         {showErrorBanner && error && (
             <Banner tone="critical" title="Error" onDismiss={() => setShowErrorBanner(false)}>
               {error}
@@ -563,21 +564,18 @@ export default function Credits() {
           </div>
         )}
 
-        <header className="credits-top">
-          <div className="credits-top-main">
-            <h1 className="credits-top-title">Plans &amp; credits</h1>
-            <p className="credits-top-hint">
-              Monthly quota resets each cycle. Unused credits do not roll over.
-            </p>
-          </div>
-          <div className="credits-balance-compact" aria-label="Credits available">
-            <span className="credits-balance-compact-value">
-              {currentCredits.toLocaleString("en-US")}
-            </span>
-            <span className="credits-balance-compact-label">credits left</span>
-          </div>
-        </header>
-
+        <AdminPage
+          title="Plans & credits"
+          subtitle="Monthly quota resets each cycle. Unused credits do not roll over."
+          actions={
+            <div className="credits-balance-compact" aria-label="Credits available">
+              <span className="credits-balance-compact-value">
+                {currentCredits.toLocaleString("en-US")}
+              </span>
+              <span className="credits-balance-compact-label">credits left</span>
+            </div>
+          }
+        >
         <div className="pricing-grid pricing-grid--compact">
           {subscriptionPlans.map((plan) => {
             const isCurrentPlan = currentActivePlan === plan.id;
@@ -651,6 +649,7 @@ export default function Credits() {
         <p className="credits-footnote">
           Cancel anytime · No setup fees · Monthly credit reset
         </p>
+        </AdminPage>
       </div>
     </Page>
   );

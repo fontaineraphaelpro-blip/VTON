@@ -14,6 +14,7 @@ import {
   BlockStack,
 } from "@shopify/polaris";
 import { TitleBar } from "@shopify/app-bridge-react";
+import { AdminPage } from "../components/AdminPage";
 import { authenticate } from "../shopify.server";
 import { getShop, upsertShop, getTryonLogs, getTopProducts, getTryonStatsByDay, getMonthlyTryonUsage, query } from "../lib/services/db.service";
 
@@ -731,8 +732,8 @@ export default function Dashboard() {
       link: "/app/credits"
     },
     { 
-      label: "Total try-ons", 
-      value: totalTryons.toLocaleString("en-US"), 
+      label: "Try-ons (30 days)", 
+      value: last30DaysTotal.toLocaleString("en-US"), 
       icon: "",
       link: "/app/history"
     },
@@ -748,7 +749,7 @@ export default function Dashboard() {
       icon: "",
       link: "/app/history"
     },
-  ], [credits, totalTryons, totalAtc, conversionRate]);
+  ], [credits, last30DaysTotal, totalAtc, conversionRate]);
 
   // Memoize last 7 days stats for graph
   const last7DaysStats = useMemo(() => dailyStats.slice(-7), [dailyStats]);
@@ -765,16 +766,29 @@ export default function Dashboard() {
     <Page>
       <TitleBar title="Dashboard - VTON Magic" />
       <div className="app-container">
-        <header className="app-header">
-          <h1 className="app-title">Dashboard</h1>
-          <p className="app-subtitle">
-            Overview of your activity and statistics
-          </p>
-        </header>
+        <AdminPage
+          title="Dashboard"
+          subtitle="Overview of your virtual try-on activity and store settings"
+        >
+        <div className="vton-hero">
+          <div>
+            <span className={`vton-status-pill ${isEnabled ? "is-on" : "is-off"}`}>
+              {isEnabled ? "Storefront active" : "Storefront paused"}
+            </span>
+            <p className="vton-hero-title">Virtual Try-On on your product pages</p>
+            <p className="vton-hero-desc">
+              {credits.toLocaleString("en-US")} credits available · {last30DaysTotal.toLocaleString("en-US")} try-ons in the last 30 days
+            </p>
+          </div>
+          <div className="vton-hero-actions">
+            <Link to="/app/widget" className="vton-btn vton-btn--ghost">Customize widget</Link>
+            <Link to="/app/products" className="vton-btn vton-btn--ghost">Products</Link>
+            <Link to="/app/credits" className="vton-btn vton-btn--primary">Manage credits</Link>
+          </div>
+        </div>
 
-        {/* Alerts compactes en haut */}
         {(showErrorBanner || fetcher.data?.success || showLowCreditsBanner || showDisabledBanner || showQuotaExceededBanner || showQuotaWarningBanner || showReviewBanner || showAppEmbedBanner) && (
-          <div style={{ marginBottom: "var(--spacing-lg)" }}>
+          <div className="vton-alerts">
             <BlockStack gap="300">
               {showAppEmbedBanner && (
                 <Banner 
@@ -880,53 +894,20 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Stats Grid */}
-        <div className="stats-grid">
-          <div className="stat-card">
-            <div className="stat-icon-wrapper">
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M2.5 5.83333H17.5M2.5 5.83333C1.39543 5.83333 0.5 6.72876 0.5 7.83333V15.8333C0.5 16.9379 1.39543 17.8333 2.5 17.8333H17.5C18.6046 17.8333 19.5 16.9379 19.5 15.8333V7.83333C19.5 6.72876 18.6046 5.83333 17.5 5.83333M2.5 5.83333V4.16667C2.5 3.0621 3.39543 2.16667 4.5 2.16667H15.5C16.6046 2.16667 17.5 3.0621 17.5 4.16667V5.83333" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </div>
-            <div className="stat-value">{credits.toLocaleString("en-US")}</div>
-            <div className="stat-label">Remaining Credits</div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-icon-wrapper">
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M2.5 15.8333L10 2.5L17.5 15.8333H2.5Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M10 12.5V8.33333" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </div>
-            <div className="stat-value">{last30DaysTotal.toLocaleString("en-US")}</div>
-            <div className="stat-label">Total Try-ons (30d)</div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-icon-wrapper">
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M2.5 2.5H4.16667L5.83333 12.5H15.8333L17.5 5.83333H5.83333" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                <circle cx="7.5" cy="16.6667" r="1.66667" stroke="currentColor" strokeWidth="1.5"/>
-                <circle cx="15" cy="16.6667" r="1.66667" stroke="currentColor" strokeWidth="1.5"/>
-              </svg>
-            </div>
-            <div className="stat-value">{totalAtc.toLocaleString("en-US")}</div>
-            <div className="stat-label">Add to Cart</div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-icon-wrapper">
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M2.5 15.8333L7.5 10.8333L12.5 15.8333L17.5 10.8333" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M7.5 10.8333V2.5H12.5V10.8333" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </div>
-            <div className="stat-value">{conversionRate}%</div>
-            <div className="stat-label">Conversion Rate</div>
-          </div>
+        <div className="vton-metric-grid">
+          {stats.map((stat) => (
+            <Link key={stat.label} to={stat.link} className="vton-metric-card" style={{ textDecoration: "none" }}>
+              <p className="vton-metric-label">{stat.label}</p>
+              <p className="vton-metric-value">{stat.value}</p>
+            </Link>
+          ))}
         </div>
 
-        {/* Generations */}
-        <div className="dashboard-section">
-          <h2>Daily Generations (Last 7 Days)</h2>
+        <div className="vton-panel">
+          <div className="vton-panel-header">
+            <h2 className="vton-panel-title">Daily try-ons (last 7 days)</h2>
+            <Link to="/app/history" className="vton-panel-link">View history</Link>
+          </div>
           {dailyStats.length > 0 ? (
             <div className="graph-container-large">
               <div className="graph-bars">
@@ -955,22 +936,21 @@ export default function Dashboard() {
               </div>
             </div>
           ) : (
-            <div className="dashboard-placeholder">
-              No data available for the last 30 days
-            </div>
+            <div className="vton-empty">No try-ons in the last 7 days</div>
           )}
         </div>
 
-        {/* Products and Activity side by side */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--spacing-lg)", marginBottom: "var(--spacing-lg)" }}>
-          {/* Products */}
-          <div className="dashboard-section">
-            <h2>Most Tried Products</h2>
+        <div className="vton-grid-2">
+          <div className="vton-panel">
+            <div className="vton-panel-header">
+              <h2 className="vton-panel-title">Top products</h2>
+              <Link to="/app/products" className="vton-panel-link">Manage</Link>
+            </div>
             {topProducts.length > 0 ? (
-              <div className="products-list">
+              <div>
                 {topProducts.map((product: any, index: number) => (
-                  <div key={product.product_id || index} className="product-item">
-                    <span className="product-name">
+                  <div key={product.product_id || index} className="vton-list-item">
+                    <span>
                       {product.product_title || product.product_id || "Unknown Product"}
                     </span>
                     <Badge tone="info">
@@ -980,49 +960,46 @@ export default function Dashboard() {
                 ))}
               </div>
             ) : (
-              <div className="dashboard-placeholder">
-                No try-ons yet. Start using the widget on your products!
-              </div>
+              <div className="vton-empty">No try-ons yet. Enable the widget on your products.</div>
             )}
           </div>
 
-          {/* Recent Activity */}
-          <div className="dashboard-section">
-            <h2>Recent Activity</h2>
+          <div className="vton-panel">
+            <div className="vton-panel-header">
+              <h2 className="vton-panel-title">Recent activity</h2>
+              <Link to="/app/history" className="vton-panel-link">See all</Link>
+            </div>
             {recentLogs.length > 0 ? (
-              <div className="activity-list">
+              <div>
                 {recentLogsDisplay.map((log: any, index: number) => (
-                  <div key={log.id || index} className="activity-item">
-                    <div className="activity-info">
-                      <p className="activity-title">
+                  <div key={log.id || index} className="vton-list-item">
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: 14 }}>
                         {log.product_title || log.product_id || "Unknown Product"}
-                      </p>
-                      <p className="activity-date">
-                        {new Date(log.created_at).toLocaleDateString("en-US", { 
-                          month: "short", 
+                      </div>
+                      <div style={{ fontSize: 12, color: "var(--vton-muted)" }}>
+                        {new Date(log.created_at).toLocaleDateString("en-US", {
+                          month: "short",
                           day: "numeric",
                           hour: "2-digit",
-                          minute: "2-digit"
+                          minute: "2-digit",
                         })}
-                      </p>
+                      </div>
                     </div>
                     <Badge tone={log.success ? "success" : "critical"}>
-                      {log.success ? "✓ Success" : "✗ Failed"}
+                      {log.success ? "Success" : "Failed"}
                     </Badge>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="dashboard-placeholder">
-                No recent activity. Try-ons will appear here once customers start using the widget.
-              </div>
+              <div className="vton-empty">No recent activity yet.</div>
             )}
           </div>
         </div>
 
-        {/* Settings & Security */}
-        <div className="dashboard-section">
-          <h2>Settings & Security</h2>
+        <div className="vton-panel">
+          <h2 className="vton-panel-title" style={{ marginBottom: 16 }}>Store settings</h2>
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -1030,8 +1007,8 @@ export default function Dashboard() {
               handleSave(formData);
             }}
           >
-            <div className="settings-grid">
-              <div className="setting-card">
+            <div className="vton-form-grid">
+              <div className="vton-field">
                 <label>Enable app on store</label>
                 <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                   <Checkbox
@@ -1045,7 +1022,7 @@ export default function Dashboard() {
                 </div>
                 <input type="hidden" name="isEnabled" value={isEnabled ? "true" : "false"} />
               </div>
-              <div className="setting-card">
+              <div className="vton-field">
                 <label>Daily Limit</label>
                 <input
                   type="number"
@@ -1055,7 +1032,7 @@ export default function Dashboard() {
                   className="vton-input"
                 />
               </div>
-              <div className="setting-card">
+              <div className="vton-field">
                 <label>Max try-ons per user/day</label>
                 <input
                   type="number"
@@ -1065,7 +1042,7 @@ export default function Dashboard() {
                 />
               </div>
               {/* ADDED: Monthly quota setting */}
-              <div className="setting-card">
+              <div className="vton-field">
                 <label>Monthly Quota Limit</label>
                 <input
                   type="number"
@@ -1081,7 +1058,7 @@ export default function Dashboard() {
                   }
                 </p>
               </div>
-              <div className="setting-card">
+              <div className="vton-field">
                 <label>Cleanup</label>
                 <Button
                   onClick={() => {
@@ -1103,6 +1080,7 @@ export default function Dashboard() {
             </div>
           </form>
         </div>
+        </AdminPage>
       </div>
     </Page>
   );

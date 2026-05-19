@@ -9,25 +9,19 @@ import {
   Banner,
   TextField,
   BlockStack,
-  Card,
-  Layout,
-  InlineStack,
-  Divider,
-  Box,
 } from "@shopify/polaris";
 import { TitleBar } from "@shopify/app-bridge-react";
+import { AdminPage } from "../components/AdminPage";
 import { authenticate } from "../shopify.server";
 import { getShop, upsertShop } from "../lib/services/db.service";
+
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
   const shop = session.shop;
 
   try {
     const shopData = await getShop(shop);
-
-    return json({
-      shop: shopData || null,
-    });
+    return json({ shop: shopData || null });
   } catch (error) {
     return json({
       shop: null,
@@ -46,24 +40,20 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const widgetColor = (formData.get("widgetColor") as string) || "#ffffff";
 
   try {
-    await upsertShop(shop, {
-      widgetText,
-      widgetBg,
-      widgetColor,
-    });
+    await upsertShop(shop, { widgetText, widgetBg, widgetColor });
     const verifyShop = await getShop(shop);
-    return json({ 
+    return json({
       success: true,
       savedValues: {
         widget_text: verifyShop?.widget_text,
         widget_bg: verifyShop?.widget_bg,
         widget_color: verifyShop?.widget_color,
-      }
+      },
     });
   } catch (error) {
-    return json({ 
-      success: false, 
-        error: error instanceof Error ? error.message : "Error saving configuration"
+    return json({
+      success: false,
+      error: error instanceof Error ? error.message : "Error saving configuration",
     });
   }
 };
@@ -71,23 +61,16 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 export default function Widget() {
   const loaderData = useLoaderData<typeof loader>();
   const fetcher = useFetcher<typeof action>();
-  const revalidator = useRevalidator();
+  const shop = loaderData.shop ?? null;
+  const error = "error" in loaderData ? loaderData.error : null;
 
-  const shop = (loaderData as any).shop || null;
-  const error = (loaderData as any).error || null;
-
-  // Initialize state from shop data on mount
   const [widgetText, setWidgetText] = useState(() => shop?.widget_text || "Try It On Now ✨");
   const [widgetBg, setWidgetBg] = useState(() => shop?.widget_bg || "#000000");
   const [widgetColor, setWidgetColor] = useState(() => shop?.widget_color || "#ffffff");
-  
-  // State for controlling notification visibility
   const [showSuccessBanner, setShowSuccessBanner] = useState(false);
   const [showErrorBanner, setShowErrorBanner] = useState(false);
-
-  // Only update from shop data on initial load, not after saves
-  // This prevents the loader from overwriting user edits
   const [isInitialized, setIsInitialized] = useState(false);
+
   useEffect(() => {
     if (shop && !isInitialized) {
       setWidgetText(shop.widget_text || "Try It On Now ✨");
@@ -97,58 +80,36 @@ export default function Widget() {
     }
   }, [shop, isInitialized]);
 
-  // Update local state immediately when save is successful (from action response)
-  // This ensures the UI reflects the saved values right away
   const previousSuccessRef = useRef<string | null>(null);
   useEffect(() => {
     if (fetcher.data?.success && fetcher.data?.savedValues) {
-      // Create a unique key for this save operation
       const saveKey = `${fetcher.data.savedValues.widget_text}-${fetcher.data.savedValues.widget_bg}-${fetcher.data.savedValues.widget_color}`;
-      
-      // Only update if this is a new save (different from previous)
       if (previousSuccessRef.current !== saveKey) {
-        // Update state immediately from the saved values
         setWidgetText(fetcher.data.savedValues.widget_text || "Try It On Now ✨");
         setWidgetBg(fetcher.data.savedValues.widget_bg || "#000000");
         setWidgetColor(fetcher.data.savedValues.widget_color || "#ffffff");
-        
         previousSuccessRef.current = saveKey;
-        
-        // Show success banner
         setShowSuccessBanner(true);
-        
-        // Auto-dismiss success banner after 5 seconds
-        const timer = setTimeout(() => {
-          setShowSuccessBanner(false);
-        }, 5000);
-
+        const timer = setTimeout(() => setShowSuccessBanner(false), 5000);
         return () => clearTimeout(timer);
       }
     }
-    
-    // Show error banner if there's an error
-    if ((fetcher.data as any)?.error) {
+    if (fetcher.data && "error" in fetcher.data && fetcher.data.error) {
       setShowErrorBanner(true);
-      // Auto-dismiss error banner after 7 seconds
-      const timer = setTimeout(() => {
-        setShowErrorBanner(false);
-      }, 7000);
+      const timer = setTimeout(() => setShowErrorBanner(false), 7000);
       return () => clearTimeout(timer);
     }
-    
-    // Reset the ref when starting a new submission
     if (fetcher.state === "submitting") {
       previousSuccessRef.current = null;
       setShowSuccessBanner(false);
       setShowErrorBanner(false);
     }
-  }, [fetcher.data?.success, fetcher.data?.savedValues, fetcher.state, revalidator]);
+  }, [fetcher.data, fetcher.state]);
 
-  // Helper function to calculate if a color is dark or light
   const getLuminance = (hex: string): number => {
     const rgb = hexToRgb(hex);
     if (!rgb) return 0;
-    const [r, g, b] = rgb.map(val => {
+    const [r, g, b] = rgb.map((val) => {
       val = val / 255;
       return val <= 0.03928 ? val / 12.92 : Math.pow((val + 0.055) / 1.055, 2.4);
     });
@@ -158,23 +119,17 @@ export default function Widget() {
   const hexToRgb = (hex: string): [number, number, number] | null => {
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
     return result
-      ? [
-          parseInt(result[1], 16),
-          parseInt(result[2], 16),
-          parseInt(result[3], 16),
-        ]
+      ? [parseInt(result[1], 16), parseInt(result[2], 16), parseInt(result[3], 16)]
       : null;
   };
 
-  // Calculate appropriate text color based on background
   const getContrastTextColor = (bgColor: string, textColor: string): string => {
     const bgLuminance = getLuminance(bgColor);
     const textLuminance = getLuminance(textColor);
-    const contrast = (Math.max(bgLuminance, textLuminance) + 0.05) / (Math.min(bgLuminance, textLuminance) + 0.05);
-    
-    // If contrast is too low (less than 4.5:1 for WCAG AA), use automatic color
+    const contrast =
+      (Math.max(bgLuminance, textLuminance) + 0.05) /
+      (Math.min(bgLuminance, textLuminance) + 0.05);
     if (contrast < 4.5) {
-      // Use white text on dark backgrounds, black on light backgrounds
       return bgLuminance > 0.5 ? "#000000" : "#ffffff";
     }
     return textColor;
@@ -182,243 +137,134 @@ export default function Widget() {
 
   const handleSave = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    
-    // Prevent multiple simultaneous submissions
-    if (fetcher.state === "submitting" || fetcher.state === "loading") {
-      return;
-    }
-    
-    const formData = new FormData(e.currentTarget);
-    fetcher.submit(formData, { method: "post" });
+    if (fetcher.state === "submitting" || fetcher.state === "loading") return;
+    fetcher.submit(new FormData(e.currentTarget), { method: "post" });
   };
 
   return (
     <Page>
-      <TitleBar title="Widget Configuration - VTON Magic" />
+      <TitleBar title="Widget - VTON Magic" />
       <div className="app-container">
-        <header className="app-header">
-          <h1 className="app-title">Widget Configuration</h1>
-          <p className="app-subtitle">
-            Customize the appearance of the Virtual Try-On widget on your store
-          </p>
-        </header>
-
-        <div style={{ marginBottom: "var(--spacing-lg)" }}>
-          <Banner tone="info" title="Theme setup (required on each theme)">
-            <Text as="p" variant="bodyMd">
-              Enable the widget: <strong>Online Store → Themes → Customize → App embeds</strong> → turn on
-              &quot;Virtual Try-On Widget&quot; (repeat for every theme you use).
-              <br />
-              If the button is missing on a custom layout, set Custom button placement in that
-              same App embed panel (for example .product-form__buttons).
-            </Text>
-          </Banner>
-        </div>
-
-        {error && (
-          <div style={{ marginBottom: "var(--spacing-lg)" }}>
-            <Banner tone="critical" title="Error">
-              {error}
+        <AdminPage
+          title="Widget"
+          subtitle="Customize the try-on button on your product pages"
+        >
+          <div className="vton-alerts">
+            <Banner tone="info" title="Enable on your theme">
+              <Text as="p" variant="bodyMd">
+                <strong>Online Store → Themes → Customize → App embeds</strong> → activate
+                &quot;Virtual Try-On Widget&quot; on each theme you use.
+              </Text>
             </Banner>
+            {error ? (
+              <Banner tone="critical" title="Error">
+                {error}
+              </Banner>
+            ) : null}
+            {fetcher.data?.success && fetcher.state === "idle" && showSuccessBanner ? (
+              <Banner tone="success" onDismiss={() => setShowSuccessBanner(false)}>
+                Configuration saved. Refresh a product page to see changes.
+              </Banner>
+            ) : null}
+            {fetcher.data && "error" in fetcher.data && fetcher.data.error && showErrorBanner ? (
+              <Banner tone="critical" onDismiss={() => setShowErrorBanner(false)}>
+                {String(fetcher.data.error)}
+              </Banner>
+            ) : null}
           </div>
-        )}
 
-        {fetcher.data?.success && fetcher.state === "idle" && showSuccessBanner && (
-          <div style={{ marginBottom: "var(--spacing-lg)" }}>
-            <Banner 
-              tone="success"
-              onDismiss={() => {
-                setShowSuccessBanner(false);
-              }}
-            >
-              Configuration saved successfully! Changes are now in the database and will be automatically loaded by the widget on your product pages. Refresh a product page to see the changes.
-              {fetcher.data?.savedValues && (
-                <div style={{ marginTop: "8px", fontSize: "12px" }}>
-                  Saved values: text="{fetcher.data.savedValues.widget_text}", bg="{fetcher.data.savedValues.widget_bg}", color="{fetcher.data.savedValues.widget_color}"
-                </div>
-              )}
-            </Banner>
-          </div>
-        )}
+          <div className="vton-preview-wrap">
+            <div className="vton-preview-card">
+              <p className="vton-preview-label">Live preview</p>
+              <button
+                type="button"
+                className="vton-preview-button"
+                disabled
+                style={{
+                  backgroundColor: widgetBg || "#000000",
+                  color: getContrastTextColor(
+                    widgetBg || "#000000",
+                    widgetColor || "#ffffff",
+                  ),
+                }}
+              >
+                {widgetText || "Try It On Now ✨"}
+              </button>
+            </div>
 
-        {(fetcher.data as any)?.error && showErrorBanner && (
-          <div style={{ marginBottom: "var(--spacing-lg)" }}>
-            <Banner 
-              tone="critical"
-              onDismiss={() => {
-                setShowErrorBanner(false);
-              }}
-            >
-              Error: {(fetcher.data as any).error}
-            </Banner>
-          </div>
-        )}
+            <div className="vton-panel">
+              <h2 className="vton-panel-title" style={{ marginBottom: 16 }}>
+                Button style
+              </h2>
+              <form onSubmit={handleSave}>
+                <BlockStack gap="400">
+                  <TextField
+                    label="Button text"
+                    name="widgetText"
+                    value={widgetText}
+                    onChange={setWidgetText}
+                    autoComplete="off"
+                    helpText="Text shown on the try-on button"
+                  />
 
-        <Layout>
-          <Layout.Section>
-            <Card>
-              <BlockStack gap="500">
-                <div>
-                  <Text as="h2" variant="headingLg" fontWeight="semibold">
-                    Widget Settings
-                  </Text>
-                </div>
-
-                <Divider />
-
-                <form onSubmit={handleSave}>
-                  <BlockStack gap="500">
-                    <TextField
-                      label="Button Text"
-                      name="widgetText"
-                      value={widgetText}
-                      onChange={setWidgetText}
-                      autoComplete="off"
-                      helpText="The text displayed on the widget button"
-                    />
-
-                    <BlockStack gap="200">
-                      <Text as="p" variant="bodyMd" fontWeight="medium">
-                        Background Color
-                      </Text>
-                      <InlineStack gap="300" align="start">
-                        <input
-                          type="color"
+                  <BlockStack gap="100">
+                    <Text as="p" variant="bodyMd" fontWeight="medium">
+                      Background color
+                    </Text>
+                    <div className="vton-color-row">
+                      <input
+                        type="color"
+                        value={widgetBg}
+                        onChange={(e) => setWidgetBg(e.target.value)}
+                        aria-label="Background color picker"
+                      />
+                      <div className="vton-color-field">
+                        <TextField
+                          label="Hex code"
+                          name="widgetBg"
                           value={widgetBg}
-                          onChange={(e) => setWidgetBg(e.target.value)}
-                          style={{
-                            width: "60px",
-                            height: "40px",
-                            border: "1px solid #e1e3e5",
-                            borderRadius: "4px",
-                            cursor: "pointer",
-                          }}
+                          onChange={setWidgetBg}
+                          autoComplete="off"
                         />
-                        <Box minWidth="200px" style={{ flex: 1 }}>
-                          <TextField
-                            label=""
-                            name="widgetBg"
-                            value={widgetBg}
-                            onChange={setWidgetBg}
-                            autoComplete="off"
-                            helpText="Hexadecimal color code"
-                          />
-                        </Box>
-                      </InlineStack>
-                    </BlockStack>
-
-                    <BlockStack gap="200">
-                      <Text as="p" variant="bodyMd" fontWeight="medium">
-                        Text Color
-                      </Text>
-                      <InlineStack gap="300" align="start">
-                        <input
-                          type="color"
-                          value={widgetColor}
-                          onChange={(e) => setWidgetColor(e.target.value)}
-                          style={{
-                            width: "60px",
-                            height: "40px",
-                            border: "1px solid #e1e3e5",
-                            borderRadius: "4px",
-                            cursor: "pointer",
-                          }}
-                        />
-                        <Box minWidth="200px" style={{ flex: 1 }}>
-                          <TextField
-                            label=""
-                            name="widgetColor"
-                            value={widgetColor}
-                            onChange={setWidgetColor}
-                            autoComplete="off"
-                            helpText="Hexadecimal color code"
-                          />
-                        </Box>
-                      </InlineStack>
-                    </BlockStack>
-
-                    <Divider />
-
-                    <Button 
-                      submit 
-                      variant="primary" 
-                      loading={fetcher.state === "submitting"}
-                      size="large"
-                      className="save-config-button"
-                      style={{
-                        backgroundColor: "#000000",
-                        color: "#ffffff",
-                        borderColor: "#000000"
-                      }}
-                    >
-                      <span style={{ color: "#ffffff" }}>Save Configuration</span>
-                    </Button>
-                  </BlockStack>
-                </form>
-
-                <Divider />
-
-                <BlockStack gap="300">
-                  <Text as="h3" variant="headingMd" fontWeight="semibold">
-                    Real-time Preview
-                  </Text>
-                  <Text variant="bodySm" tone="subdued" as="p">
-                    Here is a preview of your widget as it will appear on your product pages. Changes are applied in real-time.
-                  </Text>
-                  <Card>
-                    <div style={{ padding: "16px" }}>
-                      <div 
-                        className="vton-widget-preview"
-                        style={{
-                          width: "100%",
-                          margin: "16px 0",
-                        }}
-                      >
-                        <button
-                          type="button"
-                          className="vton-button-preview"
-                          disabled
-                          style={{
-                            width: "100%",
-                            padding: "14px 24px",
-                            border: "none",
-                            borderRadius: "4px",
-                            fontSize: "16px",
-                            fontWeight: 600,
-                            cursor: "default",
-                            transition: "opacity 0.2s",
-                            backgroundColor: widgetBg || "#000000",
-                            color: getContrastTextColor(widgetBg || "#000000", widgetColor || "#ffffff"),
-                          }}
-                        >
-                          {widgetText || "Try It On Now ✨"}
-                        </button>
                       </div>
                     </div>
-                  </Card>
+                  </BlockStack>
+
+                  <BlockStack gap="100">
+                    <Text as="p" variant="bodyMd" fontWeight="medium">
+                      Text color
+                    </Text>
+                    <div className="vton-color-row">
+                      <input
+                        type="color"
+                        value={widgetColor}
+                        onChange={(e) => setWidgetColor(e.target.value)}
+                        aria-label="Text color picker"
+                      />
+                      <div className="vton-color-field">
+                        <TextField
+                          label="Hex code"
+                          name="widgetColor"
+                          value={widgetColor}
+                          onChange={setWidgetColor}
+                          autoComplete="off"
+                        />
+                      </div>
+                    </div>
+                  </BlockStack>
+
+                  <Button submit variant="primary" loading={fetcher.state === "submitting"}>
+                    Save changes
+                  </Button>
                 </BlockStack>
-
-                <Divider />
-
-                <BlockStack gap="300">
-                  <Text as="h3" variant="headingMd" fontWeight="semibold">
-                    Current Values in Database
-                  </Text>
-                  <Text variant="bodySm" tone="subdued" as="p">
-                    <strong>Text:</strong> {shop?.widget_text || "Not defined"}
-                  </Text>
-                  <Text variant="bodySm" tone="subdued" as="p">
-                    <strong>Background Color:</strong> {shop?.widget_bg || "Not defined"}
-                  </Text>
-                  <Text variant="bodySm" tone="subdued" as="p">
-                    <strong>Text Color:</strong> {shop?.widget_color || "Not defined"}
-                  </Text>
-                </BlockStack>
-
-              </BlockStack>
-            </Card>
-          </Layout.Section>
-        </Layout>
+              </form>
+              <p className="vton-field-hint" style={{ marginTop: 16 }}>
+                Saved: {shop?.widget_text || "—"} · {shop?.widget_bg || "—"} ·{" "}
+                {shop?.widget_color || "—"}
+              </p>
+            </div>
+          </div>
+        </AdminPage>
       </div>
     </Page>
   );

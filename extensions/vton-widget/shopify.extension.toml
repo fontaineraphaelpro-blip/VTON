@@ -12,7 +12,3 @@ type = "theme_app_extension"
 command = ""
 watch = []
 
-[[extension_points]]
-target = "app_embed"
-module = "./blocks/block.liquid"
-

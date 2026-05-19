@@ -1,0 +1,572 @@
+/* VTON Admin UI v2 — simple, clear, premium feel */
+
+.vton-admin {
+  --vton-bg: #f6f7f8;
+  --vton-surface: #ffffff;
+  --vton-border: #e3e5e8;
+  --vton-text: #1a1c1e;
+  --vton-muted: #6b7177;
+  --vton-soft: #9aa0a6;
+  --vton-brand: #008060;
+  --vton-brand-dark: #004c3f;
+  --vton-brand-soft: #e8f5f1;
+  --vton-shadow: 0 1px 2px rgba(26, 28, 30, 0.06), 0 8px 24px rgba(26, 28, 30, 0.04);
+  --vton-radius: 12px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.vton-admin .app-container {
+  max-width: 1120px !important;
+  margin: 0 auto !important;
+  padding: 20px 20px 32px !important;
+  background: var(--vton-bg);
+}
+
+.vton-admin .Polaris-Page {
+  background: transparent !important;
+}
+
+.vton-admin .Polaris-Page__Content {
+  padding: 0 !important;
+}
+
+/* Page header */
+.vton-page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.vton-page-title {
+  font-size: 22px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  color: var(--vton-text);
+  margin: 0 0 4px;
+}
+
+.vton-page-subtitle {
+  font-size: 14px;
+  color: var(--vton-muted);
+  margin: 0;
+  line-height: 1.45;
+  max-width: 52ch;
+}
+
+.vton-page-actions {
+  flex-shrink: 0;
+}
+
+/* Hero strip */
+.vton-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 18px 20px;
+  margin-bottom: 20px;
+  border-radius: var(--vton-radius);
+  background: linear-gradient(135deg, #004c3f 0%, #008060 55%, #0a9b7a 100%);
+  color: #fff;
+  box-shadow: var(--vton-shadow);
+}
+
+.vton-hero-title {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0 0 6px;
+  opacity: 0.95;
+}
+
+.vton-hero-desc {
+  font-size: 13px;
+  margin: 0;
+  opacity: 0.85;
+}
+
+.vton-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.vton-status-pill::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.vton-status-pill.is-on {
+  color: #b8f5d8;
+}
+
+.vton-status-pill.is-off {
+  color: #ffd6a8;
+}
+
+.vton-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.vton-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.vton-btn--primary {
+  background: #fff;
+  color: var(--vton-brand-dark);
+}
+
+.vton-btn--ghost {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.vton-btn--secondary {
+  background: var(--vton-surface);
+  color: var(--vton-text);
+  border: 1px solid var(--vton-border);
+}
+
+.vton-btn:hover {
+  opacity: 0.92;
+}
+
+/* Metrics */
+.vton-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.vton-metric-card {
+  background: var(--vton-surface);
+  border: 1px solid var(--vton-border);
+  border-radius: var(--vton-radius);
+  padding: 16px;
+  box-shadow: var(--vton-shadow);
+}
+
+.vton-metric-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--vton-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0 0 8px;
+}
+
+.vton-metric-value {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--vton-text);
+  margin: 0;
+  line-height: 1.1;
+}
+
+.vton-metric-hint {
+  font-size: 12px;
+  color: var(--vton-soft);
+  margin: 6px 0 0;
+}
+
+/* Panels */
+.vton-panel {
+  background: var(--vton-surface);
+  border: 1px solid var(--vton-border);
+  border-radius: var(--vton-radius);
+  padding: 18px;
+  margin-bottom: 16px;
+  box-shadow: var(--vton-shadow);
+}
+
+.vton-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.vton-panel-title {
+  font-size: 15px;
+  font-weight: 650;
+  color: var(--vton-text);
+  margin: 0;
+}
+
+.vton-panel-link {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--vton-brand);
+  text-decoration: none;
+}
+
+.vton-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+/* Setup steps */
+.vton-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.vton-step {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 12px;
+  border-radius: 10px;
+  background: var(--vton-bg);
+  border: 1px solid var(--vton-border);
+}
+
+.vton-step-num {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--vton-brand-soft);
+  color: var(--vton-brand-dark);
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.vton-step-text {
+  font-size: 13px;
+  color: var(--vton-muted);
+  margin: 0;
+  line-height: 1.45;
+}
+
+.vton-step-text strong {
+  color: var(--vton-text);
+}
+
+/* Lists */
+.vton-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--vton-border);
+  font-size: 14px;
+}
+
+.vton-list-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.vton-empty {
+  padding: 28px 16px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--vton-soft);
+  background: var(--vton-bg);
+  border-radius: 10px;
+  border: 1px dashed var(--vton-border);
+}
+
+/* Widget preview */
+.vton-preview-wrap {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+.vton-preview-card {
+  padding: 20px;
+  border-radius: var(--vton-radius);
+  background: linear-gradient(160deg, #f3f4f6 0%, #e8eaed 100%);
+  border: 1px solid var(--vton-border);
+  text-align: center;
+}
+
+.vton-preview-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--vton-soft);
+  margin: 0 0 14px;
+}
+
+.vton-preview-button {
+  display: inline-block;
+  width: 100%;
+  max-width: 220px;
+  padding: 14px 20px;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  border: none;
+  cursor: default;
+  word-break: break-word;
+}
+
+/* Widget page — color row (replaces fragile Polaris Box + InlineStack on mobile) */
+.vton-color-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.vton-color-row input[type="color"] {
+  width: 56px;
+  height: 44px;
+  flex-shrink: 0;
+  border: 1px solid var(--vton-border);
+  border-radius: 8px;
+  cursor: pointer;
+  padding: 2px;
+}
+
+.vton-color-row .vton-color-field {
+  flex: 1 1 160px;
+  min-width: 0;
+}
+
+.vton-admin .vton-panel .Polaris-TextField,
+.vton-admin .vton-panel .Polaris-BlockStack {
+  max-width: none;
+}
+
+/* Products / history tables scroll on small screens */
+.vton-admin .Polaris-DataTable,
+.vton-admin .history-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.vton-admin .Polaris-Layout,
+.vton-admin .Polaris-Layout__Section {
+  max-width: 100%;
+}
+
+/* Settings form */
+.vton-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.vton-field label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--vton-text);
+  margin-bottom: 6px;
+}
+
+.vton-field input[type="number"],
+.vton-field .vton-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--vton-border);
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.vton-field-hint {
+  font-size: 12px;
+  color: var(--vton-soft);
+  margin: 6px 0 0;
+}
+
+/* Alerts stack */
+.vton-alerts {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+/* Credits page alignment */
+.vton-admin .credits-page .credits-top-title,
+.vton-admin .app-title {
+  font-size: 22px !important;
+  font-weight: 650 !important;
+}
+
+.vton-admin .plan-card--compact {
+  border-radius: var(--vton-radius) !important;
+  border: 1px solid var(--vton-border) !important;
+  box-shadow: var(--vton-shadow) !important;
+  padding: 16px 14px !important;
+}
+
+.vton-admin .plan-card--compact.featured {
+  border-color: var(--vton-brand) !important;
+  box-shadow: 0 0 0 1px var(--vton-brand), var(--vton-shadow) !important;
+}
+
+.vton-admin .plan-button-featured {
+  background: var(--vton-brand) !important;
+}
+
+/* Graph — cleaner */
+.vton-admin .graph-container-large {
+  min-height: 180px;
+  padding: 16px 8px 8px;
+  background: var(--vton-bg);
+  border-radius: 10px;
+  margin: 0;
+}
+
+.vton-admin .graph-bar {
+  background: #c5e8dc !important;
+  border-radius: 6px 6px 0 0 !important;
+}
+
+.vton-admin .graph-bar-today {
+  background: var(--vton-brand) !important;
+}
+
+@media (max-width: 900px) {
+  .vton-admin .app-container {
+    padding: 16px 14px 24px !important;
+  }
+
+  .vton-metric-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .vton-grid-2,
+  .vton-preview-wrap,
+  .vton-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .vton-page-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .vton-page-actions {
+    width: 100%;
+  }
+
+  .vton-hero {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .vton-hero-actions {
+    width: 100%;
+  }
+
+  .vton-hero-actions .vton-btn {
+    flex: 1 1 auto;
+    min-width: 0;
+    text-align: center;
+  }
+
+  .vton-list-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .vton-panel-header {
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 520px) {
+  .vton-admin .app-container {
+    padding: 12px 10px 20px !important;
+  }
+
+  .vton-page-title {
+    font-size: 20px;
+  }
+
+  .vton-metric-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .vton-metric-value {
+    font-size: 22px;
+  }
+
+  .vton-hero-actions {
+    flex-direction: column;
+  }
+
+  .vton-hero-actions .vton-btn {
+    width: 100%;
+  }
+
+  .vton-admin .credits-balance-compact {
+    width: 100%;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    text-align: left;
+  }
+}
+
+.vton-admin .credits-balance-compact {
+  background: var(--vton-surface);
+  border: 1px solid var(--vton-border);
+  border-radius: var(--vton-radius);
+  padding: 12px 18px;
+  text-align: center;
+  box-shadow: var(--vton-shadow);
+  min-width: 120px;
+}
+
+.vton-admin .credits-balance-compact-value {
+  display: block;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--vton-brand-dark);
+}
+
+.vton-admin .credits-balance-compact-label {
+  font-size: 12px;
+  color: var(--vton-muted);
+  font-weight: 600;
+}

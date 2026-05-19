@@ -19,6 +19,7 @@ import {
   Checkbox,
 } from "@shopify/polaris";
 import { TitleBar } from "@shopify/app-bridge-react";
+import { AdminPage } from "../components/AdminPage";
 import { authenticate } from "../shopify.server";
 import { getProductTryonCounts, setProductTryonSetting, getProductTryonSettingsBatch } from "../lib/services/db.service";
 
@@ -321,44 +322,44 @@ export default function Products() {
   return (
     <Page>
       <TitleBar title="Products - VTON Magic" />
-      <Layout>
-        <Layout.Section>
-          <BlockStack gap="600">
-            {error && (
-              <Banner 
-                tone="critical" 
+      <div className="app-container">
+        <AdminPage
+          title="Products"
+          subtitle="Enable or disable virtual try-on per product"
+        >
+          {error && (
+            <div className="vton-alerts">
+              <Banner
+                tone="critical"
                 title={(loaderData as any)?.requiresAuth ? "Authentication Required" : "Error"}
-                action={(loaderData as any)?.requiresAuth && (loaderData as any)?.reauthUrl ? {
-                  content: "Re-authenticate",
-                  url: (loaderData as any).reauthUrl,
-                  target: "_top",
-                } : undefined}
+                action={
+                  (loaderData as any)?.requiresAuth && (loaderData as any)?.reauthUrl
+                    ? {
+                        content: "Re-authenticate",
+                        url: (loaderData as any).reauthUrl,
+                        target: "_top",
+                      }
+                    : undefined
+                }
               >
                 {error}
               </Banner>
-            )}
+            </div>
+          )}
 
-            <Card>
+          <div className="vton-panel">
+            <div className="vton-panel-header">
+              <div>
+                <h2 className="vton-panel-title">Catalog</h2>
+                <p className="vton-field-hint" style={{ margin: "4px 0 0" }}>
+                  {products.length} product{products.length !== 1 ? "s" : ""}
+                </p>
+              </div>
+              <Button url="shopify:admin/products/new" target="_blank" variant="primary">
+                Create product
+              </Button>
+            </div>
               <BlockStack gap="400">
-                <InlineStack align="space-between" blockAlign="center">
-                  <BlockStack gap="200">
-                    <Text as="h2" variant="headingLg" fontWeight="semibold">
-                      Your Products
-                    </Text>
-                    <Text variant="bodyMd" tone="subdued" as="p">
-                      {products.length} product{products.length > 1 ? "s" : ""} available
-                    </Text>
-                  </BlockStack>
-                  <Button
-                    url="shopify:admin/products/new"
-                    target="_blank"
-                    variant="primary"
-                  >
-                    Create Product
-                  </Button>
-                </InlineStack>
-
-                <Divider />
 
                 {products.length === 0 ? (
                   <EmptyState
@@ -412,10 +413,9 @@ export default function Products() {
                   </>
                 )}
               </BlockStack>
-            </Card>
-          </BlockStack>
-        </Layout.Section>
-      </Layout>
+          </div>
+        </AdminPage>
+      </div>
     </Page>
   );
 }
