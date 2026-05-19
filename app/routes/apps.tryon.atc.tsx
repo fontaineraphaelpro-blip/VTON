@@ -6,8 +6,7 @@ import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { upsertShop } from "../lib/services/db.service";
 import {
-  verifyShopifyProxySignature,
-  isShopifyStorefrontRequest,
+  isAuthorizedStorefrontApiRequest,
   storefrontCorsHeaders,
 } from "../lib/proxy-verify.server";
 
@@ -30,30 +29,6 @@ function corsHeadersFor(request: Request): Headers {
   headers.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   headers.set("Access-Control-Max-Age", "86400");
   return headers;
-}
-
-function isAuthorizedProxyRequest(
-  request: Request,
-  queryParams: URLSearchParams
-): boolean {
-  const shopParam = queryParams.get("shop");
-  if (verifyShopifyProxySignature(queryParams, SHOPIFY_API_SECRET)) {
-    return true;
-  }
-  if (isShopifyStorefrontRequest(request, shopParam)) {
-    return true;
-  }
-  // Custom domain storefront: same-origin request via App Proxy (no .myshopify.com in Origin)
-  const referer = request.headers.get("referer") || "";
-  const host = request.headers.get("host") || "";
-  if (referer && host) {
-    try {
-      if (new URL(referer).host === host) return true;
-    } catch {
-      // ignore invalid referer
-    }
-  }
-  return false;
 }
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -79,7 +54,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   try {
     const queryParams = new URL(request.url).searchParams;
 
-    if (!isAuthorizedProxyRequest(request, queryParams)) {
+    if (
+      !isAuthorizedStorefrontApiRequest(request, queryParams, SHOPIFY_API_SECRET)
+    ) {
       return json(
         { error: "Invalid signature - request not from Shopify" },
         { status: 403, headers }

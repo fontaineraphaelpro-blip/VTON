@@ -1,4 +1,4 @@
-﻿    (function() {
+(function() {
       'use strict';
 
       var isProduction = !/localhost|127\.0\.0\.1/.test(window.location.hostname) && window.location.search.indexOf('vton_debug') === -1;
@@ -56,14 +56,33 @@
         });
       }
 
-      var bootIdleMs = (window.VTON_LIQUID && window.VTON_LIQUID.productId) ? 200 : 2000;
+      function startWidgetBoot() {
+        var bootIdleMs =
+          isProductPageContext() && (window.VTON_LIQUID && window.VTON_LIQUID.productId)
+            ? 100
+            : 800;
+        runWhenIdle(bootWidgetWithRetries, bootIdleMs);
+      }
+
+      function waitForConfigThenBoot() {
+        if (window.VTON_LIQUID) {
+          startWidgetBoot();
+          return;
+        }
+        var tries = 0;
+        var timer = setInterval(function() {
+          tries++;
+          if (window.VTON_LIQUID || tries >= 40) {
+            clearInterval(timer);
+            startWidgetBoot();
+          }
+        }, 50);
+      }
 
       if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', function() {
-          runWhenIdle(bootWidgetWithRetries, bootIdleMs);
-        }, { once: true });
+        document.addEventListener('DOMContentLoaded', waitForConfigThenBoot, { once: true });
       } else {
-        runWhenIdle(bootWidgetWithRetries, bootIdleMs);
+        waitForConfigThenBoot();
       }
 
       function vtonScheduleRetryBoot() {
@@ -126,12 +145,19 @@
       }
 
       function applyTryonStatus(status, shop, productId, productHandle) {
-        if (status && typeof status.enabled === 'boolean' && !status.error) {
+        if (status && status.enabled === true && !status.error) {
           writeStatusCache(shop, productId, status);
         }
         if (status && status.enabled === true) {
           queueWidgetRender(shop, productId, productHandle, status.widget_settings || {});
-        } else if (!status || status.enabled !== true) {
+          return;
+        }
+        if (status && status.error && isProductPageContext()) {
+          warn('[VTON] Status check failed — showing widget optimistically:', status.error);
+          queueWidgetRender(shop, productId, productHandle, (status && status.widget_settings) || {});
+          return;
+        }
+        if (!status || status.enabled !== true) {
           removeWidgetContainer();
         }
       }
@@ -357,27 +383,28 @@
         return null;
       }
       
-      function checkStatus(shop, productId, productHandle) {
-        var appProxyUrl =
-          window.location.origin +
-          '/apps/tryon/status?shop=' +
+      function buildStatusQuery(shop, productId, productHandle) {
+        var q =
+          'shop=' +
           encodeURIComponent(shop) +
           '&product_id=' +
           encodeURIComponent(productId);
         if (productHandle) {
-          appProxyUrl += '&product_handle=' + encodeURIComponent(productHandle);
+          q += '&product_handle=' + encodeURIComponent(productHandle);
         }
+        return q;
+      }
 
+      function fetchStatusUrl(url) {
         var controller = new AbortController();
-        var timeoutId = setTimeout(function() { controller.abort(); }, 1500);
+        var timeoutId = setTimeout(function() { controller.abort(); }, 6000);
 
-        return fetch(appProxyUrl, {
+        return fetch(url, {
           method: 'GET',
           headers: { Accept: 'application/json' },
           signal: controller.signal,
           credentials: 'same-origin',
-          cache: 'default',
-          priority: 'low'
+          cache: 'no-store'
         })
           .then(function(response) {
             clearTimeout(timeoutId);
@@ -388,6 +415,24 @@
           })
           .catch(function(err) {
             clearTimeout(timeoutId);
+            throw err;
+          });
+      }
+
+      function checkStatus(shop, productId, productHandle) {
+        var query = buildStatusQuery(shop, productId, productHandle);
+        var proxyUrl = window.location.origin + '/apps/tryon/status?' + query;
+        var liquid = window.VTON_LIQUID || {};
+        var appBase = (liquid.appUrl || '').replace(/\/$/, '');
+        var directUrl = appBase ? appBase + '/apps/tryon/status?' + query : null;
+
+        return fetchStatusUrl(proxyUrl)
+          .catch(function(proxyErr) {
+            warn('[VTON] App Proxy status failed:', proxyErr.message || proxyErr);
+            if (!directUrl) throw proxyErr;
+            return fetchStatusUrl(directUrl);
+          })
+          .catch(function(err) {
             if (err.name === 'AbortError') {
               warn('[VTON] Status check timed out');
               return { enabled: false, error: 'timeout' };
@@ -2136,7 +2181,7 @@
       }
       
       function pollJobStatus(shadowRoot, state, jobId, loading, result, generateBtn) {
-        const maxAttempts = 48;
+        const maxAttempts = 80;
         let attempts = 0;
         let consecutiveErrors = 0;
         let pollInterval = null;

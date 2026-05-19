@@ -20,6 +20,7 @@ import { useAdminNotifications, useNotificationSync } from "../hooks/useAdminNot
 import { useFetcherNotifications } from "../hooks/useFetcherNotifications";
 import { authenticate } from "../shopify.server";
 import { getShop, upsertShop, getTryonLogs, getTopProducts, getTryonStatsByDay, getMonthlyTryonUsage, query } from "../lib/services/db.service";
+import { getAppEmbedActivationUrl } from "../lib/theme-editor-url.server";
 
 const REVIEW_URL = "https://apps.shopify.com/try-on-stylelab";
 
@@ -412,7 +413,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       });
     }
 
-    // NOTE: Widget uses App Embed Block (block.liquid). To install: Online Store > Themes > Customize > Product template > App embeds > Enable "Virtual Try-On Widget"
+    // Widget: Theme editor → App embeds (sidebar) → enable "Virtual Try-On Widget" (vton-widget.liquid)
 
     // Check if review prompt should be shown
     let shouldShowReview = false;
@@ -430,6 +431,11 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       }
     }
 
+    const themeEditorAppEmbedsUrl = getAppEmbedActivationUrl(
+      shop,
+      process.env.SHOPIFY_API_KEY || "",
+    );
+
     return json({
       shop: shopData || null,
       recentLogs: Array.isArray(enrichedRecentLogs) ? enrichedRecentLogs.slice(0, 5) : [],
@@ -439,6 +445,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       totalTryons: totalTryons || 0, // ADDED: Total try-ons (calculated or from shop)
       shouldShowReview: shouldShowReview, // ADDED: Review prompt flag
       reviewUrl: REVIEW_URL, // ADDED: Review URL
+      themeEditorAppEmbedsUrl,
     });
   } catch (error) {
     // Log error only in development
@@ -629,6 +636,7 @@ export default function Dashboard() {
   const error = (loaderData as any).error || null;
   const shouldShowReview = (loaderData as any).shouldShowReview || false;
   const reviewUrl = (loaderData as any).reviewUrl || "https://apps.shopify.com/try-on-stylelab";
+  const themeEditorAppEmbedsUrl = (loaderData as any).themeEditorAppEmbedsUrl || "";
 
   const notifications = useAdminNotifications();
   const { notifications: notifyItems, dismiss } = notifications;
@@ -753,12 +761,18 @@ export default function Dashboard() {
         title: "Add the widget to your theme",
         message: (
           <>
-            In <strong>Online Store → Themes → Customize → App embeds</strong>, enable
-            &quot;Virtual Try-On Widget&quot; on your product template.
+            Open the theme editor, then <strong>App embeds</strong> in the left sidebar (not inside a
+            product section). Turn on <strong>Virtual Try-On Widget</strong> and save.
           </>
         ),
         persistDismiss: true,
         autoHideMs: false as const,
+        action: themeEditorAppEmbedsUrl
+          ? {
+              label: "Open App embeds",
+              onAction: () => window.open(themeEditorAppEmbedsUrl, "_top"),
+            }
+          : undefined,
       },
       {
         id: "dashboard-review",
@@ -852,6 +866,7 @@ export default function Dashboard() {
     showAppEmbedBanner,
     shouldShowReview,
     reviewUrl,
+    themeEditorAppEmbedsUrl,
     error,
     isEnabled,
     credits,

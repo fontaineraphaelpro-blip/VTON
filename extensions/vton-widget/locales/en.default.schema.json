@@ -1,0 +1,17 @@
+{
+  "blocks": {
+    "vton-widget": {
+      "name": "Virtual Try-On Widget",
+      "settings": {
+        "anchor_selector": {
+          "label": "Custom button placement (optional)",
+          "info": "CSS selector for button placement on custom themes (e.g. .product-form__buttons). Leave empty for automatic detection + fallback."
+        },
+        "app_url": {
+          "label": "App URL (fallback API)",
+          "info": "Used if the App Proxy request fails. Normally leave the default."
+        }
+      }
+    }
+  }
+}

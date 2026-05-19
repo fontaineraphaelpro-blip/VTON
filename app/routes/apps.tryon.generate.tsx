@@ -15,8 +15,8 @@ import { json } from "@remix-run/node";
 import { generateTryOn } from "../lib/services/replicate.service";
 import { getShop, upsertShop, createTryonLog, updateTryonLog, getMonthlyTryonUsage, getDailyTryonUsage, getCustomerDailyTryonUsage, query } from "../lib/services/db.service";
 import {
-  verifyShopifyProxySignature,
-  isShopifyStorefrontRequest,
+  isAuthorizedStorefrontApiRequest,
+  storefrontCorsHeaders,
 } from "../lib/proxy-verify.server";
 
 const SHOPIFY_API_SECRET = process.env.SHOPIFY_API_SECRET || "";
@@ -55,22 +55,10 @@ function convertBase64ToUrl(base64Data: string): string {
   return base64Data;
 }
 
-/**
- * Helper function to get CORS headers for Shopify storefront requests
- */
 function getCorsHeaders(request: Request): Headers {
-  const origin = request.headers.get("origin") || "";
-  const referer = request.headers.get("referer") || "";
-  const isFromShopifyStorefront = origin.includes(".myshopify.com") || referer.includes(".myshopify.com");
-  
-  const headers = new Headers();
-  if (isFromShopifyStorefront) {
-    headers.set("Access-Control-Allow-Origin", origin || "*");
-    headers.set("Access-Control-Allow-Methods", "POST, OPTIONS");
-    headers.set("Access-Control-Allow-Headers", "Content-Type");
-    headers.set("Access-Control-Max-Age", "86400"); // 24 hours
-  }
-  
+  const headers = storefrontCorsHeaders(request);
+  headers.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+  headers.set("Access-Control-Max-Age", "86400");
   return headers;
 }
 
@@ -116,13 +104,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const queryParams = url.searchParams;
 
     // 1. Verify Shopify signature OR check if request comes from storefront
-    const shopParam = queryParams.get("shop");
-    const hasValidSignature = verifyShopifyProxySignature(
-      queryParams,
-      SHOPIFY_API_SECRET
-    );
-
-    if (!hasValidSignature && !isShopifyStorefrontRequest(request, shopParam)) {
+    if (
+      !isAuthorizedStorefrontApiRequest(request, queryParams, SHOPIFY_API_SECRET)
+    ) {
       return json(
         { error: "Invalid signature - request not from Shopify" },
         { status: 403, headers: corsHeaders }

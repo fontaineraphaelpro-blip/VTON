@@ -4,10 +4,12 @@
 
 import type { LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
-import { getProductTryonStatus } from "../lib/services/db.service";
 import {
-  verifyShopifyProxySignature,
-  isShopifyStorefrontRequest,
+  getProductTryonStatus,
+  getShop,
+} from "../lib/services/db.service";
+import {
+  isAuthorizedStorefrontApiRequest,
   storefrontCorsHeaders,
 } from "../lib/proxy-verify.server";
 import {
@@ -39,19 +41,29 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     const queryParams = url.searchParams;
     const shopParam = queryParams.get("shop");
 
-    const hasValidSignature = verifyShopifyProxySignature(
+    let authorized = isAuthorizedStorefrontApiRequest(
+      request,
       queryParams,
       SHOPIFY_API_SECRET
     );
 
-    if (!hasValidSignature && !isShopifyStorefrontRequest(request, shopParam)) {
+    const shop = extractShopFromProxy(queryParams);
+
+    // Last resort: installed shop + product_id (widget same-origin fetch without proxy params)
+    if (!authorized && shop && queryParams.get("product_id")) {
+      const shopRecord = await getShop(shop);
+      if (shopRecord) {
+        authorized = true;
+      }
+    }
+
+    if (!authorized) {
       return json(
         { error: "Invalid signature - request not from Shopify" },
-        { status: 403 }
+        { status: 403, headers: storefrontCorsHeaders(request) }
       );
     }
 
-    const shop = extractShopFromProxy(queryParams);
     if (!shop) {
       return json({ error: "Shop parameter missing" }, { status: 400 });
     }

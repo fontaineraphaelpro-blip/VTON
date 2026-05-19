@@ -16,14 +16,17 @@ import { useAdminNotifications, useNotificationSync } from "../hooks/useAdminNot
 import { useFetcherNotifications } from "../hooks/useFetcherNotifications";
 import { authenticate } from "../shopify.server";
 import { getShop, upsertShop } from "../lib/services/db.service";
+import { getAppEmbedActivationUrl } from "../lib/theme-editor-url.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
   const shop = session.shop;
+  const apiKey = process.env.SHOPIFY_API_KEY || "";
+  const themeEditorAppEmbedsUrl = getAppEmbedActivationUrl(shop, apiKey);
 
   try {
     const shopData = await getShop(shop);
-    return json({ shop: shopData || null });
+    return json({ shop: shopData || null, themeEditorAppEmbedsUrl });
   } catch (error) {
     return json({
       shop: null,
@@ -64,6 +67,8 @@ export default function Widget() {
   const loaderData = useLoaderData<typeof loader>();
   const fetcher = useFetcher<typeof action>();
   const shop = loaderData.shop ?? null;
+  const themeEditorAppEmbedsUrl =
+    "themeEditorAppEmbedsUrl" in loaderData ? loaderData.themeEditorAppEmbedsUrl : "";
   const error = "error" in loaderData ? loaderData.error : null;
 
   const notifications = useAdminNotifications();
@@ -112,12 +117,19 @@ export default function Widget() {
         title: "Enable on your theme",
         message: (
           <>
-            Go to <strong>Online Store → Themes → Customize → App embeds</strong> and turn on
-            &quot;Virtual Try-On Widget&quot; for each theme you use.
+            In the theme editor, open <strong>App embeds</strong> in the left sidebar (not
+            &quot;Add block&quot; on a section). Enable <strong>Virtual Try-On Widget</strong>,
+            then save.
           </>
         ),
         persistDismiss: true,
         autoHideMs: false as const,
+        action: themeEditorAppEmbedsUrl
+          ? {
+              label: "Open App embeds",
+              onAction: () => window.open(themeEditorAppEmbedsUrl, "_top"),
+            }
+          : undefined,
       },
       {
         id: "widget-loader-error",
@@ -128,7 +140,7 @@ export default function Widget() {
         message: error,
       },
     ],
-    [error],
+    [error, themeEditorAppEmbedsUrl],
   );
 
   useNotificationSync(staticNotifications, notifications);
