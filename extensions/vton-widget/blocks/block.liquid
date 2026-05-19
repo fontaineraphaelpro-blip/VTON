@@ -1,26 +1,63 @@
-﻿{% comment %} Legacy handle — keeps themes working after block rename to vton-widget.liquid {% endcomment %}
-{% render 'vton-embed-body' %}
+﻿{% comment %} Legacy handle "block" — keep for themes that enabled this before rename. {% endcomment %}
+
+<div
+  id="vton-embed-slot"
+  data-vton-embed-slot
+  data-vton-page-type="{{ request.page_type }}"
+  data-vton-template="{{ template.name }}"
+  data-vton-custom-anchor="{{ block.settings.anchor_selector | escape }}"
+  data-vton-app-url="{{ block.settings.app_url | default: 'https://vton-production-890a.up.railway.app' | escape }}"
+  {% if product %}
+    data-vton-product-id="gid://shopify/Product/{{ product.id }}"
+    data-vton-product-handle="{{ product.handle | escape }}"
+  {% endif %}
+  style="display:none;width:100%;max-width:100%;margin:16px 0;box-sizing:border-box;"
+  aria-hidden="true"
+></div>
+
+<script>
+  (function () {
+    if (window.VTON_LIQUID) return;
+    var slot = document.getElementById('vton-embed-slot');
+    var productId = slot && slot.getAttribute('data-vton-product-id');
+    var productHandle = slot && slot.getAttribute('data-vton-product-handle');
+    if (!productId && window.location.pathname.indexOf('/products/') !== -1) {
+      var m = window.location.pathname.match(/\/products\/([^/?#]+)/);
+      if (m) productHandle = m[1];
+    }
+    window.VTON_LIQUID = {
+      productId: productId || null,
+      productHandle: productHandle || null,
+      customAnchor: (slot && slot.getAttribute('data-vton-custom-anchor')) || '',
+      appUrl: (slot && slot.getAttribute('data-vton-app-url')) || 'https://vton-production-890a.up.railway.app',
+      pageType: (slot && slot.getAttribute('data-vton-page-type')) || '',
+      templateName: (slot && slot.getAttribute('data-vton-template')) || ''
+    };
+  })();
+</script>
+<script src="{{ 'vton-widget.js' | asset_url }}" defer></script>
 
 {% schema %}
 {
-  "name": "Virtual Try-On Widget",
+  "name": "Virtual Try-On (legacy)",
   "target": "body",
-  "enabled_on": {
-    "templates": ["product"]
-  },
   "settings": [
+    {
+      "type": "paragraph",
+      "content": "If you also see “Virtual Try-On”, enable only one embed to avoid duplicates."
+    },
     {
       "type": "text",
       "id": "anchor_selector",
       "label": "Custom button placement (optional)",
-      "info": "CSS selector for button placement on custom themes (e.g. .product-form__buttons). Leave empty for automatic detection + fallback."
+      "info": "CSS selector (e.g. .product-form__buttons). Leave empty for automatic placement."
     },
     {
       "type": "text",
       "id": "app_url",
-      "label": "App URL (fallback API)",
+      "label": "App URL (fallback)",
       "default": "https://vton-production-890a.up.railway.app",
-      "info": "Used if the App Proxy request fails. Normally leave the default."
+      "info": "Leave default unless support told you otherwise."
     }
   ]
 }

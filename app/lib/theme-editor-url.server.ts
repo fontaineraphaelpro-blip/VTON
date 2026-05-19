@@ -1,4 +1,10 @@
-/** Deep link to Theme editor → App embeds for this app's block. */
+/** Theme editor → App embeds panel (lists all app embeds). */
+export function getThemeEditorAppEmbedsUrl(shop: string): string {
+  const shopDomain = shop.includes(".myshopify.com") ? shop : `${shop}.myshopify.com`;
+  return `https://${shopDomain}/admin/themes/current/editor?context=apps`;
+}
+
+/** Deep link to activate a specific app embed block. */
 export function getAppEmbedActivationUrl(
   shop: string,
   apiKey: string,

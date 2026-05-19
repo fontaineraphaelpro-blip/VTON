@@ -16,17 +16,22 @@ import { useAdminNotifications, useNotificationSync } from "../hooks/useAdminNot
 import { useFetcherNotifications } from "../hooks/useFetcherNotifications";
 import { authenticate } from "../shopify.server";
 import { getShop, upsertShop } from "../lib/services/db.service";
-import { getAppEmbedActivationUrl } from "../lib/theme-editor-url.server";
+import {
+  getAppEmbedActivationUrl,
+  getThemeEditorAppEmbedsUrl,
+} from "../lib/theme-editor-url.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
   const shop = session.shop;
   const apiKey = process.env.SHOPIFY_API_KEY || "";
-  const themeEditorAppEmbedsUrl = getAppEmbedActivationUrl(shop, apiKey);
-
   try {
     const shopData = await getShop(shop);
-    return json({ shop: shopData || null, themeEditorAppEmbedsUrl });
+    return json({
+      shop: shopData || null,
+      themeEditorAppEmbedsUrl: getThemeEditorAppEmbedsUrl(shop),
+      themeEditorActivateUrl: getAppEmbedActivationUrl(shop, apiKey, "vton-widget"),
+    });
   } catch (error) {
     return json({
       shop: null,
@@ -69,6 +74,8 @@ export default function Widget() {
   const shop = loaderData.shop ?? null;
   const themeEditorAppEmbedsUrl =
     "themeEditorAppEmbedsUrl" in loaderData ? loaderData.themeEditorAppEmbedsUrl : "";
+  const themeEditorActivateUrl =
+    "themeEditorActivateUrl" in loaderData ? loaderData.themeEditorActivateUrl : "";
   const error = "error" in loaderData ? loaderData.error : null;
 
   const notifications = useAdminNotifications();
@@ -114,20 +121,21 @@ export default function Widget() {
         show: true,
         tone: "info" as const,
         priority: 10,
-        title: "Enable on your theme",
+        title: "Activer le widget sur votre thème",
         message: (
           <>
-            In the theme editor, open <strong>App embeds</strong> in the left sidebar (not
-            &quot;Add block&quot; on a section). Enable <strong>Virtual Try-On Widget</strong>,
-            then save.
+            Boutique en ligne → <strong>Thèmes → Personnaliser</strong> → icône{" "}
+            <strong>Intégrations d&apos;applications</strong> (barre de gauche, pas « Ajouter un
+            bloc »). Activez <strong>Virtual Try-On</strong> sous l&apos;app Virtual Try-On, puis
+            enregistrez.
           </>
         ),
         persistDismiss: true,
         autoHideMs: false as const,
-        action: themeEditorAppEmbedsUrl
+        action: themeEditorActivateUrl
           ? {
-              label: "Open App embeds",
-              onAction: () => window.open(themeEditorAppEmbedsUrl, "_top"),
+              label: "Activer Virtual Try-On",
+              onAction: () => window.open(themeEditorActivateUrl, "_top"),
             }
           : undefined,
       },
@@ -140,7 +148,7 @@ export default function Widget() {
         message: error,
       },
     ],
-    [error, themeEditorAppEmbedsUrl],
+    [error, themeEditorActivateUrl],
   );
 
   useNotificationSync(staticNotifications, notifications);
@@ -189,6 +197,31 @@ export default function Widget() {
           subtitle="Customize the try-on button on your product pages"
         >
           <AdminNotifications items={items} onDismiss={dismiss} />
+
+          {(themeEditorActivateUrl || themeEditorAppEmbedsUrl) && (
+            <div className="vton-panel" style={{ marginBottom: 16 }}>
+              <h2 className="vton-panel-title">Installation sur le thème</h2>
+              <p className="vton-field-hint" style={{ marginBottom: 12 }}>
+                Le widget n&apos;apparaît pas via « Ajouter un bloc ». Utilisez les intégrations
+                d&apos;applications dans l&apos;éditeur de thème.
+              </p>
+              <BlockStack gap="200">
+                {themeEditorActivateUrl ? (
+                  <Button
+                    variant="primary"
+                    onClick={() => window.open(themeEditorActivateUrl, "_top")}
+                  >
+                    Activer Virtual Try-On
+                  </Button>
+                ) : null}
+                {themeEditorAppEmbedsUrl ? (
+                  <Button onClick={() => window.open(themeEditorAppEmbedsUrl, "_top")}>
+                    Ouvrir Intégrations d&apos;applications
+                  </Button>
+                ) : null}
+              </BlockStack>
+            </div>
+          )}
 
           <div className="vton-preview-wrap">
             <div className="vton-preview-card">

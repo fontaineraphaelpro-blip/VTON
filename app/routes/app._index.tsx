@@ -20,7 +20,10 @@ import { useAdminNotifications, useNotificationSync } from "../hooks/useAdminNot
 import { useFetcherNotifications } from "../hooks/useFetcherNotifications";
 import { authenticate } from "../shopify.server";
 import { getShop, upsertShop, getTryonLogs, getTopProducts, getTryonStatsByDay, getMonthlyTryonUsage, query } from "../lib/services/db.service";
-import { getAppEmbedActivationUrl } from "../lib/theme-editor-url.server";
+import {
+  getAppEmbedActivationUrl,
+  getThemeEditorAppEmbedsUrl,
+} from "../lib/theme-editor-url.server";
 
 const REVIEW_URL = "https://apps.shopify.com/try-on-stylelab";
 
@@ -431,10 +434,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       }
     }
 
-    const themeEditorAppEmbedsUrl = getAppEmbedActivationUrl(
-      shop,
-      process.env.SHOPIFY_API_KEY || "",
-    );
+    const apiKey = process.env.SHOPIFY_API_KEY || "";
 
     return json({
       shop: shopData || null,
@@ -445,7 +445,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       totalTryons: totalTryons || 0, // ADDED: Total try-ons (calculated or from shop)
       shouldShowReview: shouldShowReview, // ADDED: Review prompt flag
       reviewUrl: REVIEW_URL, // ADDED: Review URL
-      themeEditorAppEmbedsUrl,
+      themeEditorAppEmbedsUrl: getThemeEditorAppEmbedsUrl(shop),
+      themeEditorActivateUrl: getAppEmbedActivationUrl(shop, apiKey, "vton-widget"),
     });
   } catch (error) {
     // Log error only in development
@@ -637,6 +638,7 @@ export default function Dashboard() {
   const shouldShowReview = (loaderData as any).shouldShowReview || false;
   const reviewUrl = (loaderData as any).reviewUrl || "https://apps.shopify.com/try-on-stylelab";
   const themeEditorAppEmbedsUrl = (loaderData as any).themeEditorAppEmbedsUrl || "";
+  const themeEditorActivateUrl = (loaderData as any).themeEditorActivateUrl || "";
 
   const notifications = useAdminNotifications();
   const { notifications: notifyItems, dismiss } = notifications;
@@ -758,19 +760,20 @@ export default function Dashboard() {
         show: showAppEmbedBanner,
         tone: "info" as const,
         priority: 15,
-        title: "Add the widget to your theme",
+        title: "Activer le widget sur votre thème",
         message: (
           <>
-            Open the theme editor, then <strong>App embeds</strong> in the left sidebar (not inside a
-            product section). Turn on <strong>Virtual Try-On Widget</strong> and save.
+            Thèmes → Personnaliser → <strong>Intégrations d&apos;applications</strong> (icône à
+            gauche). Activez <strong>Virtual Try-On</strong> sous l&apos;app Virtual Try-On, puis
+            enregistrez.
           </>
         ),
         persistDismiss: true,
         autoHideMs: false as const,
-        action: themeEditorAppEmbedsUrl
+        action: themeEditorActivateUrl
           ? {
-              label: "Open App embeds",
-              onAction: () => window.open(themeEditorAppEmbedsUrl, "_top"),
+              label: "Activer Virtual Try-On",
+              onAction: () => window.open(themeEditorActivateUrl, "_top"),
             }
           : undefined,
       },
@@ -866,7 +869,7 @@ export default function Dashboard() {
     showAppEmbedBanner,
     shouldShowReview,
     reviewUrl,
-    themeEditorAppEmbedsUrl,
+    themeEditorActivateUrl,
     error,
     isEnabled,
     credits,

@@ -1,18 +1,18 @@
 {
   "blocks": {
     "block": {
-      "name": "Essayage virtuel"
+      "name": "Essayage virtuel (ancien)"
     },
     "vton-widget": {
       "name": "Essayage virtuel",
       "settings": {
         "anchor_selector": {
           "label": "Emplacement du bouton (optionnel)",
-          "info": "Sélecteur CSS pour placer le bouton (ex. .product-form__buttons). Laissez vide pour la détection automatique."
+          "info": "Sélecteur CSS (ex. .product-form__buttons). Laissez vide pour la détection automatique."
         },
         "app_url": {
           "label": "URL de l'app (secours)",
-          "info": "Utilisée si le proxy échoue. Laissez la valeur par défaut en général."
+          "info": "Laissez la valeur par défaut sauf indication contraire."
         }
       }
     }

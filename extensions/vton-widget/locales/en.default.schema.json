@@ -1,18 +1,18 @@
 {
   "blocks": {
     "block": {
-      "name": "Virtual Try-On Widget"
+      "name": "Virtual Try-On (legacy)"
     },
     "vton-widget": {
-      "name": "Virtual Try-On Widget",
+      "name": "Virtual Try-On",
       "settings": {
         "anchor_selector": {
           "label": "Custom button placement (optional)",
-          "info": "CSS selector for button placement on custom themes (e.g. .product-form__buttons). Leave empty for automatic detection + fallback."
+          "info": "CSS selector (e.g. .product-form__buttons). Leave empty for automatic placement."
         },
         "app_url": {
-          "label": "App URL (fallback API)",
-          "info": "Used if the App Proxy request fails. Normally leave the default."
+          "label": "App URL (fallback)",
+          "info": "Leave default unless support told you otherwise."
         }
       }
     }
