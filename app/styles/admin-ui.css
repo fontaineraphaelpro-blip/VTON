@@ -752,13 +752,13 @@
 }
 
 .vton-admin .credits-balance-compact {
-  background: var(--vton-surface);
-  border: 1px solid var(--vton-border);
+  background: linear-gradient(145deg, var(--vton-brand-soft) 0%, var(--vton-surface) 70%);
+  border: 1px solid var(--vton-brand);
   border-radius: var(--vton-radius);
   padding: 12px 18px;
   text-align: center;
   box-shadow: var(--vton-shadow);
-  min-width: 120px;
+  min-width: 140px;
 }
 
 .vton-admin .credits-balance-compact-value {
@@ -861,12 +861,89 @@
   background: var(--vton-surface);
   border: 1px solid var(--vton-border);
   border-radius: var(--vton-radius);
-  padding: 20px 22px;
+  padding: 22px 24px;
   box-shadow: var(--vton-shadow);
+}
+
+.vton-admin .credits-conv-hero--elevated .credits-conv-hero__main {
+  background: linear-gradient(165deg, #ffffff 0%, var(--vton-brand-soft) 120%);
 }
 
 .vton-admin .credits-conv-hero__side {
   background: linear-gradient(160deg, var(--vton-brand-soft) 0%, var(--vton-surface) 55%);
+}
+
+.vton-admin .credits-pricing-intro {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+  padding: 18px 20px;
+  border-radius: var(--vton-radius);
+  border: 1px solid var(--vton-border);
+  background: var(--vton-bg);
+}
+
+.vton-admin .credits-pricing-intro__copy {
+  flex: 1 1 320px;
+}
+
+.vton-admin .credits-pricing-intro__copy p {
+  margin: 6px 0 0;
+  font-size: 14px;
+  color: var(--vton-muted);
+  line-height: 1.5;
+  max-width: 560px;
+}
+
+.vton-admin .credits-section-title--flush {
+  margin-bottom: 0;
+}
+
+.vton-admin .credits-pricing-intro__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.vton-admin .credits-chip {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--vton-text);
+  background: var(--vton-surface);
+  border: 1px solid var(--vton-border);
+  border-radius: 999px;
+  padding: 6px 12px;
+}
+
+.vton-admin .credits-chip--accent {
+  background: var(--vton-brand-soft);
+  border-color: var(--vton-brand);
+  color: var(--vton-brand-dark);
+}
+
+.vton-admin .credits-pricing-grid {
+  margin-bottom: 28px;
+}
+
+.vton-admin .credits-page .plan-card.best-value {
+  border-color: var(--vton-brand);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+
+.vton-admin .credits-page .plan-card.featured {
+  border-color: var(--vton-brand);
+}
+
+.vton-admin .credits-footnote {
+  margin: 0 0 8px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--vton-soft);
 }
 
 .vton-admin .credits-conv-hero__eyebrow {
@@ -1087,8 +1164,8 @@
 }
 
 .vton-admin .credits-proof-metrics {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
 }
 
@@ -1207,6 +1284,15 @@
 
   .vton-admin .credits-conv-hero__stats {
     grid-template-columns: 1fr;
+  }
+
+  .vton-admin .credits-proof-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .vton-admin .credits-pricing-intro {
+    flex-direction: column;
+    align-items: stretch;
   }
 
   .vton-admin .credits-alert {

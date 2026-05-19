@@ -54,13 +54,23 @@ export function invalidateStatusCacheForProduct(
   productId: string,
   productHandle: string | null
 ) {
-  const variants = productIdVariants(productId);
+  const variants = new Set(productIdVariants(productId));
+  const gidMatch = productId.match(/^gid:\/\/shopify\/Product\/(\d+)$/i);
+  if (gidMatch) {
+    variants.add(`gid://shopify/Product/${gidMatch[1]}`);
+  } else if (/^\d+$/.test(productId)) {
+    variants.add(`gid://shopify/Product/${productId}`);
+  }
+
   for (const id of variants) {
     statusCache.delete(buildStatusCacheKey(shop, id, productHandle));
     statusCache.delete(buildStatusCacheKey(shop, id, ""));
+    statusCache.delete(buildStatusCacheKey(shop, id, productHandle || ""));
   }
   if (productHandle) {
-    statusCache.delete(buildStatusCacheKey(shop, productId, productHandle));
+    for (const id of variants) {
+      statusCache.delete(buildStatusCacheKey(shop, id, productHandle));
+    }
   }
 }
 

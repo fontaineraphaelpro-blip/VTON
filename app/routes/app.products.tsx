@@ -329,7 +329,7 @@ export default function Products() {
       <div className="app-container">
         <AdminPage
           title="Products"
-          subtitle="Le try-on est activé par défaut sur tous les produits — décochez pour le masquer sur une fiche"
+          subtitle="Try-on is enabled on all products by default — uncheck to hide it on a specific product page"
         >
           <AdminNotifications items={notifyItems} onDismiss={dismiss} />
 
@@ -338,12 +338,12 @@ export default function Products() {
               <div>
                 <h2 className="vton-panel-title">Catalog</h2>
                 <p className="vton-field-hint" style={{ margin: "4px 0 0" }}>
-                  {products.length} produit{products.length !== 1 ? "s" : ""} — try-on actif par
-                  défaut sur chaque fiche produit du storefront
+                  {products.length} product{products.length !== 1 ? "s" : ""} — try-on is active by
+                  default on every storefront product page
                 </p>
               </div>
               <Button url="shopify:admin/products/new" target="_blank" variant="secondary">
-                Créer un produit
+                Create product
               </Button>
             </div>
               <BlockStack gap="400">

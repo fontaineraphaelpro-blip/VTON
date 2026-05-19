@@ -1,4 +1,4 @@
-﻿import type { AdminNotification } from "../lib/admin-notifications";
+import type { AdminNotification } from "../lib/admin-notifications";
 
 const TONE_ICONS: Record<AdminNotification["tone"], string> = {
   success: "✓",

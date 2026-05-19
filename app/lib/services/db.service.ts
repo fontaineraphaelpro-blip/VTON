@@ -422,26 +422,20 @@ export async function getProductTryonSetting(
   const params: unknown[] = [shop, ...variants];
   let sql = `SELECT tryon_enabled, updated_at
      FROM product_settings
-     WHERE shop = $1 AND product_id IN (${idPlaceholders})`;
+     WHERE shop = $1 AND (
+       product_id IN (${idPlaceholders})`;
 
   if (productHandle) {
-    sql += ` OR (shop = $1 AND product_handle = $${params.length + 1})`;
+    sql += ` OR product_handle = $${params.length + 1}`;
     params.push(productHandle);
   }
 
-  sql += " ORDER BY updated_at DESC";
+  sql += ") ORDER BY updated_at DESC LIMIT 1";
 
   const result = await query(sql, params);
   if (result.rows.length === 0) return null;
 
-  let sawExplicitTrue = false;
-  for (const row of result.rows) {
-    const value = rowTryonEnabledValue(row.tryon_enabled);
-    if (value === false) return false;
-    if (value === true) sawExplicitTrue = true;
-  }
-
-  return sawExplicitTrue ? true : null;
+  return rowTryonEnabledValue(result.rows[0].tryon_enabled);
 }
 
 /**
@@ -476,9 +470,10 @@ export async function getProductTryonSettingsBatch(shop: string, productIds: str
   // Single query to get all settings matching any of the formats
   const placeholders = formatsArray.map((_, i) => `$${i + 2}`).join(', ');
   const result = await query(
-    `SELECT product_id, tryon_enabled, product_handle 
+    `SELECT product_id, tryon_enabled, product_handle, updated_at
      FROM product_settings 
-     WHERE shop = $1 AND product_id IN (${placeholders})`,
+     WHERE shop = $1 AND product_id IN (${placeholders})
+     ORDER BY updated_at DESC`,
     [shop, ...formatsArray]
   );
   
@@ -511,8 +506,12 @@ export async function getProductTryonSettingsBatch(shop: string, productIds: str
       const matchesDirectNumeric = storedProductId === numericId;
       
       if (matchesExact || matchesGID || matchesNumeric || matchesDirectNumeric) {
-        settingsMap[productId] = settingValue;
-        processedSettings.add(productId);
+        if (!processedSettings.has(productId)) {
+          settingsMap[productId] = settingValue;
+          processedSettings.add(productId);
+        } else if (settingValue === false) {
+          settingsMap[productId] = false;
+        }
       }
     });
   });
@@ -578,6 +577,25 @@ export async function setProductTryonSetting(shop: string, productId: string, en
        DO UPDATE SET tryon_enabled = $4, product_handle = COALESCE($3, product_settings.product_handle), updated_at = CURRENT_TIMESTAMP`,
       [shop, idFormat, productHandle || null, enabled]
     );
+  }
+
+  // Keep every row for this product in sync (avoids stale enabled rows on other id formats / handle)
+  if (formatsToSave.length > 0) {
+    if (productHandle) {
+      await query(
+        `UPDATE product_settings
+         SET tryon_enabled = $2, updated_at = CURRENT_TIMESTAMP
+         WHERE shop = $1 AND (product_id = ANY($3::text[]) OR product_handle = $4)`,
+        [shop, enabled, formatsToSave, productHandle]
+      );
+    } else {
+      await query(
+        `UPDATE product_settings
+         SET tryon_enabled = $2, updated_at = CURRENT_TIMESTAMP
+         WHERE shop = $1 AND product_id = ANY($3::text[])`,
+        [shop, enabled, formatsToSave]
+      );
+    }
   }
 
   invalidateStatusCacheForShop(shop);

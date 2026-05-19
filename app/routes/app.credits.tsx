@@ -50,7 +50,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         let currentSession = session;
         let currentShop = shop;
         
-        // Attendre un peu si la session n'est pas disponible
+        // Brief wait if session is not ready yet
         if (!currentSession || !currentSession.shop) {
           await new Promise(resolve => setTimeout(resolve, 2000));
           
@@ -547,48 +547,48 @@ export default function Credits() {
         id: "free-installation-setup",
         name: "Free",
         price: 0.0,
-        description: "4 try-ons / mois",
+        description: "4 try-ons / month",
         popular: false,
         features: [
-          "Widget sur les fiches produit",
-          "Installation automatique",
-          "Désactivation par produit",
+          "Product page widget",
+          "Automatic installation",
+          "Per-product on/off toggle",
         ],
       },
       {
         id: "starter",
         name: "Starter",
         price: 29.0,
-        description: "100 try-ons / mois",
+        description: "100 try-ons / month",
         popular: false,
         features: [
-          "Idéal pour catalogues < 50 produits",
-          "Historique des sessions try-on",
-          "Support par email",
+          "Best for catalogs under 50 SKUs",
+          "Try-on session history",
+          "Email support",
         ],
       },
       {
         id: "pro",
         name: "Pro",
         price: 99.0,
-        description: "400 try-ons / mois",
+        description: "400 try-ons / month",
         popular: true,
         features: [
-          "Meilleur rapport qualité / prix",
-          "Volume pour campagnes & ads",
-          "Stats conversion dans le dashboard",
+          "Best value per try-on",
+          "Campaign & ad traffic ready",
+          "Conversion stats in dashboard",
         ],
       },
       {
         id: "studio",
         name: "Studio",
         price: 399.0,
-        description: "2 000 try-ons / mois",
+        description: "2,000 try-ons / month",
         popular: false,
         features: [
-          "Marques à fort trafic",
-          "Pic saisonnier sans coupure",
-          "Coût unitaire le plus bas",
+          "High-traffic fashion brands",
+          "Seasonal peaks without cutoff",
+          "Lowest cost per try-on",
         ],
       },
     ],
@@ -622,23 +622,23 @@ export default function Credits() {
   const benefits = useMemo(
     () => [
       {
-        title: "Moins de retours",
-        body: "Le client visualise le produit sur lui avant d'acheter — moins d'incertitude, moins de retours.",
+        title: "Fewer returns",
+        body: "Shoppers see the product on themselves before buying — less guesswork, fewer size-related returns.",
         icon: "↩",
       },
       {
-        title: "Plus d'engagement",
-        body: "Le try-on retient les visiteurs sur la fiche produit plus longtemps qu'une simple photo.",
+        title: "More engagement",
+        body: "Virtual try-on keeps visitors on the product page longer than static images alone.",
         icon: "⏱",
       },
       {
-        title: "Panier plus confiant",
-        body: "Chaque crédit = une session IA qui rapproche le clic « Ajouter au panier ».",
+        title: "Higher-intent carts",
+        body: "Each credit powers one AI session that moves shoppers closer to Add to cart.",
         icon: "🛒",
       },
       {
-        title: "ROI mesurable",
-        body: "Suivez try-ons et ajouts panier dans le dashboard pour voir ce qui convertit.",
+        title: "Measurable ROI",
+        body: "Track try-ons and add-to-cart events in your dashboard to see what converts.",
         icon: "📈",
       },
     ],
@@ -648,38 +648,45 @@ export default function Credits() {
   const faqItems = useMemo(
     () => [
       {
-        q: "Que se passe-t-il si je n'ai plus de crédits ?",
-        a: "Le bouton try-on reste visible mais la génération est bloquée jusqu'au renouvellement mensuel ou à un changement de plan.",
+        q: "What happens when I run out of credits?",
+        a: "The try-on button stays visible, but generation is paused until your monthly renewal or a plan upgrade.",
       },
       {
-        q: "Les crédits non utilisés sont-ils reportés ?",
-        a: "Non — le quota se réinitialise chaque cycle de facturation Shopify. Choisissez un plan aligné sur votre trafic mensuel.",
+        q: "Do unused credits roll over?",
+        a: "No — your quota resets each Shopify billing cycle. Pick a plan that matches your monthly traffic.",
       },
       {
-        q: "Un crédit = une génération ?",
-        a: "Oui. Chaque essayage virtuel réussi consomme 1 crédit, quelle que soit la taille du catalogue.",
+        q: "Does one credit equal one generation?",
+        a: "Yes. Every successful virtual try-on uses 1 credit, regardless of catalog size.",
       },
       {
-        q: "Puis-je changer de plan plus tard ?",
-        a: "Oui. Vous pouvez upgrader à tout moment ; Shopify ajuste la facturation au prorata.",
+        q: "Can I change plans later?",
+        a: "Yes. Upgrade anytime; Shopify prorates billing automatically.",
       },
     ],
     []
   );
+
+  const recommendedPlanId =
+    currentActivePlan === "studio"
+      ? "studio"
+      : currentActivePlan === "starter"
+        ? "pro"
+        : "pro";
 
   return (
     <Page fullWidth>
       <TitleBar title="Credits - VTON Magic" />
       <div className="app-container credits-page">
         <AdminPage
-          title="Plans & crédits"
-          subtitle="Chaque crédit alimente une génération try-on sur votre boutique — investissez là où vos clients décident d'acheter."
+          title="Plans & credits"
+          subtitle="Every credit powers one AI try-on on your store — scale where shoppers decide to buy."
           actions={
             <div className="credits-balance-compact" aria-label="Credits available">
               <span className="credits-balance-compact-value">
                 {currentCredits.toLocaleString("en-US")}
               </span>
-              <span className="credits-balance-compact-label">crédits restants</span>
+              <span className="credits-balance-compact-label">credits left</span>
             </div>
           }
         >
@@ -693,64 +700,64 @@ export default function Credits() {
             <div>
               <strong>
                 {isOutOfCredits
-                  ? "Plus de crédits disponibles"
-                  : "Crédits bientôt épuisés"}
+                  ? "You're out of credits"
+                  : "Credits running low"}
               </strong>
               <p>
                 {isOutOfCredits
-                  ? "Vos clients ne peuvent plus générer de try-on. Passez à un plan supérieur pour réactiver l'expérience immédiatement."
-                  : `Il vous reste ${currentCredits} crédit${currentCredits > 1 ? "s" : ""}. Évitez une coupure en pleine campagne.`}
+                  ? "Shoppers can't generate new try-ons. Upgrade now to restore the experience immediately."
+                  : `You have ${currentCredits} credit${currentCredits > 1 ? "s" : ""} left. Avoid downtime during your next campaign.`}
               </p>
             </div>
             {currentActivePlan !== "studio" && (
               <button
                 type="button"
                 className="credits-alert__cta"
-                onClick={() => handleSubscriptionPurchase("pro")}
+                onClick={() => handleSubscriptionPurchase(recommendedPlanId)}
                 disabled={isSubmitting || submittingPackId !== null}
               >
-                Passer au plan Pro
+                Upgrade plan
               </button>
             )}
           </div>
         )}
 
-        <section className="credits-conv-hero">
+        <section className="credits-conv-hero credits-conv-hero--elevated">
           <div className="credits-conv-hero__main">
-            <p className="credits-conv-hero__eyebrow">Votre boutique en chiffres</p>
+            <p className="credits-conv-hero__eyebrow">Your store performance</p>
             <h2 className="credits-conv-hero__title">
-              Le try-on transforme les visiteurs en acheteurs
+              Turn product views into confident purchases
             </h2>
             <p className="credits-conv-hero__lead">
-              Les marques mode qui proposent l&apos;essayage virtuel constatent en moyenne plus
-              d&apos;engagement sur la fiche produit et un panier plus qualifié.
+              Fashion brands using virtual try-on see stronger product-page engagement and
+              higher-intent add-to-cart behavior.
             </p>
             <div className="credits-conv-hero__stats">
               <div className="credits-stat-card">
                 <span className="credits-stat-card__value">
-                  {stats.totalTryons.toLocaleString("fr-FR")}
+                  {stats.totalTryons.toLocaleString("en-US")}
                 </span>
-                <span className="credits-stat-card__label">Try-ons totaux</span>
+                <span className="credits-stat-card__label">Total try-ons</span>
               </div>
               <div className="credits-stat-card">
                 <span className="credits-stat-card__value">
-                  {stats.totalAtc.toLocaleString("fr-FR")}
+                  {stats.totalAtc.toLocaleString("en-US")}
                 </span>
-                <span className="credits-stat-card__label">Ajouts panier suivis</span>
+                <span className="credits-stat-card__label">Add-to-cart tracked</span>
               </div>
               <div className="credits-stat-card credits-stat-card--highlight">
                 <span className="credits-stat-card__value">
                   {conversionRate !== null ? `${conversionRate}%` : "—"}
                 </span>
-                <span className="credits-stat-card__label">Taux try-on → panier</span>
+                <span className="credits-stat-card__label">Try-on → cart rate</span>
               </div>
             </div>
             <Link to="/app" className="credits-conv-hero__link">
-              Voir le dashboard détaillé →
+              View full dashboard →
             </Link>
           </div>
           <div className="credits-conv-hero__side">
-            <h3 className="credits-conv-panel__title">Utilisation ce mois-ci</h3>
+            <h3 className="credits-conv-panel__title">Usage this month</h3>
             <div className="credits-usage-meter">
               <div
                 className="credits-usage-meter__fill"
@@ -758,72 +765,46 @@ export default function Credits() {
               />
             </div>
             <p className="credits-usage-meter__text">
-              <strong>{stats.monthlyUsage}</strong> / {monthlyQuota} crédits utilisés
+              <strong>{stats.monthlyUsage}</strong> / {monthlyQuota} credits used
               {monthlyUsagePercent >= 80 && (
-                <span className="credits-usage-meter__warn"> — quota bientôt atteint</span>
+                <span className="credits-usage-meter__warn"> — approaching limit</span>
               )}
             </p>
             <ul className="credits-roi-list">
               <li>
-                <span>1 crédit</span>
-                <span>= 1 client qui essaie votre produit en IA</span>
+                <span>1 credit</span>
+                <span>= 1 shopper tries your product with AI</span>
               </li>
               <li>
-                <span>Plan Pro</span>
-                <span>≈ 0,25 $ par try-on (vs 0,29 $ Starter)</span>
+                <span>Pro plan</span>
+                <span>≈ $0.25 per try-on (vs $0.29 on Starter)</span>
               </li>
               <li>
-                <span>Sans crédits</span>
-                <span>expérience coupée → risque d&apos;abandon</span>
+                <span>No credits</span>
+                <span>try-on pauses → higher bounce risk</span>
               </li>
             </ul>
           </div>
         </section>
 
-        <section className="credits-benefits" aria-label="Pourquoi acheter des crédits">
-          <h2 className="credits-section-title">Pourquoi investir dans des crédits ?</h2>
-          <div className="credits-benefits__grid">
-            {benefits.map((item) => (
-              <article key={item.title} className="credits-benefit-card">
-                <span className="credits-benefit-card__icon" aria-hidden>
-                  {item.icon}
-                </span>
-                <h3>{item.title}</h3>
-                <p>{item.body}</p>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section className="credits-social-proof">
-          <div className="credits-proof-card">
-            <p className="credits-proof-card__quote">
-              « Après avoir activé le try-on, nos clients passent plus de temps sur la fiche
-              produit et posent moins de questions sur la taille. »
+        <section className="credits-pricing-intro" aria-label="Choose a plan">
+          <div className="credits-pricing-intro__copy">
+            <h2 className="credits-section-title credits-section-title--flush">
+              Pick the plan that matches your traffic
+            </h2>
+            <p>
+              Upgrade before you run out. Most growing stores choose <strong>Pro</strong> for the
+              best balance of volume and cost per try-on.
             </p>
-            <p className="credits-proof-card__meta">— Usage type, marques mode Shopify</p>
           </div>
-          <div className="credits-proof-metrics">
-            <div>
-              <strong>+40%</strong>
-              <span>temps passé sur la page produit</span>
-            </div>
-            <div>
-              <strong>−15%</strong>
-              <span>retours taille / style</span>
-            </div>
-            <div>
-              <strong>24/7</strong>
-              <span>essayage sans cabine physique</span>
-            </div>
+          <div className="credits-pricing-intro__chips">
+            <span className="credits-chip">1 credit = 1 try-on</span>
+            <span className="credits-chip credits-chip--accent">Cancel anytime</span>
+            <span className="credits-chip">Billed via Shopify</span>
           </div>
         </section>
 
-        <h2 className="credits-section-title credits-section-title--plans">
-          Choisissez votre volume mensuel
-        </h2>
-
-        <div className="pricing-grid pricing-grid--compact">
+        <div className="pricing-grid pricing-grid--compact credits-pricing-grid">
           {subscriptionPlans.map((plan) => {
             const isCurrentPlan = currentActivePlan === plan.id;
             const isFreePlan = plan.id === "free-installation-setup";
@@ -840,18 +821,18 @@ export default function Credits() {
                 className={`plan-card plan-card--compact ${plan.popular ? "featured" : ""} ${isCurrentPlan ? "current-plan" : ""} ${isBestValue ? "best-value" : ""}`}
               >
                 {plan.popular && (
-                  <div className="plan-badge plan-badge-popular">Populaire</div>
+                  <div className="plan-badge plan-badge-popular">Most popular</div>
                 )}
                 {isBestValue && !plan.popular && (
-                  <div className="plan-badge plan-badge-value">Meilleur prix</div>
+                  <div className="plan-badge plan-badge-value">Best value</div>
                 )}
                 {isCurrentPlan && (
-                  <div className="plan-badge plan-badge-current">Actuel</div>
+                  <div className="plan-badge plan-badge-current">Current</div>
                 )}
                 <div className="plan-name">{plan.name}</div>
                 <p className="plan-tagline">{plan.description}</p>
                 <div className="plan-price">
-                  ${plan.price.toFixed(2)} <span>/ mois</span>
+                  ${plan.price.toFixed(2)} <span>/ month</span>
                 </div>
                 {pricePerCredit && (
                   <p className="plan-per-credit">{pricePerCredit} $ / try-on</p>
@@ -868,7 +849,7 @@ export default function Credits() {
                       disabled
                       type="button"
                     >
-                      Plan actuel
+                      Current plan
                     </button>
                   ) : isFreePlan ? (
                     <button
@@ -876,7 +857,7 @@ export default function Credits() {
                       disabled
                       type="button"
                     >
-                      Inclus
+                      Included
                     </button>
                   ) : (
                     <button
@@ -886,10 +867,10 @@ export default function Credits() {
                       disabled={isSubmitting || submittingPackId !== null}
                     >
                       {isSubmitting && submittingPackId === plan.id
-                        ? "Traitement..."
+                        ? "Processing..."
                         : plan.popular
-                          ? "S'abonner"
-                          : "Choisir ce plan"}
+                          ? "Subscribe"
+                          : "Choose plan"}
                     </button>
                   )}
                 </div>
@@ -898,8 +879,47 @@ export default function Credits() {
           })}
         </div>
 
-        <section className="credits-faq" aria-label="Questions fréquentes">
-          <h2 className="credits-section-title">Questions fréquentes</h2>
+        <section className="credits-benefits" aria-label="Why credits matter">
+          <h2 className="credits-section-title">Why invest in credits?</h2>
+          <div className="credits-benefits__grid">
+            {benefits.map((item) => (
+              <article key={item.title} className="credits-benefit-card">
+                <span className="credits-benefit-card__icon" aria-hidden>
+                  {item.icon}
+                </span>
+                <h3>{item.title}</h3>
+                <p>{item.body}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section className="credits-social-proof">
+          <div className="credits-proof-card">
+            <p className="credits-proof-card__quote">
+              &ldquo;After enabling try-on, shoppers spend more time on the product page and ask
+              fewer sizing questions before checkout.&rdquo;
+            </p>
+            <p className="credits-proof-card__meta">— Typical results, Shopify fashion brands</p>
+          </div>
+          <div className="credits-proof-metrics">
+            <div>
+              <strong>+40%</strong>
+              <span>time on product page</span>
+            </div>
+            <div>
+              <strong>−15%</strong>
+              <span>size &amp; style returns</span>
+            </div>
+            <div>
+              <strong>24/7</strong>
+              <span>fitting room without a physical booth</span>
+            </div>
+          </div>
+        </section>
+
+        <section className="credits-faq" aria-label="Frequently asked questions">
+          <h2 className="credits-section-title">FAQ</h2>
           <div className="credits-faq__grid">
             {faqItems.map((item) => (
               <details key={item.q} className="credits-faq__item">
@@ -911,8 +931,7 @@ export default function Credits() {
         </section>
 
         <p className="credits-footnote">
-          Annulation à tout moment · Sans frais d&apos;installation · Quota mensuel réinitialisé
-          chaque cycle
+          Cancel anytime · No setup fee · Monthly quota resets each billing cycle
         </p>
         </AdminPage>
       </div>
