@@ -1,6 +1,6 @@
 import type { HeadersFunction, LoaderFunctionArgs } from "@remix-run/node";
 import { Link, Outlet, useLoaderData, useNavigation } from "@remix-run/react";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { boundary } from "@shopify/shopify-app-remix/server";
 import { AppProvider } from "@shopify/shopify-app-remix/react";
 import { NavMenu } from "@shopify/app-bridge-react";
@@ -23,6 +23,31 @@ export default function App() {
   const { apiKey } = useLoaderData<typeof loader>();
   const navigation = useNavigation();
   const isLoading = useMemo(() => navigation.state === "loading", [navigation.state]);
+
+  useEffect(() => {
+    const blockPinch = (event: TouchEvent) => {
+      if (event.touches.length > 1) {
+        event.preventDefault();
+      }
+    };
+    const blockGesture = (event: Event) => {
+      event.preventDefault();
+    };
+
+    document.addEventListener("touchstart", blockPinch, { passive: false });
+    document.addEventListener("touchmove", blockPinch, { passive: false });
+    document.addEventListener("gesturestart", blockGesture, { passive: false });
+    document.addEventListener("gesturechange", blockGesture, { passive: false });
+    document.addEventListener("gestureend", blockGesture, { passive: false });
+
+    return () => {
+      document.removeEventListener("touchstart", blockPinch);
+      document.removeEventListener("touchmove", blockPinch);
+      document.removeEventListener("gesturestart", blockGesture);
+      document.removeEventListener("gesturechange", blockGesture);
+      document.removeEventListener("gestureend", blockGesture);
+    };
+  }, []);
 
   return (
     <AppProvider isEmbeddedApp apiKey={apiKey}>

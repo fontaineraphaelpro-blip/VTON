@@ -747,3 +747,27 @@
   color: var(--vton-muted);
   font-weight: 600;
 }
+
+/* Mobile: disable pinch/double-tap zoom in admin (iOS Safari + Android Chrome) */
+@media (max-width: 768px), (pointer: coarse) {
+  html,
+  body,
+  .vton-admin {
+    touch-action: manipulation;
+    -ms-touch-action: manipulation;
+  }
+
+  .vton-admin {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  /* iOS zooms focused inputs below 16px — keep Polaris fields at 16px+ */
+  .vton-admin input,
+  .vton-admin textarea,
+  .vton-admin select,
+  .vton-admin .Polaris-TextField__Input,
+  .vton-admin .Polaris-Select__Input {
+    font-size: 16px !important;
+  }
+}
