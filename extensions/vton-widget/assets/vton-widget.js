@@ -2218,33 +2218,41 @@
               position: relative;
               flex-shrink: 0;
               box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.08);
+              --vton-fill: 5%;
             }
             .vton-progress-bar {
               display: block;
+              position: absolute;
+              left: 0;
+              top: 0;
+              bottom: 0;
               height: 100%;
-              width: 100%;
-              min-width: 100%;
-              background: linear-gradient(90deg, ${buttonBg} 0%, ${buttonBg} 55%, rgba(255,255,255,0.35) 100%);
+              width: var(--vton-fill, 5%);
+              max-width: 100%;
+              min-width: 0;
+              margin: 0;
+              padding: 0;
+              flex: none;
+              background: ${buttonBg};
               border-radius: 999px;
-              transform: scaleX(0.03);
-              transform-origin: left center;
-              transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-              will-change: transform;
-              position: relative;
-              box-shadow: 0 0 14px rgba(15, 23, 42, 0.18);
+              transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+              box-sizing: border-box;
+              transform: none;
+              box-shadow: 0 0 10px rgba(15, 23, 42, 0.15);
+              pointer-events: none;
             }
             .vton-progress-bar.is-animating::after {
               content: "";
               position: absolute;
               inset: 0;
               border-radius: inherit;
-              background: linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent);
-              animation: vtonProgressShine 1.6s ease-in-out infinite;
+              background: linear-gradient(90deg, transparent, rgba(255,255,255,0.45), transparent);
+              animation: vtonProgressShine 1.8s ease-in-out infinite;
             }
             @keyframes vtonProgressShine {
-              0% { transform: translateX(-100%); opacity: 0; }
-              40% { opacity: 1; }
-              100% { transform: translateX(100%); opacity: 0; }
+              0% { transform: translateX(-120%); opacity: 0; }
+              35% { opacity: 1; }
+              100% { transform: translateX(120%); opacity: 0; }
             }
             .vton-progress-info {
               display: flex;
@@ -3026,6 +3034,7 @@
         if (state.isGenerating) {
           state._backgroundGeneration = true;
           vtonClearLoadingTimers(state);
+          state._loadingStartedAt = null;
           vtonSetWidgetButtonBadge(state, 'generating');
         } else {
           vtonSetWidgetButtonBadge(state, null);
@@ -4444,6 +4453,7 @@
         options = options || {};
         state.isGenerating = false;
         state._backgroundGeneration = false;
+        state._generationStartedAt = null;
         vtonStopJobPolling(state);
         stopLoadingMessages(state);
 
@@ -4721,6 +4731,9 @@
         if (t.progressRaf) {
           cancelAnimationFrame(t.progressRaf);
         }
+        if (t.progressFill) {
+          clearInterval(t.progressFill);
+        }
         if (t.timer) {
           clearInterval(t.timer);
         }
@@ -4730,56 +4743,130 @@
         state._loadingTimers = null;
       }
 
+      function vtonSyncPortalStyles(state) {
+        var shadow = state && state._shadowRoot;
+        if (!shadow) {
+          return;
+        }
+        var styleInShadow = shadow.querySelector('style');
+        if (!styleInShadow) {
+          return;
+        }
+        var portalStyle = document.getElementById('vton-modal-portal-styles');
+        if (!portalStyle) {
+          portalStyle = document.createElement('style');
+          portalStyle.id = 'vton-modal-portal-styles';
+          document.head.appendChild(portalStyle);
+        }
+        portalStyle.textContent = styleInShadow.textContent;
+      }
+
+      function vtonInjectProgressPortalCss(buttonBg) {
+        var fill = buttonBg || '#111827';
+        var id = 'vton-progress-portal-css';
+        var el = document.getElementById(id);
+        if (!el) {
+          el = document.createElement('style');
+          el.id = id;
+          document.head.appendChild(el);
+        }
+        el.textContent =
+          '#vton-modal-overlay .vton-progress-container{display:block!important;visibility:visible!important;opacity:1!important;position:relative!important;width:100%!important;max-width:280px!important;height:12px!important;margin:16px auto 0!important;overflow:hidden!important;background:rgba(15,23,42,.14)!important;border-radius:999px!important;}' +
+          '#vton-modal-overlay #vton-progress-bar,#vton-modal-overlay .vton-progress-bar{position:absolute!important;left:0!important;top:0!important;bottom:0!important;display:block!important;visibility:visible!important;opacity:1!important;height:100%!important;width:var(--vton-fill,5%)!important;max-width:100%!important;min-width:0!important;margin:0!important;padding:0!important;flex:none!important;transform:none!important;box-sizing:border-box!important;transition:width .35s ease!important;background:' +
+          fill +
+          '!important;border-radius:999px!important;}' +
+          '#vton-modal-overlay .vton-progress-info{display:flex!important;visibility:visible!important;opacity:1!important;}';
+      }
+
+      function vtonResolveProgressElements(state) {
+        var root = (state && state.modalRoot) || document.getElementById('vton-modal-overlay');
+        var bar = null;
+        var text = null;
+        var container = null;
+        if (root) {
+          bar = root.querySelector('#vton-progress-bar');
+          text = root.querySelector('#vton-progress-text');
+          container = root.querySelector('.vton-progress-container');
+        }
+        if (!bar) {
+          bar = document.getElementById('vton-progress-bar');
+        }
+        if (!text) {
+          text = document.getElementById('vton-progress-text');
+        }
+        if (!container) {
+          container = document.querySelector('.vton-progress-container');
+        }
+        state._progressBarEl = bar;
+        state._progressTextEl = text;
+        state._progressContainerEl = container;
+        return { bar: bar, text: text, container: container };
+      }
+
       function vtonCacheLoadingProgressElements(state) {
-        state._progressBarEl = vtonM(state, 'vton-progress-bar');
-        state._progressTextEl = vtonM(state, 'vton-progress-text');
-        state._progressContainerEl = vtonMq(state, '.vton-progress-container');
+        vtonResolveProgressElements(state);
         state._timerValueEl = vtonM(state, 'vton-timer-value');
       }
 
       function vtonApplyLoadingProgress(state, percent) {
         var p = Math.max(0, Math.min(100, percent));
         state._loadingProgress = p;
-        if (!state._progressBarEl) {
-          vtonCacheLoadingProgressElements(state);
+        var els = vtonResolveProgressElements(state);
+        var progressBar = els.bar;
+        var progressText = els.text;
+        var progressContainer = els.container;
+        var fillColor =
+          (state.widgetSettings && state.widgetSettings.widget_bg) || '#111827';
+        var widthPct = Math.max(4, p) + '%';
+        if (progressContainer) {
+          progressContainer.style.setProperty('display', 'block', 'important');
+          progressContainer.style.setProperty('visibility', 'visible', 'important');
+          progressContainer.style.setProperty('position', 'relative', 'important');
+          progressContainer.style.setProperty('--vton-fill', widthPct, 'important');
+          progressContainer.style.setProperty('--vton-progress', widthPct);
+          progressContainer.setAttribute('aria-valuenow', String(Math.floor(p)));
         }
-        var progressBar = state._progressBarEl;
-        var progressText = state._progressTextEl;
-        var progressContainer = state._progressContainerEl;
-        var scale = Math.max(0.03, Math.min(1, p / 100));
         if (progressBar) {
-          progressBar.style.width = '100%';
-          progressBar.style.transform = 'scaleX(' + scale + ')';
-          if (p > 2 && p < 100) {
+          progressBar.style.setProperty('position', 'absolute', 'important');
+          progressBar.style.setProperty('left', '0', 'important');
+          progressBar.style.setProperty('top', '0', 'important');
+          progressBar.style.setProperty('bottom', '0', 'important');
+          progressBar.style.setProperty('display', 'block', 'important');
+          progressBar.style.setProperty('height', '100%', 'important');
+          progressBar.style.setProperty('width', widthPct, 'important');
+          progressBar.style.setProperty('max-width', '100%', 'important');
+          progressBar.style.setProperty('margin', '0', 'important');
+          progressBar.style.setProperty('flex', 'none', 'important');
+          progressBar.style.setProperty('transform', 'none', 'important');
+          progressBar.style.setProperty('background', fillColor, 'important');
+          progressBar.style.setProperty('border-radius', '999px', 'important');
+          if (p > 3 && p < 100) {
             progressBar.classList.add('is-animating');
           } else {
             progressBar.classList.remove('is-animating');
           }
         }
-        if (progressContainer) {
-          progressContainer.setAttribute('aria-valuenow', String(Math.floor(p)));
-        }
         if (progressText) {
+          progressText.style.setProperty('display', 'inline', 'important');
+          progressText.style.setProperty('visibility', 'visible', 'important');
           progressText.textContent = Math.floor(p) + '%';
         }
       }
 
       function vtonTickLoadingProgress(state) {
-        if (!state._loadingStartedAt || !state.isGenerating) {
+        if (!state._loadingStartedAt) {
           return;
         }
         var elapsed = Date.now() - state._loadingStartedAt;
-        var durationMs = 30000;
+        var durationMs = 28000;
         var t = Math.min(1, elapsed / durationMs);
-        var eased = 1 - Math.pow(1 - t, 2.4);
-        var timeTarget = Math.min(90, 4 + eased * 86);
+        var eased = 1 - Math.pow(1 - t, 2.2);
+        var timeTarget = Math.min(92, 5 + eased * 87);
         var pollTarget = state._loadingPollTarget || 0;
-        var next = Math.max(state._loadingProgress || 0, timeTarget, pollTarget);
-        next = Math.min(94, next);
-        if (next > (state._loadingProgress || 0) + 0.2) {
-          vtonApplyLoadingProgress(state, next);
-        }
-        if (next < 94) {
+        var next = Math.max(timeTarget, pollTarget, state._loadingProgress || 0);
+        next = Math.min(96, next);
+        vtonApplyLoadingProgress(state, next);
+        if (next < 96 && state._loadingTimers) {
           state._loadingTimers.progressRaf = requestAnimationFrame(function() {
             vtonTickLoadingProgress(state);
           });
@@ -4832,7 +4919,14 @@
       
       function startLoadingMessages(state) {
         vtonClearLoadingTimers(state);
-        state._loadingStartedAt = Date.now();
+        if (!state.modalRoot && state._shadowRoot) {
+          vtonRelocateModalToBody(state, state._shadowRoot);
+        }
+        vtonSyncPortalStyles(state);
+        var progressBg =
+          (state.widgetSettings && state.widgetSettings.widget_bg) || '#111827';
+        vtonInjectProgressPortalCss(progressBg);
+        state._loadingStartedAt = state._generationStartedAt || Date.now();
         state._loadingProgress = 0;
         state._loadingPollTarget = 0;
         state._progressBarEl = null;
@@ -4918,6 +5012,9 @@
         state._loadingTimers.progressRaf = requestAnimationFrame(function() {
           vtonTickLoadingProgress(state);
         });
+        state._loadingTimers.progressFill = setInterval(function() {
+          vtonTickLoadingProgress(state);
+        }, 250);
 
         if (messageElement) {
           state._loadingTimers.message = setInterval(function() {
@@ -5163,6 +5260,16 @@
           return;
         }
         state.isGenerating = true;
+        if (!state._generationStartedAt) {
+          state._generationStartedAt = Date.now();
+        }
+        if (!state.modalRoot && state._shadowRoot) {
+          vtonRelocateModalToBody(state, state._shadowRoot);
+        }
+        vtonSyncPortalStyles(state);
+        var progressBg =
+          (state.widgetSettings && state.widgetSettings.widget_bg) || '#111827';
+        vtonInjectProgressPortalCss(progressBg);
         
         const loading = vtonM(state, 'vton-loading');
         const generateBtn = vtonM(state, 'vton-generate-btn');
