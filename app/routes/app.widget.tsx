@@ -23,6 +23,7 @@ import { AdminNotifications } from "../components/AdminNotifications";
 import { useAdminNotifications, useNotificationSync } from "../hooks/useAdminNotifications";
 import { useFetcherNotifications } from "../hooks/useFetcherNotifications";
 import { authenticate } from "../shopify.server";
+import { ensureShopFreePlan } from "../lib/ensure-shop-free-plan.server";
 import { getShop, upsertShop, getAbTestStats } from "../lib/services/db.service";
 import {
   getAppEmbedActivationUrl,
@@ -34,6 +35,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const shop = session.shop;
   const apiKey = process.env.SHOPIFY_API_KEY || "";
   try {
+    await ensureShopFreePlan(shop, { accessToken: session.accessToken });
     const shopData = await getShop(shop);
     const abStats = shopData ? await getAbTestStats(shop).catch(() => null) : null;
     return json({
@@ -307,7 +309,7 @@ export default function Widget() {
   return (
     <Page>
       <TitleBar title="Widget - VTON Magic" />
-      <div className="app-container">
+      <div className="app-container vton-widget-page">
         <AdminPage
           title="Widget"
           subtitle="Customize the try-on button on your product pages"

@@ -667,8 +667,50 @@
 
 /* Widget — Button style (mobile) */
 .vton-widget-style {
+  width: 100%;
   max-width: 100%;
-  overflow-x: hidden;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.vton-widget-page .vton-widget-style__panel,
+.vton-widget-page .vton-widget-colors,
+.vton-widget-page .vton-color-picker,
+.vton-widget-page .vton-widget-colors__fields {
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+@media (max-width: 900px) {
+  .vton-widget-page .vton-widget-style.vton-preview-wrap {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-width: 0;
+    gap: 16px;
+  }
+
+  .vton-widget-page .vton-widget-style__preview,
+  .vton-widget-page .vton-widget-style__panel {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .vton-widget-page .vton-panel.vton-widget-style__panel {
+    overflow: visible;
+    padding: 16px 12px;
+  }
+
+  .vton-widget-page .vton-widget-colors {
+    padding: 14px 12px;
+    overflow: visible;
+  }
+
+  .vton-widget-colors__fields {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 720px) {
@@ -1200,6 +1242,39 @@
 @media (max-width: 520px) {
   .vton-admin .app-container {
     padding: 12px 10px 20px !important;
+  }
+
+  .vton-widget-page .vton-widget-style__panel {
+    padding: 12px 8px !important;
+  }
+
+  .vton-widget-page .vton-widget-colors {
+    padding: 12px 8px;
+    gap: 14px;
+  }
+
+  .vton-widget-page .vton-color-pairings__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .vton-widget-page .vton-color-picker {
+    padding: 10px;
+  }
+
+  .vton-widget-page .vton-color-picker__main {
+    flex-wrap: wrap;
+  }
+
+  .vton-widget-page .vton-color-picker__hex-wrap {
+    width: 100%;
+    flex: 1 1 100%;
+  }
+
+  .vton-widget-page .vton-widget-style__saved {
+    font-size: 10px;
+    line-height: 1.45;
+    padding: 0 2px;
   }
 
   .vton-page-title {

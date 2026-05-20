@@ -8,10 +8,12 @@ import {
 import { PrismaSessionStorage } from "@shopify/shopify-app-session-storage-prisma";
 import prisma from "./db.server";
 import { ensureTables } from "./lib/db-init.server";
+import { ensureShopFreePlan } from "./lib/ensure-shop-free-plan.server";
 import {
   scheduleStorefrontWidgetScriptTag,
   sessionCanInstallScriptTag,
 } from "./lib/storefront-widget-install.server";
+import { upsertShop } from "./lib/services/db.service";
 
 // Warm DB schema once at boot so storefront /status never pays migration cost per request
 void ensureTables().catch(() => {});
@@ -56,6 +58,14 @@ const shopify = shopifyApp({
   },
   hooks: {
     afterAuth: async ({ admin, session }) => {
+      try {
+        await upsertShop(session.shop, { accessToken: session.accessToken });
+        await ensureShopFreePlan(session.shop, {
+          accessToken: session.accessToken,
+        });
+      } catch {
+        // Shop bootstrap must not block install
+      }
       if (sessionCanInstallScriptTag(session.scope)) {
         scheduleStorefrontWidgetScriptTag(admin);
       }

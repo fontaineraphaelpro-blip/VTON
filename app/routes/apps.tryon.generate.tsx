@@ -23,6 +23,7 @@ import {
   getProductTryonImageUrl,
   isTryonLogEligibleForFreeRetry,
 } from "../lib/services/db.service";
+import { ensureShopFreePlan } from "../lib/ensure-shop-free-plan.server";
 import { chargeTryonCreditOnSuccess } from "../lib/tryon-billing.server";
 import { normalizeProductGid } from "../lib/product-id.server";
 import {
@@ -182,9 +183,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
     const { ensureDemoShopAccess, isDemoShop } = await import("../lib/demo-shops.server");
     await ensureDemoShopAccess(shop);
+    await ensureShopFreePlan(shop);
 
     // Check shop settings and credits
-    const shopData = await getShop(shop);
+    let shopData = await getShop(shop);
     if (!shopData) {
       return json({ error: "Shop not found" }, { status: 404, headers: corsHeaders });
     }
