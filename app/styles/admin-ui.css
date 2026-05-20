@@ -1077,6 +1077,7 @@
 /* Products — garment photo picker for AI try-on */
 .vton-admin .vton-garment-picker-trigger {
   display: block;
+  position: relative;
   padding: 0;
   border: 2px solid var(--vton-border);
   border-radius: 8px;
@@ -1087,8 +1088,23 @@
   height: 52px;
 }
 
-.vton-admin .vton-garment-picker-trigger:hover {
+.vton-admin .vton-garment-picker-trigger.is-uploading {
   border-color: var(--vton-brand);
+  background: var(--vton-brand-soft);
+  cursor: wait;
+}
+
+.vton-admin .vton-garment-picker-trigger:hover:not(:disabled) {
+  border-color: var(--vton-brand);
+}
+
+.vton-admin .vton-garment-picker-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.82);
 }
 
 .vton-admin .vton-garment-picker-thumb {
@@ -1139,7 +1155,18 @@
   padding: 12px 14px 14px;
 }
 
+.vton-garment-popover__uploading {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 8px;
+  background: var(--vton-brand-soft, #e8f5f1);
+  border: 1px solid var(--vton-brand, #008060);
+}
+
 .vton-garment-popover__preview {
+  position: relative;
   width: 100%;
   max-height: 120px;
   border-radius: 8px;
@@ -1149,6 +1176,19 @@
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.vton-garment-popover__preview.is-uploading img {
+  opacity: 0.45;
+}
+
+.vton-garment-popover__preview-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.65);
 }
 
 .vton-garment-popover__preview img {
