@@ -1,11 +1,18 @@
 import type { HeadersFunction, LoaderFunctionArgs } from "@remix-run/node";
-import { Link, Outlet, useLoaderData, useLocation, useNavigation } from "@remix-run/react";
+import {
+  Link,
+  Outlet,
+  useLoaderData,
+  useLocation,
+  useNavigation,
+  type ShouldRevalidateFunctionArgs,
+} from "@remix-run/react";
 import { useEffect, useMemo } from "react";
 import { boundary } from "@shopify/shopify-app-remix/server";
 import { AppProvider } from "@shopify/shopify-app-remix/react";
 import { NavMenu } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
-import { getShop, getMonthlyTryonUsage } from "../lib/services/db.service";
+import { getLayoutShopContext } from "../lib/layout-shop-cache.server";
 import { computeCreditsAlert } from "../lib/credits-alert";
 import { CreditsAlertBanner } from "../components/CreditsAlertBanner";
 import polarisStyles from "@shopify/polaris/build/esm/styles.css?url";
@@ -18,20 +25,16 @@ export const links = () => [
   { rel: "stylesheet", href: adminUiStyles },
 ];
 
+/**
+ * Remix data requests (?_data=) authenticate via session token — URL has no ?shop=,
+ * so Shopify logs "shop: null" even when the session is valid. Harmless noise.
+ */
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const apiKey = process.env.SHOPIFY_API_KEY || "";
-
   const { session } = await authenticate.admin(request);
 
   try {
-    const shopData = await getShop(session.shop);
-    const monthlyUsage = await getMonthlyTryonUsage(session.shop).catch(() => 0);
-    const creditsAlert = computeCreditsAlert({
-      credits: shopData?.credits ?? 0,
-      monthlyUsage,
-      monthlyQuota: shopData?.monthly_quota ?? null,
-    });
-
+    const { creditsAlert } = await getLayoutShopContext(session.shop);
     return { apiKey, creditsAlert, buildId: getBuildId() };
   } catch {
     return {
@@ -45,6 +48,32 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     };
   }
 };
+
+/** Avoid re-running layout DB + auth on every in-app tab switch (major speed win). */
+export function shouldRevalidate({
+  currentUrl,
+  nextUrl,
+  formMethod,
+  defaultShouldRevalidate,
+}: ShouldRevalidateFunctionArgs) {
+  if (formMethod && formMethod !== "GET") {
+    return true;
+  }
+  if (
+    currentUrl.pathname.startsWith("/app/credits") ||
+    nextUrl.pathname.startsWith("/app/credits")
+  ) {
+    return true;
+  }
+  if (
+    currentUrl.pathname.startsWith("/app") &&
+    nextUrl.pathname.startsWith("/app") &&
+    currentUrl.pathname !== nextUrl.pathname
+  ) {
+    return false;
+  }
+  return defaultShouldRevalidate;
+}
 
 function getBuildId() {
   const id = process.env.APP_BUILD_ID || process.env.RAILWAY_GIT_COMMIT_SHA || "";
@@ -98,28 +127,28 @@ export default function App() {
         <div className="nav-loading-bar" role="progressbar" aria-busy="true" aria-valuetext="Loading" />
       )}
       <NavMenu>
-        <Link to="/app" rel="home" prefetch="none">
+        <Link to="/app" rel="home" prefetch="intent">
           Dashboard
         </Link>
-        <Link to="/app/products" prefetch="none">
+        <Link to="/app/products" prefetch="intent">
           Products
         </Link>
-        <Link to="/app/widget" prefetch="none">
+        <Link to="/app/widget" prefetch="intent">
           Widget
         </Link>
-        <Link to="/app/history" prefetch="none">
+        <Link to="/app/history" prefetch="intent">
           History
         </Link>
-        <Link to="/app/credits" prefetch="none">
+        <Link to="/app/credits" prefetch="intent">
           Credits
         </Link>
-        <Link to="/app/privacy" prefetch="none">
+        <Link to="/app/privacy" prefetch="intent">
           Privacy Policy
         </Link>
-        <Link to="/app/terms" prefetch="none">
+        <Link to="/app/terms" prefetch="intent">
           Terms of Service
         </Link>
-        <Link to="/app/support" prefetch="none">
+        <Link to="/app/support" prefetch="intent">
           Support
         </Link>
       </NavMenu>

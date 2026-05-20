@@ -18,6 +18,7 @@ import {
   getMonthlyTryonUsage,
 } from "../lib/services/db.service";
 import { computeCreditsAlert } from "../lib/credits-alert";
+import { invalidateLayoutShopContext } from "../lib/layout-shop-cache.server";
 import { CreditsAlertBanner } from "../components/CreditsAlertBanner";
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
@@ -137,7 +138,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             await upsertShop(shop, {
               monthlyQuota: monthlyCredits,
               credits: monthlyCredits,
-            }            );
+            });
+            invalidateLayoutShopContext(shop);
 
             try {
               await query(`ALTER TABLE shops ADD COLUMN IF NOT EXISTS plan_name TEXT`);
@@ -270,7 +272,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             monthlyQuota: monthlyCredits,
             credits: monthlyCredits,
           });
-          
+          invalidateLayoutShopContext(shop);
+
           await query(`ALTER TABLE shops ADD COLUMN IF NOT EXISTS plan_name TEXT`);
           await query(`UPDATE shops SET plan_name = $1 WHERE domain = $2`, [currentActivePlan, shop]);
           

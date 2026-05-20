@@ -5,6 +5,7 @@ import {
   useFetcher,
   Form,
   useNavigate,
+  type ShouldRevalidateFunctionArgs,
 } from "@remix-run/react";
 import { useMemo, useCallback, useState, useRef, useEffect } from "react";
 import {
@@ -153,6 +154,24 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     });
   }
 };
+
+export function shouldRevalidate({
+  currentUrl,
+  nextUrl,
+  formMethod,
+  defaultShouldRevalidate,
+}: ShouldRevalidateFunctionArgs) {
+  if (formMethod && formMethod !== "GET") {
+    return true;
+  }
+  if (
+    currentUrl.pathname === nextUrl.pathname &&
+    currentUrl.search === nextUrl.search
+  ) {
+    return false;
+  }
+  return defaultShouldRevalidate;
+}
 
 export const action = async ({ request }: ActionFunctionArgs) => {
   const { session, admin } = await authenticate.admin(request);
