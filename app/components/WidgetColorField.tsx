@@ -5,6 +5,9 @@ const HEX_3 = /^#[0-9A-Fa-f]{3}$/;
 
 export function normalizeHexColor(input: string, fallback: string): string {
   let value = input.trim();
+  if (!value) {
+    return fallback;
+  }
   if (!value.startsWith("#")) {
     value = `#${value}`;
   }
@@ -18,6 +21,14 @@ export function normalizeHexColor(input: string, fallback: string): string {
     return value.toLowerCase();
   }
   return fallback;
+}
+
+function hexBody(value: string): string {
+  return value.replace(/^#/, "").replace(/[^0-9A-Fa-f]/g, "").slice(0, 6);
+}
+
+function isValidHex(value: string): boolean {
+  return HEX_6.test(value) || HEX_3.test(value);
 }
 
 type Props = {
@@ -37,7 +48,15 @@ export function WidgetColorField({
 }: Props) {
   const inputId = useId();
   const pickerRef = useRef<HTMLInputElement>(null);
-  const safeValue = HEX_6.test(value) || HEX_3.test(value) ? value : "#000000";
+  const lastValidRef = useRef("#000000");
+
+  if (isValidHex(value)) {
+    lastValidRef.current = normalizeHexColor(value, lastValidRef.current);
+  }
+
+  const pickerValue = normalizeHexColor(value, lastValidRef.current);
+  const swatchColor = isValidHex(value) ? pickerValue : lastValidRef.current;
+  const hexDisplay = hexBody(value);
 
   const openPicker = useCallback(() => {
     pickerRef.current?.click();
@@ -45,14 +64,28 @@ export function WidgetColorField({
 
   const handleHexInput = useCallback(
     (raw: string) => {
-      onChange(raw);
+      const next = raw.replace(/[^0-9A-Fa-f]/g, "").slice(0, 6);
+      onChange(next ? `#${next}` : "#");
     },
     [onChange]
   );
 
   const commitHex = useCallback(() => {
-    onChange(normalizeHexColor(value, safeValue));
-  }, [onChange, value, safeValue]);
+    const normalized = normalizeHexColor(value, lastValidRef.current);
+    lastValidRef.current = normalized;
+    if (value !== normalized) {
+      onChange(normalized);
+    }
+  }, [onChange, value]);
+
+  const handlePickerChange = useCallback(
+    (hex: string) => {
+      const normalized = normalizeHexColor(hex, lastValidRef.current);
+      lastValidRef.current = normalized;
+      onChange(normalized);
+    },
+    [onChange]
+  );
 
   return (
     <div className="vton-color-picker">
@@ -69,15 +102,15 @@ export function WidgetColorField({
           className="vton-color-picker__swatch"
           onClick={openPicker}
           aria-label={`${label} — open color picker`}
-          style={{ backgroundColor: safeValue }}
+          style={{ backgroundColor: swatchColor }}
         >
           <input
             ref={pickerRef}
             id={inputId}
             type="color"
             className="vton-color-picker__native"
-            value={normalizeHexColor(safeValue, "#000000")}
-            onChange={(e) => onChange(e.target.value)}
+            value={pickerValue}
+            onChange={(e) => handlePickerChange(e.target.value)}
             tabIndex={-1}
           />
         </button>
@@ -89,8 +122,8 @@ export function WidgetColorField({
           <input
             type="text"
             className="vton-color-picker__hex-input"
-            value={safeValue.replace(/^#/, "")}
-            onChange={(e) => handleHexInput(`#${e.target.value.replace(/#/g, "")}`)}
+            value={hexDisplay}
+            onChange={(e) => handleHexInput(e.target.value)}
             onBlur={commitHex}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
@@ -112,7 +145,10 @@ export function WidgetColorField({
           {presets.map((preset) => {
             const normalized = normalizeHexColor(preset, preset);
             const selected =
-              normalizeHexColor(safeValue, safeValue) === normalized;
+              normalizeHexColor(value, value) === normalized ||
+              (!isValidHex(value) &&
+                normalizeHexColor(lastValidRef.current, lastValidRef.current) ===
+                  normalized);
             return (
               <button
                 key={preset}
@@ -122,7 +158,7 @@ export function WidgetColorField({
                   "vton-color-picker__preset" + (selected ? " is-selected" : "")
                 }
                 style={{ backgroundColor: normalized }}
-                onClick={() => onChange(normalized)}
+                onClick={() => handlePickerChange(normalized)}
                 aria-label={`Use ${normalized}`}
                 aria-pressed={selected}
               />
@@ -183,8 +219,8 @@ export function WidgetColorPairings({
   currentText,
   onApply,
 }: PairingsProps) {
-  const bgNorm = normalizeHexColor(currentBg, currentBg);
-  const textNorm = normalizeHexColor(currentText, currentText);
+  const bgNorm = normalizeHexColor(currentBg, "#000000");
+  const textNorm = normalizeHexColor(currentText, "#ffffff");
 
   return (
     <div className="vton-color-pairings">

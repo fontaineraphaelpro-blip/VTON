@@ -508,6 +508,34 @@
         });
       }
 
+      var VTON_MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+
+      function vtonUploadAreaMarkup() {
+        return (
+          '<input type="file" id="vton-file-input" class="vton-file-input" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,image/*" aria-label="Upload your photo" />' +
+          '<span class="vton-upload-icon" aria-hidden="true">' +
+          '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">' +
+          '<path d="M23 19C23 19.5304 22.7893 20.0391 22.4142 20.4142C22.0391 20.7893 21.5304 21 21 21H3C2.46957 21 1.96086 20.7893 1.58579 20.4142C1.21071 20.0391 1 19.5304 1 19V8C1 7.46957 1.21071 6.96086 1.58579 6.58579C1.96086 6.21071 2.46957 6 3 6H7L9 4H15L17 6H21C21.5304 6 22.0391 6.21071 22.4142 6.58579C22.7893 6.96086 23 7.46957 23 8V19Z" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>' +
+          '<path d="M12 17C14.2091 17 16 15.2091 16 13C16 10.7909 14.2091 9 12 9C9.79086 9 8 10.7909 8 13C8 15.2091 9.79086 17 12 17Z" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>' +
+          '</svg></span>' +
+          '<p>Tap or click to add your photo</p>' +
+          '<p>Camera or gallery · good lighting · best results</p>'
+        );
+      }
+
+      function vtonOnResultVariantChange(state) {
+        if (!vtonEnsureVariantSelectValid(state)) {
+          return;
+        }
+        vtonRefreshOptionSelectAvailability(state);
+        vtonSyncThemeVariant(state.selectedVariantId);
+        var atcError = vtonMq(state, '.vton-atc-error');
+        if (atcError) {
+          atcError.classList.remove('active');
+          atcError.textContent = '';
+        }
+      }
+
       function vtonBindModalEvents(state) {
         var overlay = state.modalRoot;
         if (!overlay || overlay.dataset.vtonEventsBound) {
@@ -516,51 +544,83 @@
         overlay.dataset.vtonEventsBound = '1';
 
         overlay.addEventListener('click', function(e) {
-          if (e.target === overlay && window.vtonWidgetInstance) {
-            window.vtonWidgetInstance.closeModal();
+          var inst = window.vtonWidgetInstance;
+          if (!inst) {
+            return;
+          }
+          if (e.target === overlay) {
+            inst.closeModal();
+            return;
+          }
+          if (e.target.closest && e.target.closest('.vton-modal-close')) {
+            e.preventDefault();
+            e.stopPropagation();
+            inst.closeModal();
+            return;
+          }
+          if (e.target.closest && e.target.closest('#vton-generate-btn')) {
+            e.preventDefault();
+            e.stopPropagation();
+            inst.generate();
+            return;
+          }
+          if (e.target.closest && e.target.closest('.vton-add-to-cart-btn')) {
+            e.preventDefault();
+            e.stopPropagation();
+            inst.handleAddToCart();
+            return;
+          }
+          var actionBtn =
+            e.target.closest && e.target.closest('[data-vton-action]');
+          if (actionBtn) {
+            e.preventDefault();
+            e.stopPropagation();
+            var action = actionBtn.getAttribute('data-vton-action');
+            if (action === 'retry' && inst.retryPhoto) {
+              inst.retryPhoto();
+            } else if (action === 'share-native' && inst.shareNative) {
+              inst.shareNative();
+            } else if (action === 'share-whatsapp' && inst.shareWhatsApp) {
+              inst.shareWhatsApp();
+            } else if (action === 'share-copy' && inst.shareCopy) {
+              inst.shareCopy(actionBtn);
+            }
           }
         });
 
-        var closeBtn = overlay.querySelector('.vton-modal-close');
-        if (closeBtn) {
-          closeBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            if (window.vtonWidgetInstance) {
-              window.vtonWidgetInstance.closeModal();
+        overlay.addEventListener(
+          'change',
+          function(e) {
+            var t = e.target;
+            var inst = window.vtonWidgetInstance;
+            if (!t || !inst) {
+              return;
             }
-          });
-        }
+            if (t.id === 'vton-file-input') {
+              inst.handleFileChange(e);
+              return;
+            }
+            if (
+              t.classList &&
+              (t.classList.contains('vton-option-select') ||
+                t.id === 'vton-variant-select')
+            ) {
+              inst.onVariantChange();
+            }
+          },
+          true
+        );
 
-        var uploadArea = vtonM(state, 'vton-upload-area');
-        if (uploadArea) {
-          uploadArea.addEventListener('click', function(e) {
-            e.preventDefault();
-            if (window.vtonWidgetInstance) {
-              window.vtonWidgetInstance.triggerFileInput();
+        overlay.addEventListener(
+          'touchend',
+          function(e) {
+            var t = e.target;
+            if (t && t.id === 'vton-file-input') {
+              e.stopPropagation();
             }
-          });
-        }
-
-        var fileInput = vtonM(state, 'vton-file-input');
-        if (fileInput) {
-          fileInput.addEventListener('change', function(e) {
-            if (window.vtonWidgetInstance) {
-              window.vtonWidgetInstance.handleFileChange(e);
-            }
-          });
-        }
-
-        var generateBtn = vtonM(state, 'vton-generate-btn');
-        if (generateBtn) {
-          generateBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            if (window.vtonWidgetInstance) {
-              window.vtonWidgetInstance.generate();
-            }
-          });
-        }
+          },
+          { passive: true }
+        );
       }
 
       function vtonInstallModalEscape(state) {
@@ -1304,6 +1364,11 @@
                 generate: function() { generateTryOn(state); },
                 handleFileChange: function(event) { handleFileChange(event, state); },
                 handleAddToCart: function() { handleAddToCart(state); },
+                retryPhoto: function() { resetResultForRetry(state); },
+                onVariantChange: function() { vtonOnResultVariantChange(state); },
+                shareNative: function() { vtonShareViaNative(state); },
+                shareWhatsApp: function() { vtonShareViaWhatsApp(state); },
+                shareCopy: function(btn) { vtonCopyImageLink(state, btn); },
                 startLoadingMessages: function() { startLoadingMessages(state); },
                 stopLoadingMessages: function() { stopLoadingMessages(state); }
               };
@@ -1378,6 +1443,28 @@
               background: linear-gradient(165deg, #f8fafc 0%, #f1f5f9 100%);
               position: relative;
               overflow: hidden;
+              display: block;
+              touch-action: manipulation;
+              -webkit-tap-highlight-color: transparent;
+            }
+            .vton-file-input {
+              position: absolute;
+              inset: 0;
+              width: 100%;
+              height: 100%;
+              margin: 0;
+              padding: 0;
+              opacity: 0.001;
+              cursor: pointer;
+              z-index: 5;
+              font-size: 24px;
+              border: none;
+              background: transparent;
+              -webkit-appearance: none;
+              appearance: none;
+            }
+            .vton-upload-area > :not(.vton-file-input) {
+              pointer-events: none;
             }
             .vton-upload-area:hover {
               border-color: ${buttonBg};
@@ -1454,6 +1541,14 @@
             }
             .vton-privacy-notice.hidden {
               display: none;
+            }
+            .vton-generate-btn,
+            .vton-add-to-cart-btn,
+            .vton-share-btn,
+            .vton-retry-link,
+            .vton-free-retry-btn {
+              touch-action: manipulation;
+              -webkit-tap-highlight-color: transparent;
             }
             .vton-generate-btn {
               width: 100%;
@@ -2202,17 +2297,9 @@
                   <p id="vton-funnel-label" class="vton-funnel-label">Upload your photo</p>
                 </div>
                 <div id="vton-panel-upload" class="vton-panel active">
-                <div id="vton-upload-area" class="vton-upload-area">
-                  <input type="file" id="vton-file-input" accept="image/*" style="display: none;" />
-                  <span class="vton-upload-icon">
-                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M23 19C23 19.5304 22.7893 20.0391 22.4142 20.4142C22.0391 20.7893 21.5304 21 21 21H3C2.46957 21 1.96086 20.7893 1.58579 20.4142C1.21071 20.0391 1 19.5304 1 19V8C1 7.46957 1.21071 6.96086 1.58579 6.58579C1.96086 6.21071 2.46957 6 3 6H7L9 4H15L17 6H21C21.5304 6 22.0391 6.21071 22.4142 6.58579C22.7893 6.96086 23 7.46957 23 8V19Z" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                      <path d="M12 17C14.2091 17 16 15.2091 16 13C16 10.7909 14.2091 9 12 9C9.79086 9 8 10.7909 8 13C8 15.2091 9.79086 17 12 17Z" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                  </span>
-                  <p>Tap to add your photo</p>
-                  <p>Front-facing · good lighting · best results</p>
-                </div>
+                <label id="vton-upload-area" class="vton-upload-area">
+                  ${vtonUploadAreaMarkup()}
+                </label>
                 <p class="vton-privacy-notice"><span class="vton-privacy-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></span>Secure processing · your photo is not stored</p>
                 <button type="button" id="vton-generate-btn" class="vton-generate-btn" style="background: ${buttonBg}; color: ${buttonColor};" disabled>
                   Try it on
@@ -2328,9 +2415,47 @@
       
       function handleFileChange(event, state) {
         const file = event.target.files && event.target.files[0];
-        if (!file) return;
-        
+        const errorEl = vtonM(state, 'vton-error');
+        if (!file) {
+          return;
+        }
+
+        var isImageType = /^image\//i.test(file.type || '');
+        var isImageName = /\.(jpe?g|png|webp|heic|heif)$/i.test(file.name || '');
+        if (!isImageType && !isImageName) {
+          if (errorEl) {
+            errorEl.classList.add('active');
+            errorEl.innerHTML =
+              '<p class="vton-error-text">Please choose a JPG, PNG, or WebP photo.</p>';
+          }
+          event.target.value = '';
+          return;
+        }
+
+        if (file.size > VTON_MAX_UPLOAD_BYTES) {
+          if (errorEl) {
+            errorEl.classList.add('active');
+            errorEl.innerHTML =
+              '<p class="vton-error-text">Photo is too large. Please use an image under 10 MB.</p>';
+          }
+          event.target.value = '';
+          return;
+        }
+
+        if (errorEl) {
+          errorEl.classList.remove('active', 'info', 'credits-limit');
+          errorEl.textContent = '';
+        }
+
         const reader = new FileReader();
+        reader.onerror = function() {
+          if (errorEl) {
+            errorEl.classList.add('active');
+            errorEl.innerHTML =
+              '<p class="vton-error-text">Could not read this photo. Please try another image.</p>';
+          }
+          event.target.value = '';
+        };
         reader.onload = function(e) {
           state.userPhoto = e.target.result;
           vtonResetRetryState(state);
@@ -2338,11 +2463,15 @@
           const generateBtn = vtonM(state, 'vton-generate-btn');
           if (uploadArea) {
             uploadArea.className = 'vton-upload-area has-image';
-            uploadArea.innerHTML = '<img src="' + state.userPhoto + '" alt="Preview" />';
+            uploadArea.innerHTML =
+              '<img src="' + state.userPhoto + '" alt="Preview" />';
           }
           if (generateBtn) {
             generateBtn.disabled = false;
           }
+          try {
+            event.target.value = '';
+          } catch (ignore) {}
         };
         reader.readAsDataURL(file);
       }
@@ -3481,67 +3610,8 @@
       }
 
       function bindResultPanelEvents(state) {
-        var atcBtn = vtonMq(state, '.vton-add-to-cart-btn');
-        if (atcBtn) {
-          atcBtn.addEventListener('click', function(ev) {
-            ev.preventDefault();
-            handleAddToCart(state);
-          });
-        }
-
-        var retryBtn = vtonMq(state, '[data-vton-action="retry"]');
-        if (retryBtn) {
-          retryBtn.addEventListener('click', function() {
-            resetResultForRetry(state);
-          });
-        }
-
-        function vtonOnWidgetVariantChange() {
-          if (!vtonEnsureVariantSelectValid(state)) {
-            return;
-          }
-          vtonRefreshOptionSelectAvailability(state);
-          vtonSyncThemeVariant(state.selectedVariantId);
-          var atcError = vtonMq(state, '.vton-atc-error');
-          if (atcError) {
-            atcError.classList.remove('active');
-            atcError.textContent = '';
-          }
-        }
-
-        var optionSelects = vtonMqa(state, '.vton-option-select');
-        for (var oi = 0; oi < optionSelects.length; oi++) {
-          optionSelects[oi].addEventListener('change', vtonOnWidgetVariantChange);
-        }
-
-        var variantSelect = vtonM(state, 'vton-variant-select');
-        if (variantSelect && !optionSelects.length) {
-          vtonEnsureVariantSelectValid(state);
-          variantSelect.addEventListener('change', vtonOnWidgetVariantChange);
-        } else if (variantSelect && optionSelects.length) {
-          vtonEnsureVariantSelectValid(state);
-        }
-
-        var shareNativeBtn = vtonMq(state, '[data-vton-action="share-native"]');
-        if (shareNativeBtn) {
-          shareNativeBtn.addEventListener('click', function() {
-            vtonShareViaNative(state);
-          });
-        }
-
-        var shareWhatsAppBtn = vtonMq(state, '[data-vton-action="share-whatsapp"]');
-        if (shareWhatsAppBtn) {
-          shareWhatsAppBtn.addEventListener('click', function() {
-            vtonShareViaWhatsApp(state);
-          });
-        }
-
-        var shareCopyBtn = vtonMq(state, '[data-vton-action="share-copy"]');
-        if (shareCopyBtn) {
-          shareCopyBtn.addEventListener('click', function() {
-            vtonCopyImageLink(state, shareCopyBtn);
-          });
-        }
+        vtonEnsureVariantSelectValid(state);
+        vtonRefreshOptionSelectAvailability(state);
       }
 
       function resetResultForRetry(state) {
@@ -3560,13 +3630,13 @@
         if (uploadArea) {
           uploadArea.classList.remove('hidden');
           uploadArea.className = 'vton-upload-area';
-          uploadArea.innerHTML =
-            '<input type="file" id="vton-file-input" accept="image/*" style="display: none;" onchange="window.vtonWidgetInstance.handleFileChange(event)" />' +
-            '<span class="vton-upload-icon"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M23 19C23 19.5304 22.7893 20.0391 22.4142 20.4142C22.0391 20.7893 21.5304 21 21 21H3C2.46957 21 1.96086 20.7893 1.58579 20.4142C1.21071 20.0391 1 19.5304 1 19V8C1 7.46957 1.21071 6.96086 1.58579 6.58579C1.96086 6.21071 2.46957 6 3 6H7L9 4H15L17 6H21C21.5304 6 22.0391 6.21071 22.4142 6.58579C22.7893 6.96086 23 7.46957 23 8V19Z" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 17C14.2091 17 16 15.2091 16 13C16 10.7909 14.2091 9 12 9C9.79086 9 8 10.7909 8 13C8 15.2091 9.79086 17 12 17Z" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>' +
-            '<p>Add your photo</p><p>Front-facing photo works best</p>';
-          uploadArea.onclick = function() {
-            window.vtonWidgetInstance.triggerFileInput();
-          };
+          uploadArea.innerHTML = vtonUploadAreaMarkup();
+          var fileInput = vtonM(state, 'vton-file-input');
+          if (fileInput) {
+            try {
+              fileInput.value = '';
+            } catch (ignore) {}
+          }
         }
         if (generateBtn) {
           generateBtn.classList.remove('hidden');

@@ -1,7 +1,7 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useLoaderData, useFetcher, useRevalidator } from "@remix-run/react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Page,
   Button,
@@ -159,27 +159,19 @@ export default function Widget() {
     widget_bg: shop?.widget_bg ?? "—",
     widget_color: shop?.widget_color ?? "—",
   });
-  const [isInitialized, setIsInitialized] = useState(false);
-
-  useEffect(() => {
-    if (shop && !isInitialized) {
-      setWidgetText(shop.widget_text || "Try it on");
-      setWidgetBg(shop.widget_bg || "#000000");
-      setWidgetColor(shop.widget_color || "#ffffff");
-      setSavedSnapshot({
-        widget_text: shop.widget_text || "—",
-        widget_bg: shop.widget_bg || "—",
-        widget_color: shop.widget_color || "—",
-      });
-      setIsInitialized(true);
-    }
-  }, [shop, isInitialized]);
+  const lastAppliedSaveRef = useRef<string | null>(null);
 
   useEffect(() => {
     const data = fetcher.data;
     if (!data?.success || data.intent !== "save-widget-style" || !data.savedValues) {
       return;
     }
+    const fingerprint = JSON.stringify(data.savedValues);
+    if (lastAppliedSaveRef.current === fingerprint) {
+      return;
+    }
+    lastAppliedSaveRef.current = fingerprint;
+
     setWidgetText(data.savedValues.widget_text || "Try it on");
     setWidgetBg(data.savedValues.widget_bg || "#000000");
     setWidgetColor(data.savedValues.widget_color || "#ffffff");
@@ -189,7 +181,7 @@ export default function Widget() {
       widget_color: data.savedValues.widget_color || "—",
     });
     revalidator.revalidate();
-  }, [fetcher.data, revalidator]);
+  }, [fetcher.data]);
 
   useFetcherNotifications(fetcher, notifications, {
     onSuccess: (data) => {
@@ -455,9 +447,6 @@ export default function Widget() {
                 Button style
               </h2>
               <form onSubmit={handleSave} className="vton-widget-style__form">
-                <input type="hidden" name="intent" value="save-widget-style" />
-                <input type="hidden" name="widgetBg" value={widgetBg} readOnly />
-                <input type="hidden" name="widgetColor" value={widgetColor} readOnly />
                 <BlockStack gap="400">
                   <TextField
                     label="Button text"
@@ -473,8 +462,8 @@ export default function Widget() {
                       currentBg={widgetBg}
                       currentText={widgetColor}
                       onApply={(bg, text) => {
-                        setWidgetBg(bg);
-                        setWidgetColor(text);
+                        setWidgetBg(normalizeHexColor(bg, "#000000"));
+                        setWidgetColor(normalizeHexColor(text, "#ffffff"));
                       }}
                     />
 
