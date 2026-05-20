@@ -12,10 +12,14 @@
       var error = console.error.bind(console);
 
       var VTON_STATUS_CACHE_TTL = 300000;
+      var VTON_ENABLED_STATUS_MEMO_TTL = 300000;
+      var VTON_INJECTION_WAIT_MS = 12000;
+      var VTON_EMBED_SLOT_WAIT_MS = 2000;
       var _vtonWidgetRenderQueued = false;
       var _vtonStatusInFlight = null;
       var _vtonSuppressed = false;
       var _vtonReinjectObserver = null;
+      var _vtonEnabledStatusMemo = {};
 
       function runWhenIdle(fn, timeoutMs) {
         timeoutMs = timeoutMs || 2000;
@@ -158,10 +162,26 @@
           // Only negative cache — never trust a stale "enabled" from sessionStorage
           if (!isTryonEnabledStatus(data)) {
             sessionStorage.setItem(key, JSON.stringify({ ts: Date.now(), data: data }));
+            delete _vtonEnabledStatusMemo[key];
           } else {
             sessionStorage.removeItem(key);
+            rememberEnabledStatusMemo(shop, productId, data);
           }
         } catch (e) {}
+      }
+
+      function rememberEnabledStatusMemo(shop, productId, data) {
+        if (!isTryonEnabledStatus(data)) return;
+        _vtonEnabledStatusMemo[vtonStatusCacheKey(shop, normalizeProductIdForStatus(productId))] = {
+          ts: Date.now(),
+          data: data,
+        };
+      }
+
+      function readEnabledStatusMemo(shop, productId) {
+        var entry = _vtonEnabledStatusMemo[vtonStatusCacheKey(shop, normalizeProductIdForStatus(productId))];
+        if (!entry || Date.now() - entry.ts > VTON_ENABLED_STATUS_MEMO_TTL) return null;
+        return entry.data;
       }
 
       function normalizeProductIdForStatus(productId) {
@@ -1079,6 +1099,12 @@
         }
 
         return Promise.any(attempts)
+          .then(function(status) {
+            if (isTryonEnabledStatus(status)) {
+              rememberEnabledStatusMemo(shop, productId, status);
+            }
+            return status;
+          })
           .catch(function(err) {
             var cached = readStatusCache(shop, productId);
             if (cached && !isTryonEnabledStatus(cached)) {
@@ -1087,6 +1113,11 @@
                 product_enabled: false,
                 widget_settings: cached.widget_settings || {},
               };
+            }
+            var memo = readEnabledStatusMemo(shop, productId);
+            if (memo) {
+              warn('[VTON] Status check failed, using in-session enabled memo');
+              return memo;
             }
             warn('[VTON] Status check failed:', err);
             return {
@@ -1154,7 +1185,21 @@
         '.product-section',
         '.product-form',
         '.product-block-list',
-        '.product__column-sticky'
+        '.product__column-sticky',
+        '.shopify-section--main-product',
+        '.product-template',
+        '.product-page',
+        '.productView',
+        '.ProductMeta',
+        '.product-single__form',
+        '.shopify-product-section',
+        '.pf-product-form',
+        '[data-pf-type="product-form"]',
+        '[data-pf-type="product"]',
+        '.gp-product-form',
+        '.gem-product-form',
+        '.shg-product',
+        '[data-shg-product-id]'
       ];
       var VTON_EXCLUDED_ANCESTORS = '.cart-drawer, .mini-cart, cart-drawer, .quick-add-modal, [data-quick-add], dialog, [role="dialog"], .drawer, #CartDrawer, .predictive-search, .search-modal, header.site-header, .announcement-bar';
 
@@ -1290,7 +1335,7 @@
           var atcBtn = vtonFindAddToCartButton(form);
           if (atcBtn) {
             var wrapper = atcBtn.closest(
-              '.product-form__buttons, .product-form__actions, .product-form__cart, .shopify-product-form, .product-form__submit-wrapper, .product-form__cta, .product__submit, .buy-buttons, .product-form__controls'
+              '.product-form__buttons, .product-form__actions, .product-form__cart, .shopify-product-form, .product-form__submit-wrapper, .product-form__cta, .product__submit, .buy-buttons, .product-form__controls, .product-form__buy-buttons, .product-form__payment-container, .product__buy-buttons, .product-form__group--submit, .product-form__group--buttons'
             );
             var btnHit = accept(wrapper || atcBtn, 'after', 'form_atc_button');
             if (btnHit) return btnHit;
@@ -1319,8 +1364,13 @@
           }
         }
 
+        var embedSlotEl = document.getElementById('vton-embed-slot');
+        if (embedSlotEl && vtonIsAnchorable(embedSlotEl)) {
+          return { anchor: embedSlotEl, method: 'append', source: 'embed_slot' };
+        }
+
         var stickyAtc = document.querySelector(
-          '.sticky-add-to-cart, .product-sticky-form, [data-sticky-product-form]'
+          '.sticky-add-to-cart, .product-sticky-form, [data-sticky-product-form], .sticky-product-form, .product-sticky-bar, [data-sticky-atc]'
         );
         var stickyHit = accept(stickyAtc, 'append', 'sticky_atc');
         if (stickyHit) return stickyHit;
@@ -1379,19 +1429,51 @@
         return { anchor: document.body, method: 'append', source: 'floating_fallback', floating: true };
       }
 
+      function vtonIsInlineInjectionSource(source) {
+        return (
+          source &&
+          source !== 'floating_fallback' &&
+          source !== 'embed_slot' &&
+          source.indexOf('embed_slot') !== 0
+        );
+      }
+
       function vtonWaitForInjectionAnchor(customSelector, timeoutMs) {
+        timeoutMs = timeoutMs || VTON_INJECTION_WAIT_MS;
         return new Promise(function(resolve) {
           var immediate = vtonResolveInjectionTarget(customSelector);
-          if (immediate && immediate.source !== 'floating_fallback' && immediate.source !== 'embed_slot') {
+          if (immediate && vtonIsInlineInjectionSource(immediate.source)) {
             return resolve(immediate);
           }
 
           var resolved = false;
+          var waitMs =
+            immediate && immediate.source === 'embed_slot'
+              ? VTON_EMBED_SLOT_WAIT_MS
+              : timeoutMs;
+
           function finish() {
             if (resolved) return;
             resolved = true;
-            try { obs.disconnect(); } catch (e) {}
+            try {
+              obs.disconnect();
+            } catch (e) {}
             resolve(vtonResolveInjectionTarget(customSelector));
+          }
+
+          function tryResolveInline() {
+            if (resolved) return;
+            var anchor = vtonFindInjectionAnchor(customSelector, { allowHidden: false });
+            if (!anchor) {
+              anchor = vtonFindInjectionAnchor(customSelector, { allowHidden: true });
+            }
+            if (anchor && vtonIsInlineInjectionSource(anchor.source)) {
+              resolved = true;
+              try {
+                obs.disconnect();
+              } catch (e) {}
+              resolve(anchor);
+            }
           }
 
           var scanTimer = null;
@@ -1401,20 +1483,14 @@
             scanTimer = setTimeout(function() {
               scanTimer = null;
               if (resolved) return;
-            var anchor = vtonFindInjectionAnchor(customSelector, { allowHidden: false });
-            if (!anchor) anchor = vtonFindInjectionAnchor(customSelector, { allowHidden: true });
-            if (anchor) {
-              resolved = true;
-              try { obs.disconnect(); } catch (e) {}
-              resolve(anchor);
-            }
+              tryResolveInline();
             }, 120);
           });
 
           var observeRoot = vtonGetObserverRoot();
           obs.observe(observeRoot, { childList: true, subtree: true });
 
-          setTimeout(finish, timeoutMs);
+          setTimeout(finish, waitMs);
         });
       }
 
@@ -1431,7 +1507,7 @@
         var observer = new MutationObserver(function() {
           if (_vtonSuppressed) return;
           if (vtonHasWidgetContainers()) return;
-          if (reinjectCount >= 3) {
+          if (reinjectCount >= 6) {
             observer.disconnect();
             _vtonReinjectObserver = null;
             return;
@@ -1459,7 +1535,7 @@
           if (_vtonReinjectObserver === observer) {
             _vtonReinjectObserver = null;
           }
-        }, 30000);
+        }, 60000);
       }
       
       function initializeWidget(shop, productId, productHandle, statusPayload) {
@@ -1481,7 +1557,7 @@
 
         var customSelector = (window.VTON_LIQUID && window.VTON_LIQUID.customAnchor) || '';
 
-        vtonWaitForInjectionAnchor(customSelector, 12000).then(function(injectionTarget) {
+        vtonWaitForInjectionAnchor(customSelector, VTON_INJECTION_WAIT_MS).then(function(injectionTarget) {
           if (!injectionTarget || !injectionTarget.anchor) {
             _vtonWidgetRenderQueued = false;
             error('[VTON] No injection anchor found. Enable App Embed or set a custom CSS selector in theme settings.');

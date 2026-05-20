@@ -35,6 +35,9 @@
     };
   })();
 </script>
+{% if product %}
+<script type="application/json" id="vton-product-json">{{ product | json }}</script>
+{% endif %}
 <script src="{{ 'vton-widget.js' | asset_url }}" defer></script>
 
 {% schema %}
