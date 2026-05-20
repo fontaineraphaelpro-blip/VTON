@@ -874,6 +874,35 @@
         }
         document.body.appendChild(overlay);
         state.modalRoot = overlay;
+        vtonSyncDeviceClass(state);
+      }
+
+      /** Mobile vs desktop classes on the portaled overlay (drives split CSS). */
+      function vtonSyncDeviceClass(state) {
+        var overlay =
+          (state && state.modalRoot) ||
+          document.getElementById('vton-modal-overlay');
+        if (!overlay) {
+          return;
+        }
+        var desktop = window.matchMedia('(min-width: 641px)').matches;
+        overlay.classList.toggle('vton-env-desktop', desktop);
+        overlay.classList.toggle('vton-env-mobile', !desktop);
+      }
+
+      function vtonSetResultLayoutMode(state, isResult) {
+        var modal = null;
+        if (state && state.modalRoot) {
+          modal = state.modalRoot.querySelector('.vton-modal');
+        }
+        if (!modal) {
+          modal = document.querySelector(
+            '#vton-modal-overlay .vton-modal'
+          );
+        }
+        if (modal) {
+          modal.classList.toggle('vton-modal--result', !!isResult);
+        }
       }
 
       function vtonBindWidgetButton(shadowRoot, state) {
@@ -1012,6 +1041,17 @@
           true
         );
 
+        if (!state._deviceResizeBound) {
+          state._deviceResizeBound = true;
+          window.addEventListener(
+            'resize',
+            function() {
+              vtonSyncDeviceClass(state);
+            },
+            { passive: true }
+          );
+        }
+        vtonSyncDeviceClass(state);
       }
 
       function vtonInstallModalEscape(state) {
@@ -2341,21 +2381,17 @@
               align-items: stretch;
               gap: 10px;
               box-sizing: border-box;
-              flex: 1;
-              min-height: 0;
-              overflow: hidden;
             }
             #vton-panel-result.active {
               flex: 1;
               min-height: 0;
-              overflow: hidden;
-            }
-            #vton-panel-result .vton-result {
-              flex: 1;
-              min-height: 0;
-              overflow: hidden;
               display: flex;
               flex-direction: column;
+            }
+            #vton-panel-result .vton-result {
+              display: flex;
+              flex-direction: column;
+              width: 100%;
             }
             .vton-result-lead {
               margin: 0;
@@ -2716,6 +2752,14 @@
               transform: translateY(-1px);
               filter: brightness(1.05);
             }
+            /* --- Mobile (smartphone) --- */
+            .vton-env-mobile #vton-panel-result.active,
+            .vton-env-mobile #vton-panel-result .vton-result,
+            .vton-env-mobile .vton-result-content {
+              flex: 1;
+              min-height: 0;
+              overflow: hidden;
+            }
             @media (max-width: 640px) {
               .vton-widget-container {
                 margin: 12px 0 0 0;
@@ -2884,11 +2928,70 @@
                 font-size: 15px;
               }
             }
-            @media (min-width: 641px) {
-              .vton-modal-content.has-result {
-                overflow-y: auto;
-                overflow-x: hidden;
-                -webkit-overflow-scrolling: touch;
+            /* --- Desktop (PC / tablet landscape) --- */
+            .vton-env-desktop .vton-modal.vton-modal--result {
+              max-width: min(560px, calc(100vw - 40px));
+              max-height: min(94dvh, 880px);
+            }
+            .vton-env-desktop .vton-modal-content.has-result {
+              overflow-x: hidden;
+              overflow-y: auto;
+              -webkit-overflow-scrolling: touch;
+              overscroll-behavior: contain;
+              padding: 44px 24px 28px;
+              justify-content: flex-start;
+            }
+            .vton-env-desktop #vton-panel-result.active,
+            .vton-env-desktop #vton-panel-result .vton-result,
+            .vton-env-desktop .vton-result-content {
+              flex: 0 0 auto;
+              min-height: auto;
+              overflow: visible;
+            }
+            .vton-env-desktop .vton-result-image,
+            .vton-env-desktop .vton-result img {
+              max-height: min(36vh, 260px);
+            }
+            .vton-env-desktop .vton-share-block {
+              margin-top: 8px;
+              padding-top: 14px;
+              padding-bottom: 4px;
+            }
+            .vton-env-desktop .vton-share-btn {
+              min-height: 46px;
+              padding: 11px 12px;
+            }
+            .vton-env-desktop .vton-retry-link {
+              padding-bottom: 4px;
+            }
+            @media (min-width: 900px) {
+              .vton-env-desktop .vton-modal.vton-modal--result {
+                max-width: min(720px, calc(100vw - 48px));
+              }
+              .vton-env-desktop .vton-modal-content.has-result {
+                padding: 48px 32px 32px;
+              }
+              .vton-env-desktop .vton-result-content {
+                display: grid;
+                grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+                gap: 12px 28px;
+                align-items: start;
+              }
+              .vton-env-desktop .vton-result-image,
+              .vton-env-desktop .vton-result img {
+                grid-column: 1;
+                grid-row: 1 / span 12;
+                max-height: min(68vh, 400px);
+                align-self: start;
+              }
+              .vton-env-desktop .vton-result-lead,
+              .vton-env-desktop .vton-variant-picker,
+              .vton-env-desktop .vton-urgency,
+              .vton-env-desktop .vton-atc-error,
+              .vton-env-desktop .vton-add-to-cart-btn,
+              .vton-env-desktop .vton-share-block,
+              .vton-env-desktop .vton-retry-link {
+                grid-column: 2;
               }
             }
           </style>
@@ -2979,6 +3082,7 @@
           vtonRelocateModalToBody(state, state._shadowRoot);
           vtonBindModalEvents(state);
         }
+        vtonSyncDeviceClass(state);
         var shadowRoot = state._shadowRoot;
         var overlay = vtonM(state, 'vton-modal-overlay');
         if (!overlay) {
@@ -3006,10 +3110,12 @@
           vtonShowFunnelPanel(state, 'result');
           vtonSetWidgetButtonBadge(state, null);
         } else if (state.isGenerating) {
+          vtonSetResultLayoutMode(state, false);
           vtonSetWidgetButtonBadge(state, null);
           vtonShowFunnelPanel(state, 'loading');
           startLoadingMessages(state);
         } else {
+          vtonSetResultLayoutMode(state, false);
           vtonShowFunnelPanel(state, 'upload');
         }
       }
@@ -3042,6 +3148,7 @@
           if (modalContent) {
             modalContent.classList.remove('has-result');
           }
+          vtonSetResultLayoutMode(state, false);
         }
       }
       
@@ -4411,6 +4518,7 @@
         if (modalContent) {
           modalContent.classList.remove('has-result');
         }
+        vtonSetResultLayoutMode(state, false);
         var result = vtonM(state, 'vton-result');
         var uploadArea = vtonM(state, 'vton-upload-area');
         var generateBtn = vtonM(state, 'vton-generate-btn');
@@ -4545,6 +4653,8 @@
         if (modalContent) {
           modalContent.classList.add('has-result');
         }
+        vtonSyncDeviceClass(state);
+        vtonSetResultLayoutMode(state, true);
         vtonShowFunnelPanel(state, 'result');
         bindResultPanelEvents(state);
         vtonRefreshOptionSelectAvailability(state);
