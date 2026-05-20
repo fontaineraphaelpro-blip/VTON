@@ -180,6 +180,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       return json({ error: "product_image_url is required" }, { status: 400, headers: corsHeaders });
     }
 
+    const { ensureDemoShopAccess, isDemoShop } = await import("../lib/demo-shops.server");
+    await ensureDemoShopAccess(shop);
+
     // Check shop settings and credits
     const shopData = await getShop(shop);
     if (!shopData) {
@@ -201,9 +204,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     }
 
     // Check monthly quota (if set)
-    // Special case: 3aavx5-9u.myshopify.com has unlimited monthly quota
     const monthlyQuota = shopData.monthly_quota;
-    if (monthlyQuota && monthlyQuota > 0 && shop !== "3aavx5-9u.myshopify.com") {
+    const skipMonthlyQuotaCap =
+      shop === "3aavx5-9u.myshopify.com" || isDemoShop(shop);
+    if (monthlyQuota && monthlyQuota > 0 && !skipMonthlyQuotaCap) {
       const monthlyUsage = await getMonthlyTryonUsage(shop);
       if (monthlyUsage >= monthlyQuota) {
         return json({ 

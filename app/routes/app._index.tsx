@@ -21,6 +21,8 @@ import { useFetcherNotifications } from "../hooks/useFetcherNotifications";
 import { authenticate } from "../shopify.server";
 import { getShop, upsertShop, getTryonLogs, getTopProducts, getTryonStatsByDay, getMonthlyTryonUsage, query } from "../lib/services/db.service";
 import { creditsForPlan, FREE_PLAN_ID } from "../lib/plan-credits";
+import { ensureDemoShopAccess } from "../lib/demo-shops.server";
+import { isDemoShop } from "../lib/demo-shops.shared";
 import {
   getAppEmbedActivationUrl,
   getThemeEditorAppEmbedsUrl,
@@ -57,13 +59,15 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const returnUrl = `https://${url.host}/app`;
 
   let shopData = await getShop(shop);
+  await ensureDemoShopAccess(shop);
+  shopData = await getShop(shop);
 
   if (sessionCanInstallScriptTag(session.scope)) {
     scheduleStorefrontWidgetScriptTag(admin);
   }
 
   // Sync subscription only when plan is unknown (Credits page handles billing return)
-  if (!shopData?.plan_name) {
+  if (!shopData?.plan_name && !isDemoShop(shop)) {
   try {
     const subscriptionQuery = `#graphql
       query {
@@ -156,7 +160,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     }
 
     // If no active subscription, assign free plan by default
-    if (!currentActivePlan) {
+    if (!currentActivePlan && !isDemoShop(shop)) {
       try {
         const shopData = await getShop(shop);
         

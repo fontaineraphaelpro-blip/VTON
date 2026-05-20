@@ -27,6 +27,7 @@ import {
   PLAN_MONTHLY_CREDITS,
 } from "../lib/plan-credits";
 import { CreditsAlertBanner } from "../components/CreditsAlertBanner";
+import { DEMO_SHOP_PLAN, isDemoShop } from "../lib/demo-shops.shared";
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
   const chargeId = url.searchParams.get("charge_id");
@@ -44,6 +45,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     const shop = session.shop;
 
     let shopData = await getShop(shop);
+    const { ensureDemoShopAccess } = await import("../lib/demo-shops.server");
+    await ensureDemoShopAccess(shop);
+    shopData = await getShop(shop);
     
     // Ensure widget is enabled by default if is_enabled is not set
     if (shopData && (shopData.is_enabled === null || shopData.is_enabled === undefined)) {
@@ -199,6 +203,21 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     }
 
     let shouldUpdateDb = false;
+
+    if (isDemoShop(shop)) {
+      const monthlyUsage = await getMonthlyTryonUsage(shop).catch(() => 0);
+      return json({
+        shop: shopData || null,
+        currentActivePlan: DEMO_SHOP_PLAN,
+        isDemoShop: true,
+        stats: {
+          totalTryons: shopData?.total_tryons ?? 0,
+          totalAtc: shopData?.total_atc ?? 0,
+          monthlyUsage,
+          monthlyQuota: shopData?.monthly_quota ?? null,
+        },
+      });
+    }
 
     try {
       const subscriptionQuery = `#graphql
@@ -377,6 +396,13 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const formData = await request.formData();
     const intent = formData.get("intent");
 
+    if (isDemoShop(shop)) {
+      return json({
+        success: false,
+        error: "This demo store already has complimentary Studio access.",
+      });
+    }
+
     if (intent === "purchase-subscription") {
       const planId = formData.get("planId") as string;
       
@@ -432,6 +458,7 @@ export default function Credits() {
   const subscriptionUpdated = (loaderData as any)?.subscriptionUpdated || false;
   const planName = (loaderData as any)?.planName || null;
   const currentActivePlan = (loaderData as any)?.currentActivePlan || null;
+  const isDemoShopAccount = Boolean((loaderData as any)?.isDemoShop);
   const stats = (loaderData as { stats?: {
     totalTryons: number;
     totalAtc: number;
@@ -684,6 +711,22 @@ export default function Credits() {
           }
         >
           <AdminNotifications items={notifyItems} onDismiss={dismiss} />
+
+        {isDemoShopAccount && (
+          <div
+            className="credits-funnel-panel"
+            style={{ marginBottom: 16, borderColor: "rgba(22, 163, 74, 0.35)" }}
+            role="status"
+          >
+            <p style={{ margin: 0, fontWeight: 700, color: "#166534" }}>
+              Studio plan active (demo store)
+            </p>
+            <p style={{ margin: "6px 0 0", color: "#14532d", fontSize: 14 }}>
+              {creditsMap[DEMO_SHOP_PLAN]?.toLocaleString("en-US")} generations per month — no
+              Shopify billing required for this test shop.
+            </p>
+          </div>
+        )}
 
         <CreditsAlertBanner alert={creditsAlert} variant="inline" />
 
