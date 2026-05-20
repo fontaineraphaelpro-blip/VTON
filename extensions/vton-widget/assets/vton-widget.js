@@ -1166,7 +1166,7 @@
           '.vton-button:active{transform:translateY(0);box-shadow:0 2px 6px rgba(15,23,42,.08);}' +
           '.vton-button__icon{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:8px;background:rgba(255,255,255,.18);flex-shrink:0;}' +
           '.vton-button__icon svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}' +
-          '.vton-modal-overlay{position:fixed;inset:0;width:100vw;height:100dvh;background:rgba(15,23,42,.72);backdrop-filter:blur(12px) saturate(1.15);-webkit-backdrop-filter:blur(12px) saturate(1.15);display:none;align-items:center;justify-content:center;z-index:2147483646;padding:max(16px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));animation:vtonFadeIn .3s ease;overflow-y:auto;overscroll-behavior:contain;box-sizing:border-box;}' +
+          '.vton-modal-overlay{position:fixed;inset:0;width:100vw;height:100dvh;background:rgba(15,23,42,.72);backdrop-filter:blur(12px) saturate(1.15);-webkit-backdrop-filter:blur(12px) saturate(1.15);display:none;align-items:center;justify-content:center;z-index:2147483646;padding:max(16px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));animation:vtonFadeIn .3s ease;overflow:hidden;overscroll-behavior:contain;box-sizing:border-box;}' +
           '@keyframes vtonFadeIn{from{opacity:0}to{opacity:1}}' +
           '.vton-modal-overlay.active{display:flex;}' +
           '.vton-modal{background:#fff;border-radius:24px;max-width:min(420px,calc(100vw - 32px));width:100%;max-height:min(90dvh,760px);overflow:hidden;position:relative;display:flex;flex-direction:column;box-shadow:0 32px 64px rgba(15,23,42,.22),0 0 0 1px rgba(15,23,42,.06);animation:vtonSlideUp .38s cubic-bezier(.22,1,.36,1);box-sizing:border-box;}' +
@@ -1174,7 +1174,7 @@
           '.vton-modal::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,' + buttonBg + ',transparent);z-index:2;}' +
           '.vton-modal-close{position:absolute;top:14px;right:14px;background:rgba(15,23,42,.06);border:none;font-size:20px;cursor:pointer;padding:0;line-height:1;color:#64748b;border-radius:12px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;transition:background .2s ease,color .2s ease,transform .2s ease;z-index:10;font-weight:400;}' +
           '.vton-modal-close:hover{background:rgba(15,23,42,.1);color:#0f172a;transform:scale(1.05);}' +
-          '.vton-modal-content{padding:48px 20px 24px;display:flex;flex-direction:column;flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;box-sizing:border-box;}' +
+          '.vton-modal-content{padding:44px 18px 18px;display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;box-sizing:border-box;}' +
           '.vton-funnel-head{text-align:center;margin-bottom:18px;flex-shrink:0;}' +
           '.vton-step-dots{display:flex;align-items:center;gap:6px;margin-bottom:12px;padding:0 2px;}' +
           '.vton-step-dot{flex:1;height:4px;border-radius:999px;background:rgba(15,23,42,.08);transition:background .35s cubic-bezier(.4,0,.2,1),transform .35s ease;width:auto;}' +
@@ -1186,7 +1186,8 @@
 
       function renderWidget(shadowRoot, state) {
         const settings = state.widgetSettings;
-        const buttonText = settings.widget_text || 'Try It On Now';
+        const buttonText =
+          vtonStripEmojis(settings.widget_text) || 'Try it on';
         const buttonBg = settings.widget_bg || '#111827';
         const buttonColor = settings.widget_color || '#ffffff';
         
@@ -1276,7 +1277,7 @@
             }
             .vton-upload-area img {
               max-width: 100%;
-              max-height: 280px;
+              max-height: min(24dvh, 200px);
               border-radius: 18px;
               object-fit: contain;
               box-shadow: 0 12px 40px rgba(15, 23, 42, 0.14);
@@ -1472,12 +1473,27 @@
               min-height: 0;
             }
             .vton-result-content {
-                width: 100%;
+              width: 100%;
               display: flex;
               flex-direction: column;
               align-items: stretch;
-              gap: 12px;
+              gap: 10px;
               box-sizing: border-box;
+              flex: 1;
+              min-height: 0;
+              overflow: hidden;
+            }
+            #vton-panel-result.active {
+              flex: 1;
+              min-height: 0;
+              overflow: hidden;
+            }
+            #vton-panel-result .vton-result {
+              flex: 1;
+              min-height: 0;
+              overflow: hidden;
+              display: flex;
+              flex-direction: column;
             }
             .vton-result-lead {
               margin: 0;
@@ -1493,14 +1509,15 @@
             }
             .vton-result img {
               width: 100%;
-              max-height: min(42dvh, 360px);
+              max-height: min(34dvh, 280px);
               height: auto;
-              border-radius: 18px;
+              border-radius: 14px;
               object-fit: contain;
               display: block;
               background: linear-gradient(165deg, #f8fafc, #f1f5f9);
-              box-shadow: 0 16px 48px rgba(15, 23, 42, 0.12);
+              box-shadow: 0 8px 24px rgba(15, 23, 42, 0.1);
               border: 1px solid rgba(15, 23, 42, 0.06);
+              flex-shrink: 1;
             }
             .vton-add-to-cart-btn {
               width: 100%;
@@ -1606,40 +1623,31 @@
               width: 100%;
               max-width: 420px;
             }
-            .vton-link-btn {
+            .vton-retry-link {
               background: none;
               border: none;
-              padding: 8px 4px;
+              padding: 6px 0 0;
+              margin: 0;
               font-size: 13px;
               color: #64748b;
               cursor: pointer;
-              text-decoration: none;
               font-weight: 500;
+              text-align: center;
+              width: 100%;
               transition: color 0.2s ease;
             }
-            .vton-link-btn:hover {
+            .vton-retry-link:hover {
               color: #0f172a;
-            }
-            .vton-result-actions {
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              gap: 8px;
-              margin-top: 4px;
-            }
-            .vton-result-actions-sep {
-              color: #d1d5db;
-              font-size: 12px;
             }
             .vton-share-block {
               width: 100%;
-              max-width: 420px;
-              margin-top: 12px;
-              padding-top: 16px;
+              margin-top: 4px;
+              padding-top: 12px;
               border-top: 1px solid rgba(15, 23, 42, 0.08);
+              flex-shrink: 0;
             }
             .vton-share-heading {
-              margin: 0 0 10px 0;
+              margin: 0 0 8px 0;
               font-size: 11px;
               font-weight: 600;
               color: #94a3b8;
@@ -1648,43 +1656,72 @@
               letter-spacing: 0.08em;
             }
             .vton-share-btns {
-              display: flex;
-              flex-wrap: wrap;
-              gap: 10px;
-              justify-content: center;
+              display: grid;
+              grid-template-columns: repeat(3, minmax(0, 1fr));
+              gap: 8px;
+            }
+            .vton-share-btns--dual {
+              grid-template-columns: repeat(2, minmax(0, 1fr));
             }
             .vton-share-btn {
-              flex: 1 1 auto;
-              min-width: 0;
-              padding: 12px 14px;
-              border-radius: 12px;
-              border: 1px solid rgba(15, 23, 42, 0.1);
-              background: #f8fafc;
+              display: inline-flex;
+              align-items: center;
+              justify-content: center;
+              gap: 6px;
+              min-height: 44px;
+              padding: 10px 8px;
+              border-radius: 10px;
+              border: 1px solid rgba(15, 23, 42, 0.12);
+              background: #fff;
               color: #0f172a;
-              font-size: 13px;
+              font-size: 12px;
               font-weight: 600;
               cursor: pointer;
               line-height: 1.2;
-              transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+              transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+              box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
             }
             .vton-share-btn:hover {
-              border-color: rgba(15, 23, 42, 0.18);
-              background: #fff;
-              transform: translateY(-1px);
+              border-color: rgba(15, 23, 42, 0.2);
+              box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+            }
+            .vton-share-btn__icon {
+              width: 18px;
+              height: 18px;
+              flex-shrink: 0;
+            }
+            .vton-share-btn__label {
+              white-space: nowrap;
+              overflow: hidden;
+              text-overflow: ellipsis;
+            }
+            .vton-share-btn--native {
+              color: #334155;
             }
             .vton-share-btn--wa {
-              border-color: rgba(22, 163, 74, 0.25);
+              border-color: rgba(22, 163, 74, 0.3);
               background: #f0fdf4;
-              color: #15803d;
+              color: #166534;
             }
             .vton-share-btn--wa:hover {
               background: #dcfce7;
-              border-color: rgba(22, 163, 74, 0.4);
+              border-color: rgba(22, 163, 74, 0.45);
+            }
+            .vton-share-btn--copy {
+              color: #334155;
             }
             .vton-share-btn.is-copied {
               border-color: rgba(37, 99, 235, 0.35);
               background: #eff6ff;
               color: #1d4ed8;
+            }
+            .vton-privacy-notice .vton-privacy-icon {
+              display: inline-flex;
+              vertical-align: middle;
+              margin-right: 4px;
+              width: 14px;
+              height: 14px;
+              color: #94a3b8;
             }
             .vton-secondary-btn {
               flex: 1 1 140px;
@@ -1917,16 +1954,36 @@
                 height: 100%;
               }
               .vton-modal-content {
-                padding: 20px;
-                justify-content: center;
-                align-items: center;
+                padding: 48px 14px 14px;
+                justify-content: flex-start;
+                align-items: stretch;
                 display: flex;
                 flex-direction: column;
+                overflow: hidden;
               }
               .vton-modal-content.has-result {
-                padding: 16px;
-                justify-content: center;
-                align-items: center;
+                padding: 44px 12px 12px;
+                justify-content: flex-start;
+              }
+              .vton-funnel-head {
+                margin-bottom: 12px;
+              }
+              .vton-share-btns {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+              }
+              .vton-share-btn--native {
+                grid-column: 1 / -1;
+              }
+              .vton-result img {
+                max-height: min(28dvh, 200px);
+              }
+              .vton-result-lead {
+                font-size: 14px;
+                margin: 0;
+              }
+              .vton-loading {
+                min-height: 160px;
+                padding: 24px 12px;
               }
               .vton-upload-area {
                 padding: 32px 16px;
@@ -1939,7 +1996,7 @@
                 padding: 28px 16px;
               }
               .vton-result img {
-                max-height: 55vh;
+                max-height: min(26dvh, 180px);
               }
               .vton-result-title {
                 font-size: 16px;
@@ -1982,7 +2039,7 @@
                   <p>Tap to add your photo</p>
                   <p>Front-facing · good lighting · best results</p>
                 </div>
-                <p class="vton-privacy-notice">🔒 Secure processing · your photo is not stored</p>
+                <p class="vton-privacy-notice"><span class="vton-privacy-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></span>Secure processing · your photo is not stored</p>
                 <button id="vton-generate-btn" class="vton-generate-btn" style="background: ${buttonBg}; color: ${buttonColor};" onclick="window.vtonWidgetInstance.generate()" disabled>
                   Try it on now
                 </button>
@@ -2101,6 +2158,11 @@
 
           // Clear saved scroll position
           state.savedScrollY = null;
+
+          var modalContent = shadowRoot.querySelector('.vton-modal-content');
+          if (modalContent) {
+            modalContent.classList.remove('has-result');
+          }
         }
       }
       
@@ -2131,6 +2193,40 @@
           .replace(/</g, '&lt;')
           .replace(/>/g, '&gt;')
           .replace(/"/g, '&quot;');
+      }
+
+      function vtonStripEmojis(str) {
+        return String(str || '')
+          .replace(
+            /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE00}-\u{FE0F}\u{200D}\u{20E3}]/gu,
+            ''
+          )
+          .replace(/\s+/g, ' ')
+          .trim();
+      }
+
+      function vtonShareIconSvg(name) {
+        if (name === 'whatsapp') {
+          return (
+            '<svg class="vton-share-btn__icon" viewBox="0 0 24 24" aria-hidden="true">' +
+            '<path fill="currentColor" d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 2.09.62 4.03 1.69 5.66L2.05 22l4.51-1.65a9.86 9.86 0 004.48 1.07h.01c5.46 0 9.91-4.45 9.91-9.91S17.5 2 12.04 2zm5.84 14.17c-.25.71-1.21 1.32-1.67 1.38-.43.05-.98.08-1.58-.1-.36-.12-.83-.39-1.44-.76-2.54-1.5-4.18-4.13-4.31-4.32-.13-.19-1.03-1.36-1.03-2.64 0-1.28.67-1.91.91-2.17.25-.26.55-.32.74-.32h.53c.17 0 .4-.06.62.47.22.54.76 1.86.83 1.99.07.13.12.28.02.45-.1.17-.15.28-.3.43-.15.15-.31.34-.44.45-.15.12-.3.25-.13.49.17.24.76 1.25 1.63 2.02 1.12.99 2.06 1.3 2.37 1.44.31.14.49.12.67-.07.18-.19.77-.9.98-1.21.21-.31.42-.26.71-.16.29.1 1.84.87 2.16 1.03.32.16.53.24.61.37.08.13.08.76-.17 1.47z"/>' +
+            '</svg>'
+          );
+        }
+        if (name === 'copy') {
+          return (
+            '<svg class="vton-share-btn__icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+            '<rect x="9" y="9" width="13" height="13" rx="2"/>' +
+            '<path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>' +
+            '</svg>'
+          );
+        }
+        return (
+          '<svg class="vton-share-btn__icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+          '<path d="M4 12v7a1 1 0 001 1h14a1 1 0 001-1v-7"/>' +
+          '<path d="M16 6l-4-4-4 4"/><path d="M12 2v14"/>' +
+          '</svg>'
+        );
       }
 
       function vtonGetShopifyRoot() {
@@ -2272,12 +2368,75 @@
           body.sections_url = window.location.pathname;
         }
 
-        return postPayload(body).catch(function() {
+        return postPayload(body).catch(function(firstErr) {
           var legacy = { id: parseInt(variantId, 10), quantity: quantity };
           if (properties && Object.keys(properties).length) {
             legacy.properties = properties;
           }
-          return postPayload(legacy);
+          return postPayload(legacy).catch(function() {
+            if (firstErr) {
+              firstErr._vtonLegacyFailed = true;
+            }
+            throw firstErr || new Error('Failed to add to cart');
+          });
+        });
+      }
+
+      function vtonTryThemeAddToCart(variantId, quantity) {
+        return new Promise(function(resolve, reject) {
+          vtonSyncThemeVariant(variantId);
+          var form = vtonFindBestProductForm();
+          if (form) {
+            var htmlForm = form instanceof HTMLFormElement ? form : form.querySelector('form');
+            if (htmlForm) {
+              var qtyInput = htmlForm.querySelector(
+                'input[name="quantity"], select[name="quantity"]'
+              );
+              if (qtyInput && quantity) {
+                qtyInput.value = String(quantity);
+              }
+            }
+          }
+          var btn = vtonFindAddToCartButton(form || document);
+          if (!btn || btn.disabled) {
+            reject(new Error('Unable to add to cart on this product page'));
+            return;
+          }
+          var settled = false;
+          function finish(ok, payload) {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timer);
+            document.removeEventListener('cart:updated', onCart);
+            document.removeEventListener('cart:add', onCart);
+            document.removeEventListener('cart:change', onCart);
+            if (ok) {
+              resolve(payload || { themeTriggered: true });
+            } else {
+              reject(new Error('Unable to add to cart'));
+            }
+          }
+          function onCart() {
+            finish(true, { themeTriggered: true });
+          }
+          document.addEventListener('cart:updated', onCart);
+          document.addEventListener('cart:add', onCart);
+          document.addEventListener('cart:change', onCart);
+          var timer = setTimeout(function() {
+            finish(true, { themeTriggered: true, optimistic: true });
+          }, 2800);
+          try {
+            btn.click();
+          } catch (e) {
+            finish(false);
+          }
+        });
+      }
+
+      function vtonAddToCartWithFallback(variantId, quantity, properties) {
+        return vtonAddToCartAjax(variantId, quantity, properties).catch(function(ajaxErr) {
+          log('[VTON] Cart API failed, using theme add-to-cart button', ajaxErr);
+          return vtonTryThemeAddToCart(variantId, quantity);
         });
       }
 
@@ -2474,12 +2633,20 @@
           if (!buttonEl || !success) {
             return;
           }
-          var original = buttonEl.getAttribute('data-vton-label') || buttonEl.textContent;
+          var labelEl = buttonEl.querySelector('.vton-share-btn__label');
+          var original =
+            buttonEl.getAttribute('data-vton-label') ||
+            (labelEl && labelEl.textContent) ||
+            'Copy link';
           buttonEl.setAttribute('data-vton-label', original);
-          buttonEl.textContent = 'Copied!';
+          if (labelEl) {
+            labelEl.textContent = 'Copied';
+          }
           buttonEl.classList.add('is-copied');
           setTimeout(function() {
-            buttonEl.textContent = original;
+            if (labelEl) {
+              labelEl.textContent = original;
+            }
             buttonEl.classList.remove('is-copied');
           }, 2200);
         };
@@ -2525,13 +2692,22 @@
           }
         }
 
+        var hasNativeShare =
+          typeof navigator !== 'undefined' && typeof navigator.share === 'function';
+        var shareGridClass =
+          'vton-share-btns' + (hasNativeShare ? '' : ' vton-share-btns--dual');
+        var nativeShareBtn = hasNativeShare
+          ? '<button type="button" class="vton-share-btn vton-share-btn--native" data-vton-action="share-native">' +
+            vtonShareIconSvg('share') +
+            '<span class="vton-share-btn__label">Share</span></button>'
+          : '';
+
         return (
           '<div class="vton-result-content">' +
-          '<span class="vton-result-badge">Your try-on</span>' +
           '<img src="' +
           vtonEscapeHtml(state.resultImageUrl) +
           '" alt="Try-on result" />' +
-          '<p class="vton-result-lead">Love the look? Add <strong>' +
+          '<p class="vton-result-lead">Add <strong>' +
           vtonEscapeHtml(productTitle) +
           '</strong> to your cart.</p>' +
           variantHtml +
@@ -2542,20 +2718,20 @@
           ';color:' +
           buttonColor +
           ';">Add to cart</button>' +
-          '<div class="vton-result-actions">' +
-          '<button type="button" class="vton-link-btn" data-vton-action="retry">New photo</button>' +
-          (typeof navigator !== 'undefined' && navigator.share
-            ? '<span class="vton-result-actions-sep" aria-hidden="true">·</span>' +
-              '<button type="button" class="vton-link-btn" data-vton-action="share-native">Share</button>'
-            : '') +
-          '</div>' +
           '<div class="vton-share-block">' +
           '<p class="vton-share-heading">Share your look</p>' +
-          '<div class="vton-share-btns">' +
-          '<button type="button" class="vton-share-btn vton-share-btn--wa" data-vton-action="share-whatsapp">WhatsApp</button>' +
-          '<button type="button" class="vton-share-btn" data-vton-action="share-copy">Copy image link</button>' +
-          '</div>' +
-          '</div>' +
+          '<div class="' +
+          shareGridClass +
+          '">' +
+          nativeShareBtn +
+          '<button type="button" class="vton-share-btn vton-share-btn--wa" data-vton-action="share-whatsapp">' +
+          vtonShareIconSvg('whatsapp') +
+          '<span class="vton-share-btn__label">WhatsApp</span></button>' +
+          '<button type="button" class="vton-share-btn vton-share-btn--copy" data-vton-action="share-copy" data-vton-label="Copy link">' +
+          vtonShareIconSvg('copy') +
+          '<span class="vton-share-btn__label">Copy link</span></button>' +
+          '</div></div>' +
+          '<button type="button" class="vton-retry-link" data-vton-action="retry">Try another photo</button>' +
           '</div>'
         );
       }
@@ -2611,6 +2787,10 @@
 
       function resetResultForRetry(shadowRoot, state) {
         state.resultImageUrl = null;
+        var modalContent = shadowRoot.querySelector('.vton-modal-content');
+        if (modalContent) {
+          modalContent.classList.remove('has-result');
+        }
         var result = shadowRoot.getElementById('vton-result');
         var uploadArea = shadowRoot.getElementById('vton-upload-area');
         var generateBtn = shadowRoot.getElementById('vton-generate-btn');
@@ -2731,7 +2911,14 @@
         if (!result || !state.resultImageUrl) {
           return;
         }
+        if (!state.selectedVariantId) {
+          state.selectedVariantId = vtonResolveVariantId();
+        }
         result.innerHTML = buildResultPanelHtml(state);
+        var modalContent = shadowRoot.querySelector('.vton-modal-content');
+        if (modalContent) {
+          modalContent.classList.add('has-result');
+        }
         vtonShowFunnelPanel(shadowRoot, 'result');
         bindResultPanelEvents(shadowRoot, state);
       }
@@ -2777,14 +2964,32 @@
           return;
         }
 
+        var variantSelect = shadowRoot.getElementById('vton-variant-select');
+        if (variantSelect) {
+          var selectedOpt = variantSelect.options[variantSelect.selectedIndex];
+          if (selectedOpt && selectedOpt.disabled) {
+            if (atcButton) {
+              atcButton.disabled = false;
+              atcButton.textContent = originalButtonText;
+            }
+            if (atcError) {
+              atcError.textContent = 'This option is sold out. Choose another variant.';
+              atcError.classList.add('active');
+            }
+            return;
+          }
+        }
+
         log('[VTON] Adding variant', variantId, 'qty', quantity);
 
-        vtonAddToCartAjax(variantId, quantity, properties)
+        vtonSyncThemeVariant(variantId);
+
+        vtonAddToCartWithFallback(variantId, quantity, properties)
           .then(function(data) {
             log('[VTON] Product added to cart:', data);
 
             if (atcButton) {
-              atcButton.textContent = 'Added to cart!';
+              atcButton.textContent = 'Added to cart';
               atcButton.style.background = '#16a34a';
             setTimeout(function() {
                 atcButton.textContent = originalButtonText;
@@ -2797,7 +3002,20 @@
             if (state.abBucket) {
               trackAbEvent(state.shop, state.productId, state.abBucket, 'atc');
             }
-            vtonPublishCartUpdate(data);
+            if (data && !data.themeTriggered) {
+              vtonPublishCartUpdate(data);
+            } else {
+              fetch(vtonGetShopifyRoot() + 'cart.js', { credentials: 'same-origin' })
+                .then(function(r) {
+                  return r.json();
+                })
+                .then(function(cart) {
+                  vtonPublishCartUpdate(cart);
+                })
+                .catch(function() {
+                  vtonPublishCartUpdate({});
+                });
+            }
             vtonTryOpenCartDrawer();
         })
         .catch(function(err) {

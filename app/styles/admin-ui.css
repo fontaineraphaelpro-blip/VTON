@@ -661,6 +661,16 @@
   transform: scale(1.08);
 }
 
+.vton-color-picker__head {
+  margin: 0;
+}
+
+/* Widget — Button style (mobile) */
+.vton-widget-style {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
 @media (max-width: 720px) {
   .vton-widget-colors__fields {
     grid-template-columns: 1fr;
@@ -668,6 +678,133 @@
 
   .vton-color-pairings__grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .vton-widget-style.vton-preview-wrap {
+    gap: 14px;
+  }
+
+  .vton-widget-style__preview {
+    padding: 16px 14px;
+  }
+
+  .vton-widget-style__preview .vton-preview-button {
+    display: block;
+    width: 100%;
+    max-width: none;
+    padding: 16px 18px;
+    font-size: 16px;
+    line-height: 1.35;
+    border-radius: 10px;
+    box-sizing: border-box;
+  }
+
+  .vton-widget-style__panel {
+    padding: 14px 12px;
+  }
+
+  .vton-widget-style__title {
+    margin-bottom: 12px !important;
+    font-size: 16px;
+  }
+
+  .vton-widget-colors {
+    gap: 16px;
+    padding: 14px 12px;
+  }
+
+  .vton-color-pairings__title {
+    margin-bottom: 10px;
+  }
+
+  .vton-color-pairing {
+    min-height: 76px;
+    padding: 10px 6px;
+    gap: 6px;
+    border-radius: 10px;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .vton-color-pairing__chip {
+    min-height: 40px;
+    font-size: 14px;
+  }
+
+  .vton-color-pairing__name {
+    font-size: 10px;
+    line-height: 1.2;
+    text-align: center;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .vton-color-picker {
+    padding: 12px;
+    gap: 10px;
+  }
+
+  .vton-color-picker__main {
+    gap: 10px;
+  }
+
+  .vton-color-picker__swatch {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+  }
+
+  .vton-color-picker__hex-wrap {
+    height: 48px;
+    min-height: 48px;
+  }
+
+  .vton-color-picker__presets {
+    gap: 10px;
+    margin-top: 2px;
+  }
+
+  .vton-color-picker__preset {
+    width: 36px;
+    height: 36px;
+  }
+
+  .vton-widget-style__saved {
+    margin-top: 12px !important;
+    font-size: 11px;
+    line-height: 1.5;
+    word-break: break-word;
+  }
+
+  .vton-widget-style__actions .Polaris-Button {
+    width: 100%;
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 400px) {
+  .vton-color-pairings__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .vton-color-pairing {
+    min-height: 72px;
+    padding: 8px 4px;
+  }
+
+  .vton-widget-colors {
+    padding: 12px 10px;
+  }
+
+  .vton-color-picker__label {
+    font-size: 12px;
+  }
+
+  .vton-color-picker__hint {
+    font-size: 11px;
   }
 }
 
@@ -1010,6 +1147,10 @@
   .vton-preview-wrap,
   .vton-form-grid {
     grid-template-columns: 1fr;
+  }
+
+  .vton-widget-style.vton-preview-wrap {
+    gap: 16px;
   }
 
   .vton-page-header {
@@ -1605,7 +1746,15 @@
 
 /* Credits — 3-step funnel */
 .vton-admin .credits-funnel {
-  max-width: 1120px;
+  max-width: 100%;
+}
+
+.vton-admin .credits-funnel-step {
+  margin-bottom: 24px;
+}
+
+.vton-admin .credits-funnel-step:last-child {
+  margin-bottom: 0;
 }
 
 .vton-admin .credits-funnel-kicker {
@@ -1618,11 +1767,15 @@
 }
 
 .vton-admin .credits-funnel-kicker--plans {
-  margin-top: 22px;
+  margin-top: 0;
 }
 
 .vton-admin .credits-funnel-kicker--help {
-  margin-top: 22px;
+  margin-top: 0;
+}
+
+.vton-admin .credits-plans-header {
+  margin-bottom: 14px;
 }
 
 .vton-admin .credits-funnel-lead {
@@ -1634,10 +1787,13 @@
 }
 
 .vton-admin .credits-funnel-panel--usage {
-  margin-bottom: 4px;
+  margin-bottom: 0;
 }
 
 .vton-admin .credits-usage-strip {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   background: var(--vton-surface);
   border: 1px solid var(--vton-border);
   border-radius: var(--vton-radius);
@@ -1675,20 +1831,47 @@
   color: #b45309;
 }
 
+.vton-admin .credits-usage-strip__stat-box {
+  padding: 10px 12px;
+  background: var(--vton-bg);
+  border: 1px solid var(--vton-border);
+  border-radius: var(--vton-radius-sm, 8px);
+}
+
+.vton-admin .credits-usage-strip__stat-label {
+  margin: 0 0 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--vton-muted);
+}
+
 .vton-admin .credits-usage-strip__stat {
-  margin: 12px 0 0;
+  margin: 0;
   font-size: 13px;
   color: var(--vton-text);
+  line-height: 1.4;
+}
+
+.vton-admin .credits-usage-strip__stat strong {
+  display: block;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--vton-text);
+  margin-bottom: 2px;
 }
 
 .vton-admin .credits-usage-strip__stat-muted {
+  display: block;
   color: var(--vton-muted);
   font-weight: 400;
+  font-size: 12px;
 }
 
 .vton-admin .credits-usage-strip__link {
   display: inline-block;
-  margin-top: 10px;
+  margin-top: 2px;
   font-size: 13px;
   font-weight: 600;
   color: var(--vton-brand);
@@ -1796,11 +1979,155 @@
 .vton-admin .credits-page .plan-card--compact {
   display: flex;
   flex-direction: column;
-  min-height: 300px;
+  min-height: 0;
 }
 
 .vton-admin .credits-page .plan-card--compact .plan-cta {
   margin-top: auto;
+}
+
+/* Credits — desktop layout */
+@media (min-width: 768px) {
+  .vton-admin .credits-page .vton-page-header {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 24px;
+  }
+
+  .vton-admin .credits-page .vton-page-actions {
+    width: auto;
+  }
+
+  .vton-admin .credits-page .credits-balance-compact {
+    width: auto;
+    min-width: 152px;
+    padding: 14px 22px;
+  }
+
+  .vton-admin .credits-page .credits-balance-compact-value {
+    font-size: 28px;
+  }
+}
+
+@media (min-width: 900px) {
+  .vton-admin .credits-page.app-container {
+    max-width: 1280px !important;
+    padding-left: 28px !important;
+    padding-right: 28px !important;
+  }
+
+  .vton-admin .credits-funnel-step {
+    margin-bottom: 36px;
+  }
+
+  .vton-admin .credits-plans-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px 40px;
+    margin-bottom: 18px;
+  }
+
+  .vton-admin .credits-plans-header .credits-funnel-kicker {
+    margin-bottom: 0;
+  }
+
+  .vton-admin .credits-plans-header .credits-funnel-lead {
+    margin: 0;
+    flex: 1 1 300px;
+    max-width: 480px;
+    text-align: right;
+  }
+
+  .vton-admin .credits-usage-strip {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(200px, 28%) auto;
+    grid-template-areas: "meter stat link";
+    gap: 8px 28px;
+    align-items: center;
+    padding: 20px 24px;
+  }
+
+  .vton-admin .credits-usage-strip__meter {
+    grid-area: meter;
+  }
+
+  .vton-admin .credits-usage-strip__stat-box {
+    grid-area: stat;
+    padding: 14px 16px;
+  }
+
+  .vton-admin .credits-usage-strip__link {
+    grid-area: link;
+    margin: 0;
+    white-space: nowrap;
+    font-size: 14px;
+  }
+
+  .vton-admin .credits-usage-strip:not(:has(.credits-usage-strip__stat-box)) {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "meter link";
+  }
+
+  .vton-admin .credits-page .credits-pricing-grid {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 16px !important;
+    margin-bottom: 0 !important;
+  }
+
+  .vton-admin .credits-page .plan-card--compact {
+    min-height: 100%;
+    padding: 20px 18px !important;
+  }
+
+  .vton-admin .credits-page .plan-card--compact .plan-name {
+    font-size: 17px;
+  }
+
+  .vton-admin .credits-page .plan-card--compact .plan-price {
+    font-size: 26px;
+  }
+
+  .vton-admin .credits-page .plan-card--compact .plan-button {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+
+  .vton-admin .credits-page .plan-card.best-value {
+    transform: none;
+  }
+
+  .vton-admin .credits-funnel-panel--help {
+    padding: 24px 28px;
+  }
+
+  .vton-admin .credits-help-heading {
+    font-size: 18px;
+  }
+
+  .vton-admin .credits-faq-grid {
+    gap: 14px;
+  }
+
+  .vton-admin .credits-footnote {
+    margin-top: 8px;
+  }
+}
+
+@media (min-width: 1100px) {
+  .vton-admin .credits-page .credits-pricing-grid {
+    gap: 20px !important;
+  }
+
+  .vton-admin .credits-faq-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .vton-admin .credits-faq-card {
+    padding: 16px 18px;
+  }
 }
 
 /* Try-on toggle (× = on, empty = off) */
@@ -2282,12 +2609,6 @@
   color: var(--vton-brand);
   font-weight: 700;
   font-size: 10px;
-}
-
-.vton-admin .credits-page .plan-card--compact {
-  display: flex;
-  flex-direction: column;
-  min-height: 280px;
 }
 
 .vton-admin .credits-faq {

@@ -5,6 +5,8 @@ import {
   useLoaderData,
   useLocation,
   useNavigation,
+  useRouteError,
+  isRouteErrorResponse,
   type ShouldRevalidateFunctionArgs,
 } from "@remix-run/react";
 import { useEffect, useMemo } from "react";
@@ -49,7 +51,11 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   }
 };
 
-/** Avoid re-running layout DB + auth on every in-app tab switch (major speed win). */
+/**
+ * Layout shop/credits banner uses a 20s server cache (layout-shop-cache.server.ts).
+ * Do not skip full layout revalidation on tab changes — that broke client navigations
+ * (stuck page / raw JSON with braces) when combined with singleFetch.
+ */
 export function shouldRevalidate({
   currentUrl,
   nextUrl,
@@ -64,13 +70,6 @@ export function shouldRevalidate({
     nextUrl.pathname.startsWith("/app/credits")
   ) {
     return true;
-  }
-  if (
-    currentUrl.pathname.startsWith("/app") &&
-    nextUrl.pathname.startsWith("/app") &&
-    currentUrl.pathname !== nextUrl.pathname
-  ) {
-    return false;
   }
   return defaultShouldRevalidate;
 }
@@ -122,28 +121,28 @@ export default function App() {
         <div className="nav-loading-bar" role="progressbar" aria-busy="true" aria-valuetext="Loading" />
       )}
       <NavMenu>
-        <Link to="/app" rel="home" prefetch="intent">
+        <Link to="/app" rel="home" prefetch="render">
           Dashboard
         </Link>
-        <Link to="/app/products" prefetch="intent">
+        <Link to="/app/products" prefetch="render">
           Products
         </Link>
-        <Link to="/app/widget" prefetch="intent">
+        <Link to="/app/widget" prefetch="render">
           Widget
         </Link>
-        <Link to="/app/history" prefetch="intent">
+        <Link to="/app/history" prefetch="render">
           History
         </Link>
-        <Link to="/app/credits" prefetch="intent">
+        <Link to="/app/credits" prefetch="render">
           Credits
         </Link>
-        <Link to="/app/privacy" prefetch="intent">
+        <Link to="/app/privacy" prefetch="render">
           Privacy Policy
         </Link>
-        <Link to="/app/terms" prefetch="intent">
+        <Link to="/app/terms" prefetch="render">
           Terms of Service
         </Link>
-        <Link to="/app/support" prefetch="intent">
+        <Link to="/app/support" prefetch="render">
           Support
         </Link>
       </NavMenu>
@@ -157,4 +156,44 @@ export default function App() {
       </div>
     </AppProvider>
   );
+}
+
+export function ErrorBoundary() {
+  const error = useRouteError();
+
+  if (isRouteErrorResponse(error)) {
+    const data =
+      typeof error.data === "string"
+        ? error.data.trim()
+        : "";
+    // Shopify boundary renders error.data as HTML; JSON bodies show as raw {…} and block the UI.
+    if (data.startsWith("{") || data.startsWith("[")) {
+      return (
+        <div className="vton-admin app-container" style={{ padding: 24 }}>
+          <h1 style={{ fontSize: 18, margin: "0 0 8px" }}>Unable to load this page</h1>
+          <p style={{ color: "#6b7280", margin: "0 0 16px" }}>
+            The navigation request failed. Refresh the app or open this section again.
+          </p>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            style={{
+              padding: "8px 16px",
+              background: "#008060",
+              color: "#fff",
+              border: "none",
+              borderRadius: 6,
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            Reload
+          </button>
+        </div>
+      );
+    }
+    return boundary.error(error);
+  }
+
+  return boundary.error(error);
 }

@@ -75,7 +75,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     }
   }
 
-  const widgetText = (formData.get("widgetText") as string) || "Try It On Now ✨";
+  const widgetText = (formData.get("widgetText") as string) || "Try it on";
   const widgetBg = (formData.get("widgetBg") as string) || "#000000";
   const widgetColor = (formData.get("widgetColor") as string) || "#ffffff";
 
@@ -135,14 +135,14 @@ export default function Widget() {
   const notifications = useAdminNotifications();
   const { notifications: items, dismiss } = notifications;
 
-  const [widgetText, setWidgetText] = useState(() => shop?.widget_text || "Try It On Now ✨");
+  const [widgetText, setWidgetText] = useState(() => shop?.widget_text || "Try it on");
   const [widgetBg, setWidgetBg] = useState(() => shop?.widget_bg || "#000000");
   const [widgetColor, setWidgetColor] = useState(() => shop?.widget_color || "#ffffff");
   const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
     if (shop && !isInitialized) {
-      setWidgetText(shop.widget_text || "Try It On Now ✨");
+      setWidgetText(shop.widget_text || "Try it on");
       setWidgetBg(shop.widget_bg || "#000000");
       setWidgetColor(shop.widget_color || "#ffffff");
       setIsInitialized(true);
@@ -151,7 +151,7 @@ export default function Widget() {
 
   useEffect(() => {
     if (fetcher.data?.success && fetcher.data.savedValues) {
-      setWidgetText(fetcher.data.savedValues.widget_text || "Try It On Now ✨");
+      setWidgetText(fetcher.data.savedValues.widget_text || "Try it on");
       setWidgetBg(fetcher.data.savedValues.widget_bg || "#000000");
       setWidgetColor(fetcher.data.savedValues.widget_color || "#ffffff");
     }
@@ -390,8 +390,8 @@ export default function Widget() {
             </div>
           )}
 
-          <div className="vton-preview-wrap">
-            <div className="vton-preview-card">
+          <div className="vton-preview-wrap vton-widget-style">
+            <div className="vton-preview-card vton-widget-style__preview">
               <p className="vton-preview-label">Live preview</p>
               <button
                 type="button"
@@ -405,15 +405,15 @@ export default function Widget() {
                   ),
                 }}
               >
-                {widgetText || "Try It On Now ✨"}
+                {widgetText || "Try it on"}
               </button>
             </div>
 
-            <div className="vton-panel">
-              <h2 className="vton-panel-title" style={{ marginBottom: 16 }}>
+            <div className="vton-panel vton-widget-style__panel">
+              <h2 className="vton-panel-title vton-widget-style__title">
                 Button style
               </h2>
-              <form onSubmit={handleSave}>
+              <form onSubmit={handleSave} className="vton-widget-style__form">
                 <BlockStack gap="400">
                   <TextField
                     label="Button text"
@@ -451,12 +451,19 @@ export default function Widget() {
                       />
                     </div>
                   </div>
-                  <Button submit variant="primary" loading={fetcher.state === "submitting"}>
-                    Save changes
-                  </Button>
+                  <div className="vton-widget-style__actions">
+                    <Button
+                      submit
+                      variant="primary"
+                      loading={fetcher.state === "submitting"}
+                      fullWidth
+                    >
+                      Save changes
+                    </Button>
+                  </div>
                 </BlockStack>
               </form>
-              <p className="vton-field-hint" style={{ marginTop: 16 }}>
+              <p className="vton-field-hint vton-widget-style__saved">
                 Saved: {shop?.widget_text || "—"} · {shop?.widget_bg || "—"} ·{" "}
                 {shop?.widget_color || "—"}
               </p>

@@ -217,7 +217,7 @@ export async function upsertShop(domain: string, data: {
         domain,
         data.accessToken || "",
         initialCredits, // Initialize credits (1000 for specific shop, or provided value, or default)
-        data.widgetText || "Try It On Now ✨",
+        data.widgetText || "Try it on",
         data.widgetBg || "#000000",
         data.widgetColor || "#ffffff",
         data.maxTriesPerUser || 5,
@@ -1005,7 +1005,7 @@ export async function getProductTryonStatus(shop: string, productId: string, pro
   // Get widget settings (only if enabled)
   // Use widget_text, widget_bg, widget_color to match what the client widget expects
   const widgetSettings = enabled ? {
-    widget_text: shopRecord.widget_text || "Try It On Now ✨",
+    widget_text: shopRecord.widget_text || "Try it on",
     widget_bg: shopRecord.widget_bg || "#000000",
     widget_color: shopRecord.widget_color || "#ffffff",
     maxTriesPerUser: shopRecord.max_tries_per_user || 5,

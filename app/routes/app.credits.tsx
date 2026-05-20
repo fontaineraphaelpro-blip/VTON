@@ -685,49 +685,68 @@ export default function Credits() {
         <CreditsAlertBanner alert={creditsAlert} variant="inline" />
 
         <div className="credits-funnel" aria-label="Credits checkout flow">
-          <p className="credits-funnel-kicker">Step 1 · Your usage</p>
+          <section
+            className="credits-funnel-step"
+            aria-labelledby="credits-step-usage"
+          >
+            <p id="credits-step-usage" className="credits-funnel-kicker">
+              Step 1 · Your usage
+            </p>
 
-          <section className="credits-funnel-panel credits-funnel-panel--usage">
-            <div className="credits-usage-strip">
-              <div className="credits-usage-strip__meter">
-                <div className="credits-usage-strip__head">
-                  <span className="credits-usage-strip__label">This month</span>
-                  <span className="credits-usage-strip__numbers">
-                    <strong>{stats.monthlyUsage}</strong> / {monthlyQuota} used
-                  </span>
+            <div className="credits-funnel-panel credits-funnel-panel--usage">
+              <div className="credits-usage-strip">
+                <div className="credits-usage-strip__meter">
+                  <div className="credits-usage-strip__head">
+                    <span className="credits-usage-strip__label">This month</span>
+                    <span className="credits-usage-strip__numbers">
+                      <strong>{stats.monthlyUsage}</strong> / {monthlyQuota} used
+                    </span>
+                  </div>
+                  <div className="credits-usage-meter credits-usage-meter--compact">
+                    <div
+                      className="credits-usage-meter__fill"
+                      style={{ width: `${monthlyUsagePercent}%` }}
+                    />
+                  </div>
+                  {monthlyUsagePercent >= 80 && (
+                    <p className="credits-usage-strip__warn">
+                      Approaching your monthly limit
+                    </p>
+                  )}
                 </div>
-                <div className="credits-usage-meter credits-usage-meter--compact">
-                  <div
-                    className="credits-usage-meter__fill"
-                    style={{ width: `${monthlyUsagePercent}%` }}
-                  />
-                </div>
-                {monthlyUsagePercent >= 80 && (
-                  <p className="credits-usage-strip__warn">Approaching your monthly limit</p>
+                {stats.totalTryons > 0 && (
+                  <div className="credits-usage-strip__stat-box">
+                    <p className="credits-usage-strip__stat-label">Try-on → cart</p>
+                    <p className="credits-usage-strip__stat">
+                      <strong>
+                        {conversionRate !== null ? `${conversionRate}%` : "—"}
+                      </strong>
+                      <span className="credits-usage-strip__stat-muted">
+                        {stats.totalAtc} ATC / {stats.totalTryons} try-ons
+                      </span>
+                    </p>
+                  </div>
                 )}
+                <Link to="/app" className="credits-usage-strip__link">
+                  Open dashboard →
+                </Link>
               </div>
-              {stats.totalTryons > 0 && (
-                <p className="credits-usage-strip__stat">
-                  Try-on → cart:{" "}
-                  <strong>{conversionRate !== null ? `${conversionRate}%` : "—"}</strong>
-                  <span className="credits-usage-strip__stat-muted">
-                    {" "}
-                    ({stats.totalAtc} ATC / {stats.totalTryons} try-ons)
-                  </span>
-                </p>
-              )}
-              <Link to="/app" className="credits-usage-strip__link">
-                Open dashboard
-              </Link>
             </div>
           </section>
 
-          <p className="credits-funnel-kicker credits-funnel-kicker--plans">
-            Step 2 · Choose a plan
-          </p>
-          <p className="credits-funnel-lead">
-            1 credit = 1 try-on. Most stores upgrade to <strong>Pro</strong> before campaigns.
-          </p>
+          <section
+            className="credits-funnel-step credits-funnel-step--plans"
+            aria-labelledby="credits-step-plans"
+          >
+            <div className="credits-plans-header">
+              <p id="credits-step-plans" className="credits-funnel-kicker credits-funnel-kicker--plans">
+                Step 2 · Choose a plan
+              </p>
+              <p className="credits-funnel-lead">
+                1 credit = 1 try-on. Most stores upgrade to <strong>Pro</strong> before
+                campaigns.
+              </p>
+            </div>
 
         <div className="pricing-grid pricing-grid--compact credits-pricing-grid">
           {subscriptionPlans.map((plan) => {
@@ -806,11 +825,17 @@ export default function Credits() {
             );
           })}
         </div>
+          </section>
 
-          <p className="credits-funnel-kicker credits-funnel-kicker--help">Step 3 · Good to know</p>
           <section
+            className="credits-funnel-step credits-funnel-step--help"
+            aria-labelledby="credits-step-help"
+          >
+          <p id="credits-step-help" className="credits-funnel-kicker credits-funnel-kicker--help">
+            Step 3 · Good to know
+          </p>
+          <div
             className="credits-funnel-panel credits-funnel-panel--help"
-            aria-labelledby="credits-help-heading"
           >
             <h2 id="credits-help-heading" className="credits-help-heading">
               Billing & credits FAQ
@@ -827,6 +852,7 @@ export default function Credits() {
                 </article>
               ))}
             </div>
+          </div>
           </section>
         </div>
 

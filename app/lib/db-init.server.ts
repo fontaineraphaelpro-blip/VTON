@@ -54,7 +54,7 @@ export async function ensureTables() {
         domain TEXT PRIMARY KEY,
         access_token TEXT DEFAULT '',
         credits INTEGER DEFAULT 0,
-        widget_text TEXT DEFAULT 'Try It On Now ✨',
+        widget_text TEXT DEFAULT 'Try it on',
         widget_bg TEXT DEFAULT '#000000',
         widget_color TEXT DEFAULT '#ffffff',
         max_tries_per_user INTEGER DEFAULT 5,
