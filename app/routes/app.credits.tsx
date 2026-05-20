@@ -649,6 +649,10 @@ export default function Credits() {
         q: "Can I change plans?",
         a: "Yes — upgrade anytime; Shopify handles prorated billing.",
       },
+      {
+        q: "Cancel or pause?",
+        a: "Cancel anytime from Shopify billing. Your plan stays active until the end of the current cycle.",
+      },
     ],
     []
   );
@@ -681,11 +685,6 @@ export default function Credits() {
         <CreditsAlertBanner alert={creditsAlert} variant="inline" />
 
         <div className="credits-funnel" aria-label="Credits checkout flow">
-          <div className="credits-funnel-steps" aria-hidden="true">
-            <span className="credits-funnel-step-dot is-active" />
-            <span className="credits-funnel-step-dot" />
-            <span className="credits-funnel-step-dot" />
-          </div>
           <p className="credits-funnel-kicker">Step 1 · Your usage</p>
 
           <section className="credits-funnel-panel credits-funnel-panel--usage">
@@ -809,16 +808,26 @@ export default function Credits() {
         </div>
 
           <p className="credits-funnel-kicker credits-funnel-kicker--help">Step 3 · Good to know</p>
-          <details className="credits-funnel-help">
-            <summary>How credits work</summary>
-            <ul className="credits-funnel-help__list">
+          <section
+            className="credits-funnel-panel credits-funnel-panel--help"
+            aria-labelledby="credits-help-heading"
+          >
+            <h2 id="credits-help-heading" className="credits-help-heading">
+              Billing & credits FAQ
+            </h2>
+            <p className="credits-help-intro">
+              Everything you need before subscribing — no hidden fees, credits only count on
+              successful try-ons.
+            </p>
+            <div className="credits-faq-grid">
               {faqItems.map((item) => (
-                <li key={item.q}>
-                  <strong>{item.q}</strong> {item.a}
-                </li>
+                <article key={item.q} className="credits-faq-card">
+                  <h3 className="credits-faq-card__q">{item.q}</h3>
+                  <p className="credits-faq-card__a">{item.a}</p>
+                </article>
               ))}
-            </ul>
-          </details>
+            </div>
+          </section>
         </div>
 
         <p className="credits-footnote">
