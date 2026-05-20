@@ -404,6 +404,173 @@
         document.head.appendChild(style);
       }
 
+      function vtonInjectToastCss() {
+        if (document.getElementById('vton-toast-css')) {
+          return;
+        }
+        var style = document.createElement('style');
+        style.id = 'vton-toast-css';
+        style.textContent =
+          '.vton-ready-toast{position:fixed;left:max(16px,env(safe-area-inset-left));right:max(16px,env(safe-area-inset-right));bottom:max(20px,env(safe-area-inset-bottom));z-index:2147483647;display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border-radius:16px;background:#0f172a;color:#fff;box-shadow:0 12px 40px rgba(15,23,42,.35),0 0 0 1px rgba(255,255,255,.08);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;transform:translateY(120%);opacity:0;transition:transform .4s cubic-bezier(.22,1,.36,1),opacity .35s ease;pointer-events:none;max-width:420px;margin:0 auto;}' +
+          '.vton-ready-toast.is-visible{transform:translateY(0);opacity:1;pointer-events:auto;}' +
+          '.vton-ready-toast--error{background:#7f1d1d;}' +
+          '.vton-ready-toast__icon{flex-shrink:0;width:40px;height:40px;border-radius:12px;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:20px;}' +
+          '.vton-ready-toast__body{flex:1;min-width:0;}' +
+          '.vton-ready-toast__title{margin:0 0 4px;font-size:15px;font-weight:600;line-height:1.3;}' +
+          '.vton-ready-toast__sub{margin:0;font-size:13px;opacity:.85;line-height:1.35;}' +
+          '.vton-ready-toast__cta{margin-top:10px;padding:8px 14px;border:none;border-radius:10px;background:#fff;color:#0f172a;font-size:13px;font-weight:600;cursor:pointer;touch-action:manipulation;}' +
+          '.vton-ready-toast--error .vton-ready-toast__cta{background:#fef2f2;color:#7f1d1d;}' +
+          '.vton-ready-toast__close{flex-shrink:0;width:32px;height:32px;border:none;border-radius:10px;background:rgba(255,255,255,.12);color:#fff;font-size:20px;line-height:1;cursor:pointer;padding:0;}' +
+          '.vton-button{position:relative;}' +
+          '.vton-button-badge{position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;padding:0 5px;border-radius:999px;font-size:10px;font-weight:700;line-height:18px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.2);}' +
+          '.vton-button-badge--generating{background:#f59e0b;color:#fff;animation:vtonBadgePulse 1.2s ease infinite;}' +
+          '.vton-button-badge--ready{background:#16a34a;color:#fff;}' +
+          '@keyframes vtonBadgePulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.7;transform:scale(.92)}}' +
+          '.vton-widget-container--generating .vton-button{box-shadow:0 0 0 2px rgba(245,158,11,.45);}';
+        document.head.appendChild(style);
+      }
+
+      function vtonNotifyStrings() {
+        var lang = (document.documentElement.lang || '').toLowerCase();
+        if (lang.indexOf('fr') === 0) {
+          return {
+            readyTitle: 'Votre essayage est prêt !',
+            readySub: 'Appuyez pour voir le résultat sur le produit.',
+            readyCta: 'Voir le résultat',
+            errorTitle: 'Échec de l\'essayage',
+            errorSub: 'Ouvrez le widget pour réessayer.',
+            errorCta: 'Réessayer',
+            readyBadge: 'Prêt',
+            closeHint:
+              'Vous pouvez fermer cette fenêtre. Nous vous préviendrons quand ce sera prêt.',
+          };
+        }
+        return {
+          readyTitle: 'Your try-on is ready!',
+          readySub: 'Tap to view your result on this product.',
+          readyCta: 'View result',
+          errorTitle: 'Try-on could not be completed',
+          errorSub: 'Open the widget to try again.',
+          errorCta: 'Try again',
+          readyBadge: 'Ready',
+          closeHint:
+            'You can close this window. We\'ll notify you when your try-on is ready.',
+        };
+      }
+
+      function vtonDismissReadyNotification(state) {
+        if (state && state._toastAutoHideTimer) {
+          clearTimeout(state._toastAutoHideTimer);
+          state._toastAutoHideTimer = null;
+        }
+        var el = document.getElementById('vton-ready-toast');
+        if (el) {
+          el.classList.remove('is-visible');
+          setTimeout(function() {
+            if (el.parentNode) {
+              el.parentNode.removeChild(el);
+            }
+          }, 350);
+        }
+      }
+
+      function vtonShowReadyNotification(state, type) {
+        vtonInjectToastCss();
+        vtonDismissReadyNotification(state);
+        var isError = type === 'error';
+        var copy = vtonNotifyStrings();
+        var toast = document.createElement('div');
+        toast.id = 'vton-ready-toast';
+        toast.className =
+          'vton-ready-toast' + (isError ? ' vton-ready-toast--error' : '');
+        toast.setAttribute('role', 'status');
+        toast.innerHTML =
+          '<span class="vton-ready-toast__icon" aria-hidden="true">' +
+          (isError ? '!' : '✓') +
+          '</span>' +
+          '<div class="vton-ready-toast__body">' +
+          '<p class="vton-ready-toast__title">' +
+          vtonEscapeHtml(isError ? copy.errorTitle : copy.readyTitle) +
+          '</p>' +
+          '<p class="vton-ready-toast__sub">' +
+          vtonEscapeHtml(isError ? copy.errorSub : copy.readySub) +
+          '</p>' +
+          '<button type="button" class="vton-ready-toast__cta" data-vton-toast-action="1">' +
+          vtonEscapeHtml(isError ? copy.errorCta : copy.readyCta) +
+          '</button></div>' +
+          '<button type="button" class="vton-ready-toast__close" aria-label="Close">&times;</button>';
+        document.body.appendChild(toast);
+        requestAnimationFrame(function() {
+          toast.classList.add('is-visible');
+        });
+        var actionBtn = toast.querySelector('[data-vton-toast-action]');
+        if (actionBtn) {
+          actionBtn.addEventListener('click', function() {
+            vtonDismissReadyNotification(state);
+            vtonSetWidgetButtonBadge(state, null);
+            if (window.vtonWidgetInstance && window.vtonWidgetInstance.openModal) {
+              window.vtonWidgetInstance.openModal();
+            }
+          });
+        }
+        var closeBtn = toast.querySelector('.vton-ready-toast__close');
+        if (closeBtn) {
+          closeBtn.addEventListener('click', function(ev) {
+            ev.stopPropagation();
+            vtonDismissReadyNotification(state);
+          });
+        }
+        if (!isError) {
+          state._toastAutoHideTimer = setTimeout(function() {
+            vtonDismissReadyNotification(state);
+          }, 14000);
+        }
+      }
+
+      function vtonSetWidgetButtonBadge(state, mode) {
+        var shadow = state && state._shadowRoot;
+        if (!shadow) {
+          return;
+        }
+        var wrap = shadow.querySelector('.vton-widget-container');
+        var btn = shadow.querySelector('.vton-button');
+        if (!wrap || !btn) {
+          return;
+        }
+        var old = shadow.querySelector('.vton-button-badge');
+        if (old) {
+          old.remove();
+        }
+        wrap.classList.remove(
+          'vton-widget-container--generating',
+          'vton-widget-container--ready'
+        );
+        if (!mode) {
+          return;
+        }
+        var badge = document.createElement('span');
+        badge.className = 'vton-button-badge';
+        if (mode === 'generating') {
+          wrap.classList.add('vton-widget-container--generating');
+          badge.className += ' vton-button-badge--generating';
+          badge.textContent = '…';
+          badge.setAttribute('aria-label', 'Try-on in progress');
+        } else if (mode === 'ready') {
+          wrap.classList.add('vton-widget-container--ready');
+          badge.className += ' vton-button-badge--ready';
+          badge.textContent = vtonNotifyStrings().readyBadge;
+          badge.setAttribute('aria-label', 'Try-on ready');
+        }
+        btn.appendChild(badge);
+      }
+
+      function vtonStopJobPolling(state) {
+        if (state && state._jobPollInterval) {
+          clearInterval(state._jobPollInterval);
+          state._jobPollInterval = null;
+        }
+      }
+
       function vtonGetWidgetHost() {
         return document.getElementById('vton-widget-container');
       }
@@ -659,6 +826,7 @@
         vtonRecoverStuckModalLock();
         vtonInjectMobilePlacementCss();
         vtonInjectPageModalCss();
+        vtonInjectToastCss();
         var shop = extractShop();
         if (!shop) return;
 
@@ -1699,6 +1867,16 @@
               line-height: 1.4;
               max-width: 280px;
             }
+            .vton-loading-hint {
+              margin: 14px 0 0;
+              font-size: 12px;
+              color: #64748b;
+              line-height: 1.45;
+              max-width: 300px;
+              padding: 10px 12px;
+              border-radius: 10px;
+              background: rgba(15, 23, 42, 0.04);
+            }
             .vton-progress-container {
               width: 100%;
               max-width: 280px;
@@ -2391,6 +2569,7 @@
                     <span id="vton-timer-value" class="vton-timer-value">~30s</span>
                   </div>
                   <p class="vton-loading-subtext">This usually takes about 30 seconds</p>
+                  <p class="vton-loading-hint" id="vton-loading-hint"></p>
                 </div>
                 </div>
                 <div id="vton-panel-result" class="vton-panel">
@@ -2457,9 +2636,15 @@
           overlay.classList.remove('active');
           return;
         }
+        vtonDismissReadyNotification(state);
         if (state.resultImageUrl) {
           renderTryonResultPanel(state);
           vtonShowFunnelPanel(state, 'result');
+          vtonSetWidgetButtonBadge(state, null);
+        } else if (state.isGenerating) {
+          vtonSetWidgetButtonBadge(state, null);
+          vtonShowFunnelPanel(state, 'loading');
+          startLoadingMessages(state);
         } else {
           vtonShowFunnelPanel(state, 'upload');
         }
@@ -2481,9 +2666,16 @@
           triggerWrap.classList.remove('vton-widget-container--modal-open');
         }
         vtonUnlockPageScroll(state);
-        var modalContent = vtonMq(state, '.vton-modal-content');
-        if (modalContent) {
-          modalContent.classList.remove('has-result');
+        if (state.isGenerating) {
+          state._backgroundGeneration = true;
+          vtonClearLoadingTimers(state);
+          vtonSetWidgetButtonBadge(state, 'generating');
+        } else {
+          vtonSetWidgetButtonBadge(state, null);
+          var modalContent = vtonMq(state, '.vton-modal-content');
+          if (modalContent) {
+            modalContent.classList.remove('has-result');
+          }
         }
       }
       
@@ -3735,6 +3927,8 @@
       function vtonShowAiFailure(state, message, failedJobId, options) {
         options = options || {};
         state.isGenerating = false;
+        state._backgroundGeneration = false;
+        vtonStopJobPolling(state);
         stopLoadingMessages(state);
 
         if (failedJobId) {
@@ -3772,6 +3966,11 @@
             generateTryOn(state);
           }, 1200);
           return;
+        }
+
+        if (!state.modalOpen) {
+          vtonSetWidgetButtonBadge(state, null);
+          vtonShowReadyNotification(state, 'error');
         }
 
         vtonShowFunnelPanel(state, 'upload');
@@ -4222,13 +4421,13 @@
         const maxAttempts = 80;
         let attempts = 0;
         let consecutiveErrors = 0;
-        let pollInterval = null;
+        vtonStopJobPolling(state);
 
         function pollOnce() {
           attempts++;
 
           if (attempts > maxAttempts) {
-            if (pollInterval) clearInterval(pollInterval);
+            vtonStopJobPolling(state);
             vtonShowAiFailure(
               state,
               'Generation timed out.',
@@ -4272,11 +4471,11 @@
               log('[VTON] Job status:', statusData.status, statusData);
               
               if (statusData.status === 'completed' && statusData.result_url) {
-                if (pollInterval) clearInterval(pollInterval);
+                vtonStopJobPolling(state);
                 log('[VTON] Job completed, result URL:', statusData.result_url);
                 displayResult(state, statusData.result_url, loading, result, generateBtn);
               } else if (statusData.status === 'failed' || statusData.status === 'error') {
-                if (pollInterval) clearInterval(pollInterval);
+                vtonStopJobPolling(state);
                 vtonShowAiFailure(
                   state,
                   statusData.error || 'Generation failed.',
@@ -4293,7 +4492,7 @@
                 // Unknown status, stop polling after a few attempts
                 warn('[VTON] Unknown status:', statusData.status);
                 if (attempts > 10) {
-                  if (pollInterval) clearInterval(pollInterval);
+                  vtonStopJobPolling(state);
                   vtonShowAiFailure(
                     state,
                     'Unexpected status: ' + (statusData.status || 'unknown') + '.',
@@ -4310,7 +4509,7 @@
 
               if (consecutiveErrors >= 5) {
                 error('[VTON] Multiple consecutive polling errors, stopping...');
-                if (pollInterval) clearInterval(pollInterval);
+                vtonStopJobPolling(state);
                 vtonShowAiFailure(
                   state,
                   'Connection error.',
@@ -4322,12 +4521,14 @@
         }
 
         pollOnce();
-        pollInterval = setInterval(pollOnce, 2500);
+        state._jobPollInterval = setInterval(pollOnce, 2500);
       }
       
       function displayResult(state, resultUrl, loading, result, generateBtn) {
         state.resultImageUrl = resultUrl;
         vtonResetRetryState(state);
+        state._backgroundGeneration = false;
+        vtonStopJobPolling(state);
 
         if (state.abBucket) {
           trackAbEvent(state.shop, state.productId, state.abBucket, 'tryon');
@@ -4343,6 +4544,8 @@
             errorElement.classList.add('active');
             errorElement.textContent = 'Error: Invalid result URL. Please try again.';
           }
+          state.isGenerating = false;
+          vtonSetWidgetButtonBadge(state, null);
           if (generateBtn) generateBtn.disabled = false;
           return;
         }
@@ -4357,6 +4560,17 @@
         ) {
           renderTryonResultPanel(state);
           log('[VTON] Result displayed with conversion panel');
+          if (state.modalOpen) {
+            vtonShowFunnelPanel(state, 'result');
+            var modalContent = vtonMq(state, '.vton-modal-content');
+            if (modalContent) {
+              modalContent.classList.add('has-result');
+            }
+            vtonSetWidgetButtonBadge(state, null);
+          } else {
+            vtonSetWidgetButtonBadge(state, 'ready');
+            vtonShowReadyNotification(state, 'success');
+          }
         } else {
           error('[VTON] Cannot display result:', {
             hasResult: !!result,
@@ -4405,6 +4619,10 @@
         
         // Start rotating loading messages
         startLoadingMessages(state);
+        var hintEl = vtonM(state, 'vton-loading-hint');
+        if (hintEl) {
+          hintEl.textContent = vtonNotifyStrings().closeHint;
+        }
         
         var generateUrl =
           window.location.origin +
