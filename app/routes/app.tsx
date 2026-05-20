@@ -15,6 +15,7 @@ import { authenticate } from "../shopify.server";
 import { getLayoutShopContext } from "../lib/layout-shop-cache.server";
 import { computeCreditsAlert } from "../lib/credits-alert";
 import { CreditsAlertBanner } from "../components/CreditsAlertBanner";
+import { GarmentUploadProvider } from "../contexts/GarmentUploadContext";
 import polarisStyles from "@shopify/polaris/build/esm/styles.css?url";
 import appStyles from "../styles/app.css?url";
 import adminUiStyles from "../styles/admin-ui.css?url";
@@ -150,7 +151,9 @@ export default function App() {
         {showGlobalCreditsAlert && (
           <CreditsAlertBanner alert={creditsAlert} variant="global" />
         )}
-        <Outlet />
+        <GarmentUploadProvider>
+          <Outlet />
+        </GarmentUploadProvider>
       </div>
     </AppProvider>
   );

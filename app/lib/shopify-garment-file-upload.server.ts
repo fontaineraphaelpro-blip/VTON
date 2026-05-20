@@ -1,8 +1,8 @@
 import type { AdminApiContext } from "@shopify/shopify-app-remix/server";
 
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
-const FILE_READY_POLL_MS = 400;
-const FILE_READY_MAX_ATTEMPTS = 15;
+const FILE_READY_POLL_MS = 250;
+const FILE_READY_MAX_ATTEMPTS = 12;
 
 type GraphqlAdmin = AdminApiContext["admin"];
 

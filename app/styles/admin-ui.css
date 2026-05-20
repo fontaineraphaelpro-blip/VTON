@@ -1,5 +1,76 @@
 /* VTON Admin UI v2 — simple, clear, premium feel */
 
+.vton-upload-global-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 12px;
+  padding: 10px 14px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--vton-brand-dark, #004c3f);
+  background: var(--vton-brand-soft, #e8f5f1);
+  border: 1px solid var(--vton-brand, #008060);
+  border-radius: var(--vton-radius, 12px);
+}
+
+.vton-upload-global-bar__spinner {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(0, 128, 96, 0.25);
+  border-top-color: var(--vton-brand, #008060);
+  border-radius: 50%;
+  animation: vton-upload-spin 0.7s linear infinite;
+}
+
+@keyframes vton-upload-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.vton-upload-global-toast {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0 0 12px;
+  padding: 10px 14px;
+  font-size: 13px;
+  line-height: 1.4;
+  border-radius: var(--vton-radius, 12px);
+  border: 1px solid var(--vton-border, #e3e5e8);
+}
+
+.vton-upload-global-toast--success {
+  background: #ecfdf5;
+  border-color: #6ee7b7;
+  color: #065f46;
+}
+
+.vton-upload-global-toast--critical {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #991b1b;
+}
+
+.vton-upload-global-toast strong {
+  display: block;
+  font-weight: 600;
+}
+
+.vton-upload-global-toast__dismiss {
+  margin-left: auto;
+  padding: 0 4px;
+  border: none;
+  background: transparent;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  color: inherit;
+  opacity: 0.7;
+}
+
 .vton-admin {
   overflow-x: hidden;
   max-width: 100%;
@@ -1114,6 +1185,10 @@
   display: block;
 }
 
+.vton-admin .vton-garment-picker-thumb--busy {
+  opacity: 0.45;
+}
+
 .vton-admin .vton-garment-picker-placeholder {
   display: flex;
   align-items: center;
@@ -1155,14 +1230,15 @@
   padding: 12px 14px 14px;
 }
 
-.vton-garment-popover__uploading {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 12px;
-  border-radius: 8px;
+.vton-garment-popover__uploading-hint {
+  margin: 0;
+  padding: 10px 12px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--vton-brand-dark, #004c3f);
   background: var(--vton-brand-soft, #e8f5f1);
   border: 1px solid var(--vton-brand, #008060);
+  border-radius: 8px;
 }
 
 .vton-garment-popover__preview {
@@ -1176,19 +1252,6 @@
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.vton-garment-popover__preview.is-uploading img {
-  opacity: 0.45;
-}
-
-.vton-garment-popover__preview-overlay {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255, 255, 255, 0.65);
 }
 
 .vton-garment-popover__preview img {

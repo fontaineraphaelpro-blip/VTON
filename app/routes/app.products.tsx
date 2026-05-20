@@ -5,7 +5,6 @@ import {
   useFetcher,
   Form,
   useNavigate,
-  useRevalidator,
   type ShouldRevalidateFunctionArgs,
 } from "@remix-run/react";
 import { useMemo, useCallback, useState, useRef, useEffect } from "react";
@@ -38,6 +37,7 @@ import {
   getProductSettingsBatch,
 } from "../lib/services/db.service";
 import { uploadGarmentImageToShopifyFiles } from "../lib/shopify-garment-file-upload.server";
+import { useGarmentUpload } from "../contexts/GarmentUploadContext";
 import {
   PRODUCTS_PAGE_SIZE,
   buildProductsListUrl,
@@ -285,7 +285,7 @@ function GarmentPhotoPicker({
         "vton-garment-picker-trigger" + (isUploading ? " is-uploading" : "")
       }
       onClick={() => setOpen((v) => !v)}
-      disabled={disabled || isUploading}
+      disabled={disabled}
       title={
         isUploading
           ? "Uploading garment photo…"
@@ -294,11 +294,18 @@ function GarmentPhotoPicker({
       aria-expanded={open || isUploading}
       aria-busy={isUploading}
     >
-      {activeUrl && !isUploading ? (
-        <img src={activeUrl} alt="" className="vton-garment-picker-thumb" />
-      ) : !isUploading ? (
+      {activeUrl ? (
+        <img
+          src={activeUrl}
+          alt=""
+          className={
+            "vton-garment-picker-thumb" +
+            (isUploading ? " vton-garment-picker-thumb--busy" : "")
+          }
+        />
+      ) : (
         <span className="vton-garment-picker-placeholder">Photo</span>
-      ) : null}
+      )}
       {isUploading ? (
         <span className="vton-garment-picker-loading" aria-hidden="true">
           <Spinner size="small" />
@@ -317,28 +324,19 @@ function GarmentPhotoPicker({
 
   return (
     <Popover
-      active={open || Boolean(isUploading)}
+      active={open}
       activator={activator}
-      onClose={() => {
-        if (!isUploading) setOpen(false);
-      }}
+      onClose={() => setOpen(false)}
       preferredAlignment="left"
       autofocusTarget="none"
     >
       <div className="vton-garment-popover">
         <BlockStack gap="300">
           {isUploading ? (
-            <div className="vton-garment-popover__uploading" role="status" aria-live="polite">
-              <Spinner size="small" />
-              <div>
-                <Text as="p" variant="bodySm" fontWeight="semibold">
-                  Uploading image…
-                </Text>
-                <Text as="p" variant="bodySm" tone="subdued">
-                  Saving to Shopify Files for AI try-on
-                </Text>
-              </div>
-            </div>
+            <p className="vton-garment-popover__uploading-hint" role="status">
+              Upload in progress — you can close this and work elsewhere. A banner
+              at the top confirms when it&apos;s done.
+            </p>
           ) : null}
 
           <Text as="p" variant="bodySm" tone="subdued">
@@ -346,30 +344,19 @@ function GarmentPhotoPicker({
             for AI only — they never appear in your product gallery.
           </Text>
 
-          {activeUrl && (
-            <div
-              className={
-                "vton-garment-popover__preview" +
-                (isUploading ? " is-uploading" : "")
-              }
-            >
+          {activeUrl && !isUploading ? (
+            <div className="vton-garment-popover__preview">
               <img src={activeUrl} alt="Selected garment for AI" />
-              {isUploading ? (
-                <div className="vton-garment-popover__preview-overlay">
-                  <Spinner size="small" />
-                </div>
-              ) : null}
             </div>
-          )}
+          ) : null}
 
           <InlineStack gap="200" wrap>
             <Button
               size="slim"
               onClick={() => fileInputRef.current?.click()}
               disabled={disabled || isUploading}
-              loading={isUploading}
             >
-              Upload image
+              {isUploading ? "Uploading…" : "Upload image"}
             </Button>
             {selectedUrl && (
               <Button
@@ -449,34 +436,13 @@ export default function Products() {
     (loaderData as { pageSize?: number }).pageSize ?? PRODUCTS_PAGE_SIZE;
   const error = loaderData.error || null;
   const navigate = useNavigate();
-  const revalidator = useRevalidator();
   const [searchInput, setSearchInput] = useState(searchQuery);
   const tryonCounts = loaderData.tryonCounts || {};
   const productSettings = loaderData.productSettings || {};
   const fetcher = useFetcher<typeof action>();
-  const uploadFetcher = useFetcher<typeof action>();
-  const [uploadingProductId, setUploadingProductId] = useState<string | null>(
-    null
-  );
+  const { uploadGarment, isProductUploading } = useGarmentUpload();
   const notifications = useAdminNotifications();
   const { notifications: notifyItems, dismiss } = notifications;
-
-  useFetcherNotifications(uploadFetcher, notifications, {
-    onSuccess: (data) => {
-      const d = data as { imageUrl?: string | null };
-      if (d.imageUrl !== undefined) {
-        return {
-          title: "Garment photo saved",
-          message: "AI try-on will use this image instead of the first gallery photo.",
-        };
-      }
-      return { title: "Saved" };
-    },
-    onError: (data) => ({
-      title: "Upload failed",
-      message: (data as { error?: string }).error || "Could not upload garment photo",
-    }),
-  });
 
   useFetcherNotifications(fetcher, notifications, {
     onSuccess: (data) => {
@@ -549,37 +515,16 @@ export default function Products() {
   );
 
   const handleUploadGarmentImage = useCallback(
-    (productId: string, productHandle: string | undefined, file: File) => {
-      setUploadingProductId(productId);
-      const formData = new FormData();
-      formData.append("intent", "upload-tryon-image");
-      formData.append("productId", productId);
-      if (productHandle) formData.append("productHandle", productHandle);
-      formData.append("file", file);
-      uploadFetcher.submit(formData, {
-        method: "post",
-        encType: "multipart/form-data",
-      });
+    (
+      productId: string,
+      productHandle: string | undefined,
+      file: File,
+      productTitle?: string,
+    ) => {
+      void uploadGarment(productId, productHandle, file, productTitle);
     },
-    [uploadFetcher]
+    [uploadGarment],
   );
-
-  useEffect(() => {
-    if (uploadFetcher.state === "idle" && uploadingProductId) {
-      setUploadingProductId(null);
-    }
-  }, [uploadFetcher.state, uploadingProductId]);
-
-  useEffect(() => {
-    if (uploadFetcher.state !== "idle" || !uploadFetcher.data) return;
-    const data = uploadFetcher.data as {
-      success?: boolean;
-      productId?: string;
-      imageUrl?: string | null;
-    };
-    if (!data.success || !data.productId || data.imageUrl === undefined) return;
-    revalidator.revalidate();
-  }, [uploadFetcher.state, uploadFetcher.data, revalidator]);
 
   useEffect(() => {
     setSearchInput(searchQuery);
@@ -651,13 +596,15 @@ export default function Products() {
               handleSelectGarmentImage(product.id, product.handle, url)
             }
             onUpload={(file) =>
-              handleUploadGarmentImage(product.id, product.handle, file)
+              handleUploadGarmentImage(
+                product.id,
+                product.handle,
+                file,
+                product.title,
+              )
             }
-            disabled={fetcher.state !== "idle"}
-            isUploading={
-              uploadingProductId === product.id &&
-              uploadFetcher.state !== "idle"
-            }
+            disabled={fetcher.state === "submitting"}
+            isUploading={isProductUploading(product.id)}
           />,
           <TryOnToggle
             key={`toggle-${product.id}`}
@@ -686,7 +633,7 @@ export default function Products() {
     handleToggle,
     handleSelectGarmentImage,
     handleUploadGarmentImage,
-    uploadingProductId,
+    isProductUploading,
   ]);
 
   return (
@@ -850,13 +797,15 @@ export default function Products() {
                               handleSelectGarmentImage(product.id, product.handle, url)
                             }
                             onUpload={(file) =>
-                              handleUploadGarmentImage(product.id, product.handle, file)
+                              handleUploadGarmentImage(
+                                product.id,
+                                product.handle,
+                                file,
+                                product.title,
+                              )
                             }
-                            disabled={fetcher.state !== "idle"}
-                            isUploading={
-              uploadingProductId === product.id &&
-              uploadFetcher.state !== "idle"
-            }
+                            disabled={fetcher.state === "submitting"}
+                            isUploading={isProductUploading(product.id)}
                           />
                         </div>
                         <div className="vton-product-card__actions">
