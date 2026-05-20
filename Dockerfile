@@ -15,8 +15,8 @@ COPY . .
 
 RUN npx prisma generate
 
-# vite.config.ts reads SHOPIFY_APP_URL at build time
-ARG SHOPIFY_APP_URL=http://localhost:3000
+# vite.config.ts reads SHOPIFY_APP_URL at build time (override in Railway build args if needed)
+ARG SHOPIFY_APP_URL=https://vton-production-890a.up.railway.app
 ENV SHOPIFY_APP_URL=$SHOPIFY_APP_URL
 
 RUN npm run build

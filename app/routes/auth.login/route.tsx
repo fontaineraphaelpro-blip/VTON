@@ -5,13 +5,16 @@ import { login } from "../../shopify.server";
 // This route MUST use shopify.login() to initiate OAuth flow
 // shopify.login() will handle OAuth and preserve return_to automatically
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  // shopify.login() initiates OAuth flow
-  // It automatically preserves query parameters including return_to
-  // The shop parameter must be present in the request for this to work
+  // Health checks / probes send HEAD without a body — login() calls formData() and crashes
+  if (request.method === "HEAD") {
+    return new Response(null, { status: 200 });
+  }
   return login(request);
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
-  // Same as loader
+  if (request.method === "HEAD") {
+    return new Response(null, { status: 200 });
+  }
   return login(request);
 };
