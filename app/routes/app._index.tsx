@@ -30,6 +30,7 @@ import {
   hasStorefrontWidgetScriptTag,
 } from "../lib/storefront-widget-install.server";
 import { buildOnboardingState, mergeOnboardingOverride } from "../lib/onboarding.server";
+import { invalidateLayoutShopContext } from "../lib/layout-shop-cache.server";
 import type { OnboardingStepId } from "../lib/onboarding.server";
 import { OnboardingGuide } from "../components/OnboardingGuide";
 import {
@@ -639,10 +640,17 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           }
         }
         
-        return json({ 
-          success: true, 
+        if (sessionCanInstallScriptTag(session.scope)) {
+          scheduleStorefrontWidgetScriptTag(admin);
+        }
+
+        return json({
+          success: true,
           deletedCount,
-          message: `Deleted ${deletedCount} old script tag(s)` 
+          message:
+            deletedCount > 0
+              ? `Deleted ${deletedCount} old script tag(s). Current widget script reinstalled.`
+              : "No old script tags found. Current widget script is active.",
         });
       }
       
@@ -659,43 +667,52 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     }
   }
 
-  // Action normale pour sauvegarder la configuration
-  const widgetText = (formData.get("widgetText") as string) || "Try It On Now";
-  const widgetBg = (formData.get("widgetBg") as string) || "#000000";
-  const widgetColor = (formData.get("widgetColor") as string) || "#ffffff";
-  const maxTriesPerUserStr = formData.get("maxTriesPerUser") as string;
-  const maxTriesPerUser = maxTriesPerUserStr ? parseInt(maxTriesPerUserStr) : 5;
-  const isEnabled = formData.get("isEnabled") === "true";
-  const dailyLimitStr = formData.get("dailyLimit") as string;
-  const dailyLimit = dailyLimitStr ? parseInt(dailyLimitStr) : 100;
-  // ADDED: Monthly quota
-  const monthlyQuotaStr = formData.get("monthlyQuota") as string;
-  const monthlyQuota = monthlyQuotaStr && monthlyQuotaStr.trim() !== "" ? parseInt(monthlyQuotaStr) : null;
+  if (intent === "save-store-settings") {
+    const parseLimit = (raw: FormDataEntryValue | null, fallback: number) => {
+      const n = parseInt(String(raw ?? ""), 10);
+      return Number.isFinite(n) && n >= 0 ? n : fallback;
+    };
 
-    // Configuration saved (logged in database)
+    const maxTriesPerUser = parseLimit(formData.get("maxTriesPerUser"), 5);
+    const dailyLimit = parseLimit(formData.get("dailyLimit"), 100);
+    const isEnabled = formData.get("isEnabled") === "true";
+    const monthlyQuotaStr = String(formData.get("monthlyQuota") ?? "").trim();
+    const monthlyQuota =
+      monthlyQuotaStr === ""
+        ? null
+        : parseLimit(monthlyQuotaStr, 0) || null;
 
-  try {
-    await upsertShop(shop, {
-      widgetText,
-      widgetBg,
-      widgetColor,
-      maxTriesPerUser,
-      isEnabled,
-      dailyLimit,
-      monthlyQuota, // ADDED
-    });
+    try {
+      await upsertShop(shop, {
+        maxTriesPerUser,
+        isEnabled,
+        dailyLimit,
+        monthlyQuota,
+      });
+      invalidateLayoutShopContext(shop);
 
-    return json({ success: true });
-  } catch (error) {
-    // Log error only in development
-    if (process.env.NODE_ENV !== "production") {
-      console.error("[Dashboard Action] Error saving configuration:", error);
+      const [updatedShop, usage] = await Promise.all([
+        getShop(shop),
+        getMonthlyTryonUsage(shop).catch(() => 0),
+      ]);
+
+      return json({
+        success: true,
+        shop: updatedShop,
+        monthlyUsage: usage,
+      });
+    } catch (error) {
+      if (process.env.NODE_ENV !== "production") {
+        console.error("[Dashboard] Error saving store settings:", error);
+      }
+      return json({
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
     }
-    return json({ 
-      success: false, 
-      error: error instanceof Error ? error.message : "Error saving configuration" 
-    });
   }
+
+  return json({ success: false, error: "Unknown action" });
 };
 
 type DailyTryonStat = { date: string; count: number };
@@ -809,6 +826,8 @@ function DailyTryonsLineChart({
 export default function Dashboard() {
   const loaderData = useLoaderData<typeof loader>();
   const fetcher = useFetcher<typeof action>();
+  const settingsFetcher = useFetcher<typeof action>();
+  const cleanupFetcher = useFetcher<typeof action>();
   // Handle both success and error cases from loader
   const shop = (loaderData as any).shop || null;
   const recentLogs = Array.isArray((loaderData as any).recentLogs) ? (loaderData as any).recentLogs : [];
@@ -849,7 +868,6 @@ export default function Dashboard() {
 
   // ADDED: Monthly quota and usage (for display only)
   const monthlyQuota = shop?.monthly_quota || null;
-  const monthlyUsageCount = monthlyUsage || 0;
   const quotaPercentage = monthlyQuota && monthlyQuota > 0 
     ? Math.min((monthlyUsageCount / monthlyQuota) * 100, 100).toFixed(1)
     : null;
@@ -877,34 +895,52 @@ export default function Dashboard() {
   }, [dailyStats]);
   
 
-  // Memoize handleSave to prevent recreation on every render
-  const handleSave = useCallback((formData: FormData) => {
-    // Ensure all required fields are present
-    if (!formData.get("widgetText")) {
-      formData.set("widgetText", shop?.widget_text || "Try It On Now");
-    }
-    if (!formData.get("widgetBg")) {
-      formData.set("widgetBg", shop?.widget_bg || "#000000");
-    }
-    if (!formData.get("widgetColor")) {
-      formData.set("widgetColor", shop?.widget_color || "#ffffff");
-    }
-    if (!formData.get("maxTriesPerUser")) {
-      formData.set("maxTriesPerUser", String(shop?.max_tries_per_user || 5));
-    }
-    if (!formData.get("isEnabled")) {
-      formData.set("isEnabled", shop?.is_enabled !== false ? "true" : "false");
-    }
-    if (!formData.get("dailyLimit")) {
-      formData.set("dailyLimit", String(shop?.daily_limit || 100));
-    }
-    if (!formData.get("monthlyQuota")) {
-      formData.set("monthlyQuota", shop?.monthly_quota ? String(shop.monthly_quota) : "");
-    }
-    fetcher.submit(formData, { method: "post" });
-  }, [shop, fetcher]);
-  
   const [isEnabled, setIsEnabled] = useState(shop?.is_enabled !== false);
+  const [dailyLimit, setDailyLimit] = useState(
+    () => String(shop?.daily_limit ?? 100),
+  );
+  const [maxTriesPerUser, setMaxTriesPerUser] = useState(
+    () => String(shop?.max_tries_per_user ?? 5),
+  );
+  const [monthlyQuotaInput, setMonthlyQuotaInput] = useState(() =>
+    shop?.monthly_quota != null ? String(shop.monthly_quota) : "",
+  );
+  const [monthlyUsageCount, setMonthlyUsageCount] = useState(monthlyUsage);
+
+  useEffect(() => {
+    if (!shop) return;
+    setIsEnabled(shop.is_enabled !== false);
+    setDailyLimit(String(shop.daily_limit ?? 100));
+    setMaxTriesPerUser(String(shop.max_tries_per_user ?? 5));
+    setMonthlyQuotaInput(
+      shop.monthly_quota != null ? String(shop.monthly_quota) : "",
+    );
+  }, [shop]);
+
+  useEffect(() => {
+    setMonthlyUsageCount(monthlyUsage);
+  }, [monthlyUsage]);
+
+  useEffect(() => {
+    const data = settingsFetcher.data as {
+      success?: boolean;
+      shop?: typeof shop;
+      monthlyUsage?: number;
+    } | undefined;
+    if (!data?.success) return;
+    if (typeof data.monthlyUsage === "number") {
+      setMonthlyUsageCount(data.monthlyUsage);
+    }
+    if (data.shop) {
+      setIsEnabled(data.shop.is_enabled !== false);
+      setDailyLimit(String(data.shop.daily_limit ?? 100));
+      setMaxTriesPerUser(String(data.shop.max_tries_per_user ?? 5));
+      setMonthlyQuotaInput(
+        data.shop.monthly_quota != null ? String(data.shop.monthly_quota) : "",
+      );
+    }
+    revalidator.revalidate();
+  }, [settingsFetcher.data, revalidator]);
 
   useEffect(() => {
     if (!showAppEmbedBanner) return;
@@ -923,31 +959,34 @@ export default function Dashboard() {
     }
   }, [showAppEmbedBanner]);
 
-  useEffect(() => {
-    if (fetcher.state === "idle" && (fetcher.data as { success?: boolean })?.success) {
-      revalidator.revalidate();
-    }
-  }, [fetcher.state, fetcher.data, revalidator]);
-
-  useFetcherNotifications(fetcher, notifications, {
+  useFetcherNotifications(settingsFetcher, notifications, {
     successId: "dashboard-save-success",
     errorId: "dashboard-save-error",
+    onSuccess: () => ({
+      title: "Settings saved",
+      message:
+        "Store limits and enable/disable are live on your storefront now.",
+    }),
+    onError: (data) => ({
+      title: "Could not save",
+      message: String((data as { error?: string }).error ?? "Unknown error"),
+    }),
+  });
+
+  useFetcherNotifications(cleanupFetcher, notifications, {
+    successId: "dashboard-cleanup-success",
+    errorId: "dashboard-cleanup-error",
     onSuccess: (data) => {
       const d = data as { deletedCount?: number; message?: string };
-      if (d.deletedCount !== undefined) {
-        return {
-          title: "Cleanup complete",
-          message:
-            d.message || `Deleted ${d.deletedCount} old script tag(s).`,
-        };
-      }
       return {
-        title: "Settings saved",
-        message: "Your store settings were updated successfully.",
+        title: "Cleanup complete",
+        message:
+          d.message ||
+          `Deleted ${d.deletedCount ?? 0} old script tag(s).`,
       };
     },
     onError: (data) => ({
-      title: "Could not save",
+      title: "Cleanup failed",
       message: String((data as { error?: string }).error ?? "Unknown error"),
     }),
   });
@@ -1196,9 +1235,11 @@ export default function Dashboard() {
             onSubmit={(e) => {
               e.preventDefault();
               const formData = new FormData(e.currentTarget);
-              handleSave(formData);
+              formData.set("intent", "save-store-settings");
+              settingsFetcher.submit(formData, { method: "post" });
             }}
           >
+            <input type="hidden" name="intent" value="save-store-settings" />
             <div className="vton-form-grid">
               <div className="vton-field">
                 <label>Enable app on store</label>
@@ -1213,41 +1254,55 @@ export default function Dashboard() {
                   </span>
                 </div>
                 <input type="hidden" name="isEnabled" value={isEnabled ? "true" : "false"} />
+                <p className="vton-field-hint">
+                  When off, the try-on button is hidden on all product pages.
+                </p>
               </div>
               <div className="vton-field">
                 <label>Daily Limit</label>
                 <input
                   type="number"
                   name="dailyLimit"
-                  defaultValue={String(shop?.daily_limit || 100)}
-                  placeholder="Daily try-on limit"
+                  min={0}
+                  value={dailyLimit}
+                  onChange={(e) => setDailyLimit(e.target.value)}
+                  placeholder="100"
                   className="vton-input"
                 />
+                <p className="vton-field-hint">
+                  Max successful try-ons for the whole store per day (0 = unlimited).
+                </p>
               </div>
               <div className="vton-field">
                 <label>Max try-ons per user/day</label>
                 <input
                   type="number"
                   name="maxTriesPerUser"
-                  defaultValue={String(shop?.max_tries_per_user || 5)}
-                  placeholder="0"
+                  min={0}
+                  value={maxTriesPerUser}
+                  onChange={(e) => setMaxTriesPerUser(e.target.value)}
+                  placeholder="5"
+                  className="vton-input"
                 />
+                <p className="vton-field-hint">
+                  Per visitor IP per day (0 = unlimited).
+                </p>
               </div>
-              {/* ADDED: Monthly quota setting */}
               <div className="vton-field">
                 <label>Monthly Quota Limit</label>
                 <input
                   type="number"
                   name="monthlyQuota"
-                  defaultValue={shop?.monthly_quota ? String(shop.monthly_quota) : ""}
+                  min={0}
+                  value={monthlyQuotaInput}
+                  onChange={(e) => setMonthlyQuotaInput(e.target.value)}
                   placeholder="Unlimited (leave empty)"
                   className="vton-input"
                 />
                 <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "4px" }}>
-                  {monthlyQuota 
-                    ? `Current usage: ${monthlyUsageCount.toLocaleString()} / ${monthlyQuota.toLocaleString()} (${quotaPercentage}%)`
-                    : `Current usage: ${monthlyUsageCount.toLocaleString()} (no limit set)`
-                  }
+                  {monthlyQuota
+                    ? `Current usage: ${monthlyUsageCount.toLocaleString("en-US")} / ${monthlyQuota.toLocaleString("en-US")} (${quotaPercentage}%)`
+                    : `Current usage: ${monthlyUsageCount.toLocaleString("en-US")} (no limit set)`}
                 </p>
               </div>
               <div className="vton-field">
@@ -1256,17 +1311,26 @@ export default function Dashboard() {
                   onClick={() => {
                     const formData = new FormData();
                     formData.append("intent", "cleanup-script-tags");
-                    fetcher.submit(formData, { method: "post" });
+                    cleanupFetcher.submit(formData, { method: "post" });
                   }}
-                  disabled={fetcher.state === "submitting"}
-                  loading={fetcher.state === "submitting"}
+                  disabled={cleanupFetcher.state === "submitting"}
+                  loading={cleanupFetcher.state === "submitting"}
                 >
-                  {fetcher.state === "submitting" ? "Processing..." : "Delete old widgets and scripts"}
+                  {cleanupFetcher.state === "submitting"
+                    ? "Processing..."
+                    : "Delete old widgets and scripts"}
                 </Button>
+                <p className="vton-field-hint">
+                  Removes duplicate legacy script tags, then reinstalls the current widget.
+                </p>
               </div>
             </div>
             <div style={{ marginTop: "20px" }}>
-              <Button submit variant="primary" loading={fetcher.state === "submitting"}>
+              <Button
+                submit
+                variant="primary"
+                loading={settingsFetcher.state === "submitting"}
+              >
                 Save
               </Button>
             </div>
