@@ -32,7 +32,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       monthlyQuota: shopData?.monthly_quota ?? null,
     });
 
-    return { apiKey, creditsAlert };
+    return { apiKey, creditsAlert, buildId: getBuildId() };
   } catch {
     return {
       apiKey,
@@ -41,12 +41,26 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         monthlyUsage: 0,
         monthlyQuota: null,
       }),
+      buildId: getBuildId(),
     };
   }
 };
 
+function getBuildId() {
+  const id = process.env.APP_BUILD_ID || process.env.RAILWAY_GIT_COMMIT_SHA || "";
+  return id ? id.slice(0, 7) : "dev";
+}
+
+export const headers: HeadersFunction = (headersArgs) => {
+  return {
+    ...boundary.headers(headersArgs),
+    "Cache-Control": "no-store, no-cache, must-revalidate",
+    Pragma: "no-cache",
+  };
+};
+
 export default function App() {
-  const { apiKey, creditsAlert } = useLoaderData<typeof loader>();
+  const { apiKey, creditsAlert, buildId } = useLoaderData<typeof loader>();
   const location = useLocation();
   const navigation = useNavigation();
   const showGlobalCreditsAlert =
@@ -114,6 +128,11 @@ export default function App() {
           <CreditsAlertBanner alert={creditsAlert} variant="global" />
         )}
         <Outlet />
+        {buildId ? (
+          <p className="vton-build-id" title={`Build ${buildId}`}>
+            Build {buildId}
+          </p>
+        ) : null}
       </div>
     </AppProvider>
   );

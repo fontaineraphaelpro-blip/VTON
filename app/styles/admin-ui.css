@@ -2407,3 +2407,13 @@
 .vton-panel-title--mb {
   margin-bottom: 16px;
 }
+
+.vton-build-id {
+  margin: 24px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--vton-border);
+  font-size: 11px;
+  color: var(--vton-soft);
+  text-align: center;
+  letter-spacing: 0.02em;
+}

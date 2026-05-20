@@ -6,9 +6,15 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     return new Response(null, { status: 200 });
   }
 
+  const buildId =
+    process.env.APP_BUILD_ID ||
+    process.env.RAILWAY_GIT_COMMIT_SHA ||
+    "unknown";
+
   return Response.json({
     ok: true,
     service: "vton",
-    commit: process.env.RAILWAY_GIT_COMMIT_SHA?.slice(0, 7) ?? "unknown",
+    commit: buildId.slice(0, 7),
+    fullCommit: buildId,
   });
 };

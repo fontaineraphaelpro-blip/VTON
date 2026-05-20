@@ -4,7 +4,14 @@
 
 Le push sur `main` déclenche en général un redeploy automatique.
 
-> Dernier redeploy déclenché : 2026-05-19
+### Si Railway affiche toujours l’ancienne version
+
+1. **Ne pas utiliser « Redeploy » seul** — ça redémarre parfois l’ancienne image en cache.
+2. Railway → service → **Deployments** → **Deploy** (dernier commit GitHub) ou `Ctrl+K` → *Deploy latest commit*.
+3. Variable temporaire **`NO_CACHE=1`** sur le service → un deploy → retirer après succès.
+4. Vérifier le build : https://vton-production-890a.up.railway.app/health → champ `commit` = hash GitHub (7 caractères).
+5. Dans l’admin Shopify : en bas de page **Build xxxxxxx** doit correspondre au même hash.
+6. Hard refresh dans l’iframe : **Ctrl+Shift+R**.
 
 Vérifier : https://vton-production-890a.up.railway.app
 
