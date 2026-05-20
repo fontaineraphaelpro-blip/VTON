@@ -866,6 +866,12 @@ export default function Dashboard() {
     setShowAppEmbedBanner(displayCount < 2);
   }, [embedDismissed]);
 
+  const [monthlyUsageCount, setMonthlyUsageCount] = useState(monthlyUsage);
+
+  useEffect(() => {
+    setMonthlyUsageCount(monthlyUsage);
+  }, [monthlyUsage]);
+
   // ADDED: Monthly quota and usage (for display only)
   const monthlyQuota = shop?.monthly_quota || null;
   const quotaPercentage = monthlyQuota && monthlyQuota > 0 
@@ -905,7 +911,6 @@ export default function Dashboard() {
   const [monthlyQuotaInput, setMonthlyQuotaInput] = useState(() =>
     shop?.monthly_quota != null ? String(shop.monthly_quota) : "",
   );
-  const [monthlyUsageCount, setMonthlyUsageCount] = useState(monthlyUsage);
 
   useEffect(() => {
     if (!shop) return;
@@ -916,10 +921,6 @@ export default function Dashboard() {
       shop.monthly_quota != null ? String(shop.monthly_quota) : "",
     );
   }, [shop]);
-
-  useEffect(() => {
-    setMonthlyUsageCount(monthlyUsage);
-  }, [monthlyUsage]);
 
   useEffect(() => {
     const data = settingsFetcher.data as {
