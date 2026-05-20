@@ -1,3 +1,4 @@
+# Deploy revision: 7395f87 — bust cache if Railway stuck on old image
 [build]
 builder = "DOCKERFILE"
 dockerfilePath = "Dockerfile"
