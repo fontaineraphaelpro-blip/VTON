@@ -1,6 +1,6 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
-import { useLoaderData, useFetcher } from "@remix-run/react";
+import { useLoaderData, useFetcher, useRevalidator } from "@remix-run/react";
 import { useEffect, useMemo, useState } from "react";
 import {
   Page,
@@ -15,6 +15,7 @@ import { AdminPage } from "../components/AdminPage";
 import {
   WidgetColorField,
   WidgetColorPairings,
+  normalizeHexColor,
   BG_PRESETS,
   TEXT_PRESETS,
 } from "../components/WidgetColorField";
@@ -75,27 +76,41 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     }
   }
 
-  const widgetText = (formData.get("widgetText") as string) || "Try it on";
-  const widgetBg = (formData.get("widgetBg") as string) || "#000000";
-  const widgetColor = (formData.get("widgetColor") as string) || "#ffffff";
+  if (intent === "save-widget-style") {
+    const widgetText =
+      String(formData.get("widgetText") ?? "").trim() || "Try it on";
+    const widgetBg = normalizeHexColor(
+      String(formData.get("widgetBg") ?? "#000000"),
+      "#000000"
+    );
+    const widgetColor = normalizeHexColor(
+      String(formData.get("widgetColor") ?? "#ffffff"),
+      "#ffffff"
+    );
 
-  try {
-    await upsertShop(shop, { widgetText, widgetBg, widgetColor });
-    const verifyShop = await getShop(shop);
-    return json({
-      success: true,
-      savedValues: {
-        widget_text: verifyShop?.widget_text,
-        widget_bg: verifyShop?.widget_bg,
-        widget_color: verifyShop?.widget_color,
-      },
-    });
-  } catch (error) {
-    return json({
-      success: false,
-      error: error instanceof Error ? error.message : "Error saving configuration",
-    });
+    try {
+      await upsertShop(shop, { widgetText, widgetBg, widgetColor });
+      const verifyShop = await getShop(shop);
+      return json({
+        success: true,
+        intent: "save-widget-style",
+        shop: verifyShop,
+        savedValues: {
+          widget_text: verifyShop?.widget_text,
+          widget_bg: verifyShop?.widget_bg,
+          widget_color: verifyShop?.widget_color,
+        },
+      });
+    } catch (error) {
+      return json({
+        success: false,
+        intent: "save-widget-style",
+        error: error instanceof Error ? error.message : "Error saving configuration",
+      });
+    }
   }
+
+  return json({ success: false, error: "Unknown action" });
 };
 
 type AbStats = {
@@ -110,6 +125,7 @@ const EMPTY_AB_STATS: AbStats = {
 
 export default function Widget() {
   const loaderData = useLoaderData<typeof loader>();
+  const revalidator = useRevalidator();
   const fetcher = useFetcher<typeof action>();
   const abFetcher = useFetcher<typeof action>();
   const shop = loaderData.shop ?? null;
@@ -138,6 +154,11 @@ export default function Widget() {
   const [widgetText, setWidgetText] = useState(() => shop?.widget_text || "Try it on");
   const [widgetBg, setWidgetBg] = useState(() => shop?.widget_bg || "#000000");
   const [widgetColor, setWidgetColor] = useState(() => shop?.widget_color || "#ffffff");
+  const [savedSnapshot, setSavedSnapshot] = useState({
+    widget_text: shop?.widget_text ?? "—",
+    widget_bg: shop?.widget_bg ?? "—",
+    widget_color: shop?.widget_color ?? "—",
+  });
   const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
@@ -145,21 +166,35 @@ export default function Widget() {
       setWidgetText(shop.widget_text || "Try it on");
       setWidgetBg(shop.widget_bg || "#000000");
       setWidgetColor(shop.widget_color || "#ffffff");
+      setSavedSnapshot({
+        widget_text: shop.widget_text || "—",
+        widget_bg: shop.widget_bg || "—",
+        widget_color: shop.widget_color || "—",
+      });
       setIsInitialized(true);
     }
   }, [shop, isInitialized]);
 
   useEffect(() => {
-    if (fetcher.data?.success && fetcher.data.savedValues) {
-      setWidgetText(fetcher.data.savedValues.widget_text || "Try it on");
-      setWidgetBg(fetcher.data.savedValues.widget_bg || "#000000");
-      setWidgetColor(fetcher.data.savedValues.widget_color || "#ffffff");
+    const data = fetcher.data;
+    if (!data?.success || data.intent !== "save-widget-style" || !data.savedValues) {
+      return;
     }
-  }, [fetcher.data?.success, fetcher.data?.savedValues]);
+    setWidgetText(data.savedValues.widget_text || "Try it on");
+    setWidgetBg(data.savedValues.widget_bg || "#000000");
+    setWidgetColor(data.savedValues.widget_color || "#ffffff");
+    setSavedSnapshot({
+      widget_text: data.savedValues.widget_text || "—",
+      widget_bg: data.savedValues.widget_bg || "—",
+      widget_color: data.savedValues.widget_color || "—",
+    });
+    revalidator.revalidate();
+  }, [fetcher.data, revalidator]);
 
   useFetcherNotifications(fetcher, notifications, {
     onSuccess: (data) => {
-      if ((data as { abStats?: AbStats }).abStats) return null;
+      const payload = data as { intent?: string; abStats?: AbStats };
+      if (payload.abStats || payload.intent !== "save-widget-style") return null;
       return {
         title: "Widget saved",
         message: "Refresh a product page on your store to see the new button style.",
@@ -268,7 +303,13 @@ export default function Widget() {
   const handleSave = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (fetcher.state === "submitting" || fetcher.state === "loading") return;
-    fetcher.submit(new FormData(e.currentTarget), { method: "post" });
+
+    const fd = new FormData();
+    fd.set("intent", "save-widget-style");
+    fd.set("widgetText", widgetText.trim() || "Try it on");
+    fd.set("widgetBg", normalizeHexColor(widgetBg, "#000000"));
+    fd.set("widgetColor", normalizeHexColor(widgetColor, "#ffffff"));
+    fetcher.submit(fd, { method: "post" });
   };
 
   return (
@@ -414,6 +455,9 @@ export default function Widget() {
                 Button style
               </h2>
               <form onSubmit={handleSave} className="vton-widget-style__form">
+                <input type="hidden" name="intent" value="save-widget-style" />
+                <input type="hidden" name="widgetBg" value={widgetBg} readOnly />
+                <input type="hidden" name="widgetColor" value={widgetColor} readOnly />
                 <BlockStack gap="400">
                   <TextField
                     label="Button text"
@@ -464,8 +508,8 @@ export default function Widget() {
                 </BlockStack>
               </form>
               <p className="vton-field-hint vton-widget-style__saved">
-                Saved: {shop?.widget_text || "—"} · {shop?.widget_bg || "—"} ·{" "}
-                {shop?.widget_color || "—"}
+                Saved: {savedSnapshot.widget_text} · {savedSnapshot.widget_bg} ·{" "}
+                {savedSnapshot.widget_color}
               </p>
             </div>
           </div>
