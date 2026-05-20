@@ -1,7 +1,11 @@
-{% comment %} Legacy handle "block" — keep for themes that enabled this before rename. {% endcomment %}
+{% comment %}
+  Legacy handle "block" — keep for themes that enabled this before rename.
+  Disable this embed if "Virtual Try-On" is already enabled (avoids duplicate buttons).
+{% endcomment %}
 
 <div
   id="vton-embed-slot"
+  data-vton-embed-legacy="1"
   data-vton-embed-slot
   data-vton-page-type="{{ request.page_type }}"
   data-vton-template="{{ template.name }}"
@@ -18,7 +22,8 @@
 <script>
   (function () {
     if (window.VTON_LIQUID) return;
-    var slot = document.getElementById('vton-embed-slot');
+    if (document.querySelector('[data-vton-embed-slot]:not([data-vton-embed-legacy])')) return;
+    var slot = document.querySelector('[data-vton-embed-slot][data-vton-embed-legacy]') || document.getElementById('vton-embed-slot');
     var productId = slot && slot.getAttribute('data-vton-product-id');
     var productHandle = slot && slot.getAttribute('data-vton-product-handle');
     if (!productId && window.location.pathname.indexOf('/products/') !== -1) {
