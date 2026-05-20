@@ -433,7 +433,159 @@
         document.documentElement.classList.remove('vton-modal-active');
       }
 
+      /** Modal lives on document.body — fixed positioning breaks inside shadow DOM on many themes. */
+      function vtonM(state, id) {
+        var root = state && state.modalRoot;
+        if (!root) {
+          return document.getElementById(id);
+        }
+        if (id === 'vton-modal-overlay') {
+          return root;
+        }
+        return root.querySelector('#' + id);
+      }
+
+      function vtonMq(state, sel) {
+        var root = state && state.modalRoot;
+        if (!root) {
+          return document.querySelector(sel);
+        }
+        return root.querySelector(sel);
+      }
+
+      function vtonMqa(state, sel) {
+        var root = state && state.modalRoot;
+        if (!root) {
+          return document.querySelectorAll(sel);
+        }
+        return root.querySelectorAll(sel);
+      }
+
+      function vtonLockPageScroll(state) {
+        state.savedScrollY = window.scrollY;
+        document.documentElement.classList.add('vton-modal-active');
+      }
+
+      function vtonUnlockPageScroll(state) {
+        document.documentElement.classList.remove('vton-modal-active');
+        if (state.savedScrollY != null) {
+          window.scrollTo(0, state.savedScrollY);
+          state.savedScrollY = null;
+        }
+      }
+
+      function vtonRelocateModalToBody(state, shadowRoot) {
+        if (!shadowRoot || state.modalRoot) {
+          return;
+        }
+        var overlay = shadowRoot.getElementById('vton-modal-overlay');
+        if (!overlay) {
+          return;
+        }
+        var styleInShadow = shadowRoot.querySelector('style');
+        if (!document.getElementById('vton-modal-portal-styles') && styleInShadow) {
+          var portalStyle = document.createElement('style');
+          portalStyle.id = 'vton-modal-portal-styles';
+          portalStyle.textContent = styleInShadow.textContent;
+          document.head.appendChild(portalStyle);
+        }
+        document.body.appendChild(overlay);
+        state.modalRoot = overlay;
+      }
+
+      function vtonBindWidgetButton(shadowRoot, state) {
+        var btn = shadowRoot.querySelector('.vton-button');
+        if (!btn || btn.dataset.vtonBound) {
+          return;
+        }
+        btn.dataset.vtonBound = '1';
+        btn.addEventListener('click', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (window.vtonWidgetInstance && window.vtonWidgetInstance.openModal) {
+            window.vtonWidgetInstance.openModal();
+          }
+        });
+      }
+
+      function vtonBindModalEvents(state) {
+        var overlay = state.modalRoot;
+        if (!overlay || overlay.dataset.vtonEventsBound) {
+          return;
+        }
+        overlay.dataset.vtonEventsBound = '1';
+
+        overlay.addEventListener('click', function(e) {
+          if (e.target === overlay && window.vtonWidgetInstance) {
+            window.vtonWidgetInstance.closeModal();
+          }
+        });
+
+        var closeBtn = overlay.querySelector('.vton-modal-close');
+        if (closeBtn) {
+          closeBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (window.vtonWidgetInstance) {
+              window.vtonWidgetInstance.closeModal();
+            }
+          });
+        }
+
+        var uploadArea = vtonM(state, 'vton-upload-area');
+        if (uploadArea) {
+          uploadArea.addEventListener('click', function(e) {
+            e.preventDefault();
+            if (window.vtonWidgetInstance) {
+              window.vtonWidgetInstance.triggerFileInput();
+            }
+          });
+        }
+
+        var fileInput = vtonM(state, 'vton-file-input');
+        if (fileInput) {
+          fileInput.addEventListener('change', function(e) {
+            if (window.vtonWidgetInstance) {
+              window.vtonWidgetInstance.handleFileChange(e);
+            }
+          });
+        }
+
+        var generateBtn = vtonM(state, 'vton-generate-btn');
+        if (generateBtn) {
+          generateBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (window.vtonWidgetInstance) {
+              window.vtonWidgetInstance.generate();
+            }
+          });
+        }
+      }
+
+      function vtonInstallModalEscape(state) {
+        if (state._escapeBound) {
+          return;
+        }
+        state._escapeBound = true;
+        document.addEventListener('keydown', function(ev) {
+          if (ev.key === 'Escape' && state.modalOpen && window.vtonWidgetInstance) {
+            window.vtonWidgetInstance.closeModal();
+          }
+        });
+      }
+
+      function vtonRecoverStuckModalLock() {
+        document.documentElement.classList.remove('vton-modal-active');
+        document.body.style.position = '';
+        document.body.style.top = '';
+        document.body.style.width = '';
+        document.body.style.overflow = '';
+        document.documentElement.style.overflow = '';
+      }
+
       function initWidget() {
+        vtonRecoverStuckModalLock();
         vtonInjectMobilePlacementCss();
         vtonInjectPageModalCss();
         var shop = extractShop();
@@ -1128,25 +1280,32 @@
               userPhoto: null,
               resultImageUrl: null,
               modalOpen: false,
-              isGenerating: false
+              isGenerating: false,
+              modalRoot: null,
+              _shadowRoot: null
             };
 
             requestAnimationFrame(function() {
+              state._shadowRoot = shadowRoot;
               renderWidget(shadowRoot, state);
+              vtonRelocateModalToBody(state, shadowRoot);
+              vtonBindWidgetButton(shadowRoot, state);
+              vtonBindModalEvents(state);
+              vtonInstallModalEscape(state);
               log('[VTON] Widget rendered', { source: injectionTarget.source, productId: productId });
 
               window.vtonWidgetInstance = {
-                openModal: function() { openModal(shadowRoot, state); },
-                closeModal: function() { closeModal(shadowRoot, state); },
+                openModal: function() { openModal(state); },
+                closeModal: function() { closeModal(state); },
                 triggerFileInput: function() {
-                  var fileInput = shadowRoot.getElementById('vton-file-input');
+                  var fileInput = vtonM(state, 'vton-file-input');
                   if (fileInput) fileInput.click();
                 },
-                generate: function() { generateTryOn(shadowRoot, state); },
-                handleFileChange: function(event) { handleFileChange(event, shadowRoot, state); },
-                handleAddToCart: function() { handleAddToCart(shadowRoot, state); },
-                startLoadingMessages: function() { startLoadingMessages(shadowRoot); },
-                stopLoadingMessages: function() { stopLoadingMessages(shadowRoot); }
+                generate: function() { generateTryOn(state); },
+                handleFileChange: function(event) { handleFileChange(event, state); },
+                handleAddToCart: function() { handleAddToCart(state); },
+                startLoadingMessages: function() { startLoadingMessages(state); },
+                stopLoadingMessages: function() { stopLoadingMessages(state); }
               };
 
               vtonWatchForDomRemoval(shop, productId, productHandle, payload);
@@ -2023,16 +2182,16 @@
             }
           </style>
           <div class="vton-widget-container">
-            <button type="button" class="vton-button" style="background: ${buttonBg}; color: ${buttonColor};" onclick="window.vtonWidgetInstance.openModal()">
+            <button type="button" class="vton-button" style="background: ${buttonBg}; color: ${buttonColor};">
               <span class="vton-button__icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M5 20v-1a7 7 0 0114 0v1"/></svg>
               </span>
               <span class="vton-button__label">${buttonText}</span>
             </button>
           </div>
-          <div id="vton-modal-overlay" class="vton-modal-overlay" onclick="if(event.target === this) window.vtonWidgetInstance.closeModal()">
+          <div id="vton-modal-overlay" class="vton-modal-overlay">
             <div class="vton-modal">
-              <button class="vton-modal-close" onclick="window.vtonWidgetInstance.closeModal()">&times;</button>
+              <button type="button" class="vton-modal-close" aria-label="Close">&times;</button>
               <div class="vton-modal-content">
                 <div class="vton-funnel-head">
                   <div class="vton-step-dots" aria-hidden="true">
@@ -2043,8 +2202,8 @@
                   <p id="vton-funnel-label" class="vton-funnel-label">Upload your photo</p>
                 </div>
                 <div id="vton-panel-upload" class="vton-panel active">
-                <div id="vton-upload-area" class="vton-upload-area" onclick="window.vtonWidgetInstance.triggerFileInput()">
-                  <input type="file" id="vton-file-input" accept="image/*" style="display: none;" onchange="window.vtonWidgetInstance.handleFileChange(event)" />
+                <div id="vton-upload-area" class="vton-upload-area">
+                  <input type="file" id="vton-file-input" accept="image/*" style="display: none;" />
                   <span class="vton-upload-icon">
                     <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <path d="M23 19C23 19.5304 22.7893 20.0391 22.4142 20.4142C22.0391 20.7893 21.5304 21 21 21H3C2.46957 21 1.96086 20.7893 1.58579 20.4142C1.21071 20.0391 1 19.5304 1 19V8C1 7.46957 1.21071 6.96086 1.58579 6.58579C1.96086 6.21071 2.46957 6 3 6H7L9 4H15L17 6H21C21.5304 6 22.0391 6.21071 22.4142 6.58579C22.7893 6.96086 23 7.46957 23 8V19Z" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -2055,7 +2214,7 @@
                   <p>Front-facing · good lighting · best results</p>
                 </div>
                 <p class="vton-privacy-notice"><span class="vton-privacy-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></span>Secure processing · your photo is not stored</p>
-                <button id="vton-generate-btn" class="vton-generate-btn" style="background: ${buttonBg}; color: ${buttonColor};" onclick="window.vtonWidgetInstance.generate()" disabled>
+                <button type="button" id="vton-generate-btn" class="vton-generate-btn" style="background: ${buttonBg}; color: ${buttonColor};" disabled>
                   Try it on
                 </button>
                 </div>
@@ -2084,7 +2243,7 @@
       }
       
 
-      function vtonShowFunnelPanel(shadowRoot, panelName) {
+      function vtonShowFunnelPanel(state, panelName) {
         var stepMap = { upload: 1, loading: 2, result: 3 };
         var step = stepMap[panelName] || 1;
         var labels = {
@@ -2092,96 +2251,82 @@
           loading: 'Creating your try-on...',
           result: 'Your result'
         };
-        var labelEl = shadowRoot.getElementById('vton-funnel-label');
+        var labelEl = vtonM(state, 'vton-funnel-label');
         if (labelEl) {
           labelEl.textContent = labels[panelName] || labels.upload;
         }
-        var dots = shadowRoot.querySelectorAll('.vton-step-dot');
+        var dots = vtonMqa(state, '.vton-step-dot');
         for (var i = 0; i < dots.length; i++) {
           var n = parseInt(dots[i].getAttribute('data-step'), 10);
           dots[i].classList.remove('active', 'done');
           if (n < step) dots[i].classList.add('done');
           if (n === step) dots[i].classList.add('active');
         }
-        var panels = shadowRoot.querySelectorAll('.vton-panel');
+        var panels = vtonMqa(state, '.vton-panel');
         for (var j = 0; j < panels.length; j++) {
           panels[j].classList.remove('active');
         }
-        var panel = shadowRoot.getElementById('vton-panel-' + panelName);
+        var panel = vtonM(state, 'vton-panel-' + panelName);
         if (panel) panel.classList.add('active');
       }
       
-      function openModal(shadowRoot, state) {
-        const overlay = shadowRoot.getElementById('vton-modal-overlay');
-        if (overlay) {
-          vtonExpandHostForModal();
+      function openModal(state) {
+        if (!state.modalRoot && state._shadowRoot) {
+          vtonRelocateModalToBody(state, state._shadowRoot);
+          vtonBindModalEvents(state);
+        }
+        var shadowRoot = state._shadowRoot;
+        var overlay = vtonM(state, 'vton-modal-overlay');
+        if (!overlay) {
+          return;
+        }
+        try {
           overlay.classList.add('active');
           state.modalOpen = true;
-          var triggerWrap = shadowRoot.querySelector('.vton-widget-container');
-          if (triggerWrap) triggerWrap.classList.add('vton-widget-container--modal-open');
-
-          // Prevent body scroll when modal is open
-          const body = document.body;
-          const html = document.documentElement;
-          const scrollY = window.scrollY;
-
-          // Save current scroll position
-          body.style.position = 'fixed';
-          body.style.top = '-' + scrollY + 'px';
-          body.style.width = '100%';
-          body.style.overflow = 'hidden';
-
-          // Also prevent scroll on html element
-          html.style.overflow = 'hidden';
-
-          // Store scroll position for restoration
-          state.savedScrollY = scrollY;
+          var triggerWrap =
+            shadowRoot && shadowRoot.querySelector('.vton-widget-container');
+          if (triggerWrap) {
+            triggerWrap.classList.add('vton-widget-container--modal-open');
+          }
+          vtonLockPageScroll(state);
+        } catch (err) {
+          warn('[VTON] openModal failed', err);
+          vtonUnlockPageScroll(state);
+          state.modalOpen = false;
+          overlay.classList.remove('active');
+          return;
         }
         if (state.resultImageUrl) {
-          renderTryonResultPanel(shadowRoot, state);
-          vtonShowFunnelPanel(shadowRoot, 'result');
+          renderTryonResultPanel(state);
+          vtonShowFunnelPanel(state, 'result');
         } else {
-          vtonShowFunnelPanel(shadowRoot, 'upload');
+          vtonShowFunnelPanel(state, 'upload');
         }
       }
       
-      function closeModal(shadowRoot, state) {
-        const overlay = shadowRoot.getElementById('vton-modal-overlay');
-        if (overlay) {
-          overlay.classList.remove('active');
+      function closeModal(state) {
+        var shadowRoot = state._shadowRoot;
+        var overlay = vtonM(state, 'vton-modal-overlay');
+        if (!overlay) {
+          vtonUnlockPageScroll(state);
           state.modalOpen = false;
-          var triggerWrap = shadowRoot.querySelector('.vton-widget-container');
-          if (triggerWrap) triggerWrap.classList.remove('vton-widget-container--modal-open');
-          vtonCollapseHostAfterModal();
-
-          // Restore body scroll
-          const body = document.body;
-          const html = document.documentElement;
-          const scrollY = state.savedScrollY || 0;
-
-          // Restore body styles
-          body.style.position = '';
-          body.style.top = '';
-          body.style.width = '';
-          body.style.overflow = '';
-
-          // Restore html overflow
-          html.style.overflow = '';
-
-          // Restore scroll position
-          window.scrollTo(0, scrollY);
-
-          // Clear saved scroll position
-          state.savedScrollY = null;
-
-          var modalContent = shadowRoot.querySelector('.vton-modal-content');
-          if (modalContent) {
-            modalContent.classList.remove('has-result');
-          }
+          return;
+        }
+        overlay.classList.remove('active');
+        state.modalOpen = false;
+        var triggerWrap =
+          shadowRoot && shadowRoot.querySelector('.vton-widget-container');
+        if (triggerWrap) {
+          triggerWrap.classList.remove('vton-widget-container--modal-open');
+        }
+        vtonUnlockPageScroll(state);
+        var modalContent = vtonMq(state, '.vton-modal-content');
+        if (modalContent) {
+          modalContent.classList.remove('has-result');
         }
       }
       
-      function handleFileChange(event, shadowRoot, state) {
+      function handleFileChange(event, state) {
         const file = event.target.files && event.target.files[0];
         if (!file) return;
         
@@ -2189,8 +2334,8 @@
         reader.onload = function(e) {
           state.userPhoto = e.target.result;
           vtonResetRetryState(state);
-          const uploadArea = shadowRoot.getElementById('vton-upload-area');
-          const generateBtn = shadowRoot.getElementById('vton-generate-btn');
+          const uploadArea = vtonM(state, 'vton-upload-area');
+          const generateBtn = vtonM(state, 'vton-generate-btn');
           if (uploadArea) {
             uploadArea.className = 'vton-upload-area has-image';
             uploadArea.innerHTML = '<img src="' + state.userPhoto + '" alt="Preview" />';
@@ -2616,13 +2761,13 @@
         return vtonNormalizeVariantIdForCart(variants[0].id);
       }
 
-      function vtonUpdateWidgetVariantFromOptions(shadowRoot, state) {
+      function vtonUpdateWidgetVariantFromOptions(state) {
         var product = vtonGetProductData();
-        if (!product || !shadowRoot) {
+        if (!product) {
           return false;
         }
         state._vtonOptionSelections = state._vtonOptionSelections || {};
-        var optionSelects = shadowRoot.querySelectorAll('.vton-option-select');
+        var optionSelects = vtonMqa(state, '.vton-option-select');
         for (var i = 0; i < optionSelects.length; i++) {
           var name = optionSelects[i].getAttribute('data-option-name');
           if (name) {
@@ -2631,19 +2776,19 @@
         }
         var vid = vtonFindVariantIdFromSelections(product, state._vtonOptionSelections);
         state.selectedVariantId = vtonNormalizeVariantIdForCart(vid);
-        var hidden = shadowRoot.getElementById('vton-variant-select');
+        var hidden = vtonM(state, 'vton-variant-select');
         if (hidden && state.selectedVariantId) {
           hidden.value = state.selectedVariantId;
         }
         return !!state.selectedVariantId;
       }
 
-      function vtonRefreshOptionSelectAvailability(shadowRoot, state) {
+      function vtonRefreshOptionSelectAvailability(state) {
         var product = vtonGetProductData();
-        if (!product || !shadowRoot) {
+        if (!product) {
           return;
         }
-        var optionSelects = shadowRoot.querySelectorAll('.vton-option-select');
+        var optionSelects = vtonMqa(state, '.vton-option-select');
         for (var i = 0; i < optionSelects.length; i++) {
           var sel = optionSelects[i];
           var optName = sel.getAttribute('data-option-name');
@@ -2664,20 +2809,15 @@
         }
       }
 
-      function vtonResolveSelectedVariantId(state, shadowRoot) {
-        if (shadowRoot) {
-          var multiOpts = shadowRoot.querySelectorAll('.vton-option-select');
-          if (multiOpts.length) {
-            vtonUpdateWidgetVariantFromOptions(shadowRoot, state);
-            if (state.selectedVariantId) {
-              return vtonNormalizeVariantIdForCart(state.selectedVariantId);
-            }
+      function vtonResolveSelectedVariantId(state) {
+        var multiOpts = vtonMqa(state, '.vton-option-select');
+        if (multiOpts.length) {
+          vtonUpdateWidgetVariantFromOptions(state);
+          if (state.selectedVariantId) {
+            return vtonNormalizeVariantIdForCart(state.selectedVariantId);
           }
         }
-        var variantSelect =
-          shadowRoot && shadowRoot.getElementById
-            ? shadowRoot.getElementById('vton-variant-select')
-            : null;
+        var variantSelect = vtonM(state, 'vton-variant-select');
         if (variantSelect && variantSelect.value) {
           return vtonNormalizeVariantIdForCart(variantSelect.value);
         }
@@ -3106,10 +3246,10 @@
         }
       }
 
-      function vtonEnsureVariantSelectValid(shadowRoot, state) {
-        var optionSelects = shadowRoot.querySelectorAll('.vton-option-select');
+      function vtonEnsureVariantSelectValid(state) {
+        var optionSelects = vtonMqa(state, '.vton-option-select');
         if (optionSelects.length) {
-          if (!vtonUpdateWidgetVariantFromOptions(shadowRoot, state)) {
+          if (!vtonUpdateWidgetVariantFromOptions(state)) {
             return false;
           }
           var product = vtonGetProductData();
@@ -3124,7 +3264,7 @@
           return !!state.selectedVariantId;
         }
 
-        var variantSelect = shadowRoot.getElementById('vton-variant-select');
+        var variantSelect = vtonM(state, 'vton-variant-select');
         if (!variantSelect) {
           return true;
         }
@@ -3340,63 +3480,63 @@
         );
       }
 
-      function bindResultPanelEvents(shadowRoot, state) {
-        var atcBtn = shadowRoot.querySelector('.vton-add-to-cart-btn');
+      function bindResultPanelEvents(state) {
+        var atcBtn = vtonMq(state, '.vton-add-to-cart-btn');
         if (atcBtn) {
           atcBtn.addEventListener('click', function(ev) {
             ev.preventDefault();
-            handleAddToCart(shadowRoot, state);
+            handleAddToCart(state);
           });
         }
 
-        var retryBtn = shadowRoot.querySelector('[data-vton-action="retry"]');
+        var retryBtn = vtonMq(state, '[data-vton-action="retry"]');
         if (retryBtn) {
           retryBtn.addEventListener('click', function() {
-            resetResultForRetry(shadowRoot, state);
+            resetResultForRetry(state);
           });
         }
 
         function vtonOnWidgetVariantChange() {
-          if (!vtonEnsureVariantSelectValid(shadowRoot, state)) {
+          if (!vtonEnsureVariantSelectValid(state)) {
             return;
           }
-          vtonRefreshOptionSelectAvailability(shadowRoot, state);
+          vtonRefreshOptionSelectAvailability(state);
           vtonSyncThemeVariant(state.selectedVariantId);
-          var atcError = shadowRoot.querySelector('.vton-atc-error');
+          var atcError = vtonMq(state, '.vton-atc-error');
           if (atcError) {
             atcError.classList.remove('active');
             atcError.textContent = '';
           }
         }
 
-        var optionSelects = shadowRoot.querySelectorAll('.vton-option-select');
+        var optionSelects = vtonMqa(state, '.vton-option-select');
         for (var oi = 0; oi < optionSelects.length; oi++) {
           optionSelects[oi].addEventListener('change', vtonOnWidgetVariantChange);
         }
 
-        var variantSelect = shadowRoot.getElementById('vton-variant-select');
+        var variantSelect = vtonM(state, 'vton-variant-select');
         if (variantSelect && !optionSelects.length) {
-          vtonEnsureVariantSelectValid(shadowRoot, state);
+          vtonEnsureVariantSelectValid(state);
           variantSelect.addEventListener('change', vtonOnWidgetVariantChange);
         } else if (variantSelect && optionSelects.length) {
-          vtonEnsureVariantSelectValid(shadowRoot, state);
+          vtonEnsureVariantSelectValid(state);
         }
 
-        var shareNativeBtn = shadowRoot.querySelector('[data-vton-action="share-native"]');
+        var shareNativeBtn = vtonMq(state, '[data-vton-action="share-native"]');
         if (shareNativeBtn) {
           shareNativeBtn.addEventListener('click', function() {
             vtonShareViaNative(state);
           });
         }
 
-        var shareWhatsAppBtn = shadowRoot.querySelector('[data-vton-action="share-whatsapp"]');
+        var shareWhatsAppBtn = vtonMq(state, '[data-vton-action="share-whatsapp"]');
         if (shareWhatsAppBtn) {
           shareWhatsAppBtn.addEventListener('click', function() {
             vtonShareViaWhatsApp(state);
           });
         }
 
-        var shareCopyBtn = shadowRoot.querySelector('[data-vton-action="share-copy"]');
+        var shareCopyBtn = vtonMq(state, '[data-vton-action="share-copy"]');
         if (shareCopyBtn) {
           shareCopyBtn.addEventListener('click', function() {
             vtonCopyImageLink(state, shareCopyBtn);
@@ -3404,16 +3544,16 @@
         }
       }
 
-      function resetResultForRetry(shadowRoot, state) {
+      function resetResultForRetry(state) {
         state.resultImageUrl = null;
-        var modalContent = shadowRoot.querySelector('.vton-modal-content');
+        var modalContent = vtonMq(state, '.vton-modal-content');
         if (modalContent) {
           modalContent.classList.remove('has-result');
         }
-        var result = shadowRoot.getElementById('vton-result');
-        var uploadArea = shadowRoot.getElementById('vton-upload-area');
-        var generateBtn = shadowRoot.getElementById('vton-generate-btn');
-        var errorEl = shadowRoot.getElementById('vton-error');
+        var result = vtonM(state, 'vton-result');
+        var uploadArea = vtonM(state, 'vton-upload-area');
+        var generateBtn = vtonM(state, 'vton-generate-btn');
+        var errorEl = vtonM(state, 'vton-error');
         if (result) {
           result.innerHTML = '';
         }
@@ -3439,7 +3579,7 @@
         state.userPhoto = null;
         vtonResetRetryState(state);
         state.isGenerating = false;
-        vtonShowFunnelPanel(shadowRoot, 'upload');
+        vtonShowFunnelPanel(state, 'upload');
       }
 
       function vtonResetRetryState(state) {
@@ -3448,16 +3588,16 @@
         state._autoRetryUsed = false;
       }
 
-      function vtonShowAiFailure(shadowRoot, state, message, failedJobId, options) {
+      function vtonShowAiFailure(state, message, failedJobId, options) {
         options = options || {};
         state.isGenerating = false;
-        stopLoadingMessages(shadowRoot);
+        stopLoadingMessages(state);
 
         if (failedJobId) {
           state.lastFailedJobId = String(failedJobId);
         }
 
-        var generateBtn = shadowRoot.getElementById('vton-generate-btn');
+        var generateBtn = vtonM(state, 'vton-generate-btn');
         if (generateBtn) {
           generateBtn.disabled = false;
         }
@@ -3471,27 +3611,27 @@
         if (canAutoRetry) {
           state._autoRetryUsed = true;
           state.retryOfJobId = state.lastFailedJobId;
-          var errorElement = shadowRoot.getElementById('vton-error');
+          var errorElement = vtonM(state, 'vton-error');
           if (errorElement) {
             errorElement.classList.add('active');
             errorElement.classList.remove('info');
             errorElement.textContent =
               'Retrying your try-on… you were not charged for the failed attempt.';
           }
-          vtonShowFunnelPanel(shadowRoot, 'loading');
-          startLoadingMessages(shadowRoot);
+          vtonShowFunnelPanel(state, 'loading');
+          startLoadingMessages(state);
           if (generateBtn) {
             generateBtn.disabled = true;
           }
           setTimeout(function() {
             state.isGenerating = false;
-            generateTryOn(shadowRoot, state);
+            generateTryOn(state);
           }, 1200);
           return;
         }
 
-        vtonShowFunnelPanel(shadowRoot, 'upload');
-        var errorEl = shadowRoot.getElementById('vton-error');
+        vtonShowFunnelPanel(state, 'upload');
+        var errorEl = vtonM(state, 'vton-error');
         if (!errorEl) {
           return;
         }
@@ -3504,7 +3644,7 @@
           vtonEscapeHtml(baseMsg + ' You were not charged.') +
           '</p>';
 
-        var oldBtn = shadowRoot.getElementById('vton-free-retry-btn');
+        var oldBtn = vtonM(state, 'vton-free-retry-btn');
         if (oldBtn) {
           oldBtn.remove();
         }
@@ -3519,36 +3659,36 @@
             if (state.lastFailedJobId) {
               state.retryOfJobId = state.lastFailedJobId;
             }
-            generateTryOn(shadowRoot, state);
+            generateTryOn(state);
           });
           errorEl.appendChild(retryBtn);
         }
       }
 
-      function renderTryonResultPanel(shadowRoot, state) {
-        var result = shadowRoot.getElementById('vton-result');
+      function renderTryonResultPanel(state) {
+        var result = vtonM(state, 'vton-result');
         if (!result || !state.resultImageUrl) {
           return;
         }
         state.selectedVariantId = vtonNormalizeVariantIdForCart(vtonResolveVariantId());
         result.innerHTML = buildResultPanelHtml(state);
-        var modalContent = shadowRoot.querySelector('.vton-modal-content');
+        var modalContent = vtonMq(state, '.vton-modal-content');
         if (modalContent) {
           modalContent.classList.add('has-result');
         }
-        vtonShowFunnelPanel(shadowRoot, 'result');
-        bindResultPanelEvents(shadowRoot, state);
-        vtonRefreshOptionSelectAvailability(shadowRoot, state);
+        vtonShowFunnelPanel(state, 'result');
+        bindResultPanelEvents(state);
+        vtonRefreshOptionSelectAvailability(state);
         if (state.selectedVariantId) {
           vtonSyncThemeVariant(state.selectedVariantId);
         }
       }
 
-      function handleAddToCart(shadowRoot, state) {
+      function handleAddToCart(state) {
         log('[VTON] handleAddToCart called');
 
-        var atcButton = shadowRoot.querySelector('.vton-add-to-cart-btn');
-        var atcError = shadowRoot.querySelector('.vton-atc-error');
+        var atcButton = vtonMq(state, '.vton-add-to-cart-btn');
+        var atcError = vtonMq(state, '.vton-atc-error');
         var originalButtonText = atcButton
           ? atcButton.textContent
           : 'Add to cart';
@@ -3565,12 +3705,12 @@
         }
 
         var form = vtonFindBestProductForm();
-        var hasOptionPicker = shadowRoot.querySelectorAll('.vton-option-select').length > 0;
-        var variantSelect = shadowRoot.getElementById('vton-variant-select');
+        var hasOptionPicker = vtonMqa(state, '.vton-option-select').length > 0;
+        var variantSelect = vtonM(state, 'vton-variant-select');
 
         if (
           (hasOptionPicker || variantSelect) &&
-          !vtonEnsureVariantSelectValid(shadowRoot, state)
+          !vtonEnsureVariantSelectValid(state)
         ) {
           if (atcButton) {
             atcButton.disabled = false;
@@ -3584,7 +3724,7 @@
           return;
         }
 
-        var variantId = vtonResolveSelectedVariantId(state, shadowRoot);
+        var variantId = vtonResolveSelectedVariantId(state);
         var quantity = vtonResolveQuantity(form);
         var properties = vtonCollectLineItemProperties(form);
 
@@ -3748,17 +3888,17 @@
         'Tip: Your photos are deleted after use'
       ];
       
-      function startLoadingMessages(shadowRoot) {
+      function startLoadingMessages(state) {
         startTime = Date.now();
         let messageIndex = 0;
         let tipIndex = 0;
         let progress = 0;
         let currentStep = 1;
-        const messageElement = shadowRoot.getElementById('vton-loading-message');
-        const progressBar = shadowRoot.getElementById('vton-progress-bar');
-        const progressText = shadowRoot.getElementById('vton-progress-text');
-        const timerValue = shadowRoot.getElementById('vton-timer-value');
-        const tipElement = shadowRoot.querySelector('.vton-tip');
+        const messageElement = vtonM(state, 'vton-loading-message');
+        const progressBar = vtonM(state, 'vton-progress-bar');
+        const progressText = vtonM(state, 'vton-progress-text');
+        const timerValue = vtonM(state, 'vton-timer-value');
+        const tipElement = vtonMq(state, '.vton-tip');
         
         if (!messageElement) return;
         
@@ -3804,16 +3944,16 @@
             // Update steps based on progress with smoother transitions
             if (progress >= 18 && currentStep === 1) {
               currentStep = 2;
-              updateStep(shadowRoot, 1, true);
-              updateStep(shadowRoot, 2, false);
+              updateStep(state, 1, true);
+              updateStep(state, 2, false);
             } else if (progress >= 42 && currentStep === 2) {
               currentStep = 3;
-              updateStep(shadowRoot, 2, true);
-              updateStep(shadowRoot, 3, false);
+              updateStep(state, 2, true);
+              updateStep(state, 3, false);
             } else if (progress >= 68 && currentStep === 3) {
               currentStep = 4;
-              updateStep(shadowRoot, 3, true);
-              updateStep(shadowRoot, 4, false);
+              updateStep(state, 3, true);
+              updateStep(state, 4, false);
             }
           }
         }, 400);
@@ -3852,8 +3992,8 @@
         }
       }
       
-      function updateStep(shadowRoot, stepNum, completed) {
-        const stepElement = shadowRoot.getElementById('vton-step-' + stepNum);
+      function updateStep(state, stepNum, completed) {
+        const stepElement = vtonM(state, 'vton-step-' + stepNum);
         if (stepElement) {
           stepElement.classList.remove('active');
           if (completed) {
@@ -3862,7 +4002,7 @@
         }
       }
       
-      function stopLoadingMessages(shadowRoot) {
+      function stopLoadingMessages(state) {
         if (loadingMessageInterval) {
           clearInterval(loadingMessageInterval);
           loadingMessageInterval = null;
@@ -3880,10 +4020,10 @@
           tipInterval = null;
         }
         
-        if (shadowRoot) {
+        if (state.modalRoot) {
           // Complete progress bar
-          const progressBar = shadowRoot.getElementById('vton-progress-bar');
-          const progressText = shadowRoot.getElementById('vton-progress-text');
+          const progressBar = vtonM(state, 'vton-progress-bar');
+          const progressText = vtonM(state, 'vton-progress-text');
           if (progressBar) {
             progressBar.style.width = '100%';
           }
@@ -3893,7 +4033,7 @@
           
           // Complete all steps
           for (let i = 1; i <= 4; i++) {
-            const stepElement = shadowRoot.getElementById('vton-step-' + i);
+            const stepElement = vtonM(state, 'vton-step-' + i);
             if (stepElement) {
               stepElement.classList.remove('active');
               stepElement.classList.add('completed');
@@ -3902,7 +4042,7 @@
         }
       }
       
-      function pollJobStatus(shadowRoot, state, jobId, loading, result, generateBtn) {
+      function pollJobStatus(state, jobId, loading, result, generateBtn) {
         const maxAttempts = 80;
         let attempts = 0;
         let consecutiveErrors = 0;
@@ -3914,7 +4054,6 @@
           if (attempts > maxAttempts) {
             if (pollInterval) clearInterval(pollInterval);
             vtonShowAiFailure(
-              shadowRoot,
               state,
               'Generation timed out.',
               jobId,
@@ -3959,11 +4098,10 @@
               if (statusData.status === 'completed' && statusData.result_url) {
                 if (pollInterval) clearInterval(pollInterval);
                 log('[VTON] Job completed, result URL:', statusData.result_url);
-                displayResult(shadowRoot, state, statusData.result_url, loading, result, generateBtn);
+                displayResult(state, statusData.result_url, loading, result, generateBtn);
               } else if (statusData.status === 'failed' || statusData.status === 'error') {
                 if (pollInterval) clearInterval(pollInterval);
                 vtonShowAiFailure(
-                  shadowRoot,
                   state,
                   statusData.error || 'Generation failed.',
                   jobId,
@@ -3978,7 +4116,6 @@
                 if (attempts > 10) {
                   if (pollInterval) clearInterval(pollInterval);
                   vtonShowAiFailure(
-                    shadowRoot,
                     state,
                     'Unexpected status: ' + (statusData.status || 'unknown') + '.',
                     jobId,
@@ -3996,7 +4133,6 @@
                 error('[VTON] Multiple consecutive polling errors, stopping...');
                 if (pollInterval) clearInterval(pollInterval);
                 vtonShowAiFailure(
-                  shadowRoot,
                   state,
                   'Connection error.',
                   jobId,
@@ -4010,7 +4146,7 @@
         pollInterval = setInterval(pollOnce, 2500);
       }
       
-      function displayResult(shadowRoot, state, resultUrl, loading, result, generateBtn) {
+      function displayResult(state, resultUrl, loading, result, generateBtn) {
         state.resultImageUrl = resultUrl;
         vtonResetRetryState(state);
 
@@ -4023,7 +4159,7 @@
         // Validate result URL
         if (!state.resultImageUrl || typeof state.resultImageUrl !== 'string' || !state.resultImageUrl.startsWith('http')) {
           error('[VTON] Invalid result URL:', state.resultImageUrl);
-          const errorElement = shadowRoot.getElementById('vton-error');
+          const errorElement = vtonM(state, 'vton-error');
           if (errorElement) {
             errorElement.classList.add('active');
             errorElement.textContent = 'Error: Invalid result URL. Please try again.';
@@ -4033,8 +4169,8 @@
         }
         
         // Complete progress to 100% before stopping
-        const progressBar = shadowRoot.getElementById('vton-progress-bar');
-        const progressText = shadowRoot.getElementById('vton-progress-text');
+        const progressBar = vtonM(state, 'vton-progress-bar');
+        const progressText = vtonM(state, 'vton-progress-text');
         if (progressBar) {
           progressBar.style.width = '100%';
         }
@@ -4044,7 +4180,7 @@
         
         // Complete all steps
         for (let i = 1; i <= 4; i++) {
-          const stepElement = shadowRoot.getElementById('vton-step-' + i);
+          const stepElement = vtonM(state, 'vton-step-' + i);
           if (stepElement) {
             stepElement.classList.remove('active');
             stepElement.classList.add('completed');
@@ -4052,7 +4188,7 @@
         }
         
         // Stop loading messages
-        stopLoadingMessages(shadowRoot);
+        stopLoadingMessages(state);
         
         if (
           result &&
@@ -4060,14 +4196,14 @@
           typeof state.resultImageUrl === 'string' &&
           state.resultImageUrl.startsWith('http')
         ) {
-          renderTryonResultPanel(shadowRoot, state);
+          renderTryonResultPanel(state);
           log('[VTON] Result displayed with conversion panel');
         } else {
           error('[VTON] Cannot display result:', {
             hasResult: !!result,
             resultImageUrl: state.resultImageUrl
           });
-          const errorElement = shadowRoot.getElementById('vton-error');
+          const errorElement = vtonM(state, 'vton-error');
           if (errorElement) {
             errorElement.classList.add('active');
             errorElement.textContent = 'Error: Unable to display the result. Please try again.';
@@ -4078,7 +4214,7 @@
         if (generateBtn) generateBtn.disabled = false;
       }
       
-      function generateTryOn(shadowRoot, state) {
+      function generateTryOn(state) {
         if (!state.userPhoto || !state.productId) {
           return;
         }
@@ -4090,12 +4226,12 @@
         }
         state.isGenerating = true;
         
-        const loading = shadowRoot.getElementById('vton-loading');
-        const generateBtn = shadowRoot.getElementById('vton-generate-btn');
-        const result = shadowRoot.getElementById('vton-result');
-        const errorElement = shadowRoot.getElementById('vton-error');
+        const loading = vtonM(state, 'vton-loading');
+        const generateBtn = vtonM(state, 'vton-generate-btn');
+        const result = vtonM(state, 'vton-result');
+        const errorElement = vtonM(state, 'vton-error');
         
-        vtonShowFunnelPanel(shadowRoot, 'loading');
+        vtonShowFunnelPanel(state, 'loading');
         if (generateBtn) {
           generateBtn.disabled = true;
         }
@@ -4109,7 +4245,7 @@
         }
         
         // Start rotating loading messages
-        startLoadingMessages(shadowRoot);
+        startLoadingMessages(state);
         
         var generateUrl =
           window.location.origin +
@@ -4207,7 +4343,7 @@
           
           if (immediateResultUrl && typeof immediateResultUrl === 'string' && immediateResultUrl.startsWith('http')) {
             log('[VTON] Result URL available immediately, displaying result');
-            displayResult(shadowRoot, state, immediateResultUrl, loading, result, generateBtn);
+            displayResult(state, immediateResultUrl, loading, result, generateBtn);
             return;
           }
           
@@ -4220,16 +4356,16 @@
             // Asynchronous mode: start polling for job status
             log('[VTON] Job ID received, starting polling:', jobId);
             state.lastFailedJobId = String(jobId);
-            pollJobStatus(shadowRoot, state, jobId, loading, result, generateBtn);
+            pollJobStatus(state, jobId, loading, result, generateBtn);
             return; // Exit early, polling will handle the rest
           }
           
           // If we reach here, neither result_url nor job_id were found
           error('[VTON] Invalid response format: no result_url or job_id found', data);
           state.isGenerating = false;
-          stopLoadingMessages(shadowRoot);
-          vtonShowFunnelPanel(shadowRoot, 'upload');
-          const errorElement = shadowRoot.getElementById('vton-error');
+          stopLoadingMessages(state);
+          vtonShowFunnelPanel(state, 'upload');
+          const errorElement = vtonM(state, 'vton-error');
           if (errorElement) {
             errorElement.classList.add('active');
             errorElement.textContent = 'Invalid response from server. Please try again.';
@@ -4264,10 +4400,10 @@
 
           if (isDailyLimitError) {
             state.isGenerating = false;
-            stopLoadingMessages(shadowRoot);
-            vtonShowFunnelPanel(shadowRoot, 'upload');
+            stopLoadingMessages(state);
+            vtonShowFunnelPanel(state, 'upload');
             if (generateBtn) generateBtn.disabled = false;
-            var limitEl = shadowRoot.getElementById('vton-error');
+            var limitEl = vtonM(state, 'vton-error');
             if (limitEl) {
               limitEl.classList.add('active', 'credits-limit');
               limitEl.textContent = errorMessage;
@@ -4275,7 +4411,7 @@
             return;
           }
 
-          vtonShowAiFailure(shadowRoot, state, errorMessage, state.lastFailedJobId, {
+          vtonShowAiFailure(state, errorMessage, state.lastFailedJobId, {
             allowAutoRetry: true,
           });
         });
