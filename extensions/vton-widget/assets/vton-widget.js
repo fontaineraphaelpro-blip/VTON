@@ -591,6 +591,135 @@
         }
       }
 
+      function vtonInjectZoomCss() {
+        if (document.getElementById('vton-zoom-css')) {
+          return;
+        }
+        var style = document.createElement('style');
+        style.id = 'vton-zoom-css';
+        style.textContent =
+          'html.vton-zoom-active{overflow:hidden!important;}' +
+          '.vton-zoom-overlay{position:fixed;inset:0;z-index:2147483647;background:rgba(15,23,42,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:max(16px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));box-sizing:border-box;overflow:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;}' +
+          '.vton-zoom-overlay__close{position:fixed;top:max(14px,env(safe-area-inset-top));right:max(14px,env(safe-area-inset-right));width:44px;height:44px;border:none;border-radius:12px;background:rgba(255,255,255,.15);color:#fff;font-size:26px;line-height:1;cursor:pointer;z-index:2;}' +
+          '.vton-zoom-overlay__stage{display:flex;align-items:center;justify-content:center;min-height:min(80dvh,100%);width:100%;padding:48px 8px 56px;box-sizing:border-box;}' +
+          '.vton-zoom-overlay__img{max-width:min(96vw,1200px);max-height:min(86dvh,1200px);width:auto;height:auto;object-fit:contain;border-radius:8px;box-shadow:0 20px 60px rgba(0,0,0,.45);transition:transform .2s ease;cursor:zoom-in;touch-action:pan-x pan-y pinch-zoom;}' +
+          '.vton-zoom-overlay__img.is-zoomed{cursor:zoom-out;}' +
+          '.vton-zoom-overlay__hint{position:fixed;bottom:max(16px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);margin:0;padding:8px 14px;border-radius:999px;background:rgba(255,255,255,.12);color:#fff;font-size:12px;font-weight:500;pointer-events:none;white-space:nowrap;}';
+        document.head.appendChild(style);
+      }
+
+      function vtonCloseResultZoom() {
+        var el = document.getElementById('vton-zoom-overlay');
+        if (el) {
+          el.remove();
+        }
+        document.documentElement.classList.remove('vton-zoom-active');
+      }
+
+      function vtonOpenResultZoom(imageUrl) {
+        if (!imageUrl) {
+          return;
+        }
+        vtonInjectZoomCss();
+        vtonCloseResultZoom();
+        var lang = (document.documentElement.lang || '').toLowerCase();
+        var isFr = lang.indexOf('fr') === 0;
+        var hint = isFr
+          ? 'Cliquez pour zoomer · molette pour ajuster'
+          : 'Click to zoom · scroll wheel to adjust';
+        var overlay = document.createElement('div');
+        overlay.id = 'vton-zoom-overlay';
+        overlay.className = 'vton-zoom-overlay';
+        overlay.setAttribute('role', 'dialog');
+        overlay.setAttribute('aria-modal', 'true');
+        overlay.setAttribute('aria-label', isFr ? 'Aperçu essayage' : 'Try-on preview');
+        overlay.innerHTML =
+          '<button type="button" class="vton-zoom-overlay__close" aria-label="' +
+          (isFr ? 'Fermer' : 'Close') +
+          '">&times;</button>' +
+          '<div class="vton-zoom-overlay__stage">' +
+          '<img class="vton-zoom-overlay__img" src="' +
+          vtonEscapeHtml(imageUrl) +
+          '" alt="' +
+          (isFr ? 'Résultat essayage virtuel' : 'Virtual try-on result') +
+          '" /></div>' +
+          '<p class="vton-zoom-overlay__hint">' +
+          vtonEscapeHtml(hint) +
+          '</p>';
+        document.body.appendChild(overlay);
+        document.documentElement.classList.add('vton-zoom-active');
+
+        var img = overlay.querySelector('.vton-zoom-overlay__img');
+        var scale = 1;
+
+        function applyScale() {
+          if (!img) return;
+          img.style.transform = scale > 1 ? 'scale(' + scale + ')' : '';
+          img.classList.toggle('is-zoomed', scale > 1);
+        }
+
+        if (img) {
+          img.addEventListener('click', function(ev) {
+            ev.stopPropagation();
+            if (scale <= 1) {
+              scale = 2;
+            } else if (scale < 2.5) {
+              scale = 2.5;
+            } else {
+              scale = 1;
+            }
+            applyScale();
+          });
+          img.addEventListener('wheel', function(ev) {
+            ev.preventDefault();
+            ev.stopPropagation();
+            scale = Math.min(3.5, Math.max(1, scale + (ev.deltaY < 0 ? 0.15 : -0.15)));
+            applyScale();
+          }, { passive: false });
+        }
+
+        overlay.addEventListener('click', function(ev) {
+          if (
+            ev.target === overlay ||
+            ev.target.classList.contains('vton-zoom-overlay__close') ||
+            ev.target.classList.contains('vton-zoom-overlay__stage')
+          ) {
+            vtonCloseResultZoom();
+          }
+        });
+
+        var closeBtn = overlay.querySelector('.vton-zoom-overlay__close');
+        if (closeBtn) {
+          closeBtn.addEventListener('click', function(ev) {
+            ev.stopPropagation();
+            vtonCloseResultZoom();
+          });
+        }
+      }
+
+      function vtonBindResultZoomTrigger(state) {
+        var wrap = vtonMq(state, '.vton-result-image-wrap');
+        if (!wrap || wrap.dataset.vtonZoomBound === '1') {
+          return;
+        }
+        wrap.dataset.vtonZoomBound = '1';
+        function openZoom(ev) {
+          if (ev) {
+            ev.preventDefault();
+            ev.stopPropagation();
+          }
+          if (state.resultImageUrl) {
+            vtonOpenResultZoom(state.resultImageUrl);
+          }
+        }
+        wrap.addEventListener('click', openZoom);
+        wrap.addEventListener('keydown', function(ev) {
+          if (ev.key === 'Enter' || ev.key === ' ') {
+            openZoom(ev);
+          }
+        });
+      }
+
       function vtonGetWidgetHost() {
         return document.getElementById('vton-widget-container');
       }
@@ -827,7 +956,14 @@
         }
         state._escapeBound = true;
         document.addEventListener('keydown', function(ev) {
-          if (ev.key === 'Escape' && state.modalOpen && window.vtonWidgetInstance) {
+          if (ev.key !== 'Escape') {
+            return;
+          }
+          if (document.getElementById('vton-zoom-overlay')) {
+            vtonCloseResultZoom();
+            return;
+          }
+          if (state.modalOpen && window.vtonWidgetInstance) {
             window.vtonWidgetInstance.closeModal();
           }
         });
@@ -1667,6 +1803,8 @@
           '.vton-modal-close{position:absolute;top:14px;right:14px;background:rgba(15,23,42,.06);border:none;font-size:20px;cursor:pointer;padding:0;line-height:1;color:#64748b;border-radius:12px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;transition:background .2s ease,color .2s ease,transform .2s ease;z-index:10;font-weight:400;}' +
           '.vton-modal-close:hover{background:rgba(15,23,42,.1);color:#0f172a;transform:scale(1.05);}' +
           '.vton-modal-content{padding:44px 18px 18px;display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;box-sizing:border-box;}' +
+          '.vton-modal-content.has-result{overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;}' +
+          '.vton-modal.vton-modal--result{max-width:min(460px,calc(100vw - 32px));max-height:min(92dvh,860px);}' +
           '.vton-funnel-head{text-align:center;margin-bottom:18px;flex-shrink:0;}' +
           '.vton-step-dots{display:flex;align-items:center;gap:6px;margin-bottom:12px;padding:0 2px;}' +
           '.vton-step-dot{flex:1;height:4px;border-radius:999px;background:rgba(15,23,42,.08);transition:background .35s cubic-bezier(.4,0,.2,1),transform .35s ease;width:auto;}' +
@@ -2059,23 +2197,71 @@
               display: flex;
               flex-direction: column;
               align-items: stretch;
-              gap: 10px;
+              gap: 12px;
               box-sizing: border-box;
               flex: 1;
               min-height: 0;
-              overflow: hidden;
+              overflow: visible;
             }
             #vton-panel-result.active {
               flex: 1;
               min-height: 0;
-              overflow: hidden;
+              overflow: visible;
             }
             #vton-panel-result .vton-result {
               flex: 1;
               min-height: 0;
-              overflow: hidden;
+              overflow: visible;
               display: flex;
               flex-direction: column;
+            }
+            .vton-result-footer {
+              display: flex;
+              flex-direction: column;
+              align-items: stretch;
+              gap: 10px;
+              flex-shrink: 0;
+              width: 100%;
+            }
+            .vton-result-image-wrap {
+              position: relative;
+              width: 100%;
+              flex-shrink: 0;
+              border-radius: 14px;
+              overflow: hidden;
+              cursor: zoom-in;
+              background: linear-gradient(165deg, #f8fafc, #f1f5f9);
+              border: 1px solid rgba(15, 23, 42, 0.06);
+              box-shadow: 0 8px 24px rgba(15, 23, 42, 0.1);
+              touch-action: manipulation;
+            }
+            .vton-result-image-wrap:focus-visible {
+              outline: 2px solid ${buttonBg};
+              outline-offset: 2px;
+            }
+            .vton-result-zoom-badge {
+              position: absolute;
+              right: 10px;
+              bottom: 10px;
+              display: inline-flex;
+              align-items: center;
+              gap: 5px;
+              padding: 6px 10px;
+              border-radius: 999px;
+              background: rgba(15, 23, 42, 0.72);
+              color: #fff;
+              font-size: 11px;
+              font-weight: 600;
+              letter-spacing: 0.02em;
+              pointer-events: none;
+              backdrop-filter: blur(6px);
+            }
+            .vton-result-zoom-badge svg {
+              width: 14px;
+              height: 14px;
+              stroke: currentColor;
+              fill: none;
+              stroke-width: 2;
             }
             .vton-result-lead {
               margin: 0;
@@ -2089,17 +2275,19 @@
               color: #0f172a;
               font-weight: 600;
             }
+            .vton-result-image,
             .vton-result img {
               width: 100%;
-              max-height: min(34dvh, 280px);
+              max-height: min(32dvh, 240px);
               height: auto;
-              border-radius: 14px;
+              border-radius: 0;
               object-fit: contain;
               display: block;
-              background: linear-gradient(165deg, #f8fafc, #f1f5f9);
-              box-shadow: 0 8px 24px rgba(15, 23, 42, 0.1);
-              border: 1px solid rgba(15, 23, 42, 0.06);
-              flex-shrink: 1;
+              background: transparent;
+              box-shadow: none;
+              border: none;
+              flex-shrink: 0;
+              vertical-align: middle;
             }
             .vton-add-to-cart-btn {
               width: 100%;
@@ -2238,30 +2426,33 @@
               letter-spacing: 0.08em;
             }
             .vton-share-btns {
-              display: grid;
-              grid-template-columns: repeat(3, minmax(0, 1fr));
+              display: flex;
+              flex-direction: column;
               gap: 8px;
+              width: 100%;
             }
             .vton-share-btns--dual {
-              grid-template-columns: repeat(2, minmax(0, 1fr));
+              flex-direction: column;
             }
             .vton-share-btn {
               display: inline-flex;
               align-items: center;
               justify-content: center;
-              gap: 6px;
+              gap: 8px;
+              width: 100%;
               min-height: 44px;
-              padding: 10px 8px;
+              padding: 12px 14px;
               border-radius: 10px;
               border: 1px solid rgba(15, 23, 42, 0.12);
               background: #fff;
               color: #0f172a;
-              font-size: 12px;
+              font-size: 13px;
               font-weight: 600;
               cursor: pointer;
-              line-height: 1.2;
+              line-height: 1.25;
               transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
               box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+              box-sizing: border-box;
             }
             .vton-share-btn:hover {
               border-color: rgba(15, 23, 42, 0.2);
@@ -2273,9 +2464,11 @@
               flex-shrink: 0;
             }
             .vton-share-btn__label {
-              white-space: nowrap;
-              overflow: hidden;
-              text-overflow: ellipsis;
+              white-space: normal;
+              overflow: visible;
+              text-overflow: unset;
+              flex: 1;
+              text-align: center;
             }
             .vton-share-btn--native {
               color: #334155;
@@ -2518,9 +2711,12 @@
                 font-size: 14px;
                 border-radius: 12px;
               }
+              .vton-result-image,
               .vton-result img {
-                max-height: 60vh;
-                border-radius: 16px;
+                max-height: min(38dvh, 280px);
+              }
+              .vton-modal-content.has-result {
+                padding: 40px 20px 20px;
               }
               .vton-result-title {
                 font-size: 20px;
@@ -2565,12 +2761,7 @@
               .vton-funnel-head {
                 margin-bottom: 12px;
               }
-              .vton-share-btns {
-                grid-template-columns: repeat(2, minmax(0, 1fr));
-              }
-              .vton-share-btn--native {
-                grid-column: 1 / -1;
-              }
+              .vton-result-image,
               .vton-result img {
                 max-height: min(28dvh, 200px);
               }
@@ -2592,6 +2783,7 @@
               .vton-loading {
                 padding: 28px 16px;
               }
+              .vton-result-image,
               .vton-result img {
                 max-height: min(26dvh, 180px);
               }
@@ -2601,6 +2793,18 @@
               .vton-add-to-cart-btn {
                 padding: 14px 20px;
                 font-size: 15px;
+              }
+            }
+            @media (min-width: 641px) {
+              .vton-modal-content.has-result {
+                padding: 44px 20px 22px;
+              }
+              .vton-result-image,
+              .vton-result img {
+                max-height: min(36dvh, 300px);
+              }
+              .vton-add-to-cart-btn {
+                padding: 16px 20px;
               }
             }
           </style>
@@ -2736,6 +2940,7 @@
         }
         overlay.classList.remove('active');
         state.modalOpen = false;
+        vtonCloseResultZoom();
         var triggerWrap =
           shadowRoot && shadowRoot.querySelector('.vton-widget-container');
         if (triggerWrap) {
@@ -3911,11 +4116,22 @@
             '<span class="vton-share-btn__label">Share</span></button>'
           : '';
 
+        var zoomLabel = (document.documentElement.lang || '').toLowerCase().indexOf('fr') === 0
+          ? 'Agrandir'
+          : 'Zoom';
         return (
           '<div class="vton-result-content">' +
-          '<img src="' +
+          '<div class="vton-result-image-wrap" role="button" tabindex="0" aria-label="' +
+          vtonEscapeHtml(zoomLabel) +
+          '">' +
+          '<img class="vton-result-image" src="' +
           vtonEscapeHtml(state.resultImageUrl) +
           '" alt="Try-on result" />' +
+          '<span class="vton-result-zoom-badge" aria-hidden="true">' +
+          '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.5-4.5"/><path d="M11 8v6M8 11h6"/></svg>' +
+          zoomLabel +
+          '</span></div>' +
+          '<div class="vton-result-footer">' +
           '<p class="vton-result-lead">' +
           (variantHtml
             ? 'Select your option, then add <strong>' +
@@ -3947,7 +4163,7 @@
           '<span class="vton-share-btn__label">Copy link</span></button>' +
           '</div></div>' +
           '<button type="button" class="vton-retry-link" data-vton-action="retry">Try another photo</button>' +
-          '</div>'
+          '</div></div>'
         );
       }
 
@@ -3958,9 +4174,14 @@
 
       function resetResultForRetry(state) {
         state.resultImageUrl = null;
+        vtonCloseResultZoom();
         var modalContent = vtonMq(state, '.vton-modal-content');
         if (modalContent) {
           modalContent.classList.remove('has-result');
+        }
+        var modal = vtonMq(state, '.vton-modal');
+        if (modal) {
+          modal.classList.remove('vton-modal--result');
         }
         var result = vtonM(state, 'vton-result');
         var uploadArea = vtonM(state, 'vton-upload-area');
@@ -4094,6 +4315,10 @@
         var modalContent = vtonMq(state, '.vton-modal-content');
         if (modalContent) {
           modalContent.classList.add('has-result');
+        }
+        var modal = vtonMq(state, '.vton-modal');
+        if (modal) {
+          modal.classList.add('vton-modal--result');
         }
         vtonShowFunnelPanel(state, 'result');
         bindResultPanelEvents(state);
