@@ -1124,7 +1124,7 @@
               widgetSettings: widgetSettings,
               productImageUrl: productImageUrl,
               abBucket: abBucket,
-              selectedVariantId: vtonResolveVariantId(),
+              selectedVariantId: vtonNormalizeVariantIdForCart(vtonResolveVariantId()),
               userPhoto: null,
               resultImageUrl: null,
               modalOpen: false,
@@ -2285,6 +2285,97 @@
         return null;
       }
 
+      function vtonNormalizeVariantIdForCart(variantId) {
+        if (variantId === null || variantId === undefined || variantId === '') {
+          return null;
+        }
+        var s = String(variantId).trim();
+        var gid = s.match(/ProductVariant\/(\d+)/i);
+        if (gid) {
+          return gid[1];
+        }
+        if (/^\d+$/.test(s)) {
+          return s;
+        }
+        var n = parseInt(s, 10);
+        return Number.isFinite(n) && n > 0 ? String(n) : null;
+      }
+
+      function vtonVariantsFromThemeForm() {
+        var form = vtonFindBestProductForm();
+        if (!form) {
+          return null;
+        }
+        var htmlForm = form instanceof HTMLFormElement ? form : form.querySelector('form');
+        if (!htmlForm) {
+          return null;
+        }
+        var select = htmlForm.querySelector('select[name="id"]');
+        if (!select || select.options.length <= 1) {
+          return null;
+        }
+        var variants = [];
+        for (var i = 0; i < select.options.length; i++) {
+          var opt = select.options[i];
+          if (!opt.value) {
+            continue;
+          }
+          variants.push({
+            id: opt.value,
+            title: (opt.textContent || '').trim() || 'Option ' + (i + 1),
+            available: !opt.disabled,
+          });
+        }
+        if (variants.length <= 1) {
+          return null;
+        }
+        return { variants: variants, label: 'Choose option' };
+      }
+
+      function vtonGetVariantCatalog() {
+        if (window.Shopify && window.Shopify.product && window.Shopify.product.variants) {
+          var product = window.Shopify.product;
+          var opts = product.options || [];
+          var label = 'Choose option';
+          if (opts.length > 1) {
+            label = opts.filter(Boolean).join(' / ');
+          } else if (opts.length === 1 && opts[0]) {
+            label = String(opts[0]);
+          }
+          return {
+            variants: product.variants,
+            label: label,
+          };
+        }
+        return vtonVariantsFromThemeForm();
+      }
+
+      function vtonFirstAvailableVariantId(variants) {
+        if (!variants || !variants.length) {
+          return null;
+        }
+        for (var i = 0; i < variants.length; i++) {
+          if (variants[i].available !== false) {
+            return vtonNormalizeVariantIdForCart(variants[i].id);
+          }
+        }
+        return vtonNormalizeVariantIdForCart(variants[0].id);
+      }
+
+      function vtonResolveSelectedVariantId(state, shadowRoot) {
+        var variantSelect =
+          shadowRoot && shadowRoot.getElementById
+            ? shadowRoot.getElementById('vton-variant-select')
+            : null;
+        if (variantSelect && variantSelect.value) {
+          return vtonNormalizeVariantIdForCart(variantSelect.value);
+        }
+        if (state && state.selectedVariantId) {
+          return vtonNormalizeVariantIdForCart(state.selectedVariantId);
+        }
+        return vtonNormalizeVariantIdForCart(vtonResolveVariantId());
+      }
+
       function vtonResolveQuantity(form) {
         var formEl = form || vtonFindBestProductForm();
         if (formEl && formEl.querySelector) {
@@ -2334,8 +2425,12 @@
       }
 
       function vtonAddToCartAjax(variantId, quantity, properties) {
+        var normalizedId = vtonNormalizeVariantIdForCart(variantId);
+        if (!normalizedId) {
+          return Promise.reject(new Error('Invalid variant'));
+        }
         var url = vtonGetShopifyRoot() + 'cart/add.js';
-        var item = { id: parseInt(variantId, 10), quantity: quantity };
+        var item = { id: parseInt(normalizedId, 10), quantity: quantity };
         if (properties && Object.keys(properties).length) {
           item.properties = properties;
         }
@@ -2369,7 +2464,7 @@
         }
 
         return postPayload(body).catch(function(firstErr) {
-          var legacy = { id: parseInt(variantId, 10), quantity: quantity };
+          var legacy = { id: parseInt(normalizedId, 10), quantity: quantity };
           if (properties && Object.keys(properties).length) {
             legacy.properties = properties;
           }
@@ -2485,42 +2580,50 @@
       }
 
       function vtonBuildVariantSelectorHtml(state) {
-        if (!window.Shopify || !window.Shopify.product) {
-          return '';
-        }
-        var variants = window.Shopify.product.variants;
-        if (!variants || variants.length <= 1) {
+        var catalog = vtonGetVariantCatalog();
+        if (!catalog || !catalog.variants || catalog.variants.length <= 1) {
           return '';
         }
 
-        var options = window.Shopify.product.options || [];
-        var label =
-          options.length === 1 && options[0]
-            ? options[0]
-            : 'Choose size / option';
+        var variants = catalog.variants;
+        var preferredId =
+          vtonNormalizeVariantIdForCart(state.selectedVariantId) ||
+          vtonNormalizeVariantIdForCart(vtonResolveVariantId());
+        var selectedId = null;
+
+        if (preferredId) {
+          for (var p = 0; p < variants.length; p++) {
+            var pv = variants[p];
+            var pvid = vtonNormalizeVariantIdForCart(pv.id) || String(pv.id);
+            if (pvid === preferredId && pv.available !== false) {
+              selectedId = pvid;
+              break;
+            }
+          }
+        }
+        if (!selectedId) {
+          selectedId = vtonFirstAvailableVariantId(variants);
+        }
+        state.selectedVariantId = selectedId;
 
         var html =
           '<div class="vton-variant-picker">' +
           '<label class="vton-variant-label" for="vton-variant-select">' +
-          vtonEscapeHtml(label) +
+          vtonEscapeHtml(catalog.label || 'Choose option') +
           '</label>' +
-          '<select class="vton-variant-select" id="vton-variant-select">';
+          '<select class="vton-variant-select" id="vton-variant-select" aria-required="true">';
 
         for (var i = 0; i < variants.length; i++) {
           var v = variants[i];
-          var vid = String(v.id);
-          var selected =
-            vid === String(state.selectedVariantId) ||
-            (!state.selectedVariantId && i === 0)
-              ? ' selected'
-              : '';
-          var title = v.title || v.public_title || 'Option ' + (i + 1);
+          var vid = vtonNormalizeVariantIdForCart(v.id) || String(v.id);
           var soldOut = v.available === false;
+          var selected = selectedId && vid === selectedId;
+          var title = v.title || v.public_title || 'Option ' + (i + 1);
           html +=
             '<option value="' +
             vtonEscapeHtml(vid) +
             '"' +
-            selected +
+            (selected ? ' selected' : '') +
             (soldOut ? ' disabled' : '') +
             '>' +
             vtonEscapeHtml(title) +
@@ -2533,9 +2636,18 @@
       }
 
       function vtonSyncThemeVariant(variantId) {
-        if (!variantId) return;
+        var normalized = vtonNormalizeVariantIdForCart(variantId);
+        if (!normalized) {
+          return;
+        }
+        var productFormEl = document.querySelector('product-form');
+        if (productFormEl) {
+          productFormEl.setAttribute('data-variant-id', normalized);
+        }
         var form = vtonFindBestProductForm();
-        if (!form) return;
+        if (!form) {
+          return;
+        }
         var inputs = vtonQueryDeep(
           'input[name="id"], select[name="id"]',
           form === document.documentElement ? document.documentElement : form
@@ -2543,10 +2655,35 @@
         for (var i = 0; i < inputs.length; i++) {
           var inp = inputs[i];
           if (inp && inp.name === 'id') {
-            inp.value = String(variantId);
+            inp.value = normalized;
+            inp.dispatchEvent(new Event('input', { bubbles: true }));
             inp.dispatchEvent(new Event('change', { bubbles: true }));
           }
         }
+      }
+
+      function vtonEnsureVariantSelectValid(shadowRoot, state) {
+        var variantSelect = shadowRoot.getElementById('vton-variant-select');
+        if (!variantSelect) {
+          return true;
+        }
+        var opt = variantSelect.options[variantSelect.selectedIndex];
+        if (!opt || !opt.value) {
+          return false;
+        }
+        if (opt.disabled) {
+          var catalog = vtonGetVariantCatalog();
+          var fallback = catalog ? vtonFirstAvailableVariantId(catalog.variants) : null;
+          if (!fallback) {
+            return false;
+          }
+          variantSelect.value = fallback;
+          state.selectedVariantId = fallback;
+          vtonSyncThemeVariant(fallback);
+          return true;
+        }
+        state.selectedVariantId = vtonNormalizeVariantIdForCart(opt.value);
+        return true;
       }
 
       function vtonGetProductPageUrl() {
@@ -2707,9 +2844,15 @@
           '<img src="' +
           vtonEscapeHtml(state.resultImageUrl) +
           '" alt="Try-on result" />' +
-          '<p class="vton-result-lead">Add <strong>' +
-          vtonEscapeHtml(productTitle) +
-          '</strong> to your cart.</p>' +
+          '<p class="vton-result-lead">' +
+          (variantHtml
+            ? 'Select your option, then add <strong>' +
+              vtonEscapeHtml(productTitle) +
+              '</strong> to your cart.'
+            : 'Add <strong>' +
+              vtonEscapeHtml(productTitle) +
+              '</strong> to your cart.') +
+          '</p>' +
           variantHtml +
           urgencyHtml +
           '<p class="vton-atc-error" role="alert"></p>' +
@@ -2754,12 +2897,17 @@
 
         var variantSelect = shadowRoot.getElementById('vton-variant-select');
         if (variantSelect) {
-          if (!state.selectedVariantId && variantSelect.value) {
-            state.selectedVariantId = variantSelect.value;
-          }
+          vtonEnsureVariantSelectValid(shadowRoot, state);
           variantSelect.addEventListener('change', function() {
-            state.selectedVariantId = variantSelect.value;
+            if (!vtonEnsureVariantSelectValid(shadowRoot, state)) {
+              return;
+            }
             vtonSyncThemeVariant(state.selectedVariantId);
+            var atcError = shadowRoot.querySelector('.vton-atc-error');
+            if (atcError) {
+              atcError.classList.remove('active');
+              atcError.textContent = '';
+            }
           });
         }
 
@@ -2911,9 +3059,7 @@
         if (!result || !state.resultImageUrl) {
           return;
         }
-        if (!state.selectedVariantId) {
-          state.selectedVariantId = vtonResolveVariantId();
-        }
+        state.selectedVariantId = vtonResolveSelectedVariantId(state, null);
         result.innerHTML = buildResultPanelHtml(state);
         var modalContent = shadowRoot.querySelector('.vton-modal-content');
         if (modalContent) {
@@ -2921,6 +3067,9 @@
         }
         vtonShowFunnelPanel(shadowRoot, 'result');
         bindResultPanelEvents(shadowRoot, state);
+        if (state.selectedVariantId) {
+          vtonSyncThemeVariant(state.selectedVariantId);
+        }
       }
 
       function handleAddToCart(shadowRoot, state) {
@@ -2944,27 +3093,40 @@
         }
 
         var form = vtonFindBestProductForm();
-        var variantId = state.selectedVariantId
-          ? String(state.selectedVariantId)
-          : vtonResolveVariantId(form);
-        var quantity = vtonResolveQuantity(form);
-        var properties = vtonCollectLineItemProperties(form);
+        var variantSelect = shadowRoot.getElementById('vton-variant-select');
 
-        if (!variantId) {
-          warn('[VTON] Variant ID not resolved');
-              if (atcButton) {
-                atcButton.disabled = false;
+        if (variantSelect && !vtonEnsureVariantSelectValid(shadowRoot, state)) {
+          if (atcButton) {
+            atcButton.disabled = false;
             atcButton.textContent = originalButtonText;
           }
           if (atcError) {
             atcError.textContent =
-              'Please select a size or variant on the product page, then try again.';
+              'Please choose an available option before adding to cart.';
             atcError.classList.add('active');
           }
           return;
         }
 
-        var variantSelect = shadowRoot.getElementById('vton-variant-select');
+        var variantId = vtonResolveSelectedVariantId(state, shadowRoot);
+        var quantity = vtonResolveQuantity(form);
+        var properties = vtonCollectLineItemProperties(form);
+
+        if (!variantId) {
+          warn('[VTON] Variant ID not resolved');
+          if (atcButton) {
+            atcButton.disabled = false;
+            atcButton.textContent = originalButtonText;
+          }
+          if (atcError) {
+            atcError.textContent = variantSelect
+              ? 'Please choose an option in the list above.'
+              : 'Please select a size or variant on the product page, then try again.';
+            atcError.classList.add('active');
+          }
+          return;
+        }
+
         if (variantSelect) {
           var selectedOpt = variantSelect.options[variantSelect.selectedIndex];
           if (selectedOpt && selectedOpt.disabled) {
@@ -2982,6 +3144,7 @@
 
         log('[VTON] Adding variant', variantId, 'qty', quantity);
 
+        state.selectedVariantId = variantId;
         vtonSyncThemeVariant(variantId);
 
         vtonAddToCartWithFallback(variantId, quantity, properties)
