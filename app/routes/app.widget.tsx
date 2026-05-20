@@ -98,20 +98,32 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   }
 };
 
+type AbStats = {
+  tryon: { impression: number; tryon: number; atc: number };
+  control: { impression: number; tryon: number; atc: number };
+};
+
+const EMPTY_AB_STATS: AbStats = {
+  tryon: { impression: 0, tryon: 0, atc: 0 },
+  control: { impression: 0, tryon: 0, atc: 0 },
+};
+
 export default function Widget() {
   const loaderData = useLoaderData<typeof loader>();
   const fetcher = useFetcher<typeof action>();
+  const abFetcher = useFetcher<typeof action>();
   const shop = loaderData.shop ?? null;
   const themeEditorAppEmbedsUrl =
     "themeEditorAppEmbedsUrl" in loaderData ? loaderData.themeEditorAppEmbedsUrl : "";
   const themeEditorActivateUrl =
     "themeEditorActivateUrl" in loaderData ? loaderData.themeEditorActivateUrl : "";
-  const abStats =
+  const loaderAbStats =
     "abStats" in loaderData && loaderData.abStats
-      ? loaderData.abStats
-      : { tryon: { impression: 0, tryon: 0, atc: 0 }, control: { impression: 0, tryon: 0, atc: 0 } };
+      ? (loaderData.abStats as AbStats)
+      : EMPTY_AB_STATS;
   const error = "error" in loaderData ? loaderData.error : null;
 
+  const [abStats, setAbStats] = useState<AbStats>(loaderAbStats);
   const [abTestEnabled, setAbTestEnabled] = useState(
     () => shop?.ab_test_enabled === true
   );
@@ -146,15 +158,46 @@ export default function Widget() {
   }, [fetcher.data?.success, fetcher.data?.savedValues]);
 
   useFetcherNotifications(fetcher, notifications, {
-    onSuccess: () => ({
-      title: "Widget saved",
-      message: "Refresh a product page on your store to see the new button style.",
-    }),
+    onSuccess: (data) => {
+      if ((data as { abStats?: AbStats }).abStats) return null;
+      return {
+        title: "Widget saved",
+        message: "Refresh a product page on your store to see the new button style.",
+      };
+    },
     onError: (data) => ({
       title: "Could not save",
       message: String((data as { error?: string }).error ?? "Unknown error"),
     }),
   });
+
+  useFetcherNotifications(abFetcher, notifications, {
+    onSuccess: () => ({
+      title: "A/B test saved",
+      message:
+        "Traffic split is live. Stats update as visitors view products and add to cart.",
+    }),
+    onError: (data) => ({
+      title: "Could not save A/B test",
+      message: String((data as { error?: string }).error ?? "Unknown error"),
+    }),
+  });
+
+  useEffect(() => {
+    const data = abFetcher.data;
+    if (!data?.success) return;
+    if (data.abStats) {
+      setAbStats(data.abStats as AbStats);
+    }
+    const savedShop = data.shop;
+    if (savedShop) {
+      setAbTestEnabled(savedShop.ab_test_enabled === true);
+      const p = savedShop.ab_test_percent;
+      setAbTestPercent(
+        typeof p === "number" ? p : parseInt(String(p ?? 50), 10) || 50
+      );
+    }
+  }, [abFetcher.data]);
 
   const staticNotifications = useMemo(
     () => [
@@ -247,7 +290,7 @@ export default function Widget() {
               onSubmit={(e) => {
                 e.preventDefault();
                 const fd = new FormData(e.currentTarget);
-                fetcher.submit(fd, { method: "post" });
+                abFetcher.submit(fd, { method: "post" });
               }}
             >
               <input type="hidden" name="intent" value="save-ab-test" />
@@ -273,13 +316,23 @@ export default function Widget() {
                   disabled={!abTestEnabled}
                 />
                 <input type="hidden" name="abTestPercent" value={String(abTestPercent)} />
-                <Button submit loading={fetcher.state === "submitting"}>
+                <Button submit loading={abFetcher.state === "submitting"}>
                   Save A/B settings
                 </Button>
+                {abTestEnabled ? (
+                  <p className="vton-field-hint">
+                    Each visitor is assigned once to try-on or control. Control visitors
+                    see the normal product page (no try-on button). Compare add-to-cart
+                    rates below after a few days of traffic.
+                  </p>
+                ) : null}
               </BlockStack>
             </form>
             {abTestEnabled && (
               <div className="vton-ab-stats">
+                <p className="vton-field-hint" style={{ marginBottom: 10 }}>
+                  Last 30 days · refreshes after you save or reload this page
+                </p>
                 <div className="vton-ab-stat-card">
                   <h4>With try-on ({abTestPercent}%)</h4>
                   <ul>

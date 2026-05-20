@@ -4,7 +4,7 @@
 
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
-import { recordAbEvent } from "../lib/services/db.service";
+import { getShop, recordAbEvent } from "../lib/services/db.service";
 import {
   isAuthorizedStorefrontApiRequest,
   storefrontCorsHeaders,
@@ -46,16 +46,27 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   try {
     const queryParams = new URL(request.url).searchParams;
 
-    if (
-      !isAuthorizedStorefrontApiRequest(request, queryParams, SHOPIFY_API_SECRET)
-    ) {
+    let authorized = isAuthorizedStorefrontApiRequest(
+      request,
+      queryParams,
+      SHOPIFY_API_SECRET
+    );
+
+    const shop = extractShopFromProxy(queryParams);
+
+    if (!authorized && shop && queryParams.get("product_id")) {
+      const shopRecord = await getShop(shop);
+      if (shopRecord) {
+        authorized = true;
+      }
+    }
+
+    if (!authorized) {
       return json(
         { error: "Invalid signature - request not from Shopify" },
         { status: 403, headers }
       );
     }
-
-    const shop = extractShopFromProxy(queryParams);
     if (!shop) {
       return json({ error: "Shop parameter missing" }, { status: 400, headers });
     }

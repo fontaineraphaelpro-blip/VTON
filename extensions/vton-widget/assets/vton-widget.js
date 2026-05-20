@@ -228,6 +228,51 @@
         trackAbEvent(shop, productId, bucket, 'impression');
       }
 
+      var _vtonControlAtcListenerBound = false;
+      var _vtonControlAtcSent = false;
+      function bindControlAtcTracking(shop, productId) {
+        if (_vtonControlAtcListenerBound || !shop || !productId) return;
+        _vtonControlAtcListenerBound = true;
+
+        function trackControlAtcOnce() {
+          if (_vtonControlAtcSent) return;
+          _vtonControlAtcSent = true;
+          trackAbEvent(shop, productId, 'control', 'atc');
+        }
+
+        document.addEventListener(
+          'submit',
+          function(e) {
+            var form = e.target;
+            if (
+              form &&
+              form.tagName === 'FORM' &&
+              form.action &&
+              String(form.action).indexOf('/cart/add') !== -1
+            ) {
+              trackControlAtcOnce();
+            }
+          },
+          true
+        );
+
+        document.addEventListener(
+          'click',
+          function(e) {
+            var target = e.target;
+            if (!target || !target.closest) return;
+            var btn = target.closest(
+              'button[name="add"], [data-add-to-cart], .product-form__submit, .shopify-payment-button button, form[action*="/cart/add"] button[type="submit"]'
+            );
+            if (btn) trackControlAtcOnce();
+          },
+          true
+        );
+
+        document.addEventListener('cart:added', trackControlAtcOnce);
+        document.addEventListener('variant:add', trackControlAtcOnce);
+      }
+
       function vtonHasWidgetContainers() {
         return document.querySelectorAll('#vton-widget-container, [data-vton-widget="true"]').length > 0;
       }
@@ -291,6 +336,7 @@
         }
 
         if (status && status.ab_test_enabled && status.ab_bucket === 'control') {
+          bindControlAtcTracking(shop, productId);
           suppressWidget(shop, productId, status);
           return;
         }
@@ -1403,11 +1449,11 @@
             }
             .vton-loading-dots span {
               display: inline-block;
-              width: 4px;
-              height: 4px;
+              width: 5px;
+              height: 5px;
               border-radius: 50%;
-              background: #000000;
-              margin: 0 2px;
+              background: ${buttonBg};
+              margin: 0 3px;
               animation: dotPulse 1.4s infinite ease-in-out;
             }
             .vton-loading-dots span:nth-child(1) { animation-delay: 0s; }
@@ -1767,7 +1813,7 @@
                 max-width: 100%;
                 padding: 16px 20px;
                 font-size: 15px;
-                border-radius: 10px;
+                border-radius: 14px;
                 box-sizing: border-box;
               }
               .vton-modal-overlay {
