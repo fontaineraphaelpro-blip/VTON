@@ -1,18 +1,18 @@
-/** Monthly usage thresholds for admin credit alerts. */
+/** Monthly usage thresholds for generation quota alerts. */
 export const CREDITS_WARNING_USAGE_PERCENT = 80;
 
 export type CreditsAlertLevel = "ok" | "warning" | "critical";
 
 export type CreditsAlertState = {
   level: CreditsAlertLevel;
-  usagePercent: number | null;
+  title: string;
+  message: string;
   creditsRemaining: number;
   monthlyUsage: number;
   monthlyQuota: number | null;
-  isQuotaExhausted: boolean;
+  usagePercent: number | null;
   isCreditsExhausted: boolean;
-  title: string;
-  message: string;
+  isQuotaExhausted: boolean;
 };
 
 export function computeCreditsAlert(params: {
@@ -32,14 +32,14 @@ export function computeCreditsAlert(params: {
       ? Math.min(100, Math.round((monthlyUsage / monthlyQuota) * 100))
       : null;
 
-  const isCreditsExhausted = creditsRemaining <= 0;
   const isQuotaExhausted =
     monthlyQuota != null && monthlyUsage >= monthlyQuota;
+  const isCreditsExhausted = creditsRemaining <= 0;
 
   const creditsWarningThreshold =
     monthlyQuota != null
       ? Math.max(1, Math.ceil(monthlyQuota * (1 - CREDITS_WARNING_USAGE_PERCENT / 100)))
-      : 2;
+      : 0;
 
   const isCreditsLow =
     creditsRemaining > 0 && creditsRemaining <= creditsWarningThreshold;
@@ -51,56 +51,56 @@ export function computeCreditsAlert(params: {
 
   if (isCreditsExhausted || isQuotaExhausted) {
     const title = isQuotaExhausted
-      ? "Monthly try-on limit reached"
-      : "No credits left";
+      ? "Monthly generation limit reached"
+      : "No generations left";
     const message = isQuotaExhausted
-      ? `You've used all ${monthlyQuota?.toLocaleString("en-US")} try-ons this billing cycle. New virtual try-ons are paused — upgrade your plan before your next sales push.`
-      : "Shoppers can't start new try-ons. Add credits or upgrade your plan to avoid losing conversions during traffic peaks.";
+      ? `You've used all ${monthlyQuota?.toLocaleString("en-US")} generations this billing cycle. New virtual try-ons are paused — upgrade your plan before your next sales push.`
+      : "Shoppers can't start new try-ons. Upgrade your plan to keep generations available during traffic peaks.";
 
     return {
       level: "critical",
-      usagePercent,
+      title,
+      message,
       creditsRemaining,
       monthlyUsage,
       monthlyQuota,
-      isQuotaExhausted,
+      usagePercent,
       isCreditsExhausted,
-      title,
-      message,
+      isQuotaExhausted,
     };
   }
 
   if (isQuotaWarning || isCreditsLow) {
-    const title = "Credits running low";
+    const title = "Generations running low";
     let message: string;
     if (usagePercent != null && monthlyQuota != null) {
-      message = `${usagePercent}% of your monthly quota used (${monthlyUsage.toLocaleString("en-US")} / ${monthlyQuota.toLocaleString("en-US")} try-ons). You have ${creditsRemaining.toLocaleString("en-US")} credit${creditsRemaining === 1 ? "" : "s"} left — upgrade now to avoid try-on stopping mid-campaign.`;
+      message = `${usagePercent}% of your monthly quota used (${monthlyUsage.toLocaleString("en-US")} / ${monthlyQuota.toLocaleString("en-US")} generations). You have ${creditsRemaining.toLocaleString("en-US")} generation${creditsRemaining === 1 ? "" : "s"} left — upgrade now to avoid try-on stopping mid-campaign.`;
     } else {
-      message = `Only ${creditsRemaining.toLocaleString("en-US")} credit${creditsRemaining === 1 ? "" : "s"} remaining. Upgrade before your next campaign so try-on stays live.`;
+      message = `Only ${creditsRemaining.toLocaleString("en-US")} generation${creditsRemaining === 1 ? "" : "s"} remaining. Upgrade before your next campaign so try-on stays live.`;
     }
 
     return {
       level: "warning",
-      usagePercent,
+      title,
+      message,
       creditsRemaining,
       monthlyUsage,
       monthlyQuota,
-      isQuotaExhausted: false,
+      usagePercent,
       isCreditsExhausted: false,
-      title,
-      message,
+      isQuotaExhausted: false,
     };
   }
 
   return {
     level: "ok",
-    usagePercent,
+    title: "",
+    message: "",
     creditsRemaining,
     monthlyUsage,
     monthlyQuota,
-    isQuotaExhausted: false,
+    usagePercent,
     isCreditsExhausted: false,
-    title: "",
-    message: "",
+    isQuotaExhausted: false,
   };
 }

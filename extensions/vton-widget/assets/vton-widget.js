@@ -1791,6 +1791,21 @@
               box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.08);
               background: #fff;
             }
+            .vton-variant-picker--multi .vton-variant-picker__row {
+              margin-bottom: 10px;
+            }
+            .vton-variant-picker--multi .vton-variant-picker__row:last-of-type {
+              margin-bottom: 0;
+            }
+            .vton-variant-select--hidden {
+              position: absolute;
+              width: 1px;
+              height: 1px;
+              opacity: 0;
+              pointer-events: none;
+              overflow: hidden;
+              clip: rect(0, 0, 0, 0);
+            }
             .vton-error {
               color: #b91c1c;
               text-align: center;
@@ -2240,24 +2255,55 @@
         return root;
       }
 
-      function vtonResolveVariantId(form) {
-        var formEl = form || vtonFindBestProductForm();
+      var __vtonProductDataCache = null;
 
-        if (window.Shopify && window.Shopify.product) {
-          var p = window.Shopify.product;
-          if (p.selected_or_first_available_variant && p.selected_or_first_available_variant.id) {
-            return String(p.selected_or_first_available_variant.id);
-          }
-          if (Array.isArray(p.variants) && p.variants.length) {
-            for (var vi = 0; vi < p.variants.length; vi++) {
-              if (p.variants[vi].available) {
-                return String(p.variants[vi].id);
-              }
-            }
-            return String(p.variants[0].id);
-          }
+      function vtonGetProductData() {
+        if (__vtonProductDataCache) {
+          return __vtonProductDataCache;
         }
 
+        var scriptEl = document.getElementById('vton-product-json');
+        if (scriptEl && scriptEl.textContent) {
+          try {
+            __vtonProductDataCache = JSON.parse(scriptEl.textContent.trim());
+            return __vtonProductDataCache;
+          } catch (e) {}
+        }
+
+        var jsonScripts = document.querySelectorAll('script[type="application/json"]');
+        for (var si = 0; si < jsonScripts.length; si++) {
+          var sid = jsonScripts[si].id || '';
+          if (!/product/i.test(sid) || !jsonScripts[si].textContent) {
+            continue;
+          }
+          try {
+            var parsed = JSON.parse(jsonScripts[si].textContent.trim());
+            if (parsed && parsed.variants && parsed.variants.length) {
+              __vtonProductDataCache = parsed;
+              return __vtonProductDataCache;
+            }
+          } catch (e2) {}
+        }
+
+        if (
+          window.ShopifyAnalytics &&
+          window.ShopifyAnalytics.meta &&
+          window.ShopifyAnalytics.meta.product
+        ) {
+          __vtonProductDataCache = window.ShopifyAnalytics.meta.product;
+          return __vtonProductDataCache;
+        }
+
+        if (window.Shopify && window.Shopify.product) {
+          __vtonProductDataCache = window.Shopify.product;
+          return __vtonProductDataCache;
+        }
+
+        return null;
+      }
+
+      function vtonResolveVariantIdFromFormOnly(form) {
+        var formEl = form || vtonFindBestProductForm();
         var productFormEl = document.querySelector('product-form');
         if (productFormEl) {
           var dataVid = productFormEl.getAttribute('data-variant-id');
@@ -2280,6 +2326,205 @@
         var urlVariant = new URLSearchParams(window.location.search).get('variant');
         if (urlVariant) {
           return String(urlVariant);
+        }
+
+        return null;
+      }
+
+      function vtonReadThemeOptionSelections(product, form) {
+        var selections = {};
+        if (!product || !product.options || !product.options.length) {
+          return selections;
+        }
+
+        var opts = product.options;
+        var formEl = form || vtonFindBestProductForm();
+        var htmlForm =
+          formEl instanceof HTMLFormElement
+            ? formEl
+            : formEl && formEl.querySelector
+              ? formEl.querySelector('form')
+              : null;
+
+        if (htmlForm) {
+          for (var i = 0; i < opts.length; i++) {
+            var optName = opts[i];
+            if (!optName) {
+              continue;
+            }
+            var optionField =
+              htmlForm.querySelector('[name="options[' + optName + ']"]') ||
+              htmlForm.querySelector('select[name="option' + (i + 1) + '"]') ||
+              htmlForm.querySelector('#Option-' + (i + 1) + ' select');
+            if (optionField) {
+              if (optionField.tagName === 'SELECT' && optionField.value) {
+                selections[optName] = optionField.value;
+              } else if (optionField.type === 'radio' && optionField.checked) {
+                selections[optName] = optionField.value;
+              }
+            }
+            var checkedRadio = htmlForm.querySelector(
+              'input[name="options[' + optName + ']"]:checked'
+            );
+            if (checkedRadio && checkedRadio.value) {
+              selections[optName] = checkedRadio.value;
+            }
+          }
+        }
+
+        var vid = vtonResolveVariantIdFromFormOnly(form);
+        if (vid && product.variants) {
+          var norm = vtonNormalizeVariantIdForCart(vid);
+          for (var v = 0; v < product.variants.length; v++) {
+            var variant = product.variants[v];
+            if (vtonNormalizeVariantIdForCart(variant.id) === norm) {
+              for (var j = 0; j < opts.length; j++) {
+                var key = 'option' + (j + 1);
+                if (variant[key] && variant[key] !== 'Default Title') {
+                  selections[opts[j]] = variant[key];
+                }
+              }
+              break;
+            }
+          }
+        }
+
+        return selections;
+      }
+
+      function vtonFindVariantIdFromSelections(product, selections) {
+        if (!product || !product.variants || !selections) {
+          return null;
+        }
+        var opts = product.options || [];
+        var hasPick = false;
+        for (var k in selections) {
+          if (Object.prototype.hasOwnProperty.call(selections, k) && selections[k]) {
+            hasPick = true;
+            break;
+          }
+        }
+        if (!hasPick) {
+          return null;
+        }
+
+        for (var i = 0; i < product.variants.length; i++) {
+          var variant = product.variants[i];
+          var match = true;
+          for (var j = 0; j < opts.length; j++) {
+            var optName = opts[j];
+            var selVal = selections[optName];
+            if (!selVal) {
+              continue;
+            }
+            var key = 'option' + (j + 1);
+            if (variant[key] !== selVal) {
+              match = false;
+              break;
+            }
+          }
+          if (match) {
+            return String(variant.id);
+          }
+        }
+        return null;
+      }
+
+      function vtonMeaningfulProductOptions(product) {
+        if (!product || !product.variants) {
+          return [];
+        }
+        var opts = product.options || [];
+        var variants = product.variants;
+        var result = [];
+        for (var i = 0; i < opts.length; i++) {
+          var name = opts[i];
+          if (!name || name === 'Title') {
+            continue;
+          }
+          var key = 'option' + (i + 1);
+          var seen = {};
+          var values = [];
+          for (var v = 0; v < variants.length; v++) {
+            var val = variants[v][key];
+            if (val && val !== 'Default Title' && !seen[val]) {
+              seen[val] = true;
+              values.push(val);
+            }
+          }
+          if (values.length) {
+            result.push({ index: i, name: name, key: key, values: values });
+          }
+        }
+        return result;
+      }
+
+      function vtonIsOptionValueAvailable(product, optionName, value, currentSelections) {
+        if (!product || !product.variants) {
+          return true;
+        }
+        var opts = product.options || [];
+        var trial = {};
+        var key;
+        for (key in currentSelections || {}) {
+          if (Object.prototype.hasOwnProperty.call(currentSelections, key)) {
+            trial[key] = currentSelections[key];
+          }
+        }
+        trial[optionName] = value;
+
+        for (var i = 0; i < product.variants.length; i++) {
+          var variant = product.variants[i];
+          if (variant.available === false) {
+            continue;
+          }
+          var match = true;
+          for (var j = 0; j < opts.length; j++) {
+            var name = opts[j];
+            var pick = trial[name];
+            if (!pick) {
+              continue;
+            }
+            if (variant['option' + (j + 1)] !== pick) {
+              match = false;
+              break;
+            }
+          }
+          if (match) {
+            return true;
+          }
+        }
+        return false;
+      }
+
+      function vtonResolveVariantId(form) {
+        var fromForm = vtonResolveVariantIdFromFormOnly(form);
+        if (fromForm) {
+          return fromForm;
+        }
+
+        var product = vtonGetProductData();
+        if (product && product.variants && product.variants.length) {
+          var selections = vtonReadThemeOptionSelections(product, form);
+          var fromOpts = vtonFindVariantIdFromSelections(product, selections);
+          if (fromOpts) {
+            return fromOpts;
+          }
+        }
+
+        if (window.Shopify && window.Shopify.product) {
+          var p = window.Shopify.product;
+          if (p.selected_or_first_available_variant && p.selected_or_first_available_variant.id) {
+            return String(p.selected_or_first_available_variant.id);
+          }
+          if (Array.isArray(p.variants) && p.variants.length) {
+            for (var vi = 0; vi < p.variants.length; vi++) {
+              if (p.variants[vi].available) {
+                return String(p.variants[vi].id);
+              }
+            }
+            return String(p.variants[0].id);
+          }
         }
 
         return null;
@@ -2333,17 +2578,26 @@
       }
 
       function vtonGetVariantCatalog() {
-        if (window.Shopify && window.Shopify.product && window.Shopify.product.variants) {
-          var product = window.Shopify.product;
-          var opts = product.options || [];
+        var product = vtonGetProductData();
+        if (product && product.variants && product.variants.length > 1) {
+          var meaningful = vtonMeaningfulProductOptions(product);
           var label = 'Choose option';
-          if (opts.length > 1) {
-            label = opts.filter(Boolean).join(' / ');
-          } else if (opts.length === 1 && opts[0]) {
-            label = String(opts[0]);
+          if (meaningful.length === 1) {
+            label = meaningful[0].name;
+          } else if (meaningful.length > 1) {
+            label = 'Options';
+          } else {
+            var opts = product.options || [];
+            if (opts.length > 1) {
+              label = opts.filter(Boolean).join(' / ');
+            } else if (opts.length === 1 && opts[0]) {
+              label = String(opts[0]);
+            }
           }
           return {
+            product: product,
             variants: product.variants,
+            options: meaningful,
             label: label,
           };
         }
@@ -2362,7 +2616,64 @@
         return vtonNormalizeVariantIdForCart(variants[0].id);
       }
 
+      function vtonUpdateWidgetVariantFromOptions(shadowRoot, state) {
+        var product = vtonGetProductData();
+        if (!product || !shadowRoot) {
+          return false;
+        }
+        state._vtonOptionSelections = state._vtonOptionSelections || {};
+        var optionSelects = shadowRoot.querySelectorAll('.vton-option-select');
+        for (var i = 0; i < optionSelects.length; i++) {
+          var name = optionSelects[i].getAttribute('data-option-name');
+          if (name) {
+            state._vtonOptionSelections[name] = optionSelects[i].value;
+          }
+        }
+        var vid = vtonFindVariantIdFromSelections(product, state._vtonOptionSelections);
+        state.selectedVariantId = vtonNormalizeVariantIdForCart(vid);
+        var hidden = shadowRoot.getElementById('vton-variant-select');
+        if (hidden && state.selectedVariantId) {
+          hidden.value = state.selectedVariantId;
+        }
+        return !!state.selectedVariantId;
+      }
+
+      function vtonRefreshOptionSelectAvailability(shadowRoot, state) {
+        var product = vtonGetProductData();
+        if (!product || !shadowRoot) {
+          return;
+        }
+        var optionSelects = shadowRoot.querySelectorAll('.vton-option-select');
+        for (var i = 0; i < optionSelects.length; i++) {
+          var sel = optionSelects[i];
+          var optName = sel.getAttribute('data-option-name');
+          if (!optName) {
+            continue;
+          }
+          for (var o = 0; o < sel.options.length; o++) {
+            var opt = sel.options[o];
+            var available = vtonIsOptionValueAvailable(
+              product,
+              optName,
+              opt.value,
+              state._vtonOptionSelections
+            );
+            opt.disabled = !available;
+            opt.textContent = opt.value + (available ? '' : ' (sold out)');
+          }
+        }
+      }
+
       function vtonResolveSelectedVariantId(state, shadowRoot) {
+        if (shadowRoot) {
+          var multiOpts = shadowRoot.querySelectorAll('.vton-option-select');
+          if (multiOpts.length) {
+            vtonUpdateWidgetVariantFromOptions(shadowRoot, state);
+            if (state.selectedVariantId) {
+              return vtonNormalizeVariantIdForCart(state.selectedVariantId);
+            }
+          }
+        }
         var variantSelect =
           shadowRoot && shadowRoot.getElementById
             ? shadowRoot.getElementById('vton-variant-select')
@@ -2585,7 +2896,19 @@
           return '';
         }
 
+        var product = catalog.product || vtonGetProductData();
         var variants = catalog.variants;
+        var meaningful = catalog.options || (product ? vtonMeaningfulProductOptions(product) : []);
+        var hasMultiPicker =
+          meaningful.length > 0 &&
+          meaningful.some(function(o) {
+            return o.values.length > 1;
+          });
+
+        state._vtonOptionSelections = product
+          ? vtonReadThemeOptionSelections(product)
+          : {};
+
         var preferredId =
           vtonNormalizeVariantIdForCart(state.selectedVariantId) ||
           vtonNormalizeVariantIdForCart(vtonResolveVariantId());
@@ -2595,7 +2918,7 @@
           for (var p = 0; p < variants.length; p++) {
             var pv = variants[p];
             var pvid = vtonNormalizeVariantIdForCart(pv.id) || String(pv.id);
-            if (pvid === preferredId && pv.available !== false) {
+            if (pvid === preferredId) {
               selectedId = pvid;
               break;
             }
@@ -2605,6 +2928,81 @@
           selectedId = vtonFirstAvailableVariantId(variants);
         }
         state.selectedVariantId = selectedId;
+
+        if (product && selectedId) {
+          for (var sv = 0; sv < variants.length; sv++) {
+            if (vtonNormalizeVariantIdForCart(variants[sv].id) === selectedId) {
+              for (var oi = 0; oi < meaningful.length; oi++) {
+                var m = meaningful[oi];
+                if (variants[sv][m.key]) {
+                  state._vtonOptionSelections[m.name] = variants[sv][m.key];
+                }
+              }
+              break;
+            }
+          }
+        }
+
+        if (hasMultiPicker && product) {
+          var multiHtml =
+            '<div class="vton-variant-picker vton-variant-picker--multi">';
+          for (var mi = 0; mi < meaningful.length; mi++) {
+            var opt = meaningful[mi];
+            if (opt.values.length <= 1) {
+              continue;
+            }
+            var selVal =
+              state._vtonOptionSelections[opt.name] || opt.values[0];
+            multiHtml +=
+              '<div class="vton-variant-picker__row">' +
+              '<label class="vton-variant-label" for="vton-option-' +
+              mi +
+              '">' +
+              vtonEscapeHtml(opt.name) +
+              '</label>' +
+              '<select class="vton-variant-select vton-option-select" id="vton-option-' +
+              mi +
+              '" data-option-index="' +
+              opt.index +
+              '" data-option-name="' +
+              vtonEscapeHtml(opt.name) +
+              '" aria-required="true">';
+            for (var vi = 0; vi < opt.values.length; vi++) {
+              var val = opt.values[vi];
+              var available = vtonIsOptionValueAvailable(
+                product,
+                opt.name,
+                val,
+                state._vtonOptionSelections
+              );
+              multiHtml +=
+                '<option value="' +
+                vtonEscapeHtml(val) +
+                '"' +
+                (val === selVal ? ' selected' : '') +
+                (available ? '' : ' disabled') +
+                '>' +
+                vtonEscapeHtml(val) +
+                (available ? '' : ' (sold out)') +
+                '</option>';
+            }
+            multiHtml += '</select></div>';
+          }
+          multiHtml +=
+            '<select class="vton-variant-select vton-variant-select--hidden" id="vton-variant-select" aria-hidden="true" tabindex="-1">';
+          for (var hi = 0; hi < variants.length; hi++) {
+            var hv = variants[hi];
+            var hvid = vtonNormalizeVariantIdForCart(hv.id) || String(hv.id);
+            multiHtml +=
+              '<option value="' +
+              vtonEscapeHtml(hvid) +
+              '"' +
+              (hvid === selectedId ? ' selected' : '') +
+              '></option>';
+          }
+          multiHtml += '</select></div>';
+          return multiHtml;
+        }
 
         var html =
           '<div class="vton-variant-picker">' +
@@ -2640,11 +3038,57 @@
         if (!normalized) {
           return;
         }
+
+        var product = vtonGetProductData();
+        var variantObj = null;
+        if (product && product.variants) {
+          for (var vi = 0; vi < product.variants.length; vi++) {
+            if (vtonNormalizeVariantIdForCart(product.variants[vi].id) === normalized) {
+              variantObj = product.variants[vi];
+              break;
+            }
+          }
+        }
+
+        var form = vtonFindBestProductForm();
+        var htmlForm =
+          form instanceof HTMLFormElement
+            ? form
+            : form && form.querySelector
+              ? form.querySelector('form')
+              : null;
+
+        if (variantObj && htmlForm && product && product.options) {
+          for (var j = 0; j < product.options.length; j++) {
+            var optName = product.options[j];
+            var val = variantObj['option' + (j + 1)];
+            if (!val || val === 'Default Title') {
+              continue;
+            }
+            var optionEl =
+              htmlForm.querySelector('[name="options[' + optName + ']"]') ||
+              htmlForm.querySelector('select[name="option' + (j + 1) + '"]') ||
+              htmlForm.querySelector('#Option-' + (j + 1) + ' select');
+            if (optionEl && optionEl.tagName === 'SELECT' && optionEl.value !== val) {
+              optionEl.value = val;
+              optionEl.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+            var radios = htmlForm.querySelectorAll(
+              'input[name="options[' + optName + ']"]'
+            );
+            for (var r = 0; r < radios.length; r++) {
+              if (radios[r].value === val) {
+                radios[r].checked = true;
+                radios[r].dispatchEvent(new Event('change', { bubbles: true }));
+              }
+            }
+          }
+        }
+
         var productFormEl = document.querySelector('product-form');
         if (productFormEl) {
           productFormEl.setAttribute('data-variant-id', normalized);
         }
-        var form = vtonFindBestProductForm();
         if (!form) {
           return;
         }
@@ -2663,6 +3107,23 @@
       }
 
       function vtonEnsureVariantSelectValid(shadowRoot, state) {
+        var optionSelects = shadowRoot.querySelectorAll('.vton-option-select');
+        if (optionSelects.length) {
+          if (!vtonUpdateWidgetVariantFromOptions(shadowRoot, state)) {
+            return false;
+          }
+          var product = vtonGetProductData();
+          if (product && product.variants) {
+            for (var i = 0; i < product.variants.length; i++) {
+              var v = product.variants[i];
+              if (vtonNormalizeVariantIdForCart(v.id) === state.selectedVariantId) {
+                return v.available !== false;
+              }
+            }
+          }
+          return !!state.selectedVariantId;
+        }
+
         var variantSelect = shadowRoot.getElementById('vton-variant-select');
         if (!variantSelect) {
           return true;
@@ -2895,20 +3356,30 @@
           });
         }
 
+        function vtonOnWidgetVariantChange() {
+          if (!vtonEnsureVariantSelectValid(shadowRoot, state)) {
+            return;
+          }
+          vtonRefreshOptionSelectAvailability(shadowRoot, state);
+          vtonSyncThemeVariant(state.selectedVariantId);
+          var atcError = shadowRoot.querySelector('.vton-atc-error');
+          if (atcError) {
+            atcError.classList.remove('active');
+            atcError.textContent = '';
+          }
+        }
+
+        var optionSelects = shadowRoot.querySelectorAll('.vton-option-select');
+        for (var oi = 0; oi < optionSelects.length; oi++) {
+          optionSelects[oi].addEventListener('change', vtonOnWidgetVariantChange);
+        }
+
         var variantSelect = shadowRoot.getElementById('vton-variant-select');
-        if (variantSelect) {
+        if (variantSelect && !optionSelects.length) {
           vtonEnsureVariantSelectValid(shadowRoot, state);
-          variantSelect.addEventListener('change', function() {
-            if (!vtonEnsureVariantSelectValid(shadowRoot, state)) {
-              return;
-            }
-            vtonSyncThemeVariant(state.selectedVariantId);
-            var atcError = shadowRoot.querySelector('.vton-atc-error');
-            if (atcError) {
-              atcError.classList.remove('active');
-              atcError.textContent = '';
-            }
-          });
+          variantSelect.addEventListener('change', vtonOnWidgetVariantChange);
+        } else if (variantSelect && optionSelects.length) {
+          vtonEnsureVariantSelectValid(shadowRoot, state);
         }
 
         var shareNativeBtn = shadowRoot.querySelector('[data-vton-action="share-native"]');
@@ -3059,7 +3530,7 @@
         if (!result || !state.resultImageUrl) {
           return;
         }
-        state.selectedVariantId = vtonResolveSelectedVariantId(state, null);
+        state.selectedVariantId = vtonNormalizeVariantIdForCart(vtonResolveVariantId());
         result.innerHTML = buildResultPanelHtml(state);
         var modalContent = shadowRoot.querySelector('.vton-modal-content');
         if (modalContent) {
@@ -3067,6 +3538,7 @@
         }
         vtonShowFunnelPanel(shadowRoot, 'result');
         bindResultPanelEvents(shadowRoot, state);
+        vtonRefreshOptionSelectAvailability(shadowRoot, state);
         if (state.selectedVariantId) {
           vtonSyncThemeVariant(state.selectedVariantId);
         }
@@ -3093,9 +3565,13 @@
         }
 
         var form = vtonFindBestProductForm();
+        var hasOptionPicker = shadowRoot.querySelectorAll('.vton-option-select').length > 0;
         var variantSelect = shadowRoot.getElementById('vton-variant-select');
 
-        if (variantSelect && !vtonEnsureVariantSelectValid(shadowRoot, state)) {
+        if (
+          (hasOptionPicker || variantSelect) &&
+          !vtonEnsureVariantSelectValid(shadowRoot, state)
+        ) {
           if (atcButton) {
             atcButton.disabled = false;
             atcButton.textContent = originalButtonText;
@@ -3119,15 +3595,16 @@
             atcButton.textContent = originalButtonText;
           }
           if (atcError) {
-            atcError.textContent = variantSelect
-              ? 'Please choose an option in the list above.'
-              : 'Please select a size or variant on the product page, then try again.';
+            atcError.textContent =
+              hasOptionPicker || variantSelect
+                ? 'Please choose an available option above.'
+                : 'Please select a size or variant on the product page, then try again.';
             atcError.classList.add('active');
           }
           return;
         }
 
-        if (variantSelect) {
+        if (variantSelect && !hasOptionPicker) {
           var selectedOpt = variantSelect.options[variantSelect.selectedIndex];
           if (selectedOpt && selectedOpt.disabled) {
             if (atcButton) {

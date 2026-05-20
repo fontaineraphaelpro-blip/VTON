@@ -38,18 +38,18 @@ const shopify = shopifyApp({
       currencyCode: "USD",
       interval: BillingInterval.Every30Days as any,
     },
-    "starter": {
-      amount: 29.0,
+    starter: {
+      amount: 19.0,
       currencyCode: "USD",
       interval: BillingInterval.Every30Days as any,
     },
-    "pro": {
-      amount: 99.0,
+    growth: {
+      amount: 49.0,
       currencyCode: "USD",
       interval: BillingInterval.Every30Days as any,
     },
-    "studio": {
-      amount: 399.0,
+    scale: {
+      amount: 149.0,
       currencyCode: "USD",
       interval: BillingInterval.Every30Days as any,
     },

@@ -134,7 +134,7 @@ export default function App() {
           History
         </Link>
         <Link to="/app/credits" prefetch="render">
-          Credits
+          Plans
         </Link>
         <Link to="/app/privacy" prefetch="render">
           Privacy Policy

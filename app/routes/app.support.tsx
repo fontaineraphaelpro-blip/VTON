@@ -78,15 +78,15 @@ export default function Support() {
               <div className="vton-doc__faq-item">
                 <h3>What happens when I reach my monthly quota?</h3>
                 <p>
-                  When you reach your monthly quota or run out of credits, new try-ons pause until
-                  your billing cycle resets or you upgrade on the Credits page. You can also turn
+                  When you reach your monthly quota or run out of generations, new try-ons pause until
+                  your billing cycle resets or you upgrade on the Plans page. You can also turn
                   the widget off per product from Products.
                 </p>
               </div>
               <div className="vton-doc__faq-item">
                 <h3>Can I upgrade or downgrade my plan?</h3>
                 <p>
-                  Yes. Go to the Credits page to view available plans and upgrade or downgrade at any time.
+                  Yes. Go to the Plans page to view available plans and upgrade or downgrade at any time.
                 </p>
               </div>
             </div>

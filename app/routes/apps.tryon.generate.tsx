@@ -195,7 +195,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const credits = shopData.credits || 0;
     if (credits <= 0) {
       return json({ 
-        error: "Insufficient credits. Please purchase a subscription plan.",
+        error: "No generations left. Please upgrade your plan.",
         credits: credits 
       }, { status: 402, headers: corsHeaders });
     }
@@ -207,7 +207,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       const monthlyUsage = await getMonthlyTryonUsage(shop);
       if (monthlyUsage >= monthlyQuota) {
         return json({ 
-          error: "Monthly quota exceeded. Please upgrade your plan.",
+          error: "Monthly generation limit reached. Please upgrade your plan.",
           monthlyUsage,
           monthlyQuota 
         }, { status: 402, headers: corsHeaders });
@@ -237,7 +237,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         const customerDailyUsage = await getCustomerDailyTryonUsage(shop, firstIp);
         if (customerDailyUsage >= maxTriesPerUser) {
           return json({ 
-            error: `You have used all your available credits for today. You have reached the limit of ${maxTriesPerUser} attempt${maxTriesPerUser > 1 ? "s" : ""} per day. Please try again tomorrow.`,
+            error: `You have reached the daily limit of ${maxTriesPerUser} generation${maxTriesPerUser > 1 ? "s" : ""} per shopper. Please try again tomorrow.`,
             customerDailyUsage,
             maxTriesPerUser 
           }, { status: 402, headers: corsHeaders });

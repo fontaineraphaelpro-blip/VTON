@@ -19,7 +19,13 @@ import {
 } from "../lib/services/db.service";
 import { computeCreditsAlert } from "../lib/credits-alert";
 import { invalidateLayoutShopContext } from "../lib/layout-shop-cache.server";
-import { creditsForPlan, PLAN_MONTHLY_CREDITS } from "../lib/plan-credits";
+import {
+  BILLING_PLAN_IDS,
+  creditsForPlan,
+  FREE_PLAN_ID,
+  normalizePlanId,
+  PLAN_MONTHLY_CREDITS,
+} from "../lib/plan-credits";
 import { CreditsAlertBanner } from "../components/CreditsAlertBanner";
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
@@ -124,7 +130,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             })[0];
           
           if (recentSubscription) {
-            const planName = recentSubscription.name.toLowerCase().replace(/\s+/g, '-');
+            const planName = normalizePlanId(
+              recentSubscription.name.toLowerCase().replace(/\s+/g, "-")
+            );
 
             const monthlyCredits = creditsForPlan(planName);
             
@@ -168,10 +176,19 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
     // Sync with Shopify only when plan unknown or returning from billing
     if (!chargeId && shopData?.plan_name) {
+      const expectedQuota = creditsForPlan(shopData.plan_name);
+      if (shopData.monthly_quota !== expectedQuota) {
+        await upsertShop(shop, {
+          monthlyQuota: expectedQuota,
+          credits: Math.max(shopData.credits ?? 0, expectedQuota),
+        });
+        invalidateLayoutShopContext(shop);
+        shopData = await getShop(shop);
+      }
       const monthlyUsage = await getMonthlyTryonUsage(shop).catch(() => 0);
       return json({
         shop: shopData || null,
-        currentActivePlan,
+        currentActivePlan: shopData?.plan_name || currentActivePlan,
         stats: {
           totalTryons: shopData?.total_tryons ?? 0,
           totalAtc: shopData?.total_atc ?? 0,
@@ -234,7 +251,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       }
 
       if (activeSubscription) {
-        const detectedPlanName = activeSubscription.name.toLowerCase().replace(/\s+/g, '-');
+        const detectedPlanName = normalizePlanId(
+          activeSubscription.name.toLowerCase().replace(/\s+/g, "-")
+        );
         currentActivePlan = detectedPlanName;
         
         const dbPlanName = shopData?.plan_name;
@@ -242,11 +261,15 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
           shouldUpdateDb = true;
         }
       } else {
-        if (!shopData?.plan_name || shopData.plan_name !== "free-installation-setup") {
-          currentActivePlan = "free-installation-setup";
+        if (!shopData?.plan_name || shopData.plan_name !== FREE_PLAN_ID) {
+          currentActivePlan = FREE_PLAN_ID;
           shouldUpdateDb = true;
         } else {
           currentActivePlan = shopData.plan_name;
+          const expectedQuota = creditsForPlan(currentActivePlan);
+          if (shopData.monthly_quota !== expectedQuota) {
+            shouldUpdateDb = true;
+          }
         }
       }
       
@@ -357,15 +380,15 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     if (intent === "purchase-subscription") {
       const planId = formData.get("planId") as string;
       
-      const validPlans = ["free-installation-setup", "starter", "pro", "studio"];
-      if (!validPlans.includes(planId)) {
+      const validPlans = [...BILLING_PLAN_IDS];
+      if (!validPlans.includes(planId as (typeof BILLING_PLAN_IDS)[number])) {
         return json({ 
           success: false, 
           error: "Invalid subscription plan",
         });
       }
 
-      if (planId === "free-installation-setup") {
+      if (planId === FREE_PLAN_ID) {
         return json({ 
           success: false, 
           error: "The free plan is already active",
@@ -454,7 +477,7 @@ export default function Credits() {
         tone: "success" as const,
         priority: 5,
         title: "Subscription activated",
-        message: `Your ${planName} plan is active. Monthly credits have been updated.`,
+        message: `Your ${planName} plan is active. Monthly generations have been updated.`,
         autoHideMs: 8000 as const,
       },
       {
@@ -536,55 +559,62 @@ export default function Credits() {
   const subscriptionPlans = useMemo(
     () => [
       {
-        id: "free-installation-setup",
+        id: FREE_PLAN_ID,
         name: "Free",
         price: 0.0,
-        description: "4 try-ons / month",
+        description: "50 generations / month",
         popular: false,
-        highlight: "Widget on product pages",
         features: [
-          "4 try-ons every month",
-          "Try-on button on product pages",
-          "Watermark on generated images",
+          "50 generations per month",
+          "Unlimited products",
+          "Mobile & desktop ready",
+          "Basic customization",
+          "Cancel anytime",
         ],
       },
       {
         id: "starter",
         name: "Starter",
-        price: 29.0,
-        description: "100 try-ons / month",
+        price: 19.0,
+        description: "300 generations / month",
         popular: false,
-        highlight: "Small catalogs",
         features: [
-          "100 try-ons / month",
-          "Per-product try-on control",
-          "Usage stats in dashboard",
+          "300 generations per month",
+          "Unlimited products",
+          "Customizable widget",
+          "Simple analytics",
+          "Mobile & desktop ready",
+          "Cancel anytime",
         ],
       },
       {
-        id: "pro",
-        name: "Pro",
-        price: 99.0,
-        description: "400 try-ons / month",
+        id: "growth",
+        name: "Growth",
+        price: 49.0,
+        description: "1,000 generations / month",
         popular: true,
-        highlight: "Best value per try-on",
         features: [
-          "400 try-ons / month",
-          "A/B test (try-on vs control)",
-          "Custom garment photos for AI",
+          "1,000 generations per month",
+          "Everything in Starter",
+          "Advanced analytics",
+          "Priority processing",
+          "Priority support",
+          "Cancel anytime",
         ],
       },
       {
-        id: "studio",
-        name: "Studio",
-        price: 399.0,
-        description: "2,000 try-ons / month",
+        id: "scale",
+        name: "Scale",
+        price: 149.0,
+        description: "4,000 generations / month",
         popular: false,
-        highlight: "High traffic & launches",
         features: [
-          "2,000 try-ons / month",
-          "Built for high-traffic stores",
-          "Priority-friendly quota for launches",
+          "4,000 generations per month",
+          "Everything in Growth",
+          "Dedicated onboarding",
+          "Feature request priority",
+          "High-volume store support",
+          "Cancel anytime",
         ],
       },
     ],
@@ -598,7 +628,8 @@ export default function Credits() {
       ? ((stats.totalAtc / stats.totalTryons) * 100).toFixed(1)
       : null;
 
-  const monthlyQuota = stats.monthlyQuota ?? creditsMap[currentActivePlan || ""] ?? 4;
+  const monthlyQuota =
+    stats.monthlyQuota ?? creditsMap[currentActivePlan || ""] ?? PLAN_MONTHLY_CREDITS[FREE_PLAN_ID];
   const creditsAlert = useMemo(
     () =>
       computeCreditsAlert({
@@ -613,12 +644,12 @@ export default function Credits() {
   const faqItems = useMemo(
     () => [
       {
-        q: "What is one credit?",
+        q: "What counts as one generation?",
         a: "One successful virtual try-on on your storefront.",
       },
       {
-        q: "Failed AI generations?",
-        a: "No credit is used. Shoppers can retry for free until a try-on succeeds.",
+        q: "Failed generations?",
+        a: "No generation is used. Shoppers can retry for free until a try-on succeeds.",
       },
       {
         q: "What if I run out?",
@@ -629,33 +660,26 @@ export default function Credits() {
         a: "Yes — upgrade anytime; Shopify handles prorated billing.",
       },
       {
-        q: "Cancel or pause?",
-        a: "Cancel anytime from Shopify billing. Your plan stays active until the end of the current cycle.",
+        q: "Cancel anytime?",
+        a: "Yes. Cancel from Shopify billing. Your plan stays active until the end of the current cycle.",
       },
     ],
     []
   );
 
-  const recommendedPlanId =
-    currentActivePlan === "studio"
-      ? "studio"
-      : currentActivePlan === "starter"
-        ? "pro"
-        : "pro";
-
   return (
     <Page>
-      <TitleBar title="Credits - VTON Magic" />
+      <TitleBar title="Plans - VTON Magic" />
       <div className="app-container credits-page">
         <AdminPage
-          title="Plans & credits"
-          subtitle="Check usage, pick a plan, and keep try-on running on your store."
+          title="Plans & generations"
+          subtitle="Simple pricing to get started. Pick a plan and keep virtual try-on live on your store."
           actions={
-            <div className="credits-balance-compact" aria-label="Credits available">
+            <div className="credits-balance-compact" aria-label="Generations available">
               <span className="credits-balance-compact-value">
                 {currentCredits.toLocaleString("en-US")}
               </span>
-              <span className="credits-balance-compact-label">credits left</span>
+              <span className="credits-balance-compact-label">generations left</span>
             </div>
           }
         >
@@ -678,7 +702,7 @@ export default function Credits() {
                   <div className="credits-usage-strip__head">
                     <span className="credits-usage-strip__label">This month</span>
                     <span className="credits-usage-strip__numbers">
-                      <strong>{stats.monthlyUsage}</strong> / {monthlyQuota} used
+                      <strong>{stats.monthlyUsage}</strong> / {monthlyQuota} generations
                     </span>
                   </div>
                   <div className="credits-usage-meter credits-usage-meter--compact">
@@ -689,7 +713,7 @@ export default function Credits() {
                   </div>
                   {monthlyUsagePercent >= 80 && (
                     <p className="credits-usage-strip__warn">
-                      Approaching your monthly limit
+                      Approaching your monthly generation limit
                     </p>
                   )}
                 </div>
@@ -722,32 +746,24 @@ export default function Credits() {
                 Step 2 · Choose a plan
               </p>
               <p className="credits-funnel-lead">
-                1 credit = 1 try-on. Most stores upgrade to <strong>Pro</strong> before
-                campaigns.
+                1 generation = 1 successful try-on. Most stores choose{" "}
+                <strong>Growth</strong> for campaigns.
               </p>
             </div>
 
         <div className="pricing-grid pricing-grid--compact credits-pricing-grid">
           {subscriptionPlans.map((plan) => {
             const isCurrentPlan = currentActivePlan === plan.id;
-            const isFreePlan = plan.id === "free-installation-setup";
-            const credits = creditsMap[plan.id] ?? 0;
-            const pricePerCredit =
-              plan.price > 0 && credits > 0
-                ? (plan.price / credits).toFixed(2)
-                : null;
-            const isBestValue = plan.id === "pro";
+            const isFreePlan = plan.id === FREE_PLAN_ID;
+            const generations = creditsMap[plan.id] ?? 0;
 
             return (
               <div
                 key={plan.id}
-                className={`plan-card plan-card--compact ${plan.popular ? "featured" : ""} ${isCurrentPlan ? "current-plan" : ""} ${isBestValue ? "best-value" : ""}`}
+                className={`plan-card plan-card--compact ${plan.popular ? "featured" : ""} ${isCurrentPlan ? "current-plan" : ""}`}
               >
                 {plan.popular && (
                   <div className="plan-badge plan-badge-popular">Most popular</div>
-                )}
-                {isBestValue && !plan.popular && (
-                  <div className="plan-badge plan-badge-value">Best value</div>
                 )}
                 {isCurrentPlan && (
                   <div className="plan-badge plan-badge-current">Current</div>
@@ -755,12 +771,13 @@ export default function Credits() {
                 <div className="plan-name">{plan.name}</div>
                 <p className="plan-tagline">{plan.description}</p>
                 <div className="plan-price">
-                  ${plan.price.toFixed(2)} <span>/ month</span>
+                  ${plan.price.toFixed(0)} <span>/ month</span>
                 </div>
-                {pricePerCredit && (
-                  <p className="plan-per-credit">{pricePerCredit} $ / try-on</p>
+                {generations > 0 && (
+                  <p className="plan-per-credit">
+                    {generations.toLocaleString("en-US")} generations / month
+                  </p>
                 )}
-                <p className="plan-highlight">{plan.highlight}</p>
                 {plan.features?.length ? (
                   <ul className="plan-features">
                     {plan.features.map((feature: string) => (
@@ -817,11 +834,10 @@ export default function Credits() {
             className="credits-funnel-panel credits-funnel-panel--help"
           >
             <h2 id="credits-help-heading" className="credits-help-heading">
-              Billing & credits FAQ
+              Billing FAQ
             </h2>
             <p className="credits-help-intro">
-              Everything you need before subscribing — no hidden fees, credits only count on
-              successful try-ons.
+              No hidden fees. Generations only count on successful try-ons.
             </p>
             <div className="credits-faq-grid">
               {faqItems.map((item) => (
@@ -836,7 +852,7 @@ export default function Credits() {
         </div>
 
         <p className="credits-footnote">
-          Cancel anytime · No setup fee · Monthly quota resets each billing cycle
+          Cancel anytime · No setup fee · Generations reset each billing cycle
         </p>
         </AdminPage>
       </div>

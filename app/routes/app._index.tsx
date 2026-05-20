@@ -20,6 +20,7 @@ import { useAdminNotifications, useNotificationSync } from "../hooks/useAdminNot
 import { useFetcherNotifications } from "../hooks/useFetcherNotifications";
 import { authenticate } from "../shopify.server";
 import { getShop, upsertShop, getTryonLogs, getTopProducts, getTryonStatsByDay, getMonthlyTryonUsage, query } from "../lib/services/db.service";
+import { creditsForPlan, FREE_PLAN_ID } from "../lib/plan-credits";
 import {
   getAppEmbedActivationUrl,
   getThemeEditorAppEmbedsUrl,
@@ -133,14 +134,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
     // Sync database if plan changed
     if (shouldUpdateDb && currentActivePlan) {
-      const planCredits: Record<string, number> = {
-        "free-installation-setup": 4,
-        "starter": 100,
-        "pro": 400,
-        "studio": 2000,
-      };
-
-      const monthlyCredits = planCredits[currentActivePlan] || planCredits["free-installation-setup"];
+      const monthlyCredits = creditsForPlan(currentActivePlan);
       try {
         await upsertShop(shop, {
           monthlyQuota: monthlyCredits,
@@ -166,19 +160,20 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       try {
         const shopData = await getShop(shop);
         
-        if (!shopData || !shopData.plan_name || shopData.plan_name !== "free-installation-setup") {
+        if (!shopData || !shopData.plan_name || shopData.plan_name !== FREE_PLAN_ID) {
+          const freeGenerations = creditsForPlan(FREE_PLAN_ID);
           await upsertShop(shop, {
-            credits: 4,
-            monthlyQuota: 4,
+            credits: freeGenerations,
+            monthlyQuota: freeGenerations,
           });
           
           try {
             await query(
-              `ALTER TABLE shops ADD COLUMN IF NOT EXISTS plan_name TEXT DEFAULT 'free-installation-setup'`
+              `ALTER TABLE shops ADD COLUMN IF NOT EXISTS plan_name TEXT DEFAULT '${FREE_PLAN_ID}'`
             );
             await query(
               `UPDATE shops SET plan_name = $1 WHERE domain = $2`,
-              ["free-installation-setup", shop]
+              [FREE_PLAN_ID, shop]
             );
           } catch {
             // Plan name update skipped
@@ -416,11 +411,12 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       }
     }
 
-    // If shop doesn't exist yet, create it with free plan (4 credits/month)
+    // If shop doesn't exist yet, create it with free plan (50 generations/month)
     if (!shopData) {
+      const freeGenerations = creditsForPlan(FREE_PLAN_ID);
       await upsertShop(shop, {
-        credits: 4, // Initialize credits for compatibility with old system
-        monthlyQuota: 4, // Initialize with free plan
+        credits: freeGenerations,
+        monthlyQuota: freeGenerations,
         isEnabled: true, // Widget enabled by default for new shops
       });
       // Re-fetch shop data after creation
@@ -1087,13 +1083,13 @@ export default function Dashboard() {
   // Memoize stats array to prevent recreation on every render
   const stats = useMemo(() => [
     { 
-      label: "Available Credits", 
+      label: "Generations left", 
       value: credits.toLocaleString("en-US"), 
       icon: "",
       link: "/app/credits"
     },
     { 
-      label: "Try-ons (30 days)", 
+      label: "Generations (30 days)", 
       value: last30DaysTotal.toLocaleString("en-US"), 
       icon: "",
       link: "/app/history"
@@ -1133,13 +1129,13 @@ export default function Dashboard() {
             </span>
             <p className="vton-hero-title">Virtual Try-On on your product pages</p>
             <p className="vton-hero-desc">
-              {credits.toLocaleString("en-US")} credits available · {last30DaysTotal.toLocaleString("en-US")} try-ons in the last 30 days
+              {credits.toLocaleString("en-US")} generations left · {last30DaysTotal.toLocaleString("en-US")} generations in the last 30 days
             </p>
           </div>
           <div className="vton-hero-actions">
             <Link to="/app/widget" className="vton-btn vton-btn--ghost">Customize widget</Link>
             <Link to="/app/products" className="vton-btn vton-btn--ghost">Products</Link>
-            <Link to="/app/credits" className="vton-btn vton-btn--primary">Manage credits</Link>
+            <Link to="/app/credits" className="vton-btn vton-btn--primary">View plans</Link>
           </div>
         </div>
 
