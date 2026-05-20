@@ -998,19 +998,19 @@ export default function Dashboard() {
         show: showAppEmbedBanner && !showOnboardingPanel,
         tone: "info" as const,
         priority: 15,
-        title: "Widget installé sur vos pages produit",
+        title: "Try-on is live on your product pages",
         message: (
           <>
-            Le bouton try-on est activé automatiquement sur toutes les fiches produit. Désactivez-le
-            produit par produit dans <strong>Products</strong>. L&apos;intégration thème (optionnelle)
-            améliore parfois le placement du bouton.
+            The try-on button is enabled automatically on every product page. Turn it off per
+            product in <strong>Products</strong>. Optional theme embed settings can improve button
+            placement.
           </>
         ),
         persistDismiss: true,
         autoHideMs: false as const,
         action: themeEditorActivateUrl
           ? {
-              label: "Options thème (optionnel)",
+              label: "Theme options (optional)",
               onAction: () => window.open(themeEditorActivateUrl, "_top"),
             }
           : undefined,
@@ -1313,6 +1313,7 @@ export default function Dashboard() {
                     formData.append("intent", "cleanup-script-tags");
                     cleanupFetcher.submit(formData, { method: "post" });
                   }}
+                  submit={false}
                   disabled={cleanupFetcher.state === "submitting"}
                   loading={cleanupFetcher.state === "submitting"}
                 >

@@ -54,7 +54,7 @@ export function computeCreditsAlert(params: {
       ? "Monthly try-on limit reached"
       : "No credits left";
     const message = isQuotaExhausted
-      ? `You've used all ${monthlyQuota?.toLocaleString("en-US")} try-ons this billing cycle. New virtual try-ons are paused — upgrade before your next Meta or ad campaign.`
+      ? `You've used all ${monthlyQuota?.toLocaleString("en-US")} try-ons this billing cycle. New virtual try-ons are paused — upgrade your plan before your next sales push.`
       : "Shoppers can't start new try-ons. Add credits or upgrade your plan to avoid losing conversions during traffic peaks.";
 
     return {

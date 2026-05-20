@@ -29,7 +29,7 @@ const STEP_COPY: Record<
       "Test the full shopper flow once so you know everything works before sending traffic.",
     bullets: [
       "Open any active product page on your store (use the link below).",
-      'Click the try-on button (e.g. "Try It On Now").',
+      'Click the try-on button (e.g. "Try it on").',
       "Upload a front-facing photo and wait for the AI result.",
       "Optional: add to cart to confirm checkout integration.",
     ],

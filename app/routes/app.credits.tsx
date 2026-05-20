@@ -19,6 +19,7 @@ import {
 } from "../lib/services/db.service";
 import { computeCreditsAlert } from "../lib/credits-alert";
 import { invalidateLayoutShopContext } from "../lib/layout-shop-cache.server";
+import { creditsForPlan, PLAN_MONTHLY_CREDITS } from "../lib/plan-credits";
 import { CreditsAlertBanner } from "../components/CreditsAlertBanner";
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
@@ -125,14 +126,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
           if (recentSubscription) {
             const planName = recentSubscription.name.toLowerCase().replace(/\s+/g, '-');
 
-            const planCredits: Record<string, number> = {
-              "free-installation-setup": 4,
-              "starter": 100,
-              "pro": 400,
-              "studio": 2000,
-            };
-
-            const monthlyCredits = planCredits[planName] || planCredits["free-installation-setup"];
+            const monthlyCredits = creditsForPlan(planName);
             
             // Update monthlyQuota and credits to reflect purchased plan
             await upsertShop(shop, {
@@ -257,14 +251,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       }
       
       if (shouldUpdateDb && currentActivePlan) {
-        const planCredits: Record<string, number> = {
-          "free-installation-setup": 4,
-          "starter": 50,
-          "pro": 200,
-          "studio": 1000,
-        };
-
-        const monthlyCredits = planCredits[currentActivePlan] || planCredits["free-installation-setup"];
+        const monthlyCredits = creditsForPlan(currentActivePlan);
         
         try {
           // Update monthlyQuota and credits to reflect active plan
@@ -604,15 +591,7 @@ export default function Credits() {
     []
   );
 
-  const creditsMap: Record<string, number> = useMemo(
-    () => ({
-      "free-installation-setup": 4,
-      starter: 100,
-      pro: 400,
-      studio: 2000,
-    }),
-    []
-  );
+  const creditsMap: Record<string, number> = useMemo(() => ({ ...PLAN_MONTHLY_CREDITS }), []);
 
   const conversionRate =
     stats.totalTryons > 0

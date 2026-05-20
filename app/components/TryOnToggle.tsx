@@ -22,7 +22,7 @@ export function TryOnToggle({
       onClick={() => onChange(!checked)}
     >
       <span className="vton-tryon-toggle__box" aria-hidden="true">
-        {checked ? <span className="vton-tryon-toggle__mark">×</span> : null}
+        {checked ? <span className="vton-tryon-toggle__mark">✓</span> : null}
       </span>
     </button>
   );

@@ -407,11 +407,11 @@ export default function Widget() {
 
           {(themeEditorActivateUrl || themeEditorAppEmbedsUrl) && (
             <div className="vton-panel" style={{ marginBottom: 16 }}>
-              <h2 className="vton-panel-title">Installation (automatique)</h2>
+              <h2 className="vton-panel-title">Theme setup (optional)</h2>
               <p className="vton-field-hint" style={{ marginBottom: 12 }}>
-                Le bouton try-on est ajouté automatiquement sur toutes les pages produit. Pour le
-                désactiver sur un article, allez dans <strong>Products</strong>. L&apos;intégration
-                thème ci-dessous est optionnelle.
+                The try-on button is added automatically on all product pages. To turn it off for a
+                single product, go to <strong>Products</strong>. Use the buttons below only if you
+                want to adjust placement in your theme.
               </p>
               <BlockStack gap="200">
                 {themeEditorActivateUrl ? (
@@ -419,12 +419,12 @@ export default function Widget() {
                     variant="primary"
                     onClick={() => window.open(themeEditorActivateUrl, "_top")}
                   >
-                    Activer Virtual Try-On
+                    Activate Virtual Try-On embed
                   </Button>
                 ) : null}
                 {themeEditorAppEmbedsUrl ? (
                   <Button onClick={() => window.open(themeEditorAppEmbedsUrl, "_top")}>
-                    Ouvrir Intégrations d&apos;applications
+                    Open app embeds
                   </Button>
                 ) : null}
               </BlockStack>
