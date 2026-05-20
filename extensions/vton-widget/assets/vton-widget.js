@@ -483,11 +483,14 @@
           return;
         }
         var styleInShadow = shadowRoot.querySelector('style');
-        if (!document.getElementById('vton-modal-portal-styles') && styleInShadow) {
-          var portalStyle = document.createElement('style');
-          portalStyle.id = 'vton-modal-portal-styles';
+        if (styleInShadow) {
+          var portalStyle = document.getElementById('vton-modal-portal-styles');
+          if (!portalStyle) {
+            portalStyle = document.createElement('style');
+            portalStyle.id = 'vton-modal-portal-styles';
+            document.head.appendChild(portalStyle);
+          }
           portalStyle.textContent = styleInShadow.textContent;
-          document.head.appendChild(portalStyle);
         }
         document.body.appendChild(overlay);
         state.modalRoot = overlay;
@@ -1689,39 +1692,44 @@
               opacity: 0;
               transition: opacity 0.25s ease;
             }
-            .vton-loading-subtext,
-            .vton-progress-info {
-              display: none !important;
+            .vton-loading-subtext {
+              margin: 10px 0 0;
+              font-size: 13px;
+              color: #64748b;
+              line-height: 1.4;
+              max-width: 280px;
             }
             .vton-progress-container {
               width: 100%;
-              max-width: 260px;
-              margin: 0 auto;
-              background: rgba(15, 23, 42, 0.08);
+              max-width: 280px;
+              margin: 16px auto 0;
+              background: rgba(15, 23, 42, 0.1);
               border-radius: 999px;
-              height: 8px;
+              height: 10px;
               overflow: hidden;
               position: relative;
               flex-shrink: 0;
             }
             .vton-progress-bar {
               height: 100%;
+              min-width: 4%;
               background: linear-gradient(90deg, ${buttonBg}, ${buttonBg});
               border-radius: 999px;
-              width: 0%;
+              width: 4%;
               transition: width 0.45s cubic-bezier(0.4, 0, 0.2, 1);
               position: relative;
-              box-shadow: 0 0 12px rgba(15, 23, 42, 0.15);
+              box-shadow: 0 0 12px rgba(15, 23, 42, 0.2);
             }
             .vton-progress-info {
               display: flex;
               justify-content: space-between;
               align-items: center;
-              max-width: 420px;
-              margin: 0 auto;
-              padding: 0 4px;
+              gap: 12px;
+              max-width: 280px;
+              width: 100%;
+              margin: 10px auto 0;
+              padding: 0 2px;
               flex-shrink: 0;
-                width: 100%;
             }
             .vton-progress-text {
               font-size: 13px;
@@ -3973,12 +3981,38 @@
         });
       }
       
-      // Loading messages that rotate during generation
-      let loadingMessageInterval = null;
-      let progressInterval = null;
-      let timerInterval = null;
-      let tipInterval = null;
-      let startTime = null;
+      function vtonClearLoadingTimers(state) {
+        if (!state || !state._loadingTimers) {
+          return;
+        }
+        var t = state._loadingTimers;
+        if (t.message) {
+          clearInterval(t.message);
+        }
+        if (t.progress) {
+          clearInterval(t.progress);
+        }
+        if (t.timer) {
+          clearInterval(t.timer);
+        }
+        if (t.tip) {
+          clearInterval(t.tip);
+        }
+        state._loadingTimers = null;
+      }
+
+      function vtonApplyLoadingProgress(state, percent) {
+        var p = Math.max(0, Math.min(100, percent));
+        state._loadingProgress = p;
+        var progressBar = vtonM(state, 'vton-progress-bar');
+        var progressText = vtonM(state, 'vton-progress-text');
+        if (progressBar) {
+          progressBar.style.width = p + '%';
+        }
+        if (progressText) {
+          progressText.textContent = Math.floor(p) + '%';
+        }
+      }
       
       // Contextual messages based on elapsed time
       const getContextualMessage = function(elapsedSeconds) {
@@ -4025,99 +4059,123 @@
       ];
       
       function startLoadingMessages(state) {
-        startTime = Date.now();
-        let messageIndex = 0;
-        let tipIndex = 0;
-        let progress = 0;
-        let currentStep = 1;
-        const messageElement = vtonM(state, 'vton-loading-message');
-        const progressBar = vtonM(state, 'vton-progress-bar');
-        const progressText = vtonM(state, 'vton-progress-text');
-        const timerValue = vtonM(state, 'vton-timer-value');
-        const tipElement = vtonMq(state, '.vton-tip');
-        
-        if (!messageElement) return;
-        
-        // Start timer with estimated time remaining
-        timerInterval = setInterval(function() {
-          if (startTime && timerValue) {
-            const elapsed = Math.floor((Date.now() - startTime) / 1000);
-            const estimatedTotal = 30; // Average 30 seconds
-            const remaining = Math.max(0, estimatedTotal - elapsed);
-            
-            if (remaining > 0 && elapsed < 35) {
-              timerValue.textContent = elapsed + 's - ~' + remaining + 's left';
-            } else {
-              timerValue.textContent = elapsed + 's';
-            }
+        vtonClearLoadingTimers(state);
+        state._loadingStartedAt = Date.now();
+        state._loadingProgress = 0;
+
+        var messageIndex = 0;
+        var tipIndex = 0;
+        var currentStep = 1;
+        var messageElement = vtonM(state, 'vton-loading-message');
+        var timerValue = vtonM(state, 'vton-timer-value');
+        var tipElement = vtonMq(state, '.vton-tip');
+        var funnelDots = vtonMqa(state, '.vton-step-dot');
+
+        vtonApplyLoadingProgress(state, 4);
+        if (timerValue) {
+          timerValue.textContent = '~30s remaining';
+        }
+
+        for (var di = 0; di < funnelDots.length; di++) {
+          funnelDots[di].classList.remove('done');
+          funnelDots[di].classList.remove('active');
+          if (di === 0) {
+            funnelDots[di].classList.add('active');
           }
-        }, 1000);
-        
-        // Animate progress bar (simulated progress with realistic curve)
-        progressInterval = setInterval(function() {
-          if (progress < 92) {
-            // More realistic progress curve: fast start, slow middle, medium end
-            let increment;
-            if (progress < 25) {
-              increment = 2.5; // Fast start
-            } else if (progress < 50) {
-              increment = 1.2; // Slower middle
-            } else if (progress < 75) {
-              increment = 0.9; // Slow near end
+        }
+
+        state._loadingTimers = {};
+
+        if (timerValue) {
+          state._loadingTimers.timer = setInterval(function() {
+            if (!state._loadingStartedAt) {
+              return;
+            }
+            var elapsed = Math.floor(
+              (Date.now() - state._loadingStartedAt) / 1000
+            );
+            var estimatedTotal = 30;
+            var remaining = Math.max(0, estimatedTotal - elapsed);
+            if (remaining > 0 && elapsed < 45) {
+              timerValue.textContent =
+                elapsed + 's · ~' + remaining + 's left';
             } else {
-              increment = 0.6; // Very slow at 90%
+              timerValue.textContent = elapsed + 's elapsed';
             }
-            
-            progress = Math.min(progress + increment, 92);
-            
-            if (progressBar) {
-              progressBar.style.width = progress + '%';
+          }, 1000);
+        }
+
+        state._loadingTimers.progress = setInterval(function() {
+          var progress = state._loadingProgress || 0;
+          if (progress >= 92) {
+            return;
+          }
+          var increment;
+          if (progress < 25) {
+            increment = 2.8;
+          } else if (progress < 50) {
+            increment = 1.4;
+          } else if (progress < 75) {
+            increment = 0.95;
+          } else {
+            increment = 0.55;
+          }
+          progress = Math.min(progress + increment, 92);
+          vtonApplyLoadingProgress(state, progress);
+
+          if (progress >= 18 && currentStep === 1) {
+            currentStep = 2;
+            updateStep(state, 1, true);
+            updateStep(state, 2, false);
+            if (funnelDots[0]) {
+              funnelDots[0].classList.add('done');
             }
-            if (progressText) {
-              progressText.textContent = Math.floor(progress) + '%';
+            if (funnelDots[1]) {
+              funnelDots[1].classList.add('active');
             }
-            
-            // Update steps based on progress with smoother transitions
-            if (progress >= 18 && currentStep === 1) {
-              currentStep = 2;
-              updateStep(state, 1, true);
-              updateStep(state, 2, false);
-            } else if (progress >= 42 && currentStep === 2) {
-              currentStep = 3;
-              updateStep(state, 2, true);
-              updateStep(state, 3, false);
-            } else if (progress >= 68 && currentStep === 3) {
-              currentStep = 4;
-              updateStep(state, 3, true);
-              updateStep(state, 4, false);
+          } else if (progress >= 42 && currentStep === 2) {
+            currentStep = 3;
+            updateStep(state, 2, true);
+            updateStep(state, 3, false);
+            if (funnelDots[1]) {
+              funnelDots[1].classList.add('done');
+            }
+            if (funnelDots[2]) {
+              funnelDots[2].classList.add('active');
+            }
+          } else if (progress >= 68 && currentStep === 3) {
+            currentStep = 4;
+            updateStep(state, 3, true);
+            updateStep(state, 4, false);
+            if (funnelDots[2]) {
+              funnelDots[2].classList.add('done');
             }
           }
         }, 400);
-        
-        // Change message every 3 seconds with contextual messages
-        loadingMessageInterval = setInterval(function() {
-          if (startTime) {
-            const elapsed = Math.floor((Date.now() - startTime) / 1000);
-            const contextualMessages = getContextualMessage(elapsed);
-            messageIndex = (messageIndex + 1) % contextualMessages.length;
-            
-            if (messageElement) {
-              // Fade out
-              messageElement.classList.add('fade-out');
-              
-              // Change text and fade in after short delay
-              setTimeout(function() {
-                const dots = '<span class="vton-loading-dots"><span></span><span></span><span></span></span>';
-                messageElement.innerHTML = contextualMessages[messageIndex] + dots;
-                messageElement.classList.remove('fade-out');
-              }, 250);
+
+        if (messageElement) {
+          state._loadingTimers.message = setInterval(function() {
+            if (!state._loadingStartedAt) {
+              return;
             }
-          }
-        }, 3000);
-        
-        // Show tips every 8 seconds
+            var elapsed = Math.floor(
+              (Date.now() - state._loadingStartedAt) / 1000
+            );
+            var contextualMessages = getContextualMessage(elapsed);
+            messageIndex = (messageIndex + 1) % contextualMessages.length;
+            messageElement.classList.add('fade-out');
+            setTimeout(function() {
+              var dots =
+                '<span class="vton-loading-dots"><span></span><span></span><span></span></span>';
+              messageElement.innerHTML =
+                contextualMessages[messageIndex] + dots;
+              messageElement.classList.remove('fade-out');
+            }, 250);
+          }, 3000);
+        }
+
         if (tipElement) {
-          tipInterval = setInterval(function() {
+          state._loadingTimers.tip = setInterval(function() {
             tipIndex = (tipIndex + 1) % tips.length;
             tipElement.style.opacity = '0';
             setTimeout(function() {
@@ -4139,41 +4197,23 @@
       }
       
       function stopLoadingMessages(state) {
-        if (loadingMessageInterval) {
-          clearInterval(loadingMessageInterval);
-          loadingMessageInterval = null;
+        vtonClearLoadingTimers(state);
+        state._loadingStartedAt = null;
+        vtonApplyLoadingProgress(state, 100);
+        var timerValue = vtonM(state, 'vton-timer-value');
+        if (timerValue) {
+          timerValue.textContent = 'Done';
         }
-        if (progressInterval) {
-          clearInterval(progressInterval);
-          progressInterval = null;
+        var funnelDots = vtonMqa(state, '.vton-step-dot');
+        for (var i = 0; i < funnelDots.length; i++) {
+          funnelDots[i].classList.add('done');
+          funnelDots[i].classList.remove('active');
         }
-        if (timerInterval) {
-          clearInterval(timerInterval);
-          timerInterval = null;
-        }
-        if (tipInterval) {
-          clearInterval(tipInterval);
-          tipInterval = null;
-        }
-        
-        if (state.modalRoot) {
-          // Complete progress bar
-          const progressBar = vtonM(state, 'vton-progress-bar');
-          const progressText = vtonM(state, 'vton-progress-text');
-          if (progressBar) {
-            progressBar.style.width = '100%';
-          }
-          if (progressText) {
-            progressText.textContent = '100%';
-          }
-          
-          // Complete all steps
-          for (let i = 1; i <= 4; i++) {
-            const stepElement = vtonM(state, 'vton-step-' + i);
-            if (stepElement) {
-              stepElement.classList.remove('active');
-              stepElement.classList.add('completed');
-            }
+        for (var si = 1; si <= 4; si++) {
+          var stepElement = vtonM(state, 'vton-step-' + si);
+          if (stepElement) {
+            stepElement.classList.remove('active');
+            stepElement.classList.add('completed');
           }
         }
       }
@@ -4244,7 +4284,10 @@
                   { allowAutoRetry: true }
                 );
               } else if (statusData.status === 'pending' || statusData.status === 'processing') {
-                // Continue polling
+                var pollProgress = Math.min(88, 20 + attempts * 1.1);
+                if ((state._loadingProgress || 0) < pollProgress) {
+                  vtonApplyLoadingProgress(state, pollProgress);
+                }
                 log('[VTON] Job still pending/processing, continuing to poll...');
               } else {
                 // Unknown status, stop polling after a few attempts
@@ -4304,26 +4347,6 @@
           return;
         }
         
-        // Complete progress to 100% before stopping
-        const progressBar = vtonM(state, 'vton-progress-bar');
-        const progressText = vtonM(state, 'vton-progress-text');
-        if (progressBar) {
-          progressBar.style.width = '100%';
-        }
-        if (progressText) {
-          progressText.textContent = '100%';
-        }
-        
-        // Complete all steps
-        for (let i = 1; i <= 4; i++) {
-          const stepElement = vtonM(state, 'vton-step-' + i);
-          if (stepElement) {
-            stepElement.classList.remove('active');
-            stepElement.classList.add('completed');
-          }
-        }
-        
-        // Stop loading messages
         stopLoadingMessages(state);
         
         if (
