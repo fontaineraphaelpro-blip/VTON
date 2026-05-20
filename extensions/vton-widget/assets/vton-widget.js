@@ -328,7 +328,7 @@
           '#vton-widget-container[data-vton-placement="floating_fallback"]{' +
           'left:max(12px,env(safe-area-inset-left))!important;' +
           'right:max(12px,env(safe-area-inset-right))!important;' +
-          'bottom:max(12px,env(safe-area-inset-bottom))!important;' +
+          'bottom:max(88px,env(safe-area-inset-bottom))!important;' +
           'width:auto!important;max-width:none!important;}' +
           '#vton-widget-container:not([data-vton-placement="floating_fallback"]){' +
           'margin:12px 0!important;max-width:100%!important;box-sizing:border-box!important;}' +
@@ -336,8 +336,60 @@
         document.head.appendChild(style);
       }
 
+      function vtonInjectPageModalCss() {
+        if (document.getElementById('vton-page-modal-css')) return;
+        var style = document.createElement('style');
+        style.id = 'vton-page-modal-css';
+        style.textContent =
+          'html.vton-modal-active header,' +
+          'html.vton-modal-active .shopify-section-group-header-group,' +
+          'html.vton-modal-active sticky-header,' +
+          'html.vton-modal-active .header-wrapper,' +
+          'html.vton-modal-active .announcement-bar,' +
+          'html.vton-modal-active [data-header],' +
+          'html.vton-modal-active #shopify-section-header,' +
+          'html.vton-modal-active .section-header,' +
+          'html.vton-modal-active cart-drawer,' +
+          'html.vton-modal-active .sticky-add-to-cart,' +
+          'html.vton-modal-active [data-sticky-product-form],' +
+          'html.vton-modal-active .product-sticky-form{' +
+          'visibility:hidden!important;pointer-events:none!important;}' +
+          'html.vton-modal-active,html.vton-modal-active body{overflow:hidden!important;}';
+        document.head.appendChild(style);
+      }
+
+      function vtonGetWidgetHost() {
+        return document.getElementById('vton-widget-container');
+      }
+
+      function vtonExpandHostForModal() {
+        var host = vtonGetWidgetHost();
+        if (!host || host.dataset.vtonModalExpanded === '1') return;
+        host._vtonStyleBackup = host.getAttribute('style') || '';
+        host.dataset.vtonModalExpanded = '1';
+        host.style.cssText =
+          'position:fixed!important;inset:0!important;top:0!important;left:0!important;right:0!important;bottom:0!important;' +
+          'width:100%!important;height:100%!important;max-width:none!important;margin:0!important;' +
+          'z-index:2147483647!important;box-sizing:border-box!important;';
+        document.documentElement.classList.add('vton-modal-active');
+      }
+
+      function vtonCollapseHostAfterModal() {
+        var host = vtonGetWidgetHost();
+        if (!host || host.dataset.vtonModalExpanded !== '1') return;
+        host.dataset.vtonModalExpanded = '0';
+        if (host._vtonStyleBackup) {
+          host.setAttribute('style', host._vtonStyleBackup);
+        } else {
+          host.removeAttribute('style');
+        }
+        host._vtonStyleBackup = '';
+        document.documentElement.classList.remove('vton-modal-active');
+      }
+
       function initWidget() {
         vtonInjectMobilePlacementCss();
+        vtonInjectPageModalCss();
         var shop = extractShop();
         if (!shop) return;
 
@@ -1065,10 +1117,17 @@
         
         shadowRoot.innerHTML = `
           <style>
+            :host {
+              display: block;
+              width: 100%;
+            }
             .vton-widget-container {
               margin: 24px 0 0 0;
               width: 100%;
               display: block;
+            }
+            .vton-widget-container.vton-widget-container--modal-open {
+              display: none;
             }
             .vton-button {
               width: 100%;
@@ -1111,15 +1170,20 @@
               left: 0;
               right: 0;
               bottom: 0;
-              background: rgba(0, 0, 0, 0.78);
+              width: 100vw;
+              height: 100vh;
+              height: 100dvh;
+              background: rgba(0, 0, 0, 0.88);
               display: none;
               align-items: center;
               justify-content: center;
-              z-index: 999999;
-              padding: 24px;
+              z-index: 2147483646;
+              padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right))
+                max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
               animation: fadeIn 0.2s ease-out;
               overflow-y: auto;
               overscroll-behavior: contain;
+              box-sizing: border-box;
             }
             @keyframes fadeIn {
               from { opacity: 0; }
@@ -1881,18 +1945,19 @@
               }
               .vton-modal-overlay {
                 padding: 0;
-                align-items: center;
-                justify-content: center;
+                align-items: stretch;
+                justify-content: stretch;
               }
               .vton-modal {
                 max-width: 100%;
-                max-height: 100vh;
-                height: auto;
-                min-height: auto;
-                margin: auto;
+                width: 100%;
+                max-height: 100dvh;
+                height: 100%;
+                min-height: 100dvh;
+                margin: 0;
                 border-radius: 0;
                 border: none;
-                align-self: center;
+                align-self: stretch;
               }
               .vton-modal-content {
                 padding: 36px 24px;
@@ -1969,12 +2034,14 @@
                 font-size: 14px;
               }
               .vton-modal-overlay {
-                align-items: center;
-                justify-content: center;
+                align-items: stretch;
+                justify-content: stretch;
               }
               .vton-modal {
-                margin: auto;
-                align-self: center;
+                margin: 0;
+                align-self: stretch;
+                min-height: 100dvh;
+                height: 100%;
               }
               .vton-modal-content {
                 padding: 20px;
@@ -2099,23 +2166,26 @@
       function openModal(shadowRoot, state) {
         const overlay = shadowRoot.getElementById('vton-modal-overlay');
         if (overlay) {
+          vtonExpandHostForModal();
           overlay.classList.add('active');
           state.modalOpen = true;
-          
+          var triggerWrap = shadowRoot.querySelector('.vton-widget-container');
+          if (triggerWrap) triggerWrap.classList.add('vton-widget-container--modal-open');
+
           // Prevent body scroll when modal is open
           const body = document.body;
           const html = document.documentElement;
           const scrollY = window.scrollY;
-          
+
           // Save current scroll position
           body.style.position = 'fixed';
           body.style.top = '-' + scrollY + 'px';
           body.style.width = '100%';
           body.style.overflow = 'hidden';
-          
+
           // Also prevent scroll on html element
           html.style.overflow = 'hidden';
-          
+
           // Store scroll position for restoration
           state.savedScrollY = scrollY;
         }
@@ -2132,24 +2202,27 @@
         if (overlay) {
           overlay.classList.remove('active');
           state.modalOpen = false;
-          
+          var triggerWrap = shadowRoot.querySelector('.vton-widget-container');
+          if (triggerWrap) triggerWrap.classList.remove('vton-widget-container--modal-open');
+          vtonCollapseHostAfterModal();
+
           // Restore body scroll
           const body = document.body;
           const html = document.documentElement;
           const scrollY = state.savedScrollY || 0;
-          
+
           // Restore body styles
           body.style.position = '';
           body.style.top = '';
           body.style.width = '';
           body.style.overflow = '';
-          
+
           // Restore html overflow
           html.style.overflow = '';
-          
+
           // Restore scroll position
           window.scrollTo(0, scrollY);
-          
+
           // Clear saved scroll position
           state.savedScrollY = null;
         }
