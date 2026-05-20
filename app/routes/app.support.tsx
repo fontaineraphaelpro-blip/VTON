@@ -78,7 +78,9 @@ export default function Support() {
               <div className="vton-doc__faq-item">
                 <h3>What happens when I reach my monthly quota?</h3>
                 <p>
-                  When you reach your monthly quota, the widget will be temporarily disabled until your quota resets at the beginning of the next billing cycle.
+                  When you reach your monthly quota or run out of credits, new try-ons pause until
+                  your billing cycle resets or you upgrade on the Credits page. You can also turn
+                  the widget off per product from Products.
                 </p>
               </div>
               <div className="vton-doc__faq-item">
