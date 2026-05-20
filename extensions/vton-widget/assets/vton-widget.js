@@ -599,12 +599,9 @@
         style.id = 'vton-zoom-css';
         style.textContent =
           'html.vton-zoom-active{overflow:hidden!important;}' +
-          '.vton-zoom-overlay{position:fixed;inset:0;z-index:2147483647;background:rgba(15,23,42,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:max(16px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));box-sizing:border-box;overflow:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;}' +
-          '.vton-zoom-overlay__close{position:fixed;top:max(14px,env(safe-area-inset-top));right:max(14px,env(safe-area-inset-right));width:44px;height:44px;border:none;border-radius:12px;background:rgba(255,255,255,.15);color:#fff;font-size:26px;line-height:1;cursor:pointer;z-index:2;}' +
-          '.vton-zoom-overlay__stage{display:flex;align-items:center;justify-content:center;min-height:min(80dvh,100%);width:100%;padding:48px 8px 56px;box-sizing:border-box;}' +
-          '.vton-zoom-overlay__img{max-width:min(96vw,1200px);max-height:min(86dvh,1200px);width:auto;height:auto;object-fit:contain;border-radius:8px;box-shadow:0 20px 60px rgba(0,0,0,.45);transition:transform .2s ease;cursor:zoom-in;touch-action:pan-x pan-y pinch-zoom;}' +
-          '.vton-zoom-overlay__img.is-zoomed{cursor:zoom-out;}' +
-          '.vton-zoom-overlay__hint{position:fixed;bottom:max(16px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);margin:0;padding:8px 14px;border-radius:999px;background:rgba(255,255,255,.12);color:#fff;font-size:12px;font-weight:500;pointer-events:none;white-space:nowrap;}';
+          '.vton-zoom-overlay{position:fixed;inset:0;z-index:2147483647;background:rgba(0,0,0,.94);display:flex;align-items:center;justify-content:center;padding:max(12px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));box-sizing:border-box;}' +
+          '.vton-zoom-overlay__close{position:absolute;top:max(12px,env(safe-area-inset-top));right:max(12px,env(safe-area-inset-right));width:44px;height:44px;border:none;border-radius:12px;background:rgba(255,255,255,.2);color:#fff;font-size:28px;line-height:1;cursor:pointer;z-index:2;}' +
+          '.vton-zoom-overlay__img{max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;display:block;touch-action:pan-x pan-y pinch-zoom;-webkit-user-select:none;user-select:none;}';
         document.head.appendChild(style);
       }
 
@@ -624,9 +621,6 @@
         vtonCloseResultZoom();
         var lang = (document.documentElement.lang || '').toLowerCase();
         var isFr = lang.indexOf('fr') === 0;
-        var hint = isFr
-          ? 'Cliquez pour zoomer · molette pour ajuster'
-          : 'Click to zoom · scroll wheel to adjust';
         var overlay = document.createElement('div');
         overlay.id = 'vton-zoom-overlay';
         overlay.className = 'vton-zoom-overlay';
@@ -637,57 +631,16 @@
           '<button type="button" class="vton-zoom-overlay__close" aria-label="' +
           (isFr ? 'Fermer' : 'Close') +
           '">&times;</button>' +
-          '<div class="vton-zoom-overlay__stage">' +
           '<img class="vton-zoom-overlay__img" src="' +
           vtonEscapeHtml(imageUrl) +
           '" alt="' +
           (isFr ? 'Résultat essayage virtuel' : 'Virtual try-on result') +
-          '" /></div>' +
-          '<p class="vton-zoom-overlay__hint">' +
-          vtonEscapeHtml(hint) +
-          '</p>';
+          '" />';
         document.body.appendChild(overlay);
         document.documentElement.classList.add('vton-zoom-active');
-
-        var img = overlay.querySelector('.vton-zoom-overlay__img');
-        var scale = 1;
-
-        function applyScale() {
-          if (!img) return;
-          img.style.transform = scale > 1 ? 'scale(' + scale + ')' : '';
-          img.classList.toggle('is-zoomed', scale > 1);
-        }
-
-        if (img) {
-          img.addEventListener('click', function(ev) {
-            ev.stopPropagation();
-            if (scale <= 1) {
-              scale = 2;
-            } else if (scale < 2.5) {
-              scale = 2.5;
-            } else {
-              scale = 1;
-            }
-            applyScale();
-          });
-          img.addEventListener('wheel', function(ev) {
-            ev.preventDefault();
-            ev.stopPropagation();
-            scale = Math.min(3.5, Math.max(1, scale + (ev.deltaY < 0 ? 0.15 : -0.15)));
-            applyScale();
-          }, { passive: false });
-        }
-
-        overlay.addEventListener('click', function(ev) {
-          if (
-            ev.target === overlay ||
-            ev.target.classList.contains('vton-zoom-overlay__close') ||
-            ev.target.classList.contains('vton-zoom-overlay__stage')
-          ) {
-            vtonCloseResultZoom();
-          }
+        overlay.addEventListener('click', function() {
+          vtonCloseResultZoom();
         });
-
         var closeBtn = overlay.querySelector('.vton-zoom-overlay__close');
         if (closeBtn) {
           closeBtn.addEventListener('click', function(ev) {
@@ -695,27 +648,26 @@
             vtonCloseResultZoom();
           });
         }
+        var img = overlay.querySelector('.vton-zoom-overlay__img');
+        if (img) {
+          img.addEventListener('click', function(ev) {
+            ev.stopPropagation();
+          });
+        }
       }
 
       function vtonBindResultZoomTrigger(state) {
-        var wrap = vtonMq(state, '.vton-result-image-wrap');
-        if (!wrap || wrap.dataset.vtonZoomBound === '1') {
+        var img = vtonMq(state, '.vton-result-image');
+        if (!img || img.dataset.vtonZoomBound === '1') {
           return;
         }
-        wrap.dataset.vtonZoomBound = '1';
-        function openZoom(ev) {
-          if (ev) {
-            ev.preventDefault();
-            ev.stopPropagation();
-          }
+        img.dataset.vtonZoomBound = '1';
+        img.style.cursor = 'pointer';
+        img.addEventListener('click', function(ev) {
+          ev.preventDefault();
+          ev.stopPropagation();
           if (state.resultImageUrl) {
             vtonOpenResultZoom(state.resultImageUrl);
-          }
-        }
-        wrap.addEventListener('click', openZoom);
-        wrap.addEventListener('keydown', function(ev) {
-          if (ev.key === 'Enter' || ev.key === ' ') {
-            openZoom(ev);
           }
         });
       }
@@ -983,6 +935,7 @@
         vtonInjectMobilePlacementCss();
         vtonInjectPageModalCss();
         vtonInjectToastCss();
+        vtonInjectFlyToCartCss();
         var shop = extractShop();
         if (!shop) return;
 
@@ -1803,8 +1756,6 @@
           '.vton-modal-close{position:absolute;top:14px;right:14px;background:rgba(15,23,42,.06);border:none;font-size:20px;cursor:pointer;padding:0;line-height:1;color:#64748b;border-radius:12px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;transition:background .2s ease,color .2s ease,transform .2s ease;z-index:10;font-weight:400;}' +
           '.vton-modal-close:hover{background:rgba(15,23,42,.1);color:#0f172a;transform:scale(1.05);}' +
           '.vton-modal-content{padding:44px 18px 18px;display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;box-sizing:border-box;}' +
-          '.vton-modal-content.has-result{overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;}' +
-          '.vton-modal.vton-modal--result{max-width:min(460px,calc(100vw - 32px));max-height:min(92dvh,860px);}' +
           '.vton-funnel-head{text-align:center;margin-bottom:18px;flex-shrink:0;}' +
           '.vton-step-dots{display:flex;align-items:center;gap:6px;margin-bottom:12px;padding:0 2px;}' +
           '.vton-step-dot{flex:1;height:4px;border-radius:999px;background:rgba(15,23,42,.08);transition:background .35s cubic-bezier(.4,0,.2,1),transform .35s ease;width:auto;}' +
@@ -2197,71 +2148,23 @@
               display: flex;
               flex-direction: column;
               align-items: stretch;
-              gap: 12px;
+              gap: 10px;
               box-sizing: border-box;
               flex: 1;
               min-height: 0;
-              overflow: visible;
+              overflow: hidden;
             }
             #vton-panel-result.active {
               flex: 1;
               min-height: 0;
-              overflow: visible;
+              overflow: hidden;
             }
             #vton-panel-result .vton-result {
               flex: 1;
               min-height: 0;
-              overflow: visible;
-              display: flex;
-              flex-direction: column;
-            }
-            .vton-result-footer {
-              display: flex;
-              flex-direction: column;
-              align-items: stretch;
-              gap: 10px;
-              flex-shrink: 0;
-              width: 100%;
-            }
-            .vton-result-image-wrap {
-              position: relative;
-              width: 100%;
-              flex-shrink: 0;
-              border-radius: 14px;
               overflow: hidden;
-              cursor: zoom-in;
-              background: linear-gradient(165deg, #f8fafc, #f1f5f9);
-              border: 1px solid rgba(15, 23, 42, 0.06);
-              box-shadow: 0 8px 24px rgba(15, 23, 42, 0.1);
-              touch-action: manipulation;
-            }
-            .vton-result-image-wrap:focus-visible {
-              outline: 2px solid ${buttonBg};
-              outline-offset: 2px;
-            }
-            .vton-result-zoom-badge {
-              position: absolute;
-              right: 10px;
-              bottom: 10px;
-              display: inline-flex;
-              align-items: center;
-              gap: 5px;
-              padding: 6px 10px;
-              border-radius: 999px;
-              background: rgba(15, 23, 42, 0.72);
-              color: #fff;
-              font-size: 11px;
-              font-weight: 600;
-              letter-spacing: 0.02em;
-              pointer-events: none;
-              backdrop-filter: blur(6px);
-            }
-            .vton-result-zoom-badge svg {
-              width: 14px;
-              height: 14px;
-              stroke: currentColor;
-              fill: none;
-              stroke-width: 2;
+              display: flex;
+              flex-direction: column;
             }
             .vton-result-lead {
               margin: 0;
@@ -2278,16 +2181,15 @@
             .vton-result-image,
             .vton-result img {
               width: 100%;
-              max-height: min(32dvh, 240px);
+              max-height: min(34dvh, 280px);
               height: auto;
-              border-radius: 0;
+              border-radius: 14px;
               object-fit: contain;
               display: block;
-              background: transparent;
-              box-shadow: none;
-              border: none;
-              flex-shrink: 0;
-              vertical-align: middle;
+              background: linear-gradient(165deg, #f8fafc, #f1f5f9);
+              box-shadow: 0 8px 24px rgba(15, 23, 42, 0.1);
+              border: 1px solid rgba(15, 23, 42, 0.06);
+              flex-shrink: 1;
             }
             .vton-add-to-cart-btn {
               width: 100%;
@@ -2426,33 +2328,30 @@
               letter-spacing: 0.08em;
             }
             .vton-share-btns {
-              display: flex;
-              flex-direction: column;
+              display: grid;
+              grid-template-columns: repeat(3, minmax(0, 1fr));
               gap: 8px;
-              width: 100%;
             }
             .vton-share-btns--dual {
-              flex-direction: column;
+              grid-template-columns: repeat(2, minmax(0, 1fr));
             }
             .vton-share-btn {
               display: inline-flex;
               align-items: center;
               justify-content: center;
-              gap: 8px;
-              width: 100%;
+              gap: 6px;
               min-height: 44px;
-              padding: 12px 14px;
+              padding: 10px 8px;
               border-radius: 10px;
               border: 1px solid rgba(15, 23, 42, 0.12);
               background: #fff;
               color: #0f172a;
-              font-size: 13px;
+              font-size: 12px;
               font-weight: 600;
               cursor: pointer;
-              line-height: 1.25;
+              line-height: 1.2;
               transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
               box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
-              box-sizing: border-box;
             }
             .vton-share-btn:hover {
               border-color: rgba(15, 23, 42, 0.2);
@@ -2464,11 +2363,9 @@
               flex-shrink: 0;
             }
             .vton-share-btn__label {
-              white-space: normal;
-              overflow: visible;
-              text-overflow: unset;
-              flex: 1;
-              text-align: center;
+              white-space: nowrap;
+              overflow: hidden;
+              text-overflow: ellipsis;
             }
             .vton-share-btn--native {
               color: #334155;
@@ -2711,12 +2608,9 @@
                 font-size: 14px;
                 border-radius: 12px;
               }
-              .vton-result-image,
               .vton-result img {
-                max-height: min(38dvh, 280px);
-              }
-              .vton-modal-content.has-result {
-                padding: 40px 20px 20px;
+                max-height: 60vh;
+                border-radius: 16px;
               }
               .vton-result-title {
                 font-size: 20px;
@@ -2761,7 +2655,12 @@
               .vton-funnel-head {
                 margin-bottom: 12px;
               }
-              .vton-result-image,
+              .vton-share-btns {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+              }
+              .vton-share-btn--native {
+                grid-column: 1 / -1;
+              }
               .vton-result img {
                 max-height: min(28dvh, 200px);
               }
@@ -2783,7 +2682,6 @@
               .vton-loading {
                 padding: 28px 16px;
               }
-              .vton-result-image,
               .vton-result img {
                 max-height: min(26dvh, 180px);
               }
@@ -2797,14 +2695,9 @@
             }
             @media (min-width: 641px) {
               .vton-modal-content.has-result {
-                padding: 44px 20px 22px;
-              }
-              .vton-result-image,
-              .vton-result img {
-                max-height: min(36dvh, 300px);
-              }
-              .vton-add-to-cart-btn {
-                padding: 16px 20px;
+                overflow-y: auto;
+                overflow-x: hidden;
+                -webkit-overflow-scrolling: touch;
               }
             }
           </style>
@@ -3706,6 +3599,164 @@
         }
       }
 
+      function vtonInjectFlyToCartCss() {
+        if (document.getElementById('vton-fly-cart-css')) {
+          return;
+        }
+        var style = document.createElement('style');
+        style.id = 'vton-fly-cart-css';
+        style.textContent =
+          '.vton-fly-to-cart{position:fixed;width:52px;height:52px;margin:0;z-index:2147483647;pointer-events:none;border-radius:50%;overflow:hidden;box-shadow:0 8px 28px rgba(15,23,42,.28);border:2px solid #fff;transition:transform .7s cubic-bezier(.22,1,.36,1),opacity .7s ease;will-change:transform,opacity;}' +
+          '.vton-fly-to-cart img{width:100%;height:100%;object-fit:cover;display:block;}' +
+          '.vton-fly-to-cart__bag{width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#16a34a,#059669);color:#fff;}' +
+          '.vton-fly-to-cart__bag svg{width:26px;height:26px;stroke:currentColor;fill:none;stroke-width:2;}' +
+          '.vton-cart-bump{animation:vtonCartBump .55s cubic-bezier(.22,1,.36,1)!important;}' +
+          '@keyframes vtonCartBump{0%,100%{transform:scale(1)}35%{transform:scale(1.28)}55%{transform:scale(.95)}}' +
+          '.vton-atc-success-flash{animation:vtonAtcFlash .5s ease;}' +
+          '@keyframes vtonAtcFlash{0%{box-shadow:0 0 0 0 rgba(22,163,74,.55)}70%{box-shadow:0 0 0 14px rgba(22,163,74,0)}100%{box-shadow:0 4px 16px rgba(15,23,42,.16)}}' +
+          '.vton-cart-added-toast{position:fixed;top:max(16px,env(safe-area-inset-top));left:50%;transform:translateX(-50%) translateY(-120%);z-index:2147483647;display:flex;align-items:center;gap:8px;padding:10px 16px;border-radius:999px;background:#16a34a;color:#fff;font-size:13px;font-weight:600;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;box-shadow:0 10px 30px rgba(22,163,74,.35);opacity:0;transition:transform .45s cubic-bezier(.22,1,.36,1),opacity .35s ease;pointer-events:none;}' +
+          '.vton-cart-added-toast.is-visible{transform:translateX(-50%) translateY(0);opacity:1;}';
+        document.head.appendChild(style);
+      }
+
+      function vtonFindCartTarget() {
+        var selectors = [
+          '#cart-icon-bubble',
+          'cart-count',
+          '.cart-count-bubble',
+          'a[href="/cart"].header__icon',
+          'a[href="/cart"]',
+          '.header__icon--cart',
+          '[data-cart-icon]',
+          '.icon-cart',
+          'a.cart-link',
+          '.js-cart-drawer-toggle',
+          '[data-cart-drawer-toggle]',
+          '.cart-drawer-toggle',
+          'a[aria-label*="cart" i]',
+          'a[aria-label*="panier" i]',
+          'button[aria-label*="cart" i]',
+          'button[aria-label*="panier" i]',
+        ];
+        var headerScope =
+          'header, .header, sticky-header, [role="banner"], .site-header, #shopify-section-header';
+        for (var i = 0; i < selectors.length; i++) {
+          var nodes = document.querySelectorAll(selectors[i]);
+          for (var j = 0; j < nodes.length; j++) {
+            var el = nodes[j];
+            if (!el || !vtonIsVisible(el) || vtonIsExcluded(el)) {
+              continue;
+            }
+            if (el.closest && el.closest(headerScope)) {
+              return el;
+            }
+          }
+        }
+        for (var k = 0; k < selectors.length; k++) {
+          var picked = vtonPickVisible(document.querySelectorAll(selectors[k]));
+          if (picked) {
+            return picked;
+          }
+        }
+        return null;
+      }
+
+      function vtonShowCartAddedToast() {
+        vtonInjectFlyToCartCss();
+        var old = document.getElementById('vton-cart-added-toast');
+        if (old) {
+          old.remove();
+        }
+        var lang = (document.documentElement.lang || '').toLowerCase();
+        var isFr = lang.indexOf('fr') === 0;
+        var toast = document.createElement('div');
+        toast.id = 'vton-cart-added-toast';
+        toast.className = 'vton-cart-added-toast';
+        toast.setAttribute('role', 'status');
+        toast.textContent = isFr ? '✓ Ajouté à votre panier' : '✓ Added to your cart';
+        document.body.appendChild(toast);
+        requestAnimationFrame(function() {
+          toast.classList.add('is-visible');
+        });
+        setTimeout(function() {
+          toast.classList.remove('is-visible');
+          setTimeout(function() {
+            if (toast.parentNode) {
+              toast.parentNode.removeChild(toast);
+            }
+          }, 400);
+        }, 2200);
+      }
+
+      function vtonFlyToCart(state, sourceEl) {
+        vtonInjectFlyToCartCss();
+        var fromEl = sourceEl;
+        if (!fromEl || !fromEl.getBoundingClientRect) {
+          fromEl = vtonMq(state, '.vton-result-image') || vtonMq(state, '.vton-add-to-cart-btn');
+        }
+        if (!fromEl) {
+          return;
+        }
+
+        var fromRect = fromEl.getBoundingClientRect();
+        var startX = fromRect.left + fromRect.width / 2 - 26;
+        var startY = fromRect.top + fromRect.height / 2 - 26;
+
+        var target = vtonFindCartTarget();
+        var endX;
+        var endY;
+        if (target) {
+          var toRect = target.getBoundingClientRect();
+          endX = toRect.left + toRect.width / 2 - 26;
+          endY = toRect.top + toRect.height / 2 - 26;
+        } else {
+          endX = window.innerWidth - 56;
+          endY = Math.max(16, 24);
+        }
+
+        var flyer = document.createElement('div');
+        flyer.className = 'vton-fly-to-cart';
+        var imgUrl = state.resultImageUrl || getProductImage();
+        if (imgUrl && /^https?:/i.test(imgUrl)) {
+          flyer.innerHTML =
+            '<img src="' + vtonEscapeHtml(imgUrl) + '" alt="" />';
+        } else {
+          flyer.innerHTML =
+            '<span class="vton-fly-to-cart__bag" aria-hidden="true">' +
+            '<svg viewBox="0 0 24 24"><path d="M6 6h15l-1.5 9h-12z"/><path d="M6 6l-1-3H2"/><circle cx="9" cy="20" r="1"/><circle cx="18" cy="20" r="1"/></svg></span>';
+        }
+        flyer.style.left = startX + 'px';
+        flyer.style.top = startY + 'px';
+        flyer.style.transform = 'translate(0, 0) scale(1)';
+        flyer.style.opacity = '1';
+        document.body.appendChild(flyer);
+
+        var dx = endX - startX;
+        var dy = endY - startY;
+
+        requestAnimationFrame(function() {
+          requestAnimationFrame(function() {
+            flyer.style.transform =
+              'translate(' + dx + 'px, ' + dy + 'px) scale(0.15)';
+            flyer.style.opacity = '0.35';
+          });
+        });
+
+        setTimeout(function() {
+          if (flyer.parentNode) {
+            flyer.parentNode.removeChild(flyer);
+          }
+          if (target) {
+            target.classList.add('vton-cart-bump');
+            setTimeout(function() {
+              target.classList.remove('vton-cart-bump');
+            }, 600);
+          }
+        }, 720);
+
+        vtonShowCartAddedToast();
+      }
+
       function vtonBuildVariantSelectorHtml(state) {
         var catalog = vtonGetVariantCatalog();
         if (!catalog || !catalog.variants || catalog.variants.length <= 1) {
@@ -4116,22 +4167,11 @@
             '<span class="vton-share-btn__label">Share</span></button>'
           : '';
 
-        var zoomLabel = (document.documentElement.lang || '').toLowerCase().indexOf('fr') === 0
-          ? 'Agrandir'
-          : 'Zoom';
         return (
           '<div class="vton-result-content">' +
-          '<div class="vton-result-image-wrap" role="button" tabindex="0" aria-label="' +
-          vtonEscapeHtml(zoomLabel) +
-          '">' +
           '<img class="vton-result-image" src="' +
           vtonEscapeHtml(state.resultImageUrl) +
           '" alt="Try-on result" />' +
-          '<span class="vton-result-zoom-badge" aria-hidden="true">' +
-          '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.5-4.5"/><path d="M11 8v6M8 11h6"/></svg>' +
-          zoomLabel +
-          '</span></div>' +
-          '<div class="vton-result-footer">' +
           '<p class="vton-result-lead">' +
           (variantHtml
             ? 'Select your option, then add <strong>' +
@@ -4163,7 +4203,7 @@
           '<span class="vton-share-btn__label">Copy link</span></button>' +
           '</div></div>' +
           '<button type="button" class="vton-retry-link" data-vton-action="retry">Try another photo</button>' +
-          '</div></div>'
+          '</div>'
         );
       }
 
@@ -4178,10 +4218,6 @@
         var modalContent = vtonMq(state, '.vton-modal-content');
         if (modalContent) {
           modalContent.classList.remove('has-result');
-        }
-        var modal = vtonMq(state, '.vton-modal');
-        if (modal) {
-          modal.classList.remove('vton-modal--result');
         }
         var result = vtonM(state, 'vton-result');
         var uploadArea = vtonM(state, 'vton-upload-area');
@@ -4316,10 +4352,6 @@
         if (modalContent) {
           modalContent.classList.add('has-result');
         }
-        var modal = vtonMq(state, '.vton-modal');
-        if (modal) {
-          modal.classList.add('vton-modal--result');
-        }
         vtonShowFunnelPanel(state, 'result');
         bindResultPanelEvents(state);
         vtonRefreshOptionSelectAvailability(state);
@@ -4412,10 +4444,19 @@
           .then(function(data) {
             log('[VTON] Product added to cart:', data);
 
+            vtonFlyToCart(state, atcButton);
+
             if (atcButton) {
-              atcButton.textContent = 'Added to cart';
+              atcButton.textContent =
+                (document.documentElement.lang || '').toLowerCase().indexOf('fr') === 0
+                  ? 'Ajouté au panier ✓'
+                  : 'Added to cart ✓';
               atcButton.style.background = '#16a34a';
-            setTimeout(function() {
+              atcButton.classList.add('vton-atc-success-flash');
+              setTimeout(function() {
+                atcButton.classList.remove('vton-atc-success-flash');
+              }, 520);
+              setTimeout(function() {
                 atcButton.textContent = originalButtonText;
                 atcButton.style.background = buttonBg;
                 atcButton.disabled = false;
@@ -4440,7 +4481,9 @@
                   vtonPublishCartUpdate({});
                 });
             }
-            vtonTryOpenCartDrawer();
+            setTimeout(function() {
+              vtonTryOpenCartDrawer();
+            }, 780);
         })
         .catch(function(err) {
           error('[VTON] Error adding to cart:', err);
