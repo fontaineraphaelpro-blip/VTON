@@ -17,13 +17,13 @@ import {
   EmptyState,
   Thumbnail,
   Badge,
-  Checkbox,
   Popover,
   TextField,
   Pagination,
 } from "@shopify/polaris";
 import { TitleBar } from "@shopify/app-bridge-react";
 import { AdminPage } from "../components/AdminPage";
+import { TryOnToggle } from "../components/TryOnToggle";
 import { AdminNotifications } from "../components/AdminNotifications";
 import { useAdminNotifications, useNotificationSync } from "../hooks/useAdminNotifications";
 import { useFetcherNotifications } from "../hooks/useFetcherNotifications";
@@ -564,15 +564,13 @@ export default function Products() {
             disabled={fetcher.state !== "idle"}
             isUploading={uploadingProductId === product.id}
           />,
-          <Checkbox
-            key={`checkbox-${product.id}`}
+          <TryOnToggle
+            key={`toggle-${product.id}`}
             checked={settings.enabled}
             onChange={(checked) =>
               handleToggle(product.id, product.handle, checked)
             }
             disabled={fetcher.state === "submitting"}
-            label=""
-            labelHidden
           />,
           <Button
             key={`btn-${product.id}`}
@@ -675,6 +673,7 @@ export default function Products() {
                 </EmptyState>
               ) : (
                 <>
+                <div className="vton-table-desktop">
                 <DataTable
                   columnContentTypes={[
                     "text",
@@ -696,6 +695,85 @@ export default function Products() {
                   ]}
                   rows={productRows}
                 />
+                </div>
+
+                <div className="vton-products-mobile">
+                  {products.map((product) => {
+                    const settings = productSettings[product.id] ?? {
+                      enabled: true,
+                      tryonImageUrl: null,
+                    };
+                    const tryonCount = tryonCounts[product.id] ?? 0;
+                    const numericId =
+                      product.id.match(/^gid:\/\/shopify\/Product\/(\d+)$/)?.[1] ||
+                      product.id;
+
+                    return (
+                      <article key={product.id} className="vton-product-card">
+                        <div className="vton-product-card__head">
+                          {product.featuredImage?.url ? (
+                            <Thumbnail
+                              source={product.featuredImage.url}
+                              alt={product.title || "Product"}
+                              size="small"
+                            />
+                          ) : null}
+                          <div className="vton-product-card__title">
+                            <Text variant="bodyMd" fontWeight="semibold" as="span">
+                              {product.title || "Untitled Product"}
+                            </Text>
+                            {product.handle ? (
+                              <Text variant="bodySm" tone="subdued" as="span">
+                                /{product.handle}
+                              </Text>
+                            ) : null}
+                          </div>
+                        </div>
+                        <div className="vton-product-card__meta">
+                          <Badge tone={product.status === "ACTIVE" ? "success" : "warning"}>
+                            {product.status || "UNKNOWN"}
+                          </Badge>
+                          <span>Stock: {product.totalInventory ?? 0}</span>
+                          <span>Try-ons: {tryonCount.toLocaleString("en-US")}</span>
+                        </div>
+                        <div className="vton-product-card__row">
+                          <span className="vton-product-card__label">Try-on</span>
+                          <TryOnToggle
+                            checked={settings.enabled}
+                            onChange={(checked) =>
+                              handleToggle(product.id, product.handle, checked)
+                            }
+                            disabled={fetcher.state === "submitting"}
+                          />
+                        </div>
+                        <div className="vton-product-card__row vton-product-card__row--stack">
+                          <span className="vton-product-card__label">Garment photo</span>
+                          <GarmentPhotoPicker
+                            product={product}
+                            selectedUrl={settings.tryonImageUrl}
+                            onSelect={(url) =>
+                              handleSelectGarmentImage(product.id, product.handle, url)
+                            }
+                            onUpload={(file) =>
+                              handleUploadGarmentImage(product.id, product.handle, file)
+                            }
+                            disabled={fetcher.state !== "idle"}
+                            isUploading={uploadingProductId === product.id}
+                          />
+                        </div>
+                        <div className="vton-product-card__actions">
+                          <Button
+                            url={`shopify:admin/products/${numericId}`}
+                            target="_blank"
+                            variant="plain"
+                          >
+                            View in Shopify
+                          </Button>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
                 {(pageInfo.hasNextPage || pageInfo.hasPreviousPage) && (
                   <InlineStack align="center">
                     <Pagination

@@ -362,27 +362,69 @@ export default function History() {
               </EmptyState>
             </div>
           ) : (
-            <div className="history-table-wrapper">
-              <DataTable
-                columnContentTypes={[
-                  "text",
-                  "text",
-                  "text",
-                  "text",
-                  "text",
-                  "text",
-                ]}
-                headings={[
-                  "Date",
-                  "Product",
-                  "Customer",
-                  "Status",
-                  "Latency",
-                  "Error",
-                ]}
-                rows={rows}
-              />
-            </div>
+            <>
+              <div className="history-table-wrapper vton-table-desktop">
+                <DataTable
+                  columnContentTypes={[
+                    "text",
+                    "text",
+                    "text",
+                    "text",
+                    "text",
+                    "text",
+                  ]}
+                  headings={[
+                    "Date",
+                    "Product",
+                    "Customer",
+                    "Status",
+                    "Latency",
+                    "Error",
+                  ]}
+                  rows={rows}
+                />
+              </div>
+              <div className="vton-history-mobile">
+                {logs.map((log: any) => {
+                  let productDisplay = log.product_title || "-";
+                  if (!log.product_title && log.product_id) {
+                    const numericId =
+                      log.product_id.match(/^gid:\/\/shopify\/Product\/(\d+)$/)?.[1] ||
+                      log.product_id;
+                    productDisplay = log.product_handle
+                      ? `Product: ${log.product_handle}`
+                      : `Product #${numericId}`;
+                  }
+
+                  return (
+                    <article key={log.id} className="vton-history-card">
+                      <div className="vton-history-card__top">
+                        <span className="vton-history-card__date">
+                          {formatDate(log.created_at)}
+                        </span>
+                        <Badge tone={log.success ? "success" : "critical"}>
+                          {log.success ? "Success" : "Error"}
+                        </Badge>
+                      </div>
+                      <p className="vton-history-card__product">{productDisplay}</p>
+                      <dl className="vton-history-card__meta">
+                        <div>
+                          <dt>Customer</dt>
+                          <dd>{log.customer_id || log.customer_ip || "—"}</dd>
+                        </div>
+                        <div>
+                          <dt>Latency</dt>
+                          <dd>{formatLatency(log.latency_ms)}</dd>
+                        </div>
+                      </dl>
+                      {log.error_message ? (
+                        <p className="vton-history-card__error">{log.error_message}</p>
+                      ) : null}
+                    </article>
+                  );
+                })}
+              </div>
+            </>
           )}
         </div>
         </AdminPage>

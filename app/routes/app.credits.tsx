@@ -552,6 +552,11 @@ export default function Credits() {
         description: "4 try-ons / month",
         popular: false,
         highlight: "Widget on product pages",
+        features: [
+          "4 try-ons every month",
+          "Try-on button on product pages",
+          "Watermark on generated images",
+        ],
       },
       {
         id: "starter",
@@ -560,6 +565,11 @@ export default function Credits() {
         description: "100 try-ons / month",
         popular: false,
         highlight: "Small catalogs",
+        features: [
+          "100 try-ons / month",
+          "Per-product try-on control",
+          "Usage stats in dashboard",
+        ],
       },
       {
         id: "pro",
@@ -568,6 +578,11 @@ export default function Credits() {
         description: "400 try-ons / month",
         popular: true,
         highlight: "Best value per try-on",
+        features: [
+          "400 try-ons / month",
+          "A/B test (try-on vs control)",
+          "Custom garment photos for AI",
+        ],
       },
       {
         id: "studio",
@@ -576,6 +591,11 @@ export default function Credits() {
         description: "2,000 try-ons / month",
         popular: false,
         highlight: "High traffic & launches",
+        features: [
+          "2,000 try-ons / month",
+          "Built for high-traffic stores",
+          "Priority-friendly quota for launches",
+        ],
       },
     ],
     []
@@ -741,6 +761,13 @@ export default function Credits() {
                   <p className="plan-per-credit">{pricePerCredit} $ / try-on</p>
                 )}
                 <p className="plan-highlight">{plan.highlight}</p>
+                {plan.features?.length ? (
+                  <ul className="plan-features">
+                    {plan.features.map((feature: string) => (
+                      <li key={feature}>{feature}</li>
+                    ))}
+                  </ul>
+                ) : null}
                 <div className="plan-cta">
                   {isCurrentPlan ? (
                     <button

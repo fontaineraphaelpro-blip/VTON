@@ -319,7 +319,25 @@
         return _vtonStatusInFlight;
       }
 
+      function vtonInjectMobilePlacementCss() {
+        if (document.getElementById('vton-mobile-placement-css')) return;
+        var style = document.createElement('style');
+        style.id = 'vton-mobile-placement-css';
+        style.textContent =
+          '@media (max-width:640px){' +
+          '#vton-widget-container[data-vton-placement="floating_fallback"]{' +
+          'left:max(12px,env(safe-area-inset-left))!important;' +
+          'right:max(12px,env(safe-area-inset-right))!important;' +
+          'bottom:max(12px,env(safe-area-inset-bottom))!important;' +
+          'width:auto!important;max-width:none!important;}' +
+          '#vton-widget-container:not([data-vton-placement="floating_fallback"]){' +
+          'margin:12px 0!important;max-width:100%!important;box-sizing:border-box!important;}' +
+          '}';
+        document.head.appendChild(style);
+      }
+
       function initWidget() {
+        vtonInjectMobilePlacementCss();
         var shop = extractShop();
         if (!shop) return;
 
@@ -1079,10 +1097,9 @@
               left: 100%;
               }
               .vton-button:hover {
-              transform: translateY(-2px);
-              box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-              background: #000000;
-              color: #ffffff;
+              transform: translateY(-1px);
+              box-shadow: 0 4px 16px rgba(0, 0, 0, 0.14);
+              filter: brightness(1.06);
             }
             .vton-button:active {
               transform: translateY(0);
@@ -1819,10 +1836,14 @@
             .vton-error.active {
               display: block;
             }
-            .vton-error.info {
-              color: #1e40af;
-              background: #eff6ff;
-              border: 1px solid #bfdbfe;
+            .vton-error.credits-limit {
+              color: #7f1d1d;
+              background: #fef2f2;
+              border: 1px solid #fecaca;
+              font-weight: 600;
+            }
+            .vton-error.credits-limit .vton-error-text {
+              color: #7f1d1d;
             }
             .vton-error-text {
               margin: 0 0 12px 0;
@@ -1845,12 +1866,18 @@
             }
             @media (max-width: 640px) {
               .vton-widget-container {
-                margin: 20px 0 0 0;
+                margin: 12px 0 0 0;
+                width: 100%;
+                max-width: 100%;
+                box-sizing: border-box;
               }
               .vton-button {
-                padding: 18px 28px;
+                width: 100%;
+                max-width: 100%;
+                padding: 16px 20px;
                 font-size: 15px;
                 border-radius: 10px;
+                box-sizing: border-box;
               }
               .vton-modal-overlay {
                 padding: 0;
@@ -3434,7 +3461,7 @@
             if (generateBtn) generateBtn.disabled = false;
             var limitEl = shadowRoot.getElementById('vton-error');
             if (limitEl) {
-              limitEl.classList.add('active', 'info');
+              limitEl.classList.add('active', 'credits-limit');
               limitEl.textContent = errorMessage;
             }
             return;

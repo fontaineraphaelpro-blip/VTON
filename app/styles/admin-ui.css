@@ -1,6 +1,8 @@
 /* VTON Admin UI v2 — simple, clear, premium feel */
 
 .vton-admin {
+  overflow-x: hidden;
+  max-width: 100%;
   --vton-bg: #f6f7f8;
   --vton-surface: #ffffff;
   --vton-border: #e3e5e8;
@@ -1397,12 +1399,25 @@
   color: #fff;
 }
 
+.vton-admin .vton-credits-alert--critical .vton-credits-alert__title {
+  color: #991b1b;
+}
+
+.vton-admin .vton-credits-alert--critical .vton-credits-alert__message {
+  color: #7f1d1d;
+}
+
 .vton-admin .vton-credits-alert--critical .vton-credits-alert__cta {
-  background: #dc2626;
+  background: #ffffff;
+  color: #991b1b;
+  border: 1px solid #fca5a5;
+  box-shadow: 0 1px 2px rgba(127, 29, 29, 0.08);
 }
 
 .vton-admin .vton-credits-alert--critical .vton-credits-alert__cta:hover {
-  background: #b91c1c;
+  background: #fef2f2;
+  color: #7f1d1d;
+  border-color: #f87171;
 }
 
 .vton-admin .credits-conv-hero {
@@ -1662,6 +1677,242 @@
   text-align: center;
   font-size: 12px;
   color: var(--vton-soft);
+}
+
+.vton-admin .plan-features {
+  margin: 0 0 14px;
+  padding: 0 0 0 18px;
+  font-size: 13px;
+  color: var(--vton-muted);
+  line-height: 1.5;
+}
+
+.vton-admin .plan-features li {
+  margin-bottom: 6px;
+}
+
+.vton-admin .plan-features li:last-child {
+  margin-bottom: 0;
+}
+
+.vton-admin .credits-page .plan-card--compact {
+  display: flex;
+  flex-direction: column;
+  min-height: 300px;
+}
+
+.vton-admin .credits-page .plan-card--compact .plan-cta {
+  margin-top: auto;
+}
+
+/* Try-on toggle (× = on, empty = off) */
+.vton-admin .vton-tryon-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.vton-admin .vton-tryon-toggle:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.vton-admin .vton-tryon-toggle__box {
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--vton-border);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--vton-surface);
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.vton-admin .vton-tryon-toggle.is-on .vton-tryon-toggle__box {
+  border-color: var(--vton-brand);
+  background: var(--vton-brand-soft);
+}
+
+.vton-admin .vton-tryon-toggle__mark {
+  font-size: 18px;
+  line-height: 1;
+  font-weight: 700;
+  color: var(--vton-brand-dark);
+  transform: translateY(-1px);
+}
+
+/* Products / history — mobile cards (no horizontal scroll) */
+.vton-admin .vton-products-mobile,
+.vton-admin .vton-history-mobile {
+  display: none;
+}
+
+.vton-admin .vton-product-card,
+.vton-admin .vton-history-card {
+  background: var(--vton-bg);
+  border: 1px solid var(--vton-border);
+  border-radius: var(--vton-radius);
+  padding: 14px;
+  margin-bottom: 12px;
+}
+
+.vton-admin .vton-product-card__head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.vton-admin .vton-product-card__title {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.vton-admin .vton-product-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  font-size: 13px;
+  color: var(--vton-muted);
+  margin-bottom: 12px;
+}
+
+.vton-admin .vton-product-card__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.vton-admin .vton-product-card__row--stack {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.vton-admin .vton-product-card__label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--vton-text);
+}
+
+.vton-admin .vton-product-card__actions {
+  margin-top: 4px;
+}
+
+.vton-admin .vton-history-card__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.vton-admin .vton-history-card__date {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--vton-text);
+}
+
+.vton-admin .vton-history-card__product {
+  margin: 0 0 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--vton-text);
+  line-height: 1.35;
+}
+
+.vton-admin .vton-history-card__meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 12px;
+  margin: 0;
+}
+
+.vton-admin .vton-history-card__meta dt {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--vton-soft);
+  margin: 0 0 2px;
+}
+
+.vton-admin .vton-history-card__meta dd {
+  margin: 0;
+  font-size: 13px;
+  color: var(--vton-muted);
+}
+
+.vton-admin .vton-history-card__error {
+  margin: 10px 0 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  font-size: 12px;
+  color: #991b1b;
+  line-height: 1.4;
+}
+
+@media (max-width: 768px) {
+  .vton-admin .vton-table-desktop {
+    display: none !important;
+  }
+
+  .vton-admin .vton-products-mobile,
+  .vton-admin .vton-history-mobile {
+    display: block;
+  }
+
+  .vton-admin .vton-credits-alert {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .vton-admin .vton-credits-alert__actions {
+    width: 100%;
+  }
+
+  .vton-admin .vton-credits-alert__cta {
+    width: 100%;
+    text-align: center;
+  }
+
+  .vton-admin .vton-ab-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .vton-admin .vton-ab-panel,
+  .vton-admin .vton-preview-wrap .vton-panel {
+    padding: 14px;
+  }
+
+  .vton-admin .vton-widget-colors__fields {
+    grid-template-columns: 1fr;
+  }
+
+  .vton-admin .vton-products-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .vton-admin .vton-products-toolbar__search {
+    flex: 1 1 auto;
+    width: 100%;
+  }
+
+  .vton-admin .credits-page .plan-card--compact {
+    min-height: 0;
+  }
 }
 
 .vton-admin .credits-conv-hero__eyebrow {
