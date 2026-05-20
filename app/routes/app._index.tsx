@@ -32,6 +32,12 @@ import {
 import { buildOnboardingState, mergeOnboardingOverride } from "../lib/onboarding.server";
 import type { OnboardingStepId } from "../lib/onboarding.server";
 import { OnboardingGuide } from "../components/OnboardingGuide";
+import {
+  formatUtcChartLabel,
+  formatUtcDateTime,
+  isUtcSameDay,
+  utcTodayKey,
+} from "../lib/format-datetime";
 
 const REVIEW_URL = "https://apps.shopify.com/try-on-stylelab";
 
@@ -470,6 +476,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       themeEditorAppEmbedsUrl: getThemeEditorAppEmbedsUrl(shop),
       themeEditorActivateUrl: getAppEmbedActivationUrl(shop, apiKey, "vton-widget"),
       onboarding,
+      todayKey: utcTodayKey(),
     });
   } catch (error) {
     // Log error only in development
@@ -693,7 +700,13 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
 type DailyTryonStat = { date: string; count: number };
 
-function DailyTryonsLineChart({ stats }: { stats: DailyTryonStat[] }) {
+function DailyTryonsLineChart({
+  stats,
+  todayKey,
+}: {
+  stats: DailyTryonStat[];
+  todayKey: string;
+}) {
   const maxCount = Math.max(...stats.map((s) => s.count), 1);
   const W = 700;
   const H = 150;
@@ -747,9 +760,7 @@ function DailyTryonsLineChart({ stats }: { stats: DailyTryonStat[] }) {
         <path d={areaD} className="vton-line-chart__area" />
         <path d={lineD} className="vton-line-chart__line" />
         {points.map((p, i) => {
-          const date = new Date(p.stat.date);
-          const isToday =
-            date.toDateString() === new Date().toDateString();
+          const isToday = isUtcSameDay(p.stat.date, todayKey);
           return (
             <g key={`${p.stat.date}-${i}`}>
               <circle
@@ -776,9 +787,7 @@ function DailyTryonsLineChart({ stats }: { stats: DailyTryonStat[] }) {
       </svg>
       <div className="vton-line-chart__labels">
         {stats.map((stat, i) => {
-          const date = new Date(stat.date);
-          const isToday =
-            date.toDateString() === new Date().toDateString();
+          const isToday = isUtcSameDay(stat.date, todayKey);
           return (
             <span
               key={`${stat.date}-label-${i}`}
@@ -788,10 +797,7 @@ function DailyTryonsLineChart({ stats }: { stats: DailyTryonStat[] }) {
                   : "vton-line-chart__label"
               }
             >
-              {date.toLocaleDateString("en-US", {
-                day: "numeric",
-                month: "short",
-              })}
+              {formatUtcChartLabel(stat.date)}
             </span>
           );
         })}
@@ -815,6 +821,10 @@ export default function Dashboard() {
   const themeEditorAppEmbedsUrl = (loaderData as any).themeEditorAppEmbedsUrl || "";
   const themeEditorActivateUrl = (loaderData as any).themeEditorActivateUrl || "";
   const onboarding = (loaderData as any).onboarding ?? null;
+  const todayKey =
+    typeof (loaderData as any).todayKey === "string"
+      ? (loaderData as any).todayKey
+      : utcTodayKey();
   const showOnboardingPanel =
     onboarding && !(onboarding.dismissed && onboarding.allDone);
 
@@ -823,13 +833,18 @@ export default function Dashboard() {
   const { notifications: notifyItems, dismiss } = notifications;
 
   const [embedDismissed, setEmbedDismissed] = useState(false);
-  const showAppEmbedBanner = useMemo(() => {
-    if (embedDismissed || typeof window === "undefined") return false;
+  const [showAppEmbedBanner, setShowAppEmbedBanner] = useState(false);
+
+  useEffect(() => {
+    if (embedDismissed) {
+      setShowAppEmbedBanner(false);
+      return;
+    }
     const displayCount = parseInt(
       localStorage.getItem("appEmbedBannerDisplayCount") || "0",
       10,
     );
-    return displayCount < 2;
+    setShowAppEmbedBanner(displayCount < 2);
   }, [embedDismissed]);
 
   // ADDED: Monthly quota and usage (for display only)
@@ -892,19 +907,18 @@ export default function Dashboard() {
   const [isEnabled, setIsEnabled] = useState(shop?.is_enabled !== false);
 
   useEffect(() => {
-    if (showAppEmbedBanner && typeof window !== "undefined") {
-      const currentCount = parseInt(
-        localStorage.getItem("appEmbedBannerDisplayCount") || "0",
-        10,
+    if (!showAppEmbedBanner) return;
+    const currentCount = parseInt(
+      localStorage.getItem("appEmbedBannerDisplayCount") || "0",
+      10,
+    );
+    if (currentCount < 2) {
+      localStorage.setItem(
+        "appEmbedBannerDisplayCount",
+        String(currentCount + 1),
       );
-      if (currentCount < 2) {
-        localStorage.setItem(
-          "appEmbedBannerDisplayCount",
-          String(currentCount + 1),
-        );
-        if (currentCount + 1 >= 2) {
-          setEmbedDismissed(true);
-        }
+      if (currentCount + 1 >= 2) {
+        setEmbedDismissed(true);
       }
     }
   }, [showAppEmbedBanner]);
@@ -1116,7 +1130,7 @@ export default function Dashboard() {
           </div>
           {last7DaysStats.length > 0 ? (
             <div className="graph-container-large vton-line-chart-wrap">
-              <DailyTryonsLineChart stats={last7DaysStats} />
+              <DailyTryonsLineChart stats={last7DaysStats} todayKey={todayKey} />
             </div>
           ) : (
             <div className="vton-empty">No try-ons in the last 7 days</div>
@@ -1161,12 +1175,7 @@ export default function Dashboard() {
                         {log.product_title || log.product_id || "Unknown Product"}
                       </div>
                       <div style={{ fontSize: 12, color: "var(--vton-muted)" }}>
-                        {new Date(log.created_at).toLocaleDateString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
+                        {formatUtcDateTime(log.created_at)}
                       </div>
                     </div>
                     <Badge tone={log.success ? "success" : "critical"}>

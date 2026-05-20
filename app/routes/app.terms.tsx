@@ -1,15 +1,18 @@
 import type { LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
+import { useLoaderData } from "@remix-run/react";
 import { authenticate } from "../shopify.server";
 import { AdminDocShell } from "../components/AdminDocShell";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   await authenticate.admin(request);
-  return json({});
+  return json({
+    updatedAt: new Date().toLocaleDateString("en-US", { timeZone: "UTC" }),
+  });
 };
 
 export default function Terms() {
-  const updatedAt = new Date().toLocaleDateString();
+  const { updatedAt } = useLoaderData<typeof loader>();
 
   return (
     <AdminDocShell

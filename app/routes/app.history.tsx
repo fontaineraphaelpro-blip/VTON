@@ -244,6 +244,7 @@ export default function History() {
       return new Date(dateString).toLocaleString("en-US", {
         dateStyle: "short",
         timeStyle: "short",
+        timeZone: "UTC",
       });
     } catch {
       return dateString;
