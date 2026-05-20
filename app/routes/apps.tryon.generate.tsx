@@ -114,19 +114,32 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   try {
     const url = new URL(request.url);
     const queryParams = url.searchParams;
+    const shop = extractShopFromProxy(queryParams);
 
-    // 1. Verify Shopify signature OR check if request comes from storefront
-    if (
-      !isAuthorizedStorefrontApiRequest(request, queryParams, SHOPIFY_API_SECRET)
-    ) {
+    // 1. Verify Shopify signature OR storefront / installed-shop widget calls
+    let authorized = isAuthorizedStorefrontApiRequest(
+      request,
+      queryParams,
+      SHOPIFY_API_SECRET
+    );
+
+    // Same fallback as GET /apps/tryon/status — allows the marketing-site live demo
+    // (and any installed shop widget) without Shopify App Proxy HMAC on the request.
+    if (!authorized && shop && queryParams.get("product_id")) {
+      const shopRecord = await getShop(shop);
+      if (shopRecord) {
+        authorized = true;
+      }
+    }
+
+    if (!authorized) {
       return json(
         { error: "Invalid signature - request not from Shopify" },
         { status: 403, headers: corsHeaders }
       );
     }
 
-    // 2. Extract shop
-    const shop = extractShopFromProxy(queryParams);
+    // 2. Shop already extracted above
     if (!shop) {
       return json({ error: "Shop parameter missing" }, { status: 400, headers: corsHeaders });
     }

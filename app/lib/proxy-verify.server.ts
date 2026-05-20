@@ -156,6 +156,9 @@ export function storefrontCorsHeaders(request: Request): Headers {
   }
 
   headers.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  headers.set("Access-Control-Allow-Headers", "Content-Type");
+  headers.set(
+    "Access-Control-Allow-Headers",
+    "Content-Type, Accept, X-Vton-Origin, X-Vton-Demo-Token"
+  );
   return headers;
 }
