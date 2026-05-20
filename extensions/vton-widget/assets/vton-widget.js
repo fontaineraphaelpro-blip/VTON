@@ -2211,22 +2211,40 @@
               width: 100%;
               max-width: 280px;
               margin: 16px auto 0;
-              background: rgba(15, 23, 42, 0.1);
+              background: rgba(15, 23, 42, 0.12);
               border-radius: 999px;
-              height: 10px;
+              height: 12px;
               overflow: hidden;
               position: relative;
               flex-shrink: 0;
+              box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.08);
             }
             .vton-progress-bar {
+              display: block;
               height: 100%;
-              min-width: 4%;
-              background: linear-gradient(90deg, ${buttonBg}, ${buttonBg});
+              width: 100%;
+              min-width: 100%;
+              background: linear-gradient(90deg, ${buttonBg} 0%, ${buttonBg} 55%, rgba(255,255,255,0.35) 100%);
               border-radius: 999px;
-              width: 4%;
-              transition: width 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+              transform: scaleX(0.03);
+              transform-origin: left center;
+              transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+              will-change: transform;
               position: relative;
-              box-shadow: 0 0 12px rgba(15, 23, 42, 0.2);
+              box-shadow: 0 0 14px rgba(15, 23, 42, 0.18);
+            }
+            .vton-progress-bar.is-animating::after {
+              content: "";
+              position: absolute;
+              inset: 0;
+              border-radius: inherit;
+              background: linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent);
+              animation: vtonProgressShine 1.6s ease-in-out infinite;
+            }
+            @keyframes vtonProgressShine {
+              0% { transform: translateX(-100%); opacity: 0; }
+              40% { opacity: 1; }
+              100% { transform: translateX(100%); opacity: 0; }
             }
             .vton-progress-info {
               display: flex;
@@ -2899,8 +2917,8 @@
                 <div id="vton-loading" class="vton-loading">
                   <div class="vton-spinner"></div>
                   <p id="vton-loading-message" class="vton-loading-text">Creating your try-on<span class="vton-loading-dots"><span></span><span></span><span></span></span></p>
-                  <div class="vton-progress-container">
-                    <div id="vton-progress-bar" class="vton-progress-bar"></div>
+                  <div class="vton-progress-container" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Try-on progress">
+                    <div id="vton-progress-bar" class="vton-progress-bar is-animating"></div>
                   </div>
                   <div class="vton-progress-info">
                     <span id="vton-progress-text" class="vton-progress-text">0%</span>
@@ -4700,6 +4718,9 @@
         if (t.progress) {
           clearInterval(t.progress);
         }
+        if (t.progressRaf) {
+          cancelAnimationFrame(t.progressRaf);
+        }
         if (t.timer) {
           clearInterval(t.timer);
         }
@@ -4709,16 +4730,59 @@
         state._loadingTimers = null;
       }
 
+      function vtonCacheLoadingProgressElements(state) {
+        state._progressBarEl = vtonM(state, 'vton-progress-bar');
+        state._progressTextEl = vtonM(state, 'vton-progress-text');
+        state._progressContainerEl = vtonMq(state, '.vton-progress-container');
+        state._timerValueEl = vtonM(state, 'vton-timer-value');
+      }
+
       function vtonApplyLoadingProgress(state, percent) {
         var p = Math.max(0, Math.min(100, percent));
         state._loadingProgress = p;
-        var progressBar = vtonM(state, 'vton-progress-bar');
-        var progressText = vtonM(state, 'vton-progress-text');
+        if (!state._progressBarEl) {
+          vtonCacheLoadingProgressElements(state);
+        }
+        var progressBar = state._progressBarEl;
+        var progressText = state._progressTextEl;
+        var progressContainer = state._progressContainerEl;
+        var scale = Math.max(0.03, Math.min(1, p / 100));
         if (progressBar) {
-          progressBar.style.width = p + '%';
+          progressBar.style.width = '100%';
+          progressBar.style.transform = 'scaleX(' + scale + ')';
+          if (p > 2 && p < 100) {
+            progressBar.classList.add('is-animating');
+          } else {
+            progressBar.classList.remove('is-animating');
+          }
+        }
+        if (progressContainer) {
+          progressContainer.setAttribute('aria-valuenow', String(Math.floor(p)));
         }
         if (progressText) {
           progressText.textContent = Math.floor(p) + '%';
+        }
+      }
+
+      function vtonTickLoadingProgress(state) {
+        if (!state._loadingStartedAt || !state.isGenerating) {
+          return;
+        }
+        var elapsed = Date.now() - state._loadingStartedAt;
+        var durationMs = 30000;
+        var t = Math.min(1, elapsed / durationMs);
+        var eased = 1 - Math.pow(1 - t, 2.4);
+        var timeTarget = Math.min(90, 4 + eased * 86);
+        var pollTarget = state._loadingPollTarget || 0;
+        var next = Math.max(state._loadingProgress || 0, timeTarget, pollTarget);
+        next = Math.min(94, next);
+        if (next > (state._loadingProgress || 0) + 0.2) {
+          vtonApplyLoadingProgress(state, next);
+        }
+        if (next < 94) {
+          state._loadingTimers.progressRaf = requestAnimationFrame(function() {
+            vtonTickLoadingProgress(state);
+          });
         }
       }
       
@@ -4770,16 +4834,22 @@
         vtonClearLoadingTimers(state);
         state._loadingStartedAt = Date.now();
         state._loadingProgress = 0;
+        state._loadingPollTarget = 0;
+        state._progressBarEl = null;
+        state._progressTextEl = null;
+        state._progressContainerEl = null;
+        state._timerValueEl = null;
+        vtonCacheLoadingProgressElements(state);
 
         var messageIndex = 0;
         var tipIndex = 0;
         var currentStep = 1;
         var messageElement = vtonM(state, 'vton-loading-message');
-        var timerValue = vtonM(state, 'vton-timer-value');
+        var timerValue = state._timerValueEl || vtonM(state, 'vton-timer-value');
         var tipElement = vtonMq(state, '.vton-tip');
         var funnelDots = vtonMqa(state, '.vton-step-dot');
 
-        vtonApplyLoadingProgress(state, 4);
+        vtonApplyLoadingProgress(state, 5);
         if (timerValue) {
           timerValue.textContent = '~30s remaining';
         }
@@ -4815,22 +4885,6 @@
 
         state._loadingTimers.progress = setInterval(function() {
           var progress = state._loadingProgress || 0;
-          if (progress >= 92) {
-            return;
-          }
-          var increment;
-          if (progress < 25) {
-            increment = 2.8;
-          } else if (progress < 50) {
-            increment = 1.4;
-          } else if (progress < 75) {
-            increment = 0.95;
-          } else {
-            increment = 0.55;
-          }
-          progress = Math.min(progress + increment, 92);
-          vtonApplyLoadingProgress(state, progress);
-
           if (progress >= 18 && currentStep === 1) {
             currentStep = 2;
             updateStep(state, 1, true);
@@ -4859,7 +4913,11 @@
               funnelDots[2].classList.add('done');
             }
           }
-        }, 400);
+        }, 450);
+
+        state._loadingTimers.progressRaf = requestAnimationFrame(function() {
+          vtonTickLoadingProgress(state);
+        });
 
         if (messageElement) {
           state._loadingTimers.message = setInterval(function() {
@@ -4992,10 +5050,8 @@
                   { allowAutoRetry: true }
                 );
               } else if (statusData.status === 'pending' || statusData.status === 'processing') {
-                var pollProgress = Math.min(88, 20 + attempts * 1.1);
-                if ((state._loadingProgress || 0) < pollProgress) {
-                  vtonApplyLoadingProgress(state, pollProgress);
-                }
+                state._loadingPollTarget = Math.min(92, 18 + attempts * 1.15);
+                vtonTickLoadingProgress(state);
                 log('[VTON] Job still pending/processing, continuing to poll...');
               } else {
                 // Unknown status, stop polling after a few attempts
@@ -5114,6 +5170,7 @@
         const errorElement = vtonM(state, 'vton-error');
         
         vtonShowFunnelPanel(state, 'loading');
+        vtonCacheLoadingProgressElements(state);
         if (generateBtn) {
           generateBtn.disabled = true;
         }
