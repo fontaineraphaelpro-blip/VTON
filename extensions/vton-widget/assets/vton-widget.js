@@ -521,8 +521,10 @@
           '<p class="vton-upload-title">Add your photo</p>' +
           '<p class="vton-upload-sub">Camera or gallery · good lighting</p>' +
           '</div>' +
-          '<button type="button" class="vton-upload-btn">Choose photo</button>' +
-          '<input type="file" id="vton-file-input" class="vton-file-input" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,image/*" aria-label="Upload your photo" tabindex="-1" />'
+          '<label class="vton-upload-btn">' +
+          '<input type="file" id="vton-file-input" class="vton-file-input" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,image/*" aria-label="Upload your photo" />' +
+          '<span class="vton-upload-btn-text">Choose photo</span>' +
+          '</label>'
         );
       }
 
@@ -561,18 +563,17 @@
             inst.closeModal();
             return;
           }
-          var uploadTap =
+          if (
             e.target.closest &&
-            (e.target.closest('.vton-upload-btn') ||
-              e.target.closest('#vton-upload-area'));
-          if (uploadTap && inst.openFilePicker) {
-            var uploadAreaEl = inst.getUploadArea && inst.getUploadArea();
-            if (uploadAreaEl && uploadAreaEl.classList.contains('has-image')) {
-              return;
+            e.target.closest('#vton-upload-area') &&
+            !e.target.closest('.vton-upload-btn') &&
+            !e.target.closest('#vton-file-input') &&
+            inst.openFilePicker
+          ) {
+            var uploadAreaTap = inst.getUploadArea && inst.getUploadArea();
+            if (uploadAreaTap && !uploadAreaTap.classList.contains('has-image')) {
+              inst.openFilePicker();
             }
-            e.preventDefault();
-            e.stopPropagation();
-            inst.openFilePicker();
             return;
           }
           if (e.target.closest && e.target.closest('#vton-generate-btn')) {
@@ -628,25 +629,6 @@
           true
         );
 
-        overlay.addEventListener(
-          'touchend',
-          function(e) {
-            var inst = window.vtonWidgetInstance;
-            if (!inst || !inst.openFilePicker) {
-              return;
-            }
-            if (!e.target.closest || !e.target.closest('.vton-upload-btn')) {
-              return;
-            }
-            var uploadAreaEl = inst.getUploadArea && inst.getUploadArea();
-            if (uploadAreaEl && uploadAreaEl.classList.contains('has-image')) {
-              return;
-            }
-            e.preventDefault();
-            inst.openFilePicker();
-          },
-          { passive: false }
-        );
       }
 
       function vtonInstallModalEscape(state) {
@@ -1507,6 +1489,7 @@
               color: #64748b;
             }
             .vton-upload-btn {
+              position: relative;
               display: inline-flex;
               align-items: center;
               justify-content: center;
@@ -1523,22 +1506,31 @@
               touch-action: manipulation;
               -webkit-tap-highlight-color: transparent;
               box-shadow: 0 4px 14px rgba(15, 23, 42, 0.12);
+              overflow: hidden;
             }
             .vton-upload-btn:active {
               transform: scale(0.98);
             }
+            .vton-upload-btn-text {
+              position: relative;
+              z-index: 0;
+              pointer-events: none;
+            }
             .vton-file-input {
               position: absolute;
-              width: 1px;
-              height: 1px;
+              inset: 0;
+              width: 100%;
+              height: 100%;
+              margin: 0;
               padding: 0;
-              margin: -1px;
-              overflow: hidden;
-              clip: rect(0, 0, 0, 0);
-              white-space: nowrap;
-              border: 0;
               opacity: 0;
-              pointer-events: none;
+              cursor: pointer;
+              z-index: 2;
+              font-size: 16px;
+              border: none;
+              background: transparent;
+              -webkit-appearance: none;
+              appearance: none;
             }
             .vton-upload-area:hover {
               border-color: ${buttonBg};
