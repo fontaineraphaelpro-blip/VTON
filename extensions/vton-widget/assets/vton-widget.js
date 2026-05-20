@@ -4869,6 +4869,7 @@
           document.head.appendChild(portalStyle);
         }
         portalStyle.textContent = styleInShadow.textContent;
+        vtonSyncDeviceClass(state);
       }
 
       function vtonInjectProgressPortalCss(buttonBg) {
