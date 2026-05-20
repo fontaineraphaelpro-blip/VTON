@@ -4,6 +4,8 @@
 
 Le push sur `main` déclenche en général un redeploy automatique.
 
+> Dernier redeploy déclenché : 2026-05-19
+
 Vérifier : https://vton-production-890a.up.railway.app
 
 ## 2. Extension thème (widget storefront)
