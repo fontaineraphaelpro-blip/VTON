@@ -12,11 +12,20 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const boot = `(function(){
   "use strict";
   if (window.__VTON_WIDGET_BOOTED) return;
-  if (!/\\/products\\/[^\\/\\?#]+/i.test(window.location.pathname)) return;
+  var path = window.location.pathname || "";
+  var isProduct = /\\/(?:products?|produit|produkt|producto|artikel|item|p)\\/[^\\/\\?#]+/i.test(path);
+  if (!isProduct && !(window.Shopify && window.Shopify.product)) return;
 
   var shop = (window.Shopify && window.Shopify.shop) || "";
   if (!shop && window.ShopifyAnalytics && window.ShopifyAnalytics.lib && window.ShopifyAnalytics.lib.config) {
     shop = window.ShopifyAnalytics.lib.config.shop || "";
+  }
+  if (!shop) {
+    var scripts = document.querySelectorAll("script:not([src])");
+    for (var si = 0; si < scripts.length && !shop; si++) {
+      var sm = (scripts[si].textContent || "").match(/Shopify\\.shop\\s*=\\s*["']([^"']+\\.myshopify\\.com)["']/i);
+      if (sm) shop = sm[1];
+    }
   }
   var productId = null;
   var productHandle = null;
@@ -30,9 +39,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     }
   }
   if (!productHandle) {
-    var m = window.location.pathname.match(/\\/products\\/([^\\/\\?#]+)/);
+    var m = path.match(/\\/(?:products?|produit|produkt|producto|artikel|item|p)\\/([^\\/\\?#]+)/i);
     if (m) productHandle = m[1];
   }
+  if (!productId && productHandle) productId = productHandle;
   if (!productId) {
     var jsonLd = document.querySelectorAll('script[type="application/ld+json"]');
     for (var i = 0; i < jsonLd.length && !productId; i++) {

@@ -14,10 +14,13 @@
       var VTON_STATUS_CACHE_TTL = 300000;
       var VTON_ENABLED_STATUS_MEMO_TTL = 300000;
       var VTON_INJECTION_WAIT_MS = 18000;
-      var VTON_FLOATING_FALLBACK_MS = 4000;
+      var VTON_FLOATING_FALLBACK_MS = 0;
+      var VTON_ALWAYS_FLOATING = true;
       var _vtonStatusRetryTimer = null;
       var _vtonStatusRetryCount = 0;
       var VTON_EMBED_SLOT_WAIT_MS = 2000;
+      var _vtonBootContext = null;
+      var _vtonPresenceWatchdog = null;
       var _vtonWidgetRenderQueued = false;
       var _vtonWidgetMountInProgress = false;
       var _vtonWidgetMountToken = 0;
@@ -45,13 +48,65 @@
 
       function isProductPageContext() {
         var liquid = window.VTON_LIQUID || {};
+        var path = window.location.pathname || '';
         if (liquid.productId) return true;
         if (liquid.pageType === 'product') return true;
         if (liquid.templateName && String(liquid.templateName).indexOf('product') !== -1) return true;
-        if (/\/products\/[^\/\?#]+/i.test(window.location.pathname)) return true;
+        if (/\/products?\/[^\/\?#]+/i.test(path)) return true;
+        if (/\/(?:produit|produkt|producto|artikel|item|p)\/[^\/\?#]+/i.test(path)) return true;
         if (window.Shopify && window.Shopify.product && window.Shopify.product.id) return true;
-        if (document.querySelector('form[action*="/cart/add"], product-form, [data-product-id], [data-product-handle]')) return true;
+        if (document.querySelector('form[action*="/cart/add"], product-form, [data-product-id], [data-product-handle]')) {
+          return true;
+        }
+        var ogType = document.querySelector('meta[property="og:type"]');
+        if (ogType && String(ogType.getAttribute('content') || '').toLowerCase() === 'product') return true;
+        var canonical = document.querySelector('link[rel="canonical"]');
+        if (canonical && /\/products?\//i.test(canonical.getAttribute('href') || canonical.href || '')) return true;
+        if (document.getElementById('vton-product-json')) return true;
         return false;
+      }
+
+      function vtonEnsureMinimalConfig() {
+        if (window.VTON_LIQUID) return window.VTON_LIQUID;
+        var productHandle = null;
+        var path = window.location.pathname || '';
+        var m = path.match(/\/(?:products?|produit|produkt|producto|artikel|item|p)\/([^\/\?#]+)/i);
+        if (m) productHandle = m[1];
+        var scriptHost = '';
+        try {
+          var bootScript = document.querySelector('script[src*="vton-boot"], script[src*="vton-widget"]');
+          if (bootScript && bootScript.src) {
+            scriptHost = new URL(bootScript.src).origin;
+          }
+        } catch (e) {}
+        window.VTON_LIQUID = {
+          shop: extractShop(),
+          productId: null,
+          productHandle: productHandle,
+          customAnchor: '',
+          appUrl: scriptHost || 'https://vton-production-890a.up.railway.app',
+          pageType: isProductPageContext() ? 'product' : '',
+          templateName: isProductPageContext() ? 'product' : '',
+        };
+        return window.VTON_LIQUID;
+      }
+
+      function vtonScrapeShopFromDom() {
+        var scripts = document.querySelectorAll('script:not([src])');
+        for (var i = 0; i < scripts.length; i++) {
+          var text = scripts[i].textContent || '';
+          var shopMatch = text.match(/Shopify\.shop\s*=\s*["']([^"']+\.myshopify\.com)["']/i);
+          if (shopMatch) return shopMatch[1];
+          var domainMatch = text.match(/["']([a-z0-9][a-z0-9-]*\.myshopify\.com)["']/i);
+          if (domainMatch) return domainMatch[1];
+        }
+        var links = document.querySelectorAll('a[href*=".myshopify.com"], link[href*=".myshopify.com"]');
+        for (var j = 0; j < links.length; j++) {
+          var href = links[j].getAttribute('href') || links[j].href || '';
+          var linkMatch = href.match(/([a-z0-9][a-z0-9-]*\.myshopify\.com)/i);
+          if (linkMatch) return linkMatch[1];
+        }
+        return null;
       }
 
       function bootWidget() {
@@ -66,7 +121,7 @@
         vtonNeutralizeLegacyWidgets();
         bootWidget();
         if (_vtonSuppressed || vtonHasWidgetContainers()) return;
-        [800, 2000, 4500, 9000, 15000, 22000].forEach(function(delayMs) {
+        [0, 100, 300, 600, 1200, 2500, 5000, 9000, 15000, 22000, 30000].forEach(function(delayMs) {
           setTimeout(function() {
             if (!isProductPageContext()) return;
             if (_vtonSuppressed) return;
@@ -77,30 +132,24 @@
       }
 
       function startWidgetBoot() {
-        var bootIdleMs =
-          isProductPageContext() && (window.VTON_LIQUID && window.VTON_LIQUID.productId)
-            ? 0
-            : 200;
-        if (bootIdleMs === 0) {
-          bootWidgetWithRetries();
-        } else {
-          runWhenIdle(bootWidgetWithRetries, bootIdleMs);
-        }
+        vtonEnsureMinimalConfig();
+        bootWidgetWithRetries();
       }
 
       function waitForConfigThenBoot() {
-        if (window.VTON_LIQUID) {
-          startWidgetBoot();
-          return;
-        }
+        vtonEnsureMinimalConfig();
+        startWidgetBoot();
         var tries = 0;
         var timer = setInterval(function() {
           tries++;
-          if (window.VTON_LIQUID || tries >= 40) {
-            clearInterval(timer);
-            startWidgetBoot();
+          vtonEnsureMinimalConfig();
+          if (isProductPageContext() && !vtonHasWidgetContainers() && !_vtonSuppressed) {
+            bootWidget();
           }
-        }, 50);
+          if (tries >= 80) {
+            clearInterval(timer);
+          }
+        }, 250);
       }
 
       if (document.readyState === 'loading') {
@@ -127,9 +176,12 @@
         document.addEventListener(evt, vtonScheduleRetryBoot);
       });
 
+      setTimeout(vtonScheduleRetryBoot, 300);
       setTimeout(vtonScheduleRetryBoot, 1500);
       setTimeout(vtonScheduleRetryBoot, 5000);
       setTimeout(vtonScheduleRetryBoot, 12000);
+      window.addEventListener('popstate', vtonScheduleRetryBoot);
+      window.addEventListener('hashchange', vtonScheduleRetryBoot);
       
       function vtonStatusCacheKey(shop, productId) {
         return 'vton:status:' + shop + ':' + productId;
@@ -516,6 +568,20 @@
           }
           if (vtonCountWidgetContainers() > 1) {
             vtonDedupeWidgetContainers();
+            return;
+          }
+          if (
+            _vtonBootContext &&
+            isProductPageContext() &&
+            !vtonHasWidgetContainers()
+          ) {
+            _vtonWidgetRenderQueued = false;
+            queueWidgetRender(
+              _vtonBootContext.shop,
+              _vtonBootContext.productId,
+              _vtonBootContext.productHandle,
+              buildOptimisticStatus({})
+            );
           }
         });
         try {
@@ -639,16 +705,45 @@
         var style = document.createElement('style');
         style.id = 'vton-mobile-placement-css';
         style.textContent =
+          '#vton-widget-container[data-vton-placement="floating_fallback"],' +
+          '#vton-widget-container[data-vton-force-floating="1"]{' +
+          'display:block!important;visibility:visible!important;opacity:1!important;' +
+          'pointer-events:auto!important;position:fixed!important;' +
+          'z-index:2147483646!important;}' +
           '@media (max-width:640px){' +
-          '#vton-widget-container[data-vton-placement="floating_fallback"]{' +
+          '#vton-widget-container[data-vton-placement="floating_fallback"],' +
+          '#vton-widget-container[data-vton-force-floating="1"]{' +
           'left:max(12px,env(safe-area-inset-left))!important;' +
           'right:max(12px,env(safe-area-inset-right))!important;' +
           'bottom:max(88px,env(safe-area-inset-bottom))!important;' +
           'width:auto!important;max-width:none!important;}' +
-          '#vton-widget-container:not([data-vton-placement="floating_fallback"]){' +
+          '#vton-widget-container:not([data-vton-placement="floating_fallback"]):not([data-vton-force-floating="1"]){' +
           'margin:12px 0!important;max-width:100%!important;box-sizing:border-box!important;}' +
           '}';
         document.head.appendChild(style);
+      }
+
+      function vtonStartPresenceWatchdog() {
+        if (_vtonPresenceWatchdog) return;
+        var ticks = 0;
+        _vtonPresenceWatchdog = setInterval(function() {
+          ticks++;
+          if (ticks > 180) {
+            clearInterval(_vtonPresenceWatchdog);
+            _vtonPresenceWatchdog = null;
+            return;
+          }
+          if (!isProductPageContext() || _vtonSuppressed || !_vtonBootContext) return;
+          if (vtonHasWidgetContainers()) return;
+          _vtonWidgetRenderQueued = false;
+          _vtonWidgetMountInProgress = false;
+          queueWidgetRender(
+            _vtonBootContext.shop,
+            _vtonBootContext.productId,
+            _vtonBootContext.productHandle,
+            buildOptimisticStatus({})
+          );
+        }, 1500);
       }
 
       function vtonInjectPageModalCss() {
@@ -1228,13 +1323,19 @@
         vtonInjectFlyToCartCss();
         vtonEnsureSingleWidget();
         vtonStartDuplicateWatchdog();
+        vtonEnsureMinimalConfig();
+
+        var productHandle = extractProductHandle();
+        var productId = extractProductId();
+        if (!productId && productHandle) {
+          productId = productHandle;
+        }
+        if (!productId) return;
+
         var shop = extractShop();
         if (!shop) return;
 
-        var productId = extractProductId();
-        if (!productId) return;
-
-        var productHandle = extractProductHandle();
+        _vtonBootContext = { shop: shop, productId: productId, productHandle: productHandle };
         var cachedStatus = readStatusCache(shop, productId);
 
         if (cachedStatus && isExplicitlyDisabledStatus(cachedStatus)) {
@@ -1244,6 +1345,8 @@
         }
 
         _vtonSuppressed = false;
+        queueWidgetRender(shop, productId, productHandle, buildOptimisticStatus({}));
+        vtonStartPresenceWatchdog();
         refreshTryonStatus(shop, productId, productHandle);
       }
       
@@ -1259,6 +1362,8 @@
           var cfgShop = window.ShopifyAnalytics.lib.config.shop;
           if (cfgShop) return cfgShop;
         }
+        var scraped = vtonScrapeShopFromDom();
+        if (scraped) return scraped;
         var hostname = window.location.hostname;
         var match = hostname.match(/([^.]+\.myshopify\.com)/);
         if (match) return match[1];
@@ -1271,6 +1376,16 @@
         if (window.VTON_LIQUID && window.VTON_LIQUID.productId) {
           log('[VTON] Found product ID from Liquid:', window.VTON_LIQUID.productId);
           return window.VTON_LIQUID.productId;
+        }
+
+        var productJsonEl = document.getElementById('vton-product-json');
+        if (productJsonEl) {
+          try {
+            var productJson = JSON.parse(productJsonEl.textContent || '{}');
+            if (productJson && productJson.id) {
+              return 'gid://shopify/Product/' + String(productJson.id);
+            }
+          } catch (e) {}
         }
 
         // Try to get Shopify product ID (GID) from various sources
@@ -1386,11 +1501,13 @@
         }
         
         // 6. Last resort: Try from URL (handle) - backend will try to match
-        const urlMatch = window.location.pathname.match(/\/products\/([^\/\?]+)/);
+        const urlMatch = window.location.pathname.match(
+          /\/(?:products?|produit|produkt|producto|artikel|item|p)\/([^\/\?#]+)/i
+        );
         if (urlMatch) {
           const handle = urlMatch[1];
           warn('[VTON] Could not find product ID, using handle as fallback:', handle);
-          return handle; // Return handle as fallback
+          return handle;
         }
         
         error('[VTON] Could not extract product ID from any source');
@@ -1403,7 +1520,9 @@
         }
 
         // Try from URL (most reliable) - extract handle from /products/handle
-        const urlMatch = window.location.pathname.match(/\/products\/([^\/\?]+)/);
+        const urlMatch = window.location.pathname.match(
+          /\/(?:products?|produit|produkt|producto|artikel|item|p)\/([^\/\?#]+)/i
+        );
         if (urlMatch) {
           const handle = urlMatch[1];
           log('[VTON] Extracted handle from URL:', handle);
@@ -1788,9 +1907,12 @@
         container.setAttribute('data-vton-placement', target.source || 'unknown');
 
         if (target.floating) {
+          container.setAttribute('data-vton-force-floating', '1');
           container.style.cssText =
-            'position:fixed;bottom:max(16px,env(safe-area-inset-bottom));right:max(16px,env(safe-area-inset-right));z-index:2147483000;width:auto;max-width:min(360px,calc(100vw - 32px));margin:0;box-sizing:border-box;';
-          document.body.appendChild(container);
+            'position:fixed;bottom:max(16px,env(safe-area-inset-bottom));right:max(16px,env(safe-area-inset-right));z-index:2147483646;width:auto;max-width:min(360px,calc(100vw - 32px));margin:0;box-sizing:border-box;display:block!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important;';
+          var floatParent = document.body || document.documentElement;
+          if (!floatParent) return null;
+          floatParent.appendChild(container);
           return container;
         }
 
@@ -1818,14 +1940,43 @@
         return container;
       }
 
+      function vtonGetForcedFloatingTarget() {
+        return {
+          anchor: document.body || document.documentElement,
+          method: 'append',
+          source: 'floating_fallback',
+          floating: true,
+        };
+      }
+
       function vtonResolveInjectionTarget(customSelector) {
+        if (VTON_ALWAYS_FLOATING) {
+          return vtonGetForcedFloatingTarget();
+        }
         var primary = vtonFindInjectionAnchor(customSelector, { allowHidden: false });
         if (primary) return primary;
         var relaxed = vtonFindInjectionAnchor(customSelector, { allowHidden: true });
         if (relaxed) return relaxed;
         var slot = vtonGetEmbedSlotAnchor();
         if (slot) return slot;
-        return { anchor: document.body, method: 'append', source: 'floating_fallback', floating: true };
+        return vtonGetForcedFloatingTarget();
+      }
+
+      function vtonResolveInjectionTargetAsync(customSelector) {
+        if (VTON_ALWAYS_FLOATING) {
+          return new Promise(function(resolve) {
+            function mountWhenReady() {
+              var body = document.body || document.documentElement;
+              if (!body) {
+                setTimeout(mountWhenReady, 16);
+                return;
+              }
+              resolve(vtonGetForcedFloatingTarget());
+            }
+            mountWhenReady();
+          });
+        }
+        return vtonWaitForInjectionAnchor(customSelector, VTON_INJECTION_WAIT_MS);
       }
 
       function vtonIsInlineInjectionSource(source) {
@@ -1983,7 +2134,7 @@
 
         var customSelector = (window.VTON_LIQUID && window.VTON_LIQUID.customAnchor) || '';
 
-        vtonWaitForInjectionAnchor(customSelector, VTON_INJECTION_WAIT_MS).then(function(injectionTarget) {
+        vtonResolveInjectionTargetAsync(customSelector).then(function(injectionTarget) {
           if (mountToken !== _vtonWidgetMountToken || _vtonSuppressed) {
             _vtonWidgetMountInProgress = false;
             _vtonWidgetRenderQueued = false;
