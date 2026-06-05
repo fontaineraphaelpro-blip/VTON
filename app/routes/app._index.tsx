@@ -1002,9 +1002,9 @@ export default function Dashboard() {
         title: "Try-on is live on your product pages",
         message: (
           <>
-            The try-on button is enabled automatically on every product page. Turn it off per
-            product in <strong>Products</strong>. Optional theme embed settings can improve button
-            placement.
+            The try-on button installs automatically on every product page — even on complex or
+            custom themes. It appears as a floating button with no theme setup required. Turn it
+            off per product in <strong>Products</strong>.
           </>
         ),
         persistDismiss: true,

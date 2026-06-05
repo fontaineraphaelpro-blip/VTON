@@ -723,22 +723,34 @@
         document.head.appendChild(style);
       }
 
-      function vtonStartPresenceWatchdog() {
-        if (_vtonPresenceWatchdog) return;
-        var ticks = 0;
-        _vtonPresenceWatchdog = setInterval(function() {
-          ticks++;
-          if (ticks > 180) {
-            clearInterval(_vtonPresenceWatchdog);
-            _vtonPresenceWatchdog = null;
+      function vtonScheduleShopResolve(onResolved) {
+        var tries = 0;
+        var timer = setInterval(function() {
+          tries++;
+          var resolved = extractShop();
+          if (resolved) {
+            clearInterval(timer);
+            if (_vtonBootContext) {
+              _vtonBootContext.shop = resolved;
+            }
+            onResolved(resolved);
             return;
           }
+          if (tries >= 120) {
+            clearInterval(timer);
+          }
+        }, 500);
+      }
+
+      function vtonStartPresenceWatchdog() {
+        if (_vtonPresenceWatchdog) return;
+        _vtonPresenceWatchdog = setInterval(function() {
           if (!isProductPageContext() || _vtonSuppressed || !_vtonBootContext) return;
           if (vtonHasWidgetContainers()) return;
           _vtonWidgetRenderQueued = false;
           _vtonWidgetMountInProgress = false;
           queueWidgetRender(
-            _vtonBootContext.shop,
+            _vtonBootContext.shop || extractShop() || '',
             _vtonBootContext.productId,
             _vtonBootContext.productHandle,
             buildOptimisticStatus({})
@@ -1333,21 +1345,28 @@
         if (!productId) return;
 
         var shop = extractShop();
-        if (!shop) return;
-
         _vtonBootContext = { shop: shop, productId: productId, productHandle: productHandle };
-        var cachedStatus = readStatusCache(shop, productId);
 
-        if (cachedStatus && isExplicitlyDisabledStatus(cachedStatus)) {
-          suppressWidget(shop, productId, cachedStatus);
-          refreshTryonStatus(shop, productId, productHandle);
-          return;
+        if (shop) {
+          var cachedStatus = readStatusCache(shop, productId);
+          if (cachedStatus && isExplicitlyDisabledStatus(cachedStatus)) {
+            suppressWidget(shop, productId, cachedStatus);
+            refreshTryonStatus(shop, productId, productHandle);
+            return;
+          }
         }
 
         _vtonSuppressed = false;
-        queueWidgetRender(shop, productId, productHandle, buildOptimisticStatus({}));
+        queueWidgetRender(shop || '', productId, productHandle, buildOptimisticStatus({}));
         vtonStartPresenceWatchdog();
-        refreshTryonStatus(shop, productId, productHandle);
+
+        if (shop) {
+          refreshTryonStatus(shop, productId, productHandle);
+        } else {
+          vtonScheduleShopResolve(function(resolvedShop) {
+            refreshTryonStatus(resolvedShop, productId, productHandle);
+          });
+        }
       }
       
       function extractShop() {

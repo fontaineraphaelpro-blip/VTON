@@ -1,4 +1,9 @@
-import type { HeadersFunction, LoaderFunctionArgs } from "@remix-run/node";
+import type {
+  ActionFunctionArgs,
+  HeadersFunction,
+  LoaderFunctionArgs,
+} from "@remix-run/node";
+import { json } from "@remix-run/node";
 import {
   Link,
   Outlet,
@@ -17,6 +22,16 @@ import { authenticate } from "../shopify.server";
 import { getLayoutShopContext } from "../lib/layout-shop-cache.server";
 import { computeCreditsAlert } from "../lib/credits-alert";
 import { CreditsAlertBanner } from "../components/CreditsAlertBanner";
+import { StorefrontHealthBanner } from "../components/StorefrontHealthBanner";
+import {
+  getStorefrontHealth,
+  repairStorefrontWidget,
+} from "../lib/storefront-health.server";
+import {
+  scheduleStorefrontWidgetScriptTag,
+  sessionCanInstallScriptTag,
+} from "../lib/storefront-widget-install.server";
+import { invalidateLayoutShopContext } from "../lib/layout-shop-cache.server";
 import { GarmentUploadProvider } from "../contexts/GarmentUploadContext";
 import polarisStyles from "@shopify/polaris/build/esm/styles.css?url";
 import appStyles from "../styles/app.css?url";
@@ -34,11 +49,18 @@ export const links = () => [
  */
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const apiKey = process.env.SHOPIFY_API_KEY || "";
-  const { session } = await authenticate.admin(request);
+  const { session, admin } = await authenticate.admin(request);
+
+  if (sessionCanInstallScriptTag(session.scope)) {
+    scheduleStorefrontWidgetScriptTag(admin);
+  }
 
   try {
-    const { creditsAlert } = await getLayoutShopContext(session.shop);
-    return { apiKey, creditsAlert };
+    const [{ creditsAlert }, storefrontHealth] = await Promise.all([
+      getLayoutShopContext(session.shop),
+      getStorefrontHealth(session.shop, admin, session.scope),
+    ]);
+    return { apiKey, creditsAlert, storefrontHealth };
   } catch {
     return {
       apiKey,
@@ -47,8 +69,36 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         monthlyUsage: 0,
         monthlyQuota: null,
       }),
+      storefrontHealth: {
+        level: "warning" as const,
+        scriptTagInstalled: false,
+        shopEnabled: true,
+        canInstallScriptTag: sessionCanInstallScriptTag(session.scope),
+        issues: ["Could not verify storefront widget health."],
+        testProductUrl: null,
+      },
     };
   }
+};
+
+export const action = async ({ request }: ActionFunctionArgs) => {
+  const { session, admin } = await authenticate.admin(request);
+  const formData = await request.formData();
+  if (formData.get("intent") !== "repair-storefront") {
+    return json({ success: false, error: "Unknown intent" }, { status: 400 });
+  }
+
+  const result = await repairStorefrontWidget(session.shop, admin, session.scope);
+  invalidateLayoutShopContext(session.shop);
+
+  if (!result.ok) {
+    return json({
+      success: false,
+      error: result.error || "Could not repair storefront widget",
+    });
+  }
+
+  return json({ success: true, scriptTagInstalled: result.scriptTagInstalled });
 };
 
 /**
@@ -83,7 +133,7 @@ export const headers: HeadersFunction = (headersArgs) => {
 };
 
 export default function App() {
-  const { apiKey, creditsAlert } = useLoaderData<typeof loader>();
+  const { apiKey, creditsAlert, storefrontHealth } = useLoaderData<typeof loader>();
   const location = useLocation();
   const navigation = useNavigation();
   const showGlobalCreditsAlert =
@@ -147,6 +197,7 @@ export default function App() {
         </Link>
       </NavMenu>
       <div className="vton-admin">
+        <StorefrontHealthBanner health={storefrontHealth} />
         {showGlobalCreditsAlert && (
           <CreditsAlertBanner alert={creditsAlert} variant="global" />
         )}

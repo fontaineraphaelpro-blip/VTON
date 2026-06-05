@@ -1739,6 +1739,103 @@
   border-color: #f87171;
 }
 
+/* Storefront widget health — visible on every admin page when broken */
+.vton-admin .vton-storefront-health {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 14px 18px;
+  margin: 0 0 16px;
+  border-radius: 0;
+  border: 1px solid var(--vton-border);
+  border-left: none;
+  border-right: none;
+  border-top: none;
+  position: sticky;
+  top: 0;
+  z-index: 41;
+}
+
+.vton-admin .vton-storefront-health--warning {
+  background: #fffbeb;
+  border-color: #fcd34d;
+}
+
+.vton-admin .vton-storefront-health--critical {
+  background: #fef2f2;
+  border-color: #fca5a5;
+}
+
+.vton-admin .vton-storefront-health__title {
+  margin: 0 0 6px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--vton-text);
+}
+
+.vton-admin .vton-storefront-health--critical .vton-storefront-health__title {
+  color: #991b1b;
+}
+
+.vton-admin .vton-storefront-health__message {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--vton-muted);
+  max-width: 720px;
+}
+
+.vton-admin .vton-storefront-health--critical .vton-storefront-health__message {
+  color: #7f1d1d;
+}
+
+.vton-admin .vton-storefront-health__actions {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.vton-admin .vton-storefront-health__cta {
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  background: var(--vton-brand);
+  color: #fff;
+}
+
+.vton-admin .vton-storefront-health__cta:hover:not(:disabled) {
+  background: var(--vton-brand-dark);
+}
+
+.vton-admin .vton-storefront-health__cta:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+.vton-admin .vton-storefront-health--critical .vton-storefront-health__cta {
+  background: #ffffff;
+  color: #991b1b;
+  border: 1px solid #fca5a5;
+}
+
+.vton-admin .vton-storefront-health__link {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--vton-brand);
+  text-decoration: none;
+}
+
+.vton-admin .vton-storefront-health__link:hover {
+  text-decoration: underline;
+}
+
 .vton-admin .credits-conv-hero {
   display: grid;
   grid-template-columns: 1.4fr 1fr;
