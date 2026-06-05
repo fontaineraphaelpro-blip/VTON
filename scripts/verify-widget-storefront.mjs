@@ -63,9 +63,21 @@ const CHECKS = [
     required: true,
   },
   {
-    id: "dual_status_fetch",
-    label: "Proxy + direct API status fallback",
-    pattern: /Promise\.any\(attempts\)/,
+    id: "dual_api_fetch",
+    label: "Proxy + direct API fallback (all endpoints)",
+    pattern: /function vtonBuildStorefrontApiUrls/,
+    required: true,
+  },
+  {
+    id: "generate_prepare",
+    label: "Resolve shop + garment image before generate",
+    pattern: /function vtonPrepareGeneration/,
+    required: true,
+  },
+  {
+    id: "product_json_fallback",
+    label: "Shopify product.json garment fallback",
+    pattern: /vtonFetchProductJsonByHandle/,
     required: true,
   },
   {

@@ -706,6 +706,10 @@
           trackAbImpressionOnce(shop, productId, status.ab_bucket);
         }
 
+        if (status && status.garment_image_url && window.__VTON_RUNTIME_STATE) {
+          window.__VTON_RUNTIME_STATE.productImageUrl = status.garment_image_url;
+        }
+
         if (isTryonEnabledStatus(status)) {
           _vtonStatusRetryCount = 0;
           _vtonSuppressed = false;
@@ -1670,6 +1674,141 @@
         return q;
         }
 
+      function vtonGetAppBaseUrl() {
+        var liquid = window.VTON_LIQUID || {};
+        return (liquid.appUrl || 'https://vton-production-890a.up.railway.app').replace(/\/$/, '');
+      }
+
+      function vtonIsCrossOriginUrl(url) {
+        try {
+          return new URL(url, window.location.href).host !== window.location.host;
+        } catch (e) {
+          return false;
+        }
+      }
+
+      function vtonBuildStorefrontApiUrls(pathAndQuery) {
+        var proxyUrl = window.location.origin + pathAndQuery;
+        var directUrl = vtonGetAppBaseUrl() + pathAndQuery;
+        if (directUrl === proxyUrl) {
+          return [proxyUrl];
+        }
+        return [proxyUrl, directUrl];
+      }
+
+      function vtonFetchFromUrls(urls, options) {
+        options = options || {};
+        var attempts = urls.map(function(url) {
+          var crossOrigin = vtonIsCrossOriginUrl(url);
+          return fetch(url, {
+            method: options.method || 'GET',
+            headers: options.headers || { Accept: 'application/json' },
+            body: options.body,
+            signal: options.signal,
+            credentials: crossOrigin ? 'omit' : (options.credentials || 'same-origin'),
+            mode: 'cors',
+            cache: options.cache || 'no-store',
+            keepalive: options.keepalive === true,
+          }).then(function(response) {
+            if (options.onResponse) {
+              return options.onResponse(response, url);
+            }
+            if (!response.ok) {
+              throw new Error((options.errorPrefix || 'Request') + ' failed: ' + response.status);
+            }
+            return response.json();
+          });
+        });
+        return Promise.any(attempts);
+      }
+
+      function vtonFetchStorefront(pathAndQuery, options) {
+        return vtonFetchFromUrls(vtonBuildStorefrontApiUrls(pathAndQuery), options);
+      }
+
+      function vtonNormalizeProductImageUrl(url) {
+        if (!url) return url;
+        var normalized = String(url).split('?')[0];
+        normalized = normalized.replace(
+          /_(?:small|compact|medium|large|grande|master|\d+x\d+)\./gi,
+          '.'
+        );
+        return normalized;
+      }
+
+      function vtonFetchProductJsonByHandle(handle) {
+        if (!handle) return Promise.resolve(null);
+        return fetch(vtonGetShopifyRoot() + 'products/' + encodeURIComponent(handle) + '.js', {
+          credentials: 'same-origin',
+          headers: { Accept: 'application/json' },
+          cache: 'no-store',
+        })
+          .then(function(response) {
+            return response.ok ? response.json() : null;
+          })
+          .catch(function() {
+            return null;
+          });
+      }
+
+      function vtonEnsureRuntimeShop(state) {
+        if (state.shop && state.shop.indexOf('.myshopify.com') !== -1) {
+          return state.shop;
+        }
+        var shop = extractShop();
+        if (shop) state.shop = shop;
+        if (!state.shop && _vtonBootContext && _vtonBootContext.shop) {
+          state.shop = _vtonBootContext.shop;
+        }
+        return state.shop || null;
+      }
+
+      function vtonResolveProductImageUrl(state) {
+        if (state.productImageUrl) {
+          state.productImageUrl = vtonNormalizeProductImageUrl(state.productImageUrl);
+          return Promise.resolve(state.productImageUrl);
+        }
+        var fromDom = getProductImage();
+        if (fromDom) {
+          state.productImageUrl = vtonNormalizeProductImageUrl(fromDom);
+          return Promise.resolve(state.productImageUrl);
+        }
+        var og = document.querySelector('meta[property="og:image"], meta[name="og:image"]');
+        if (og && og.getAttribute('content')) {
+          state.productImageUrl = vtonNormalizeProductImageUrl(og.getAttribute('content'));
+          return Promise.resolve(state.productImageUrl);
+        }
+        var handle =
+          state.productHandle ||
+          (state.productId && /^[a-z0-9-]+$/i.test(String(state.productId))
+            ? state.productId
+            : null);
+        if (!handle) {
+          return Promise.resolve(null);
+        }
+        return vtonFetchProductJsonByHandle(handle).then(function(product) {
+          if (!product) return null;
+          var url = product.featured_image || (product.images && product.images[0]) || null;
+          if (url) {
+            state.productImageUrl = vtonNormalizeProductImageUrl(url);
+          }
+          return state.productImageUrl;
+        });
+      }
+
+      function vtonPrepareGeneration(state) {
+        vtonEnsureRuntimeShop(state);
+        if (!state.productId && state.productHandle) {
+          state.productId = state.productHandle;
+        }
+        if (!state.userPhoto) {
+          return Promise.resolve(false);
+        }
+        return vtonResolveProductImageUrl(state).then(function(imageUrl) {
+          return !!(state.shop && state.productId && state.userPhoto && imageUrl);
+        });
+      }
+
       function fetchStatusUrl(url) {
         var controller = new AbortController();
         var timeoutId = setTimeout(function() { controller.abort(); }, 6000);
@@ -1701,17 +1840,13 @@
 
       function checkStatus(shop, productId, productHandle) {
         var query = buildStatusQuery(shop, productId, productHandle);
-        var proxyUrl = window.location.origin + '/apps/tryon/status?' + query;
-        var liquid = window.VTON_LIQUID || {};
-        var appBase = (liquid.appUrl || '').replace(/\/$/, '');
-        var directUrl = appBase ? appBase + '/apps/tryon/status?' + query : null;
-
-        var attempts = [fetchStatusUrl(proxyUrl)];
-        if (directUrl) {
-          attempts.push(fetchStatusUrl(directUrl));
-        }
-
-        return Promise.any(attempts)
+        return vtonFetchStorefront('/apps/tryon/status?' + query, {
+          signal: (function() {
+            var controller = new AbortController();
+            setTimeout(function() { controller.abort(); }, 6000);
+            return controller.signal;
+          })(),
+        })
           .then(function(status) {
             if (status && status.error && !status.enabled) {
               throw new Error(String(status.error));
@@ -1740,7 +1875,6 @@
       }
       
       function getProductImage() {
-        // Try multiple selectors to find product image
         const selectors = [
           '.product__media img',
           '.product-single__media img',
@@ -1750,18 +1884,25 @@
           '.product-gallery img',
           'img[data-product-image]',
           '.product__photo img',
-          'img.product-featured-image'
+          'img.product-featured-image',
+          '.product__modal img',
+          'media-gallery img',
+          '.slider--product img',
+          'img[src*="cdn.shopify.com"]',
         ];
-        
+
         for (const selector of selectors) {
           const img = document.querySelector(selector);
           if (img && img.src) {
-            // Get the full-size image URL (remove size parameters)
-            const imageUrl = img.src.split('?')[0].replace(/_small|_medium|_large|_grande/g, '');
-            return imageUrl;
+            return vtonNormalizeProductImageUrl(img.src);
           }
         }
-        
+
+        const og = document.querySelector('meta[property="og:image"], meta[name="og:image"]');
+        if (og && og.getAttribute('content')) {
+          return vtonNormalizeProductImageUrl(og.getAttribute('content'));
+        }
+
         return null;
       }
 
@@ -2301,6 +2442,7 @@
               modalRoot: null,
               _shadowRoot: null
             };
+            window.__VTON_RUNTIME_STATE = state;
 
             requestAnimationFrame(function() {
               if (mountToken !== _vtonWidgetMountToken) {
@@ -5630,33 +5772,21 @@
             return;
           }
 
-          const statusUrl =
-            window.location.origin +
+          const jobPath =
             '/apps/tryon/job/' +
-            jobId +
+            encodeURIComponent(jobId) +
             '?shop=' +
             encodeURIComponent(state.shop);
 
-          log('[VTON] Polling job status (attempt ' + attempts + '):', statusUrl);
+          log('[VTON] Polling job status (attempt ' + attempts + '):', jobPath);
 
           const controller = new AbortController();
           const timeoutId = setTimeout(function() { controller.abort(); }, 4000);
 
-          fetch(statusUrl, {
-            signal: controller.signal,
-            credentials: 'same-origin',
-            cache: 'no-store'
-          })
-            .then(function(response) {
+          vtonFetchStorefront(jobPath, { signal: controller.signal })
+            .then(function(statusData) {
               clearTimeout(timeoutId);
               consecutiveErrors = 0;
-
-              if (!response.ok) {
-                throw new Error('Status check failed: ' + response.status);
-              }
-              return response.json();
-            })
-            .then(function(statusData) {
               if (!statusData) {
                 return;
               }
@@ -5779,15 +5909,27 @@
       }
       
       function generateTryOn(state) {
-        if (!state.userPhoto || !state.productId) {
-          return;
-        }
-        
-        // Prevent double submission
         if (state.isGenerating) {
           warn('[VTON] Generation already in progress, ignoring duplicate request');
           return;
         }
+
+        vtonPrepareGeneration(state).then(function(ready) {
+          if (!ready) {
+            error('[VTON] Cannot generate — missing shop, product, photo, or garment image');
+            var prepError = vtonM(state, 'vton-error');
+            if (prepError) {
+              prepError.classList.add('active');
+              prepError.textContent =
+                'Could not load product image for try-on. Refresh the page and try again.';
+            }
+            return;
+          }
+          vtonRunGenerateTryOn(state);
+        });
+      }
+
+      function vtonRunGenerateTryOn(state) {
         state.isGenerating = true;
         if (!state._generationStartedAt) {
           state._generationStartedAt = Date.now();
@@ -5826,91 +5968,70 @@
           hintEl.textContent = vtonNotifyStrings().closeHint;
         }
         
-        var generateUrl =
-          window.location.origin +
+        var generatePath =
           '/apps/tryon/generate?shop=' +
           encodeURIComponent(state.shop) +
           '&product_id=' +
           encodeURIComponent(state.productId);
         if (state.productHandle) {
-          generateUrl += '&product_handle=' + encodeURIComponent(state.productHandle);
+          generatePath += '&product_handle=' + encodeURIComponent(state.productHandle);
         }
 
-        function makeGenerateRequest(url) {
-          // Create AbortController for timeout handling
-          // Use 60 seconds timeout to allow server to respond (even if generation is async, server should respond quickly with job_id or result)
-          const controller = new AbortController();
-          const requestTimeout = setTimeout(() => {
-            controller.abort();
-            error('[VTON] Request timeout after 60 seconds - server did not respond');
-          }, 60000); // 60 seconds timeout - enough for server to respond, but not too long
-          
-          log('[VTON] Sending generation request to:', url);
-          const requestStartTime = Date.now();
-          
-          return fetch(url, {
+        var generatePayload = {
+          user_photo: state.userPhoto,
+          product_id: state.productId,
+          product_handle: state.productHandle,
+          product_image_url: state.productImageUrl,
+        };
+        if (state.retryOfJobId) {
+          generatePayload.retry_of_job_id = state.retryOfJobId;
+          state.retryOfJobId = null;
+        }
+
+        const controller = new AbortController();
+        const requestTimeout = setTimeout(function() {
+          controller.abort();
+          error('[VTON] Request timeout after 60 seconds - server did not respond');
+        }, 60000);
+        const requestStartTime = Date.now();
+
+        log('[VTON] Sending generation request:', generatePath);
+
+        vtonFetchFromUrls(vtonBuildStorefrontApiUrls(generatePath), {
           method: 'POST',
-          headers: {
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify((function() {
-                var payload = {
-                  user_photo: state.userPhoto,
-                  product_id: state.productId,
-                  product_handle: state.productHandle,
-                  product_image_url: state.productImageUrl
-                };
-                if (state.retryOfJobId) {
-                  payload.retry_of_job_id = state.retryOfJobId;
-                  state.retryOfJobId = null;
-                }
-                return payload;
-              })()),
-            credentials: 'same-origin',
-            signal: controller.signal
-          }).then(function(response) {
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify(generatePayload),
+          signal: controller.signal,
+          onResponse: function(response) {
             clearTimeout(requestTimeout);
             const requestTime = Date.now() - requestStartTime;
-            log('[VTON] Request sent successfully in', requestTime + 'ms');
-            
-            log('[VTON] Response status:', response.status, response.statusText);
-            
+            log('[VTON] Generate response in', requestTime + 'ms:', response.status);
+
             if (!response.ok) {
-              // Clone the response before consuming the body, so we can read it multiple times if needed
-              const clonedResponse = response.clone();
-              
-              // Try to parse as JSON first
-              return clonedResponse.json().then(function(errorData) {
-                error('[VTON] Error response:', errorData);
-                // Extract error message from response
-                const errorMessage = errorData?.error || errorData?.message || 'Generation failed: ' + response.status;
-                // Create error object with status code for detection
-                const err = new Error(errorMessage);
-                err.status = response.status;
-                err.isDailyLimit = errorMessage.includes('used all your available credits') || 
-                                   (errorMessage.includes('limit') && errorMessage.includes('per day')) ||
-                                   errorMessage.includes('Please try again tomorrow');
-                throw err;
-              }).catch(function(parseError) {
-                // If JSON parsing fails, read from original response as text
-                return response.text().then(function(text) {
-                  error('[VTON] Error response (text):', text);
-                  const err = new Error(text || 'Generation failed: ' + response.status);
+              return response
+                .clone()
+                .json()
+                .catch(function() {
+                  return response.text().then(function(text) {
+                    return { error: text || 'Generation failed: ' + response.status };
+                  });
+                })
+                .then(function(errorData) {
+                  const errorMessage =
+                    (errorData && (errorData.error || errorData.message)) ||
+                    'Generation failed: ' + response.status;
+                  const err = new Error(errorMessage);
                   err.status = response.status;
+                  err.isDailyLimit =
+                    errorMessage.includes('used all your available credits') ||
+                    (errorMessage.includes('limit') && errorMessage.includes('per day')) ||
+                    errorMessage.includes('Please try again tomorrow');
                   throw err;
                 });
-              });
             }
             return response.json();
-          }).catch(function(err) {
-            clearTimeout(requestTimeout);
-            const requestTime = Date.now() - requestStartTime;
-            error('[VTON] Request failed after', requestTime + 'ms:', err);
-            throw err;
-          });
-        }
-        
-        makeGenerateRequest(generateUrl).then(function(data) {
+          },
+        }).then(function(data) {
           log('[VTON] Generation response data:', JSON.stringify(data, null, 2));
           
           // First, check if result_url is already available (synchronous mode)

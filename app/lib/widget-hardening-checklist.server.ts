@@ -41,6 +41,16 @@ const WIDGET_STATIC_CHECKS: { id: string; label: string; pattern: RegExp }[] = [
     label: "SPA navigation hooks",
     pattern: /vtonPatchSpaNavigation/,
   },
+  {
+    id: "dual_api",
+    label: "Direct API fallback for generate/job",
+    pattern: /vtonBuildStorefrontApiUrls/,
+  },
+  {
+    id: "generate_prepare",
+    label: "Pre-generate shop/image resolution",
+    pattern: /vtonPrepareGeneration/,
+  },
 ];
 
 async function readWidgetSource(): Promise<string> {

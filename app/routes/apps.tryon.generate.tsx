@@ -26,23 +26,13 @@ import {
 import { ensureShopFreePlan } from "../lib/ensure-shop-free-plan.server";
 import { chargeTryonCreditOnSuccess } from "../lib/tryon-billing.server";
 import { normalizeProductGid } from "../lib/product-id.server";
+import { storefrontCorsHeaders } from "../lib/proxy-verify.server";
 import {
-  isAuthorizedStorefrontApiRequest,
-  storefrontCorsHeaders,
-} from "../lib/proxy-verify.server";
+  authorizeInstalledShopWidgetRequest,
+  extractShopFromStorefrontQuery,
+} from "../lib/storefront-api-auth.server";
 
 const SHOPIFY_API_SECRET = process.env.SHOPIFY_API_SECRET || "";
-
-/**
- * Extracts shop domain from Shopify parameters.
- */
-function extractShopFromProxy(queryParams: URLSearchParams): string {
-  let shop = queryParams.get("shop") || "";
-  if (shop && !shop.endsWith(".myshopify.com")) {
-    shop = `${shop}.myshopify.com`;
-  }
-  return shop;
-}
 
 /**
  * Converts base64 data URL to a regular URL or returns as-is if already a URL
@@ -114,23 +104,13 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   try {
     const url = new URL(request.url);
     const queryParams = url.searchParams;
-    const shop = extractShopFromProxy(queryParams);
+    const shop = extractShopFromStorefrontQuery(queryParams);
 
-    // 1. Verify Shopify signature OR storefront / installed-shop widget calls
-    let authorized = isAuthorizedStorefrontApiRequest(
+    const authorized = await authorizeInstalledShopWidgetRequest(
       request,
       queryParams,
       SHOPIFY_API_SECRET
     );
-
-    // Same fallback as GET /apps/tryon/status — allows the marketing-site live demo
-    // (and any installed shop widget) without Shopify App Proxy HMAC on the request.
-    if (!authorized && shop && queryParams.get("product_id")) {
-      const shopRecord = await getShop(shop);
-      if (shopRecord) {
-        authorized = true;
-      }
-    }
 
     if (!authorized) {
       return json(
@@ -158,6 +138,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     let productHandle = body.product_handle ?? queryParams.get("product_handle") ?? undefined;
     if (productId === "undefined" || productId === "null" || productId === "") productId = undefined;
     if (productHandle === "undefined" || productHandle === "null" || productHandle === "") productHandle = undefined;
+
+    if (!productId && productHandle) {
+      productId = productHandle;
+    }
 
     if (productId) {
       productId = normalizeProductGid(String(productId));

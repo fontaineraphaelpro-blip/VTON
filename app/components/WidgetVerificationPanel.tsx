@@ -40,9 +40,9 @@ export function WidgetVerificationPanel({ health }: Props) {
 
       {health.testProductUrl ? (
         <p className="vton-field-hint" style={{ marginTop: 12 }}>
-          Manual test: open a product page and confirm the floating button appears. Add{" "}
+          Manual test: open a product page, upload a photo, and run a full try-on. Add{" "}
           <code>?vton_debug=1</code> to the URL, then run{" "}
-          <code>__VTON_SELF_CHECK()</code> in the browser console.
+          <code>__VTON_SELF_CHECK()</code> in the browser console (button visible is not enough).
           {" "}
           <a href={health.testProductUrl} target="_blank" rel="noopener noreferrer">
             Open test product →

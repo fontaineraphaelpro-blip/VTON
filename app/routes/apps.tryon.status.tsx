@@ -4,14 +4,12 @@
 
 import type { LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
+import { getProductTryonStatus } from "../lib/services/db.service";
+import { storefrontCorsHeaders } from "../lib/proxy-verify.server";
 import {
-  getProductTryonStatus,
-  getShop,
-} from "../lib/services/db.service";
-import {
-  isAuthorizedStorefrontApiRequest,
-  storefrontCorsHeaders,
-} from "../lib/proxy-verify.server";
+  authorizeInstalledShopWidgetRequest,
+  extractShopFromStorefrontQuery,
+} from "../lib/storefront-api-auth.server";
 import { normalizeProductGid } from "../lib/product-id.server";
 import {
   buildStatusCacheKey,
@@ -23,14 +21,6 @@ import { resolveAbBucket, type AbBucket } from "../lib/ab-test.server";
 
 const SHOPIFY_API_SECRET = process.env.SHOPIFY_API_SECRET || "";
 
-function extractShopFromProxy(queryParams: URLSearchParams): string {
-  let shop = queryParams.get("shop") || "";
-  if (shop && !shop.endsWith(".myshopify.com")) {
-    shop = `${shop}.myshopify.com`;
-  }
-  return shop;
-}
-
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   if (request.method === "OPTIONS") {
     const headers = storefrontCorsHeaders(request);
@@ -41,23 +31,13 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
     const url = new URL(request.url);
     const queryParams = url.searchParams;
-    const shopParam = queryParams.get("shop");
-
-    let authorized = isAuthorizedStorefrontApiRequest(
+    const authorized = await authorizeInstalledShopWidgetRequest(
       request,
       queryParams,
       SHOPIFY_API_SECRET
     );
 
-    const shop = extractShopFromProxy(queryParams);
-
-    // Last resort: installed shop + product_id (widget same-origin fetch without proxy params)
-    if (!authorized && shop && queryParams.get("product_id")) {
-      const shopRecord = await getShop(shop);
-      if (shopRecord) {
-        authorized = true;
-      }
-    }
+    const shop = extractShopFromStorefrontQuery(queryParams);
 
     if (!authorized) {
       return json(
@@ -72,6 +52,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
     let productId = queryParams.get("product_id");
     const productHandle = queryParams.get("product_handle");
+
+    if (!productId && productHandle) {
+      productId = productHandle;
+    }
 
     if (!productId) {
       return json({ error: "product_id parameter required" }, { status: 400 });
