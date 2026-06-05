@@ -29,6 +29,8 @@ import {
   scheduleStorefrontWidgetScriptTag,
   sessionCanInstallScriptTag,
 } from "../lib/storefront-widget-install.server";
+import { getStorefrontHealth } from "../lib/storefront-health.server";
+import { WidgetVerificationPanel } from "../components/WidgetVerificationPanel";
 import {
   getAppEmbedActivationUrl,
   getThemeEditorAppEmbedsUrl,
@@ -44,10 +46,14 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
     await ensureShopFreePlan(shop, { accessToken: session.accessToken });
     const shopData = await getShop(shop);
-    const abStats = shopData ? await getAbTestStats(shop).catch(() => null) : null;
+    const [abStats, storefrontHealth] = await Promise.all([
+      shopData ? getAbTestStats(shop).catch(() => null) : null,
+      getStorefrontHealth(shop, admin, session.scope),
+    ]);
     return json({
       shop: shopData || null,
       abStats,
+      storefrontHealth,
       themeEditorAppEmbedsUrl: getThemeEditorAppEmbedsUrl(shop),
       themeEditorActivateUrl: getAppEmbedActivationUrl(shop, apiKey, "vton-widget"),
     });
@@ -147,6 +153,8 @@ export default function Widget() {
       ? (loaderData.abStats as AbStats)
       : EMPTY_AB_STATS;
   const error = "error" in loaderData ? loaderData.error : null;
+  const storefrontHealth =
+    "storefrontHealth" in loaderData ? loaderData.storefrontHealth : null;
 
   const [abStats, setAbStats] = useState<AbStats>(loaderAbStats);
   const [abTestEnabled, setAbTestEnabled] = useState(
@@ -322,6 +330,10 @@ export default function Widget() {
           subtitle="Customize the try-on button on your product pages"
         >
           <AdminNotifications items={items} onDismiss={dismiss} />
+
+          {storefrontHealth ? (
+            <WidgetVerificationPanel health={storefrontHealth} />
+          ) : null}
 
           <div className="vton-ab-panel">
             <h2 className="vton-panel-title">A/B test: try-on vs no try-on</h2>

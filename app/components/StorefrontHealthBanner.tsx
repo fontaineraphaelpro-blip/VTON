@@ -53,7 +53,7 @@ export function StorefrontHealthBanner({ health }: Props) {
         ) : null}
         {health.testProductUrl ? (
           <a
-            href={health.testProductUrl}
+            href={`${health.testProductUrl}${health.testProductUrl.includes("?") ? "&" : "?"}vton_debug=1`}
             target="_blank"
             rel="noopener noreferrer"
             className="vton-storefront-health__link"

@@ -74,7 +74,11 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         scriptTagInstalled: false,
         shopEnabled: true,
         canInstallScriptTag: sessionCanInstallScriptTag(session.scope),
+        apiReachable: false,
+        appUrlConfigured: Boolean(process.env.SHOPIFY_APP_URL),
         issues: ["Could not verify storefront widget health."],
+        checks: [],
+        scorePercent: 0,
         testProductUrl: null,
       },
     };

@@ -13,7 +13,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   "use strict";
   if (window.__VTON_WIDGET_BOOTED) return;
   var path = window.location.pathname || "";
-  var isProduct = /\\/(?:products?|produit|produkt|producto|artikel|item|p)\\/[^\\/\\?#]+/i.test(path);
+  var isProduct = /\\/(?:products?|produits?|produit|produkt|producto|artikel|item|p)\\/[^\\/\\?#]+/i.test(path);
   if (!isProduct && !(window.Shopify && window.Shopify.product)) return;
 
   var shop = (window.Shopify && window.Shopify.shop) || "";
@@ -39,7 +39,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     }
   }
   if (!productHandle) {
-    var m = path.match(/\\/(?:products?|produit|produkt|producto|artikel|item|p)\\/([^\\/\\?#]+)/i);
+    var m = path.match(/\\/(?:products?|produits?|produit|produkt|producto|artikel|item|p)\\/([^\\/\\?#]+)/i);
     if (m) productHandle = m[1];
   }
   if (!productId && productHandle) productId = productHandle;

@@ -7,6 +7,7 @@
     "config:link": "shopify app config link",
     "generate": "shopify app generate",
     "strip-widget-bom": "node scripts/strip-widget-bom.mjs",
+    "verify:widget": "node scripts/verify-widget-storefront.mjs",
     "deploy": "node scripts/strip-widget-bom.mjs && shopify app deploy",
     "config:use": "shopify app config use",
     "env": "shopify app env",

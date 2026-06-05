@@ -16,6 +16,8 @@
       var VTON_INJECTION_WAIT_MS = 18000;
       var VTON_FLOATING_FALLBACK_MS = 0;
       var VTON_ALWAYS_FLOATING = true;
+      var VTON_PRODUCT_PATH_RE =
+        /\/(?:products?|produits?|produit|produkt|producto|artikel|item|p)\/([^\/\?#]+)/i;
       var _vtonStatusRetryTimer = null;
       var _vtonStatusRetryCount = 0;
       var VTON_EMBED_SLOT_WAIT_MS = 2000;
@@ -52,8 +54,7 @@
         if (liquid.productId) return true;
         if (liquid.pageType === 'product') return true;
         if (liquid.templateName && String(liquid.templateName).indexOf('product') !== -1) return true;
-        if (/\/products?\/[^\/\?#]+/i.test(path)) return true;
-        if (/\/(?:produit|produkt|producto|artikel|item|p)\/[^\/\?#]+/i.test(path)) return true;
+        if (VTON_PRODUCT_PATH_RE.test(path)) return true;
         if (window.Shopify && window.Shopify.product && window.Shopify.product.id) return true;
         if (document.querySelector('form[action*="/cart/add"], product-form, [data-product-id], [data-product-handle]')) {
           return true;
@@ -70,7 +71,7 @@
         if (window.VTON_LIQUID) return window.VTON_LIQUID;
         var productHandle = null;
         var path = window.location.pathname || '';
-        var m = path.match(/\/(?:products?|produit|produkt|producto|artikel|item|p)\/([^\/\?#]+)/i);
+        var m = path.match(VTON_PRODUCT_PATH_RE);
         if (m) productHandle = m[1];
         var scriptHost = '';
         try {
@@ -182,6 +183,57 @@
       setTimeout(vtonScheduleRetryBoot, 12000);
       window.addEventListener('popstate', vtonScheduleRetryBoot);
       window.addEventListener('hashchange', vtonScheduleRetryBoot);
+      document.addEventListener('visibilitychange', function() {
+        if (!document.hidden) vtonScheduleRetryBoot();
+      });
+
+      function vtonPatchSpaNavigation() {
+        if (window.__VTON_SPA_PATCHED) return;
+        window.__VTON_SPA_PATCHED = true;
+        function onNav() {
+          setTimeout(function() {
+            _vtonWidgetRenderQueued = false;
+            _vtonWidgetMountInProgress = false;
+            vtonScheduleRetryBoot();
+          }, 80);
+        }
+        var origPush = history.pushState;
+        var origReplace = history.replaceState;
+        if (typeof origPush === 'function') {
+          history.pushState = function() {
+            var result = origPush.apply(this, arguments);
+            onNav();
+            return result;
+          };
+        }
+        if (typeof origReplace === 'function') {
+          history.replaceState = function() {
+            var result = origReplace.apply(this, arguments);
+            onNav();
+            return result;
+          };
+        }
+      }
+
+      function vtonPublishSelfCheck() {
+        window.__VTON_SELF_CHECK = function() {
+          return {
+            ok: isProductPageContext() && vtonHasWidgetContainers() && !_vtonSuppressed,
+            productPage: isProductPageContext(),
+            shop: extractShop(),
+            productId: extractProductId(),
+            productHandle: extractProductHandle(),
+            hasContainer: vtonHasWidgetContainers(),
+            suppressed: _vtonSuppressed,
+            alwaysFloating: VTON_ALWAYS_FLOATING,
+            appUrl: (window.VTON_LIQUID && window.VTON_LIQUID.appUrl) || null,
+            bootContext: _vtonBootContext,
+          };
+        };
+      }
+
+      vtonPatchSpaNavigation();
+      vtonPublishSelfCheck();
       
       function vtonStatusCacheKey(shop, productId) {
         return 'vton:status:' + shop + ':' + productId;
@@ -756,6 +808,36 @@
             buildOptimisticStatus({})
           );
         }, 1500);
+      }
+
+      function vtonStartVisibilityWatchdog() {
+        if (window.__VTON_VISIBILITY_WATCHDOG) return;
+        window.__VTON_VISIBILITY_WATCHDOG = setInterval(function() {
+          if (!isProductPageContext() || _vtonSuppressed) return;
+          var container = document.getElementById('vton-widget-container');
+          if (!container || !container.isConnected) return;
+          if (
+            container.getAttribute('data-vton-force-floating') === '1' ||
+            container.getAttribute('data-vton-placement') === 'floating_fallback'
+          ) {
+            container.style.setProperty('display', 'block', 'important');
+            container.style.setProperty('visibility', 'visible', 'important');
+            container.style.setProperty('opacity', '1', 'important');
+            container.style.setProperty('pointer-events', 'auto', 'important');
+            container.style.setProperty('position', 'fixed', 'important');
+            container.style.setProperty('z-index', '2147483646', 'important');
+          }
+          if (!vtonIsVisible(container) && _vtonBootContext) {
+            _vtonWidgetRenderQueued = false;
+            _vtonWidgetMountInProgress = false;
+            queueWidgetRender(
+              _vtonBootContext.shop || extractShop() || '',
+              _vtonBootContext.productId,
+              _vtonBootContext.productHandle,
+              buildOptimisticStatus({})
+            );
+          }
+        }, 2000);
       }
 
       function vtonInjectPageModalCss() {
@@ -1359,6 +1441,7 @@
         _vtonSuppressed = false;
         queueWidgetRender(shop || '', productId, productHandle, buildOptimisticStatus({}));
         vtonStartPresenceWatchdog();
+        vtonStartVisibilityWatchdog();
 
         if (shop) {
           refreshTryonStatus(shop, productId, productHandle);
@@ -1520,9 +1603,7 @@
         }
         
         // 6. Last resort: Try from URL (handle) - backend will try to match
-        const urlMatch = window.location.pathname.match(
-          /\/(?:products?|produit|produkt|producto|artikel|item|p)\/([^\/\?#]+)/i
-        );
+        const urlMatch = window.location.pathname.match(VTON_PRODUCT_PATH_RE);
         if (urlMatch) {
           const handle = urlMatch[1];
           warn('[VTON] Could not find product ID, using handle as fallback:', handle);
@@ -1539,9 +1620,7 @@
         }
 
         // Try from URL (most reliable) - extract handle from /products/handle
-        const urlMatch = window.location.pathname.match(
-          /\/(?:products?|produit|produkt|producto|artikel|item|p)\/([^\/\?#]+)/i
-        );
+        const urlMatch = window.location.pathname.match(VTON_PRODUCT_PATH_RE);
         if (urlMatch) {
           const handle = urlMatch[1];
           log('[VTON] Extracted handle from URL:', handle);
