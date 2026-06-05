@@ -15,6 +15,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   if (!/\\/products\\/[^\\/\\?#]+/i.test(window.location.pathname)) return;
 
   var shop = (window.Shopify && window.Shopify.shop) || "";
+  if (!shop && window.ShopifyAnalytics && window.ShopifyAnalytics.lib && window.ShopifyAnalytics.lib.config) {
+    shop = window.ShopifyAnalytics.lib.config.shop || "";
+  }
   var productId = null;
   var productHandle = null;
 
@@ -30,8 +33,24 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     var m = window.location.pathname.match(/\\/products\\/([^\\/\\?#]+)/);
     if (m) productHandle = m[1];
   }
+  if (!productId) {
+    var jsonLd = document.querySelectorAll('script[type="application/ld+json"]');
+    for (var i = 0; i < jsonLd.length && !productId; i++) {
+      try {
+        var data = JSON.parse(jsonLd[i].textContent || "{}");
+        var items = data["@graph"] && Array.isArray(data["@graph"]) ? data["@graph"] : [data];
+        for (var j = 0; j < items.length; j++) {
+          if (items[j] && items[j]["@type"] === "Product" && items[j].productID) {
+            productId = "gid://shopify/Product/" + String(items[j].productID);
+            break;
+          }
+        }
+      } catch (e) {}
+    }
+  }
 
   window.VTON_LIQUID = {
+    shop: shop || null,
     productId: productId,
     productHandle: productHandle,
     customAnchor: "",

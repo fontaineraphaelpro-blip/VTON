@@ -18,8 +18,11 @@ function isVtonScriptTag(src: string): boolean {
   return (
     lower.includes("vton-boot") ||
     lower.includes("vton-widget") ||
+    lower.includes("vton_widget") ||
     lower.includes("/apps/tryon/widget") ||
-    lower.includes("widget-v2")
+    lower.includes("widget-v2") ||
+    lower.includes("nautilus") ||
+    lower.includes("virtual-try-on")
   );
 }
 

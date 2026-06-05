@@ -31,6 +31,10 @@ import { useAdminNotifications, useNotificationSync } from "../hooks/useAdminNot
 import { useFetcherNotifications } from "../hooks/useFetcherNotifications";
 import { authenticate } from "../shopify.server";
 import {
+  scheduleStorefrontWidgetScriptTag,
+  sessionCanInstallScriptTag,
+} from "../lib/storefront-widget-install.server";
+import {
   getProductTryonCounts,
   setProductTryonSetting,
   setProductTryonImageUrl,
@@ -56,6 +60,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         error: "Invalid session. Please refresh the page to re-authenticate.",
         requiresAuth: true,
       });
+    }
+
+    if (sessionCanInstallScriptTag(session.scope)) {
+      scheduleStorefrontWidgetScriptTag(admin);
     }
 
     const url = new URL(request.url);

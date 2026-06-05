@@ -26,14 +26,21 @@ import { authenticate } from "../shopify.server";
 import { ensureShopFreePlan } from "../lib/ensure-shop-free-plan.server";
 import { getShop, upsertShop, getAbTestStats } from "../lib/services/db.service";
 import {
+  scheduleStorefrontWidgetScriptTag,
+  sessionCanInstallScriptTag,
+} from "../lib/storefront-widget-install.server";
+import {
   getAppEmbedActivationUrl,
   getThemeEditorAppEmbedsUrl,
 } from "../lib/theme-editor-url.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { session } = await authenticate.admin(request);
+  const { session, admin } = await authenticate.admin(request);
   const shop = session.shop;
   const apiKey = process.env.SHOPIFY_API_KEY || "";
+  if (sessionCanInstallScriptTag(session.scope)) {
+    scheduleStorefrontWidgetScriptTag(admin);
+  }
   try {
     await ensureShopFreePlan(shop, { accessToken: session.accessToken });
     const shopData = await getShop(shop);

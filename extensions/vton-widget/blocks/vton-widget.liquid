@@ -30,6 +30,7 @@
       if (m) productHandle = m[1];
     }
     window.VTON_LIQUID = {
+      shop: {{ shop.permanent_domain | json }},
       productId: productId || null,
       productHandle: productHandle || null,
       customAnchor: (slot && slot.getAttribute('data-vton-custom-anchor')) || '',
