@@ -34,7 +34,7 @@ export function StorefrontHealthBanner({ health }: Props) {
         <p className="vton-storefront-health__message">
           {health.issues.join(" ")}
           {health.level !== "critical"
-            ? " The button still uses a floating fallback on product pages, but you should repair now."
+            ? " The button still appears under Add to Cart on product pages, but you should repair now."
             : " Click Repair to fix this automatically — works on all themes, no theme setup required."}
         </p>
       </div>

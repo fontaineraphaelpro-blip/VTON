@@ -17,9 +17,9 @@ export type WidgetVerificationReport = {
 
 const WIDGET_STATIC_CHECKS: { id: string; label: string; pattern: RegExp }[] = [
   {
-    id: "always_floating",
-    label: "Floating button mode enabled",
-    pattern: /VTON_ALWAYS_FLOATING\s*=\s*true/,
+    id: "atc_placement",
+    label: "Widget placed after Add to Cart button",
+    pattern: /accept\(atcBtn,\s*'after',\s*'form_atc_button'\)/,
   },
   {
     id: "optimistic_render",

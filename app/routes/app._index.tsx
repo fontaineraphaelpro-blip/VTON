@@ -1003,8 +1003,8 @@ export default function Dashboard() {
         message: (
           <>
             The try-on button installs automatically on every product page — even on complex or
-            custom themes. It appears as a floating button with no theme setup required. Turn it
-            off per product in <strong>Products</strong>.
+            custom themes. It appears directly under your Add to Cart button with no theme setup
+            required. Turn it off per product in <strong>Products</strong>.
           </>
         ),
         persistDismiss: true,

@@ -21,10 +21,17 @@ const widgetPath = path.join(
 /** @type {{ id: string; label: string; pattern: RegExp; required: boolean }[]} */
 const CHECKS = [
   {
-    id: "always_floating",
-    label: "Force floating button on all themes",
-    pattern: /VTON_ALWAYS_FLOATING\s*=\s*true/,
+    id: "atc_placement",
+    label: "Place widget directly after Add to Cart button",
+    pattern: /accept\(atcBtn,\s*'after',\s*'form_atc_button'\)/,
     required: true,
+  },
+  {
+    id: "no_always_floating",
+    label: "No forced floating button mode",
+    pattern: /VTON_ALWAYS_FLOATING/,
+    required: false,
+    invert: true,
   },
   {
     id: "optimistic_render",
@@ -111,9 +118,9 @@ const CHECKS = [
     required: true,
   },
   {
-    id: "max_zindex",
-    label: "Maximum z-index for floating widget",
-    pattern: /2147483646/,
+    id: "modal_zindex",
+    label: "High z-index for try-on modal overlay",
+    pattern: /\.vton-modal-overlay\{[^}]*z-index:2147483646/,
     required: true,
   },
   {
@@ -155,10 +162,13 @@ const BOOT_CHECKS = [
 
 async function runFileChecks(filePath, checks, title) {
   const source = await readFile(filePath, "utf8");
-  const results = checks.map((check) => ({
-    ...check,
-    passed: check.pattern.test(source),
-  }));
+  const results = checks.map((check) => {
+    const matched = check.pattern.test(source);
+    return {
+      ...check,
+      passed: check.invert ? !matched : matched,
+    };
+  });
 
   console.log(`\n${title}`);
   console.log("-".repeat(title.length));

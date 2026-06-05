@@ -14,8 +14,6 @@
       var VTON_STATUS_CACHE_TTL = 300000;
       var VTON_ENABLED_STATUS_MEMO_TTL = 300000;
       var VTON_INJECTION_WAIT_MS = 18000;
-      var VTON_FLOATING_FALLBACK_MS = 0;
-      var VTON_ALWAYS_FLOATING = true;
       var VTON_PRODUCT_PATH_RE =
         /\/(?:products?|produits?|produit|produkt|producto|artikel|item|p)\/([^\/\?#]+)/i;
       var _vtonStatusRetryTimer = null;
@@ -225,7 +223,9 @@
             productHandle: extractProductHandle(),
             hasContainer: vtonHasWidgetContainers(),
             suppressed: _vtonSuppressed,
-            alwaysFloating: VTON_ALWAYS_FLOATING,
+            placement: (document.getElementById('vton-widget-container') || {}).getAttribute
+              ? document.getElementById('vton-widget-container').getAttribute('data-vton-placement')
+              : null,
             appUrl: (window.VTON_LIQUID && window.VTON_LIQUID.appUrl) || null,
             bootContext: _vtonBootContext,
           };
@@ -761,19 +761,11 @@
         var style = document.createElement('style');
         style.id = 'vton-mobile-placement-css';
         style.textContent =
-          '#vton-widget-container[data-vton-placement="floating_fallback"],' +
-          '#vton-widget-container[data-vton-force-floating="1"]{' +
+          '#vton-widget-container{' +
           'display:block!important;visibility:visible!important;opacity:1!important;' +
-          'pointer-events:auto!important;position:fixed!important;' +
-          'z-index:2147483646!important;}' +
+          'pointer-events:auto!important;}' +
           '@media (max-width:640px){' +
-          '#vton-widget-container[data-vton-placement="floating_fallback"],' +
-          '#vton-widget-container[data-vton-force-floating="1"]{' +
-          'left:max(12px,env(safe-area-inset-left))!important;' +
-          'right:max(12px,env(safe-area-inset-right))!important;' +
-          'bottom:max(88px,env(safe-area-inset-bottom))!important;' +
-          'width:auto!important;max-width:none!important;}' +
-          '#vton-widget-container:not([data-vton-placement="floating_fallback"]):not([data-vton-force-floating="1"]){' +
+          '#vton-widget-container{' +
           'margin:12px 0!important;max-width:100%!important;box-sizing:border-box!important;}' +
           '}';
         document.head.appendChild(style);
@@ -820,17 +812,10 @@
           if (!isProductPageContext() || _vtonSuppressed) return;
           var container = document.getElementById('vton-widget-container');
           if (!container || !container.isConnected) return;
-          if (
-            container.getAttribute('data-vton-force-floating') === '1' ||
-            container.getAttribute('data-vton-placement') === 'floating_fallback'
-          ) {
-            container.style.setProperty('display', 'block', 'important');
-            container.style.setProperty('visibility', 'visible', 'important');
-            container.style.setProperty('opacity', '1', 'important');
-            container.style.setProperty('pointer-events', 'auto', 'important');
-            container.style.setProperty('position', 'fixed', 'important');
-            container.style.setProperty('z-index', '2147483646', 'important');
-          }
+          container.style.setProperty('display', 'block', 'important');
+          container.style.setProperty('visibility', 'visible', 'important');
+          container.style.setProperty('opacity', '1', 'important');
+          container.style.setProperty('pointer-events', 'auto', 'important');
           if (!vtonIsVisible(container) && _vtonBootContext) {
             _vtonWidgetRenderQueued = false;
             _vtonWidgetMountInProgress = false;
@@ -1906,7 +1891,10 @@
         return null;
       }
 
-      var VTON_ATC_BUTTON_SELECTORS = 'button[type="submit"][name="add"], button[name="add"], button[type="submit"], [data-add-to-cart], .product-form__cart-submit, .product-form__submit, .btn--add-to-cart, .add-to-cart, shopify-buy-it-now-button, [aria-label*="add to cart" i], [aria-label*="ajouter" i], .shopify-payment-button, .dynamic-checkout__content';
+      var VTON_ATC_BUTTON_SELECTORS =
+        'button[type="submit"][name="add"], button[name="add"], [data-add-to-cart], .product-form__cart-submit, .product-form__submit, .btn--add-to-cart, .add-to-cart, [aria-label*="add to cart" i], [aria-label*="ajouter au panier" i], [aria-label*="ajouter" i]';
+      var VTON_ATC_EXCLUDED_ANCESTORS =
+        '.shopify-payment-button, shopify-buy-it-now-button, .dynamic-checkout__content, .shopify-payment-button__button';
       var VTON_FORM_SELECTORS = [
         'product-form form[action*="/cart"]',
         'form[action*="/cart/add"]',
@@ -2018,34 +2006,38 @@
         return vtonPickVisible(deepForms);
       }
 
+      function vtonIsAddToCartButton(btn) {
+        if (!btn || !vtonPickVisible([btn])) return false;
+        if (btn.closest && btn.closest(VTON_ATC_EXCLUDED_ANCESTORS)) return false;
+        return true;
+      }
+
       function vtonFindAddToCartButton(root) {
         var scope = root || document;
         var parts = VTON_ATC_BUTTON_SELECTORS.split(', ');
         for (var i = 0; i < parts.length; i++) {
           var btn = scope.querySelector(parts[i]);
-          if (btn && vtonPickVisible([btn])) return btn;
+          if (vtonIsAddToCartButton(btn)) return btn;
         }
         var deepMatches = vtonQueryDeep(
           'button[type="submit"], button[name="add"], [data-add-to-cart]',
           scope === document ? document.documentElement : scope
         );
         for (var d = 0; d < deepMatches.length; d++) {
-          if (vtonPickVisible([deepMatches[d]])) return deepMatches[d];
+          if (vtonIsAddToCartButton(deepMatches[d])) return deepMatches[d];
         }
         var allButtons = scope.querySelectorAll ? scope.querySelectorAll('button, [role="button"], input[type="submit"]') : [];
         for (var j = 0; j < allButtons.length; j++) {
           var b = allButtons[j];
+          if (b.closest && b.closest(VTON_ATC_EXCLUDED_ANCESTORS)) continue;
           var label = (b.textContent || b.getAttribute('aria-label') || b.getAttribute('title') || '').toLowerCase();
           if (
-            (label.indexOf('cart') !== -1 ||
-              label.indexOf('panier') !== -1 ||
-              label.indexOf('add') !== -1 ||
-              label.indexOf('ajouter') !== -1 ||
-              label.indexOf('acheter') !== -1 ||
-              label.indexOf('buy') !== -1) &&
-            vtonPickVisible([b])
+            label.indexOf('cart') !== -1 ||
+            label.indexOf('panier') !== -1 ||
+            label.indexOf('add') !== -1 ||
+            label.indexOf('ajouter') !== -1
           ) {
-            return b;
+            if (vtonIsAddToCartButton(b)) return b;
           }
         }
         return null;
@@ -2057,9 +2049,22 @@
         return null;
       }
 
+      function vtonIsAtcInjectionSource(source) {
+        return !!(
+          source &&
+          (source === 'form_atc_button' ||
+            source === 'global_atc_button' ||
+            source === 'custom_selector' ||
+            source.indexOf('form_atc_button') === 0 ||
+            source.indexOf('global_atc_button') === 0 ||
+            source.indexOf('custom_selector') === 0)
+        );
+      }
+
       function vtonFindInjectionAnchor(customSelector, options) {
         options = options || {};
         var allowHidden = options.allowHidden === true;
+        var atcOnly = options.atcOnly === true;
 
         function accept(el, method, source) {
           if (!el) return null;
@@ -2086,20 +2091,24 @@
         if (form) {
           var atcBtn = vtonFindAddToCartButton(form);
           if (atcBtn) {
-            var wrapper = atcBtn.closest(
-              '.product-form__buttons, .product-form__actions, .product-form__cart, .shopify-product-form, .product-form__submit-wrapper, .product-form__cta, .product__submit, .buy-buttons, .product-form__controls, .product-form__buy-buttons, .product-form__payment-container, .product__buy-buttons, .product-form__group--submit, .product-form__group--buttons'
-            );
-            var btnHit = accept(wrapper || atcBtn, 'after', 'form_atc_button');
+            var btnHit = accept(atcBtn, 'after', 'form_atc_button');
             if (btnHit) return btnHit;
           }
-          var formHit = accept(form, 'after', 'product_form');
-          if (formHit) return formHit;
         }
 
         var globalAtc = vtonFindAddToCartButton(document);
         if (globalAtc) {
           var globalHit = accept(globalAtc, 'after', 'global_atc_button');
           if (globalHit) return globalHit;
+        }
+
+        if (atcOnly) {
+          return null;
+        }
+
+        if (form) {
+          var formHit = accept(form, 'after', 'product_form');
+          if (formHit) return formHit;
         }
 
         var productFormComponents = document.querySelectorAll('product-form');
@@ -2145,18 +2154,8 @@
         container.setAttribute('data-vton-widget', 'true');
         container.setAttribute('data-vton-placement', target.source || 'unknown');
 
-        if (target.floating) {
-          container.setAttribute('data-vton-force-floating', '1');
-          container.style.cssText =
-            'position:fixed;bottom:max(16px,env(safe-area-inset-bottom));right:max(16px,env(safe-area-inset-right));z-index:2147483646;width:auto;max-width:min(360px,calc(100vw - 32px));margin:0;box-sizing:border-box;display:block!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important;';
-          var floatParent = document.body || document.documentElement;
-          if (!floatParent) return null;
-          floatParent.appendChild(container);
-          return container;
-        }
-
         container.style.cssText =
-          'width:100%;max-width:100%;display:block;margin:16px 0;position:relative;z-index:2;box-sizing:border-box;';
+          'width:100%;max-width:100%;display:block;margin:12px 0 0;position:relative;z-index:2;box-sizing:border-box;';
 
         if (target.source === 'embed_slot') {
           target.anchor.style.display = 'block';
@@ -2179,68 +2178,32 @@
         return container;
       }
 
-      function vtonGetForcedFloatingTarget() {
-        return {
-          anchor: document.body || document.documentElement,
-          method: 'append',
-          source: 'floating_fallback',
-          floating: true,
-        };
-      }
-
       function vtonResolveInjectionTarget(customSelector) {
-        if (VTON_ALWAYS_FLOATING) {
-          return vtonGetForcedFloatingTarget();
-        }
         var primary = vtonFindInjectionAnchor(customSelector, { allowHidden: false });
         if (primary) return primary;
         var relaxed = vtonFindInjectionAnchor(customSelector, { allowHidden: true });
         if (relaxed) return relaxed;
         var slot = vtonGetEmbedSlotAnchor();
         if (slot) return slot;
-        return vtonGetForcedFloatingTarget();
+        return null;
       }
 
       function vtonResolveInjectionTargetAsync(customSelector) {
-        if (VTON_ALWAYS_FLOATING) {
-          return new Promise(function(resolve) {
-            function mountWhenReady() {
-              var body = document.body || document.documentElement;
-              if (!body) {
-                setTimeout(mountWhenReady, 16);
-                return;
-              }
-              resolve(vtonGetForcedFloatingTarget());
-            }
-            mountWhenReady();
-          });
-        }
         return vtonWaitForInjectionAnchor(customSelector, VTON_INJECTION_WAIT_MS);
-      }
-
-      function vtonIsInlineInjectionSource(source) {
-        return (
-          source &&
-          source !== 'floating_fallback' &&
-          source !== 'embed_slot' &&
-          source.indexOf('embed_slot') !== 0
-        );
       }
 
       function vtonWaitForInjectionAnchor(customSelector, timeoutMs) {
         timeoutMs = timeoutMs || VTON_INJECTION_WAIT_MS;
         return new Promise(function(resolve) {
-          var immediate = vtonResolveInjectionTarget(customSelector);
-          if (immediate && vtonIsInlineInjectionSource(immediate.source)) {
-            return resolve(immediate);
+          var immediateAtc = vtonFindInjectionAnchor(customSelector, {
+            allowHidden: false,
+            atcOnly: true,
+          });
+          if (immediateAtc) {
+            return resolve(immediateAtc);
           }
 
           var resolved = false;
-          var waitMs =
-            immediate && immediate.source === 'embed_slot'
-              ? VTON_EMBED_SLOT_WAIT_MS
-              : timeoutMs;
-          var floatingMs = Math.min(VTON_FLOATING_FALLBACK_MS, waitMs);
 
           function finish() {
             if (resolved) return;
@@ -2251,13 +2214,13 @@
             resolve(vtonResolveInjectionTarget(customSelector));
           }
 
-          function tryResolveInline() {
+          function tryResolveAtc() {
             if (resolved) return;
-            var anchor = vtonFindInjectionAnchor(customSelector, { allowHidden: false });
+            var anchor = vtonFindInjectionAnchor(customSelector, { allowHidden: false, atcOnly: true });
             if (!anchor) {
-              anchor = vtonFindInjectionAnchor(customSelector, { allowHidden: true });
+              anchor = vtonFindInjectionAnchor(customSelector, { allowHidden: true, atcOnly: true });
             }
-            if (anchor && vtonIsInlineInjectionSource(anchor.source)) {
+            if (anchor && vtonIsAtcInjectionSource(anchor.source)) {
               resolved = true;
               try {
                 obs.disconnect();
@@ -2273,29 +2236,13 @@
             scanTimer = setTimeout(function() {
               scanTimer = null;
               if (resolved) return;
-              tryResolveInline();
+              tryResolveAtc();
             }, 120);
           });
 
           var observeRoot = vtonGetObserverRoot();
           obs.observe(observeRoot, { childList: true, subtree: true });
-
-          setTimeout(function() {
-            if (resolved) return;
-            var quick = vtonResolveInjectionTarget(customSelector);
-            if (quick && quick.source !== 'floating_fallback') {
-              finish();
-              return;
-            }
-            if (quick && quick.source === 'floating_fallback') {
-              resolved = true;
-              try {
-                obs.disconnect();
-              } catch (e) {}
-              resolve(quick);
-            }
-          }, floatingMs);
-          setTimeout(finish, waitMs);
+          setTimeout(finish, timeoutMs);
         });
       }
 
@@ -2386,17 +2333,13 @@
             return;
           }
           if (!injectionTarget || !injectionTarget.anchor) {
-            injectionTarget = {
-              anchor: document.body,
-              method: 'append',
-              source: 'floating_fallback',
-              floating: true,
-            };
+            _vtonWidgetMountInProgress = false;
+            _vtonWidgetRenderQueued = false;
+            warn('[VTON] No injection anchor found — waiting for Add to Cart button');
+            return;
           }
 
-          if (injectionTarget.source === 'floating_fallback') {
-            warn('[VTON] Using floating fallback — set a custom CSS selector in App Embed settings for better placement.');
-          } else if (injectionTarget.source === 'embed_slot') {
+          if (injectionTarget.source === 'embed_slot') {
             log('[VTON] Using app embed slot fallback');
           }
 
