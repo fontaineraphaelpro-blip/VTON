@@ -22,6 +22,16 @@ const WIDGET_STATIC_CHECKS: { id: string; label: string; pattern: RegExp }[] = [
     pattern: /accept\(atcBtn,\s*'after',\s*'form_atc_button'\)/,
   },
   {
+    id: "atc_scoring",
+    label: "Best ATC candidate selection",
+    pattern: /vtonFindBestAddToCartButton/,
+  },
+  {
+    id: "placement_watchdog",
+    label: "ATC placement watchdog",
+    pattern: /vtonStartPlacementWatchdog/,
+  },
+  {
     id: "optimistic_render",
     label: "Instant render before API",
     pattern: /buildOptimisticStatus/,

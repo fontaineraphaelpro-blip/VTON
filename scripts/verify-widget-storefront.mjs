@@ -27,6 +27,25 @@ const CHECKS = [
     required: true,
   },
   {
+    id: "atc_scoring",
+    label: "Score all ATC candidates (avoid sticky/wrong buttons)",
+    pattern: /function vtonFindBestAddToCartButton/,
+    required: true,
+  },
+  {
+    id: "placement_watchdog",
+    label: "Reposition widget under ATC if theme moves DOM",
+    pattern: /function vtonStartPlacementWatchdog/,
+    required: true,
+  },
+  {
+    id: "no_wrong_fallback",
+    label: "No product_info/main_fallback placement",
+    pattern: /main_fallback/,
+    required: false,
+    invert: true,
+  },
+  {
     id: "no_always_floating",
     label: "No forced floating button mode",
     pattern: /VTON_ALWAYS_FLOATING/,

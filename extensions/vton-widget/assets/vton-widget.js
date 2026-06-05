@@ -13,7 +13,7 @@
 
       var VTON_STATUS_CACHE_TTL = 300000;
       var VTON_ENABLED_STATUS_MEMO_TTL = 300000;
-      var VTON_INJECTION_WAIT_MS = 18000;
+      var VTON_INJECTION_WAIT_MS = 45000;
       var VTON_PRODUCT_PATH_RE =
         /\/(?:products?|produits?|produit|produkt|producto|artikel|item|p)\/([^\/\?#]+)/i;
       var _vtonStatusRetryTimer = null;
@@ -806,6 +806,20 @@
         }, 1500);
       }
 
+      function vtonStartPlacementWatchdog() {
+        if (window.__VTON_PLACEMENT_WATCHDOG) return;
+        window.__VTON_PLACEMENT_WATCHDOG = setInterval(function() {
+          if (!isProductPageContext() || _vtonSuppressed) return;
+          var container = document.getElementById('vton-widget-container');
+          if (!container || !container.isConnected) return;
+          var atc = vtonFindBestAddToCartButton();
+          if (!atc) return;
+          if (!vtonIsWidgetDirectlyAfterAtc(container, atc)) {
+            vtonRelocateWidgetUnderAtc(container);
+          }
+        }, 1500);
+      }
+
       function vtonStartVisibilityWatchdog() {
         if (window.__VTON_VISIBILITY_WATCHDOG) return;
         window.__VTON_VISIBILITY_WATCHDOG = setInterval(function() {
@@ -816,6 +830,7 @@
           container.style.setProperty('visibility', 'visible', 'important');
           container.style.setProperty('opacity', '1', 'important');
           container.style.setProperty('pointer-events', 'auto', 'important');
+          vtonRelocateWidgetUnderAtc(container);
           if (!vtonIsVisible(container) && _vtonBootContext) {
             _vtonWidgetRenderQueued = false;
             _vtonWidgetMountInProgress = false;
@@ -1431,6 +1446,7 @@
         queueWidgetRender(shop || '', productId, productHandle, buildOptimisticStatus({}));
         vtonStartPresenceWatchdog();
         vtonStartVisibilityWatchdog();
+        vtonStartPlacementWatchdog();
 
         if (shop) {
           refreshTryonStatus(shop, productId, productHandle);
@@ -1892,9 +1908,13 @@
       }
 
       var VTON_ATC_BUTTON_SELECTORS =
-        'button[type="submit"][name="add"], button[name="add"], [data-add-to-cart], .product-form__cart-submit, .product-form__submit, .btn--add-to-cart, .add-to-cart, [aria-label*="add to cart" i], [aria-label*="ajouter au panier" i], [aria-label*="ajouter" i]';
+        'button[type="submit"][name="add"], button[name="add"], input[type="submit"][name="add"], [data-add-to-cart], [data-action="add-to-cart"], .product-form__cart-submit, .product-form__submit, .btn--add-to-cart, .add-to-cart, #AddToCart, button#AddToCart, .product__add-to-cart, .product-form__add-button, [aria-label*="add to cart" i], [aria-label*="ajouter au panier" i], [aria-label*="ajouter" i], [aria-label*="añadir" i], [aria-label*="in den warenkorb" i]';
       var VTON_ATC_EXCLUDED_ANCESTORS =
-        '.shopify-payment-button, shopify-buy-it-now-button, .dynamic-checkout__content, .shopify-payment-button__button';
+        '.shopify-payment-button, shopify-buy-it-now-button, .dynamic-checkout__content, .shopify-payment-button__button, .cart-drawer, cart-drawer, .mini-cart, .quick-add-modal, [data-quick-add], dialog, [role="dialog"]';
+      var VTON_STICKY_ATC_ANCESTORS =
+        '.sticky-add-to-cart, .product-sticky-form, [data-sticky-product-form], .sticky-product-form, .sticky-product-bar, [data-sticky-atc], .sticky-bar, .fixed-add-to-cart, [data-sticky-add-to-cart]';
+      var VTON_MAIN_PRODUCT_ANCESTORS =
+        '[data-section-type="product"], .shopify-section--main-product, #ProductSection, .product-section, .product-main, .product-template, .product-page';
       var VTON_FORM_SELECTORS = [
         'product-form form[action*="/cart"]',
         'form[action*="/cart/add"]',
@@ -2006,41 +2026,100 @@
         return vtonPickVisible(deepForms);
       }
 
-      function vtonIsAddToCartButton(btn) {
-        if (!btn || !vtonPickVisible([btn])) return false;
+      function vtonUniqueElements(list) {
+        var seen = [];
+        return (list || []).filter(function(el) {
+          if (!el || seen.indexOf(el) !== -1) return false;
+          seen.push(el);
+          return true;
+        });
+      }
+
+      function vtonIsAddToCartButton(btn, options) {
+        options = options || {};
+        if (!btn || btn.nodeType !== 1) return false;
+        if (!options.allowHidden && !vtonPickVisible([btn])) return false;
+        if (options.allowHidden && !vtonIsAnchorable(btn)) return false;
         if (btn.closest && btn.closest(VTON_ATC_EXCLUDED_ANCESTORS)) return false;
+        if (btn.closest && btn.closest('header, footer, .announcement-bar, .site-header')) return false;
         return true;
       }
 
-      function vtonFindAddToCartButton(root) {
+      function vtonScoreAtcButton(btn) {
+        if (!vtonIsAddToCartButton(btn, { allowHidden: true })) return -1;
+        var score = 0;
+        if (btn.getAttribute('name') === 'add') score += 45;
+        if (btn.hasAttribute('data-add-to-cart')) score += 35;
+        if (btn.closest && btn.closest(VTON_MAIN_PRODUCT_ANCESTORS)) score += 30;
+        var form = btn.closest && btn.closest('form, product-form');
+        if (form && form.querySelector && form.querySelector('[name="id"], [name="variant-id"], input[name="id"]')) {
+          score += 40;
+        }
+        if (btn.closest && btn.closest(VTON_STICKY_ATC_ANCESTORS)) score -= 120;
+        try {
+          var rect = btn.getBoundingClientRect();
+          if (rect.top < window.innerHeight * 0.82) score += 15;
+          if (rect.width > 72 && rect.height > 28) score += 8;
+        } catch (e) {}
+        return score;
+      }
+
+      function vtonCollectAddToCartButtons(root, options) {
+        options = options || {};
         var scope = root || document;
+        var scopeRoot = scope === document ? document.documentElement : scope;
+        var candidates = [];
         var parts = VTON_ATC_BUTTON_SELECTORS.split(', ');
         for (var i = 0; i < parts.length; i++) {
-          var btn = scope.querySelector(parts[i]);
-          if (vtonIsAddToCartButton(btn)) return btn;
+          if (scope.querySelectorAll) {
+            scope.querySelectorAll(parts[i]).forEach(function(el) {
+              candidates.push(el);
+            });
+          }
         }
-        var deepMatches = vtonQueryDeep(
-          'button[type="submit"], button[name="add"], [data-add-to-cart]',
-          scope === document ? document.documentElement : scope
-        );
-        for (var d = 0; d < deepMatches.length; d++) {
-          if (vtonIsAddToCartButton(deepMatches[d])) return deepMatches[d];
-        }
-        var allButtons = scope.querySelectorAll ? scope.querySelectorAll('button, [role="button"], input[type="submit"]') : [];
+        vtonQueryDeep(
+          'button[type="submit"], button[name="add"], input[type="submit"], [data-add-to-cart], [data-action="add-to-cart"]',
+          scopeRoot
+        ).forEach(function(el) {
+          candidates.push(el);
+        });
+        var allButtons = scope.querySelectorAll
+          ? scope.querySelectorAll('button, [role="button"], input[type="submit"], a[href*="/cart/add"]')
+          : [];
         for (var j = 0; j < allButtons.length; j++) {
           var b = allButtons[j];
-          if (b.closest && b.closest(VTON_ATC_EXCLUDED_ANCESTORS)) continue;
           var label = (b.textContent || b.getAttribute('aria-label') || b.getAttribute('title') || '').toLowerCase();
           if (
             label.indexOf('cart') !== -1 ||
             label.indexOf('panier') !== -1 ||
             label.indexOf('add') !== -1 ||
-            label.indexOf('ajouter') !== -1
+            label.indexOf('ajouter') !== -1 ||
+            label.indexOf('warenkorb') !== -1
           ) {
-            if (vtonIsAddToCartButton(b)) return b;
+            candidates.push(b);
           }
         }
-        return null;
+        return vtonUniqueElements(candidates).filter(function(btn) {
+          return vtonIsAddToCartButton(btn, options);
+        });
+      }
+
+      function vtonFindBestAddToCartButton(root, options) {
+        var candidates = vtonCollectAddToCartButtons(root, options);
+        var best = null;
+        var bestScore = -1;
+        for (var i = 0; i < candidates.length; i++) {
+          var score = vtonScoreAtcButton(candidates[i]);
+          if (score > bestScore) {
+            bestScore = score;
+            best = candidates[i];
+          }
+        }
+        return best;
+      }
+
+      function vtonFindAddToCartButton(root) {
+        return vtonFindBestAddToCartButton(root, { allowHidden: false });
       }
 
       function vtonGetEmbedSlotAnchor() {
@@ -2054,18 +2133,16 @@
           source &&
           (source === 'form_atc_button' ||
             source === 'global_atc_button' ||
-            source === 'custom_selector' ||
+            source === 'custom_scope_atc' ||
             source.indexOf('form_atc_button') === 0 ||
             source.indexOf('global_atc_button') === 0 ||
-            source.indexOf('custom_selector') === 0)
+            source.indexOf('custom_scope_atc') === 0)
         );
       }
 
       function vtonFindInjectionAnchor(customSelector, options) {
         options = options || {};
         var allowHidden = options.allowHidden === true;
-        var atcOnly = options.atcOnly === true;
-
         function accept(el, method, source) {
           if (!el) return null;
           if (vtonPickVisible([el])) return { anchor: el, method: method || 'after', source: source };
@@ -2077,70 +2154,58 @@
 
         if (customSelector) {
           try {
-            var customCandidates = document.querySelectorAll(customSelector);
-            for (var c = 0; c < customCandidates.length; c++) {
-              var customHit = accept(customCandidates[c], 'after', 'custom_selector');
-              if (customHit) return customHit;
+            var customScopes = document.querySelectorAll(customSelector);
+            for (var c = 0; c < customScopes.length; c++) {
+              var scopedAtc = vtonFindBestAddToCartButton(customScopes[c], { allowHidden: allowHidden });
+              var scopedHit = accept(scopedAtc, 'after', 'custom_scope_atc');
+              if (scopedHit) return scopedHit;
             }
           } catch (e) {
-            warn('[VTON] Invalid custom anchor selector:', customSelector);
+            warn('[VTON] Invalid custom scope selector:', customSelector);
           }
         }
 
         var form = vtonFindBestProductForm();
         if (form) {
-          var atcBtn = vtonFindAddToCartButton(form);
+          var atcBtn = vtonFindBestAddToCartButton(form, { allowHidden: allowHidden });
           if (atcBtn) {
             var btnHit = accept(atcBtn, 'after', 'form_atc_button');
             if (btnHit) return btnHit;
           }
         }
 
-        var globalAtc = vtonFindAddToCartButton(document);
+        var globalAtc = vtonFindBestAddToCartButton(document, { allowHidden: allowHidden });
         if (globalAtc) {
           var globalHit = accept(globalAtc, 'after', 'global_atc_button');
           if (globalHit) return globalHit;
         }
-
-        if (atcOnly) {
-          return null;
-        }
-
-        if (form) {
-          var formHit = accept(form, 'after', 'product_form');
-          if (formHit) return formHit;
-        }
-
-        var productFormComponents = document.querySelectorAll('product-form');
-        for (var p = 0; p < productFormComponents.length; p++) {
-          var compHit = accept(productFormComponents[p], 'append', 'product-form_element');
-          if (compHit) return compHit;
-        }
-
-        for (var k = 0; k < VTON_PRODUCT_INFO_SELECTORS.length; k++) {
-          var infoNodes = document.querySelectorAll(VTON_PRODUCT_INFO_SELECTORS[k]);
-          for (var n = 0; n < infoNodes.length; n++) {
-            var infoHit = accept(infoNodes[n], 'append', 'product_info');
-            if (infoHit) return infoHit;
-          }
-        }
-
-        var embedSlotEl = document.getElementById('vton-embed-slot');
-        if (embedSlotEl && vtonIsAnchorable(embedSlotEl)) {
-          return { anchor: embedSlotEl, method: 'append', source: 'embed_slot' };
-        }
-
-        var stickyAtc = document.querySelector(
-          '.sticky-add-to-cart, .product-sticky-form, [data-sticky-product-form], .sticky-product-form, .product-sticky-bar, [data-sticky-atc]'
-        );
-        var stickyHit = accept(stickyAtc, 'append', 'sticky_atc');
-        if (stickyHit) return stickyHit;
-
-        var main = document.querySelector('main, [role="main"], #MainContent');
-        var mainHit = accept(main, 'append', 'main_fallback');
-        if (mainHit) return mainHit;
-
         return null;
+      }
+
+      function vtonIsWidgetDirectlyAfterAtc(container, atcBtn) {
+        if (!container || !atcBtn) return false;
+        return atcBtn.nextElementSibling === container;
+      }
+
+      function vtonRelocateWidgetUnderAtc(container) {
+        if (!container || !container.isConnected) return false;
+        var customSelector = (window.VTON_LIQUID && window.VTON_LIQUID.customAnchor) || '';
+        var target = vtonFindInjectionAnchor(customSelector, { allowHidden: true });
+        if (!target || !target.anchor || !target.anchor.parentNode) return false;
+        var atc = target.anchor;
+        if (vtonIsWidgetDirectlyAfterAtc(container, atc)) {
+          container.setAttribute('data-vton-placement', target.source);
+          return true;
+        }
+        try {
+          atc.parentNode.insertBefore(container, atc.nextSibling);
+          container.setAttribute('data-vton-placement', target.source);
+          container.style.cssText =
+            'width:100%;max-width:100%;display:block;margin:12px 0 0;position:relative;z-index:2;box-sizing:border-box;';
+          return true;
+        } catch (e) {
+          return false;
+        }
       }
 
       function vtonMountContainer(target) {
@@ -2156,11 +2221,6 @@
 
         container.style.cssText =
           'width:100%;max-width:100%;display:block;margin:12px 0 0;position:relative;z-index:2;box-sizing:border-box;';
-
-        if (target.source === 'embed_slot') {
-          target.anchor.style.display = 'block';
-          target.anchor.setAttribute('aria-hidden', 'false');
-        }
 
         var anchor = target.anchor;
         var method = target.method;
@@ -2181,11 +2241,7 @@
       function vtonResolveInjectionTarget(customSelector) {
         var primary = vtonFindInjectionAnchor(customSelector, { allowHidden: false });
         if (primary) return primary;
-        var relaxed = vtonFindInjectionAnchor(customSelector, { allowHidden: true });
-        if (relaxed) return relaxed;
-        var slot = vtonGetEmbedSlotAnchor();
-        if (slot) return slot;
-        return null;
+        return vtonFindInjectionAnchor(customSelector, { allowHidden: true });
       }
 
       function vtonResolveInjectionTargetAsync(customSelector) {
@@ -2195,10 +2251,7 @@
       function vtonWaitForInjectionAnchor(customSelector, timeoutMs) {
         timeoutMs = timeoutMs || VTON_INJECTION_WAIT_MS;
         return new Promise(function(resolve) {
-          var immediateAtc = vtonFindInjectionAnchor(customSelector, {
-            allowHidden: false,
-            atcOnly: true,
-          });
+          var immediateAtc = vtonFindInjectionAnchor(customSelector, { allowHidden: false });
           if (immediateAtc) {
             return resolve(immediateAtc);
           }
@@ -2216,9 +2269,9 @@
 
           function tryResolveAtc() {
             if (resolved) return;
-            var anchor = vtonFindInjectionAnchor(customSelector, { allowHidden: false, atcOnly: true });
+            var anchor = vtonFindInjectionAnchor(customSelector, { allowHidden: false });
             if (!anchor) {
-              anchor = vtonFindInjectionAnchor(customSelector, { allowHidden: true, atcOnly: true });
+              anchor = vtonFindInjectionAnchor(customSelector, { allowHidden: true });
             }
             if (anchor && vtonIsAtcInjectionSource(anchor.source)) {
               resolved = true;
@@ -2332,15 +2385,15 @@
             _vtonWidgetRenderQueued = false;
             return;
           }
-          if (!injectionTarget || !injectionTarget.anchor) {
+          if (
+            !injectionTarget ||
+            !injectionTarget.anchor ||
+            !vtonIsAtcInjectionSource(injectionTarget.source)
+          ) {
             _vtonWidgetMountInProgress = false;
             _vtonWidgetRenderQueued = false;
-            warn('[VTON] No injection anchor found — waiting for Add to Cart button');
+            warn('[VTON] Add to Cart button not ready — will keep trying');
             return;
-          }
-
-          if (injectionTarget.source === 'embed_slot') {
-            log('[VTON] Using app embed slot fallback');
           }
 
           log('[VTON] Injection anchor:', injectionTarget.source);
