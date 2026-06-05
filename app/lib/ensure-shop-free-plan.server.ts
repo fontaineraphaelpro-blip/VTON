@@ -2,7 +2,7 @@ import { creditsForPlan, FREE_PLAN_ID } from "./plan-credits";
 import { getShop, query, upsertShop } from "./services/db.service";
 
 /**
- * Ensures every shop has the free plan (50 generations/month) on first use.
+ * Ensures every shop has the free plan (10 generations/month) on first use.
  * Safe to call from afterAuth, dashboard, and storefront generate/status routes.
  */
 export async function ensureShopFreePlan(
@@ -37,6 +37,17 @@ export async function ensureShopFreePlan(
     } else if (neverHadQuota && (credits ?? 0) <= 0) {
       updates.credits = freeGenerations;
       updates.monthlyQuota = freeGenerations;
+    }
+
+    const isFreePlan =
+      !existing.plan_name || existing.plan_name === FREE_PLAN_ID;
+    if (isFreePlan) {
+      if (quota != null && quota !== freeGenerations) {
+        updates.monthlyQuota = freeGenerations;
+      }
+      if ((credits ?? 0) > freeGenerations) {
+        updates.credits = freeGenerations;
+      }
     }
     if (options?.accessToken) {
       updates.accessToken = options.accessToken;

@@ -2,7 +2,7 @@
 export const FREE_PLAN_ID = "free-installation-setup";
 
 export const PLAN_MONTHLY_CREDITS: Record<string, number> = {
-  [FREE_PLAN_ID]: 50,
+  [FREE_PLAN_ID]: 10,
   starter: 300,
   growth: 1000,
   scale: 4000,

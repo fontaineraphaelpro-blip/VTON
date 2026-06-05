@@ -182,9 +182,13 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     if (!chargeId && shopData?.plan_name) {
       const expectedQuota = creditsForPlan(shopData.plan_name);
       if (shopData.monthly_quota !== expectedQuota) {
+        const isFreePlan = shopData.plan_name === FREE_PLAN_ID;
+        const adjustedCredits = isFreePlan
+          ? Math.min(shopData.credits ?? 0, expectedQuota)
+          : Math.max(shopData.credits ?? 0, expectedQuota);
         await upsertShop(shop, {
           monthlyQuota: expectedQuota,
-          credits: Math.max(shopData.credits ?? 0, expectedQuota),
+          credits: adjustedCredits,
         });
         invalidateLayoutShopContext(shop);
         shopData = await getShop(shop);
@@ -589,10 +593,10 @@ export default function Credits() {
         id: FREE_PLAN_ID,
         name: "Free",
         price: 0.0,
-        description: "50 generations / month",
+        description: "10 generations / month",
         popular: false,
         features: [
-          "50 generations per month",
+          "10 generations per month",
           "Unlimited products",
           "Mobile & desktop ready",
           "Basic customization",

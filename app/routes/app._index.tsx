@@ -415,7 +415,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       }
     }
 
-    // If shop doesn't exist yet, create it with free plan (50 generations/month)
+    // If shop doesn't exist yet, create it with free plan (10 generations/month)
     if (!shopData) {
       const freeGenerations = creditsForPlan(FREE_PLAN_ID);
       await upsertShop(shop, {

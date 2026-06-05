@@ -40,7 +40,7 @@ export default function Terms() {
         <p>The App operates on a subscription basis with different pricing tiers:</p>
         <ul>
           <li>
-            <strong>Free plan:</strong> 4 try-ons per month with watermark
+            <strong>Free plan:</strong> 10 try-ons per month
           </li>
           <li>
             <strong>Paid plans:</strong> Various monthly quotas available

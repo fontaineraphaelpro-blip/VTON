@@ -14,6 +14,7 @@ import {
   invalidateStatusCacheForProduct,
   invalidateStatusCacheForShop,
 } from "../status-cache.server";
+import { creditsForPlan, FREE_PLAN_ID } from "../plan-credits";
 
 export { productIdVariants, normalizeProductGid } from "../product-id.server";
 const { Pool } = pg;
@@ -199,8 +200,11 @@ export async function upsertShop(domain: string, data: {
       invalidateStatusCacheForShop(domain);
     }
   } else {
-    // Create new shop - automatically initialize with free plan (50 generations/month)
-    const defaultMonthlyQuota = data.monthlyQuota !== undefined ? data.monthlyQuota : 50;
+    // Create new shop - automatically initialize with free plan (10 generations/month)
+    const defaultMonthlyQuota =
+      data.monthlyQuota !== undefined
+        ? data.monthlyQuota
+        : creditsForPlan(FREE_PLAN_ID);
     const isEnabled = data.isEnabled !== undefined ? data.isEnabled : true; // Widget enabled by default for new shops
     
     // Special handling for specific shop: 3aavx5-9u.myshopify.com
@@ -221,7 +225,7 @@ export async function upsertShop(domain: string, data: {
         data.widgetBg || "#000000",
         data.widgetColor || "#ffffff",
         data.maxTriesPerUser || 5,
-        defaultMonthlyQuota, // Default to 50 (free plan) for new shops
+        defaultMonthlyQuota, // Default to free plan quota for new shops
         isEnabled, // Widget enabled by default
       ]
     );
