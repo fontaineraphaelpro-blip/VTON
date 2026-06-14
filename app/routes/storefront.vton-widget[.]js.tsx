@@ -27,7 +27,7 @@ export const loader = async (_args: LoaderFunctionArgs) => {
   return new Response(cachedJs, {
     headers: {
       "Content-Type": "application/javascript; charset=utf-8",
-      "Cache-Control": "public, max-age=600",
+      "Cache-Control": "public, max-age=120",
       "Access-Control-Allow-Origin": "*",
     },
   });

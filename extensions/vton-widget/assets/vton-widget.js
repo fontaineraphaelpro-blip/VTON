@@ -3,6 +3,7 @@
 
       if (window.__VTON_WIDGET_BOOTED) return;
       window.__VTON_WIDGET_BOOTED = true;
+      window.__VTON_WIDGET_BUILD = '20260519-checkout-spacing';
 
       try {
 
@@ -15,7 +16,9 @@
       var VTON_ENABLED_STATUS_MEMO_TTL = 300000;
       var VTON_INJECTION_WAIT_MS = 45000;
       var VTON_CONTAINER_INLINE_STYLE =
-        'width:100%;max-width:100%;display:block;margin:12px 0 20px;position:relative;z-index:2;box-sizing:border-box;';
+        'width:100%;max-width:100%;display:block;margin:12px 0 16px;padding:0 0 12px;position:relative;z-index:2;box-sizing:border-box;';
+      var VTON_PAYMENT_SIBLING_SELECTORS =
+        '.shopify-payment-button, shopify-accelerated-checkout, shopify-buy-it-now-button, .dynamic-checkout__content, .shopify-payment-button__container, [data-shopify="payment-button"], .product-form__checkout-buttons, .additional-checkout-buttons, more-payment-options';
       var VTON_PRODUCT_PATH_RE =
         /\/(?:products?|produits?|produit|produkt|producto|artikel|item|p)\/([^\/\?#]+)/i;
       var _vtonStatusRetryTimer = null;
@@ -758,19 +761,76 @@
         return _vtonStatusInFlight;
       }
 
-      function vtonInjectMobilePlacementCss() {
-        if (document.getElementById('vton-mobile-placement-css')) return;
-        var style = document.createElement('style');
-        style.id = 'vton-mobile-placement-css';
+      function vtonIsPaymentCheckoutElement(el) {
+        if (!el || el.nodeType !== 1) return false;
+        try {
+          if (el.matches && el.matches(VTON_PAYMENT_SIBLING_SELECTORS)) return true;
+          if (el.querySelector && el.querySelector(VTON_PAYMENT_SIBLING_SELECTORS)) return true;
+          var cls = (el.className && String(el.className)) || '';
+          if (/payment|paypal|checkout|shopify-payment/i.test(cls)) return true;
+        } catch (e) {}
+        return false;
+      }
+
+      function vtonFindPaymentSiblingAfter(container) {
+        if (!container) return null;
+        var node = container.nextElementSibling;
+        while (node) {
+          if (node.id === 'vton-widget-container') {
+            node = node.nextElementSibling;
+            continue;
+          }
+          if (vtonIsPaymentCheckoutElement(node)) return node;
+          node = node.nextElementSibling;
+        }
+        return container.nextElementSibling;
+      }
+
+      function vtonApplyCheckoutSpacing(container) {
+        if (!container || !container.isConnected) return;
+        container.style.setProperty('display', 'block', 'important');
+        container.style.setProperty('width', '100%', 'important');
+        container.style.setProperty('max-width', '100%', 'important');
+        container.style.setProperty('box-sizing', 'border-box', 'important');
+        container.style.setProperty('margin-top', '12px', 'important');
+        container.style.setProperty('margin-bottom', '16px', 'important');
+        container.style.setProperty('padding-bottom', '12px', 'important');
+        var payment = vtonFindPaymentSiblingAfter(container);
+        if (payment) {
+          payment.style.setProperty('margin-top', '16px', 'important');
+        }
+      }
+
+      function vtonInjectCheckoutSpacingCss() {
+        var style = document.getElementById('vton-checkout-spacing-css');
+        if (!style) {
+          style = document.createElement('style');
+          style.id = 'vton-checkout-spacing-css';
+          document.head.appendChild(style);
+        }
         style.textContent =
           '#vton-widget-container{' +
           'display:block!important;visibility:visible!important;opacity:1!important;' +
-          'pointer-events:auto!important;' +
-          'margin:12px 0 20px!important;max-width:100%!important;box-sizing:border-box!important;}' +
+          'pointer-events:auto!important;width:100%!important;max-width:100%!important;' +
+          'box-sizing:border-box!important;margin:12px 0 16px!important;padding-bottom:12px!important;}' +
+          '#vton-widget-container + .shopify-payment-button,' +
+          '#vton-widget-container + shopify-accelerated-checkout,' +
+          '#vton-widget-container + shopify-buy-it-now-button,' +
+          '#vton-widget-container + .dynamic-checkout__content,' +
+          '#vton-widget-container + .shopify-payment-button__container,' +
+          '#vton-widget-container + .product-form__checkout-buttons,' +
+          '#vton-widget-container + .additional-checkout-buttons{' +
+          'margin-top:16px!important;}' +
           '@media (max-width:640px){' +
-          '#vton-widget-container{margin:12px 0 14px!important;}' +
+          '#vton-widget-container{margin:12px 0 14px!important;padding-bottom:10px!important;}' +
+          '#vton-widget-container + .shopify-payment-button,' +
+          '#vton-widget-container + shopify-accelerated-checkout,' +
+          '#vton-widget-container + .dynamic-checkout__content{margin-top:12px!important;}' +
           '}';
-        document.head.appendChild(style);
+      }
+
+      function vtonInjectMobilePlacementCss() {
+        vtonInjectCheckoutSpacingCss();
       }
 
       function vtonScheduleShopResolve(onResolved) {
@@ -819,6 +879,7 @@
           if (!vtonIsWidgetDirectlyAfterAtc(container, atc)) {
             vtonRelocateWidgetUnderAtc(container);
           }
+          vtonApplyCheckoutSpacing(container);
         }, 1500);
       }
 
@@ -833,6 +894,7 @@
           container.style.setProperty('opacity', '1', 'important');
           container.style.setProperty('pointer-events', 'auto', 'important');
           vtonRelocateWidgetUnderAtc(container);
+          vtonApplyCheckoutSpacing(container);
           if (!vtonIsVisible(container) && _vtonBootContext) {
             _vtonWidgetRenderQueued = false;
             _vtonWidgetMountInProgress = false;
@@ -2203,6 +2265,7 @@
           atc.parentNode.insertBefore(container, atc.nextSibling);
           container.setAttribute('data-vton-placement', target.source);
           container.style.cssText = VTON_CONTAINER_INLINE_STYLE;
+          vtonApplyCheckoutSpacing(container);
           return true;
         } catch (e) {
           return false;
@@ -2421,6 +2484,7 @@
               error('[VTON] Failed to mount widget container');
               return;
             }
+            vtonApplyCheckoutSpacing(container);
 
             var shadowRoot = container.attachShadow({ mode: 'closed' });
             var state = {
@@ -2456,6 +2520,7 @@
               vtonBindModalEvents(state);
               vtonInstallModalEscape(state);
               vtonDedupeWidgetContainers();
+              vtonApplyCheckoutSpacing(container);
               _vtonWidgetMountInProgress = false;
               log('[VTON] Widget rendered', { source: injectionTarget.source, productId: productId });
 
@@ -2499,10 +2564,10 @@
 
       function vtonWidgetStyles(buttonBg, buttonColor) {
         return (
-          ':host{display:block;width:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;}' +
-          '.vton-widget-container{margin:0 0 0;width:100%;display:block;}' +
+          ':host{display:block;width:100%;margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;}' +
+          '.vton-widget-container{margin:0;width:100%;display:block;}' +
           '.vton-widget-container.vton-widget-container--modal-open{display:none;}' +
-          '.vton-button{width:100%;padding:15px 22px;border:none;border-radius:14px;font-size:15px;font-weight:600;cursor:pointer;letter-spacing:0.01em;position:relative;overflow:hidden;display:inline-flex;align-items:center;justify-content:center;gap:10px;transition:transform .25s cubic-bezier(.4,0,.2,1),box-shadow .25s cubic-bezier(.4,0,.2,1),filter .25s ease;box-shadow:0 2px 4px rgba(15,23,42,.06),0 8px 24px rgba(15,23,42,.1);}' +
+          '.vton-button{width:100%;padding:15px 22px;border:none;border-radius:14px;font-size:15px;font-weight:600;cursor:pointer;letter-spacing:0.01em;position:relative;overflow:hidden;display:inline-flex;align-items:center;justify-content:center;gap:10px;transition:transform .25s cubic-bezier(.4,0,.2,1),box-shadow .25s cubic-bezier(.4,0,.2,1),filter .25s ease;box-shadow:0 2px 4px rgba(15,23,42,.06),0 4px 12px rgba(15,23,42,.08);}' +
           '.vton-button::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.14) 0%,transparent 48%);pointer-events:none;}' +
           '.vton-button:hover{transform:translateY(-2px);box-shadow:0 4px 8px rgba(15,23,42,.08),0 14px 32px rgba(15,23,42,.14);filter:brightness(1.04);}' +
           '.vton-button:active{transform:translateY(0);box-shadow:0 2px 6px rgba(15,23,42,.08);}' +
