@@ -14,6 +14,8 @@
       var VTON_STATUS_CACHE_TTL = 300000;
       var VTON_ENABLED_STATUS_MEMO_TTL = 300000;
       var VTON_INJECTION_WAIT_MS = 45000;
+      var VTON_CONTAINER_INLINE_STYLE =
+        'width:100%;max-width:100%;display:block;margin:12px 0 20px;position:relative;z-index:2;box-sizing:border-box;';
       var VTON_PRODUCT_PATH_RE =
         /\/(?:products?|produits?|produit|produkt|producto|artikel|item|p)\/([^\/\?#]+)/i;
       var _vtonStatusRetryTimer = null;
@@ -763,10 +765,10 @@
         style.textContent =
           '#vton-widget-container{' +
           'display:block!important;visibility:visible!important;opacity:1!important;' +
-          'pointer-events:auto!important;}' +
+          'pointer-events:auto!important;' +
+          'margin:12px 0 20px!important;max-width:100%!important;box-sizing:border-box!important;}' +
           '@media (max-width:640px){' +
-          '#vton-widget-container{' +
-          'margin:12px 0!important;max-width:100%!important;box-sizing:border-box!important;}' +
+          '#vton-widget-container{margin:12px 0 14px!important;}' +
           '}';
         document.head.appendChild(style);
       }
@@ -2200,8 +2202,7 @@
         try {
           atc.parentNode.insertBefore(container, atc.nextSibling);
           container.setAttribute('data-vton-placement', target.source);
-          container.style.cssText =
-            'width:100%;max-width:100%;display:block;margin:12px 0 0;position:relative;z-index:2;box-sizing:border-box;';
+          container.style.cssText = VTON_CONTAINER_INLINE_STYLE;
           return true;
         } catch (e) {
           return false;
@@ -2219,8 +2220,7 @@
         container.setAttribute('data-vton-widget', 'true');
         container.setAttribute('data-vton-placement', target.source || 'unknown');
 
-        container.style.cssText =
-          'width:100%;max-width:100%;display:block;margin:12px 0 0;position:relative;z-index:2;box-sizing:border-box;';
+        container.style.cssText = VTON_CONTAINER_INLINE_STYLE;
 
         var anchor = target.anchor;
         var method = target.method;
@@ -2500,7 +2500,7 @@
       function vtonWidgetStyles(buttonBg, buttonColor) {
         return (
           ':host{display:block;width:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;}' +
-          '.vton-widget-container{margin:20px 0 0;width:100%;display:block;}' +
+          '.vton-widget-container{margin:0 0 0;width:100%;display:block;}' +
           '.vton-widget-container.vton-widget-container--modal-open{display:none;}' +
           '.vton-button{width:100%;padding:15px 22px;border:none;border-radius:14px;font-size:15px;font-weight:600;cursor:pointer;letter-spacing:0.01em;position:relative;overflow:hidden;display:inline-flex;align-items:center;justify-content:center;gap:10px;transition:transform .25s cubic-bezier(.4,0,.2,1),box-shadow .25s cubic-bezier(.4,0,.2,1),filter .25s ease;box-shadow:0 2px 4px rgba(15,23,42,.06),0 8px 24px rgba(15,23,42,.1);}' +
           '.vton-button::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.14) 0%,transparent 48%);pointer-events:none;}' +
