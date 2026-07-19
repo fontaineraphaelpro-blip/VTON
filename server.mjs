@@ -28,6 +28,12 @@ app.use(
 
 app.use(express.static(path.join(__dirname, "public"), { maxAge: "1h" }));
 
+app.get("/robots.txt", (_req, res) => {
+  res
+    .type("text/plain")
+    .send("User-agent: *\nDisallow: /app/\nDisallow: /auth/\n");
+});
+
 app.all(
   "*",
   createRequestHandler({

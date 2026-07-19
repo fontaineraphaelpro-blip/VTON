@@ -7,8 +7,8 @@
  * Uses pg directly for raw SQL queries since Prisma schema is primarily for Session storage.
  */
 
-import pg from "pg";
 import { ensureTables } from "../db-init.server";
+import { getPgPool, isTransientPgError } from "../pg-pool.server";
 import { productIdVariants } from "../product-id.server";
 import {
   invalidateStatusCacheForProduct,
@@ -17,31 +17,24 @@ import {
 import { creditsForPlan, FREE_PLAN_ID } from "../plan-credits";
 
 export { productIdVariants, normalizeProductGid } from "../product-id.server";
-const { Pool } = pg;
-
-// Database connection pool
-const DATABASE_URL = process.env.DATABASE_URL;
-const connectionString = DATABASE_URL?.replace(/^postgres:\/\//, "postgresql://");
-
-const pool = connectionString
-  ? new Pool({
-      connectionString,
-      ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false,
-      max: 20,
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 2000,
-    })
-  : null;
 
 /**
  * Executes a raw SQL query.
  */
 export async function query(text: string, params: any[] = []) {
+  const pool = getPgPool();
   if (!pool) {
     throw new Error("PostgreSQL not configured");
   }
   await ensureTables();
-  return pool.query(text, params);
+  try {
+    return await pool.query(text, params);
+  } catch (err) {
+    if (isTransientPgError(err)) {
+      return await pool.query(text, params);
+    }
+    throw err;
+  }
 }
 
 /**

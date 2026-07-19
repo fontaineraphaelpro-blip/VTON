@@ -6,21 +6,7 @@
  * Creates business tables (shops, tryon_logs, rate_limits) if they don't exist.
  */
 
-import pg from "pg";
-const { Pool } = pg;
-
-const DATABASE_URL = process.env.DATABASE_URL;
-const connectionString = DATABASE_URL?.replace(/^postgres:\/\//, "postgresql://");
-
-const pool = connectionString
-  ? new Pool({
-      connectionString,
-      ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false,
-      max: 20,
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 2000,
-    })
-  : null;
+import { getPgPool } from "./pg-pool.server";
 
 // Cache to avoid checking tables on every request
 let tablesEnsured = false;
@@ -32,6 +18,7 @@ const ensureTablesPromise: Promise<void> | null = null;
  * Uses in-memory cache to avoid repeated checks.
  */
 export async function ensureTables() {
+  const pool = getPgPool();
   if (!pool) return;
 
   if (tablesEnsured) {
