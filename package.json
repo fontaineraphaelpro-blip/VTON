@@ -40,7 +40,7 @@
     "@shopify/shopify-app-session-storage-prisma": "^3.0.0",
     "@shopify/shopify-api": "^12.2.0",
     "compression": "^1.8.0",
-    "express": "^4.21.2",
+    "express": "^5.2.1",
     "isbot": "^5.1.0",
     "pg": "^8.16.3",
     "prisma": "^6.2.1",
